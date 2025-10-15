@@ -1,57 +1,55 @@
 import mongoose from "mongoose";
-import bcrypt from "bcrypt"
+import bcrypt from "bcrypt";
 import { NextResponse } from "next/server";
 import Manager from "@/models/Manager";
+import dbConnect from "@/lib/dbConnect";
 
 export async function POST(req) {
-    try {
-        const { firstName, lastName, email, password } = await req.json()
+  try {
+    await dbConnect();
 
-        if (!firstName || !lastName || !email || !password) {
-            return NextResponse.json({
-                message: "All feilds are required"
-            }, {
-                status: 409
-            })
-        }
+    const { firstName, lastName, email, password, depIds } = await req.json();
 
-        const emailAlreadyExists = await Manager.findOne({ email })
-
-        if (emailAlreadyExists) {
-            return NextResponse.json({
-                message: "Manager is already exists"
-            }, {
-                status: 409
-            })
-        }
-
-        const hashPassword = await bcrypt.hash(password, 12)
-
-        const idx = Math.floor(Math.random() * 100 ) + 1
-        const randomAvatar = `https://avatar.iran.liara.run/public/${idx}.png`
-        const avatarUrl = randomAvatar
-
-        const newManager = new Manager({
-            firstName,
-            lastName,
-            email,
-            password: hashPassword,
-            profilePic:avatarUrl
-        })
-
-        await newManager.save()
-
-        return NextResponse.json({
-            message: "Manager is register successfully"
-        }, {
-            status: 201
-        })
-
-    } catch (error) {
-        return NextResponse.json({
-            message: "Manager is register error", error
-        }, {
-            status: 404
-        })
+    if (!firstName || !lastName || !email || !password || !depIds || depIds.length === 0) {
+      return NextResponse.json(
+        { message: "All fields are required, including departments" },
+        { status: 400 }
+      );
     }
+
+    const emailAlreadyExists = await Manager.findOne({ email });
+    if (emailAlreadyExists) {
+      return NextResponse.json(
+        { message: "Manager already exists" },
+        { status: 409 }
+      );
+    }
+
+    const hashPassword = await bcrypt.hash(password, 12);
+
+    const idx = Math.floor(Math.random() * 100) + 1;
+    const avatarUrl = `https://avatar.iran.liara.run/public/${idx}.png`;
+
+    const newManager = new Manager({
+      firstName,
+      lastName,
+      email,
+      password: hashPassword,
+      profilePic: avatarUrl,
+      departments: depIds, // ✅ store multiple departments
+    });
+
+    await newManager.save();
+
+    return NextResponse.json(
+      { message: "Manager registered successfully" },
+      { status: 201 }
+    );
+  } catch (error) {
+    console.error("Error registering manager:", error);
+    return NextResponse.json(
+      { message: "Manager registration failed", error },
+      { status: 500 }
+    );
+  }
 }

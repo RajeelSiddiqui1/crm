@@ -28,10 +28,9 @@ const managerSchema = mongoose.Schema({
         type: String,
         required: false
     },
-    managerId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Manager"
-    },
+    departments: [
+        { type: mongoose.Schema.Types.ObjectId, ref: "Department" }
+    ],
     otp: {
         type: String,
         default: null,

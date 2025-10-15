@@ -33,6 +33,11 @@ const teamleadSchema = mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: "Manager"
     },
+    depId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Department",
+        required: true
+    },
     otp: {
         type: String,
         default: null,
