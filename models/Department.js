@@ -7,7 +7,6 @@ const departmentSchema = mongoose.Schema({
     },
     description: {
         type: String,
-        minlength: 10,
         required: false
     },
     logoUrl: {
@@ -20,4 +19,4 @@ const departmentSchema = mongoose.Schema({
 
 const Department = mongoose.models.Department || mongoose.model("Department", departmentSchema)
 
-export default Department
+export default Department;

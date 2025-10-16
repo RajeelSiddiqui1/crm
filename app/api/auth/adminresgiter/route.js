@@ -1,10 +1,16 @@
-import mongoose from "mongoose";
+
 import bcrypt from "bcrypt"
 import { NextResponse } from "next/server";
 import Admin from "@/models/Admin";
+import dbConnect from "@/lib/db";
+
+
 
 export async function POST(req) {
     try {
+
+        await dbConnect();
+
         const { firstName, lastName, email, password } = await req.json()
 
         if (!firstName || !lastName || !email || !password) {

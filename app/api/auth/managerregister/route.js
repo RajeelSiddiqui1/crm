@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 import bcrypt from "bcrypt";
 import { NextResponse } from "next/server";
 import Manager from "@/models/Manager";
-import dbConnect from "@/lib/dbConnect";
+import dbConnect from "@/lib/db";
 
 export async function POST(req) {
   try {
