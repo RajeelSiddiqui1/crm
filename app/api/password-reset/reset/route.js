@@ -1,4 +1,4 @@
-import { dbConnect } from "@/lib/db";
+import dbConnect  from "@/lib/db";
 import Admin from "@/models/Admin";
 import Manager from "@/models/Manager";
 import TeamLead from "@/models/TeamLead";

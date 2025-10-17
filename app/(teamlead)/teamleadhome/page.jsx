@@ -11,7 +11,7 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (status === "loading") return;
     
-    if (!session || session.user.role !== "Admin") {
+    if (!session || session.user.role !== "TeamLead") {
       router.push("/login");
     }
   }, [session, status, router]);
@@ -83,7 +83,7 @@ export default function AdminDashboard() {
                 Admin Dashboard
               </h1>
               <p className="text-gray-600 mt-2 text-lg">
-                Welcome back, <span className="font-semibold text-red-600">{session?.user?.firstName}{session?.user?.lastName}</span>!
+                Welcome back, <span className="font-semibold text-red-600">{session?.user?.name}</span>!
               </p>
             </div>
             <div className="flex items-center gap-3 px-4 py-2 bg-white rounded-xl shadow-sm border border-gray-200">

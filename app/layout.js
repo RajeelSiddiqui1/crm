@@ -44,7 +44,7 @@ function LayoutContent({ children }) {
 export default function RootLayout({ children }) {
   return (
     <html>
-      <body className="font-sans bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+      <body className="font-sans ">
         <ThemeProvider>
           <AuthProvider>
             <LayoutContent>{children}</LayoutContent>

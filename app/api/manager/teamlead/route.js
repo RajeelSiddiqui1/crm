@@ -2,13 +2,23 @@ import mongoose from "mongoose";
 import bcrypt from "bcrypt";
 import { NextResponse } from "next/server";
 import Teamlead from "@/models/TeamLead";
-import { dbConnect } from "@/lib/db";
+import dbConnect  from "@/lib/db";
 import { sendTeamLeadWelcomeEmail } from "@/helper/emails/manager/create-teamlead";
+import { authOptions } from "@/lib/auth";
+import { getServerSession } from "next-auth";
 
 export async function POST(req) {
   try {
     await dbConnect();
-    const { firstName, lastName, email, password, managerId, depId } = await req.json();
+
+    const session = await getServerSession(authOptions);
+    if (!session || session.user.role !== "Manager") {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    }
+
+    const managerId = session.user.userId || session.user.id;
+
+    const { firstName, lastName, email, password, depId } = await req.json();
 
     if (!firstName || !lastName || !email || !password || !depId) {
       return NextResponse.json({ message: "All fields are required" }, { status: 400 });
@@ -39,7 +49,7 @@ export async function POST(req) {
       email,
       password: hashPassword,
       profilePic: randomAvatar,
-      managerId: managerId || null,
+      managerId: managerId,
       depId,
     });
 
@@ -57,25 +67,21 @@ export async function POST(req) {
 
 export async function GET(req) {
   try {
-    const { searchParams } = new URL(req.url);
-    const managerId = searchParams.get("managerId");
-
-    if (!managerId) {
-      return NextResponse.json({ message: "Manager ID is required" }, { status: 400 });
-    }
-
     await dbConnect();
-    const teamLeads = await Teamlead.find({ managerId })
-      .populate("depId", "name")
-      .select("userId firstName lastName email profilePic createdAt depId");
-
-    if (teamLeads.length === 0) {
-      return NextResponse.json({ message: "No TeamLeads found for this manager" }, { status: 404 });
+    
+    const session = await getServerSession(authOptions);
+    if (!session || session.user.role !== "Manager") {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    return NextResponse.json({ message: "Fetched successfully", teamLeads }, { status: 200 });
+    const managerId = session.user.userId || session.user.id;
+
+    const teamLeads = await Teamlead.find({ managerId })
+      .populate("depId", "name");
+
+    return NextResponse.json({ teamLeads }, { status: 200 });
   } catch (error) {
     console.error("Fetch error:", error);
-    return NextResponse.json({ message: "Error fetching TeamLeads", error: error.message }, { status: 500 });
+    return NextResponse.json({ message: "Error fetching TeamLeads" }, { status: 500 });
   }
 }

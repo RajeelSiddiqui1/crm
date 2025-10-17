@@ -1,9 +1,9 @@
-import { dbConnect } from "@/lib/db";
+import  dbConnect  from "@/lib/db";
 import Admin from "@/models/Admin";
 import Manager from "@/models/Manager";
 import TeamLead from "@/models/TeamLead";
 import Employee from "@/models/Employee";
-import { sendMail } from "@/lib/emails/sendMail";
+import { sendMail } from "@/lib/mail";
 import { NextResponse } from "next/server";
 
 export async function POST(req) {

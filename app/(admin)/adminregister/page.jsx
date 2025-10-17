@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import axios from "axios";
+import { User, Mail, Lock, ArrowRight, Shield } from "lucide-react";
 
 function RegisterPage() {
   const router = useRouter();
@@ -49,96 +50,139 @@ function RegisterPage() {
   return (
     <>
       <Toaster position="top-right" />
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-gray-100 dark:from-gray-900 dark:to-black flex items-center justify-center p-4">
-        <div className="shadow-2xl mx-auto w-full max-w-md rounded-2xl bg-white dark:bg-gray-900 p-8 border border-gray-200 dark:border-gray-800">
+      <div className="min-h-screen bg-gradient-to-br from-red-50 via-white to-pink-50 flex items-center justify-center p-4">
+        <div className="shadow-2xl mx-auto w-full max-w-md rounded-2xl bg-white p-8 border border-gray-200">
+          {/* Header */}
           <div className="text-center mb-8">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-              Admin Register
+            <div className="w-16 h-16 bg-gradient-to-r from-red-600 to-pink-700 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+              <Shield className="h-8 w-8 text-white" />
+            </div>
+            <h2 className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
+              Admin Registration
             </h2>
+            <p className="text-gray-600 mt-2">
+              Create system administrator account
+            </p>
           </div>
 
           <form className="space-y-6" onSubmit={handleSubmit}>
             <div className="grid grid-cols-2 gap-4">
               <LabelInputContainer>
-                <Label htmlFor="firstname" className="text-gray-700 dark:text-gray-300">
+                <Label htmlFor="firstname" className="text-gray-700 font-medium text-sm">
                   First Name
                 </Label>
-                <Input
-                  id="firstname"
-                  placeholder="Enter first name"
-                  type="text"
-                  value={formData.firstName}
-                  onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                />
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input
+                    id="firstname"
+                    placeholder="Enter first name"
+                    type="text"
+                    value={formData.firstName}
+                    onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                    className="pl-10 focus:border-red-500 focus:ring-2 focus:ring-red-200"
+                    required
+                  />
+                </div>
               </LabelInputContainer>
               <LabelInputContainer>
-                <Label htmlFor="lastname" className="text-gray-700 dark:text-gray-300">
+                <Label htmlFor="lastname" className="text-gray-700 font-medium text-sm">
                   Last Name
                 </Label>
-                <Input
-                  id="lastname"
-                  placeholder="Enter last name"
-                  type="text"
-                  value={formData.lastName}
-                  onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                />
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input
+                    id="lastname"
+                    placeholder="Enter last name"
+                    type="text"
+                    value={formData.lastName}
+                    onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                    className="pl-10 focus:border-red-500 focus:ring-2 focus:ring-red-200"
+                    required
+                  />
+                </div>
               </LabelInputContainer>
             </div>
 
             <LabelInputContainer>
-              <Label htmlFor="email" className="text-gray-700 dark:text-gray-300">
-                Email
+              <Label htmlFor="email" className="text-gray-700 font-medium text-sm">
+                Email Address
               </Label>
-              <Input
-                id="email"
-                placeholder="Enter email"
-                type="email"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              />
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  id="email"
+                  placeholder="admin@company.com"
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  className="pl-10 focus:border-red-500 focus:ring-2 focus:ring-red-200"
+                  required
+                />
+              </div>
             </LabelInputContainer>
 
             <LabelInputContainer>
-              <Label htmlFor="password" className="text-gray-700 dark:text-gray-300">
+              <Label htmlFor="password" className="text-gray-700 font-medium text-sm">
                 Password
               </Label>
-              <Input
-                id="password"
-                placeholder="••••••••"
-                type="password"
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-              />
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  id="password"
+                  placeholder="••••••••"
+                  type="password"
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  className="pl-10 focus:border-red-500 focus:ring-2 focus:ring-red-200"
+                  required
+                  minLength={6}
+                />
+              </div>
             </LabelInputContainer>
 
             <LabelInputContainer>
-              <Label htmlFor="confirmPassword" className="text-gray-700 dark:text-gray-300">
+              <Label htmlFor="confirmPassword" className="text-gray-700 font-medium text-sm">
                 Confirm Password
               </Label>
-              <Input
-                id="confirmPassword"
-                placeholder="••••••••"
-                type="password"
-                value={formData.confirmPassword}
-                onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-              />
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  id="confirmPassword"
+                  placeholder="••••••••"
+                  type="password"
+                  value={formData.confirmPassword}
+                  onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                  className="pl-10 focus:border-red-500 focus:ring-2 focus:ring-red-200"
+                  required
+                  minLength={6}
+                />
+              </div>
             </LabelInputContainer>
 
             <button
               disabled={loading}
-              className={`group/btn relative block h-12 w-full rounded-xl bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 font-medium text-white shadow-lg transition-all duration-300 transform hover:scale-[1.02] ${
-                loading ? "opacity-70 cursor-not-allowed" : ""
-              }`}
+              className="group/btn relative block h-12 w-full rounded-xl bg-gradient-to-r from-red-600 to-pink-700 hover:from-red-700 hover:to-pink-800 font-semibold text-white shadow-lg transition-all duration-300 transform hover:scale-[1.02] disabled:opacity-70 disabled:cursor-not-allowed disabled:transform-none"
               type="submit"
             >
-              {loading ? "Creating Account..." : "Create Account"}
-              <BottomGradient />
+              <span className="flex items-center justify-center">
+                {loading ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                    Creating Account...
+                  </>
+                ) : (
+                  <>
+                    Create Admin Account
+                    <ArrowRight className="ml-2 h-4 w-4 group-hover/btn:translate-x-1 transition-transform duration-300" />
+                  </>
+                )}
+              </span>
             </button>
 
-            <p className="text-center text-xs text-gray-500 dark:text-gray-400 mt-6">
+            <p className="text-center text-sm text-gray-600 mt-6">
               Already have an account?{" "}
-              <a href="/adminlogin" className="text-blue-600 dark:text-blue-400 hover:underline">
-                Login
+              <a href="/adminlogin" className="text-red-600 font-semibold hover:text-red-700 hover:underline transition-colors duration-200">
+                Login here
               </a>
             </p>
           </form>
@@ -148,15 +192,8 @@ function RegisterPage() {
   );
 }
 
-const BottomGradient = () => (
-  <>
-    <span className="absolute inset-x-0 -bottom-0.5 block h-1.5 w-full bg-gradient-to-r from-transparent via-blue-400 to-transparent opacity-0 transition duration-500 group-hover/btn:opacity-100" />
-    <span className="absolute inset-x-10 -bottom-0.5 mx-auto block h-1 w-1/2 bg-gradient-to-r from-transparent via-blue-300 to-transparent opacity-0 blur-sm transition duration-500 group-hover/btn:opacity-100" />
-  </>
-);
-
 const LabelInputContainer = ({ children, className }) => (
-  <div className={cn("flex w-full flex-col space-y-3", className)}>{children}</div>
+  <div className={cn("flex w-full flex-col space-y-2", className)}>{children}</div>
 );
 
 export default RegisterPage;

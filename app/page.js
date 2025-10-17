@@ -7,65 +7,91 @@ import {
   Shield,
   Briefcase,
   Target,
-  Star
+  Star,
+  ArrowRight,
+  Building,
+  Workflow,
+  BarChart3
 } from "lucide-react";
 
 export default function Home() {
   const loginOptions = [
     {
       role: "Admin",
-      description: "System administrator with full access",
+      description: "System administrator with full access and control over all features",
       href: "/adminlogin",
       icon: UserCog,
-      color: "from-red-500 to-pink-600",
-      bgColor: "hover:bg-red-50 dark:hover:bg-red-950/20",
-      borderColor: "border-red-200 dark:border-red-800"
+      color: "from-red-500 to-rose-600",
+      bgColor: "hover:bg-red-50",
+      borderColor: "border-red-100",
+      buttonColor: "bg-gradient-to-r from-red-500 to-rose-600"
     },
     {
       role: "Manager", 
-      description: "Team and project management",
+      description: "Team management, project oversight, and performance tracking",
       href: "/managerlogin",
       icon: Users,
-      color: "from-blue-500 to-cyan-600",
-      bgColor: "hover:bg-blue-50 dark:hover:bg-blue-950/20",
-      borderColor: "border-blue-200 dark:border-blue-800"
+      color: "from-blue-500 to-blue-600",
+      bgColor: "hover:bg-blue-50",
+      borderColor: "border-blue-100",
+      buttonColor: "bg-gradient-to-r from-blue-500 to-blue-600"
     },
     {
       role: "Team Lead",
-      description: "Team leadership and task coordination",
+      description: "Team leadership, task coordination, and member management",
       href: "/teamleadlogin", 
       icon: UserCheck,
-      color: "from-green-500 to-emerald-600",
-      bgColor: "hover:bg-green-50 dark:hover:bg-green-950/20",
-      borderColor: "border-green-200 dark:border-green-800"
+      color: "from-green-500 to-green-600",
+      bgColor: "hover:bg-green-50",
+      borderColor: "border-green-100",
+      buttonColor: "bg-gradient-to-r from-green-500 to-green-600"
     },
     {
       role: "Employee",
-      description: "Team member and task execution",
+      description: "Task execution, attendance tracking, and personal dashboard",
       href: "/employeelogin",
       icon: User,
-      color: "from-purple-500 to-indigo-600",
-      bgColor: "hover:bg-purple-50 dark:hover:bg-purple-950/20",
-      borderColor: "border-purple-200 dark:border-purple-800"
+      color: "from-purple-500 to-purple-600",
+      bgColor: "hover:bg-purple-50",
+      borderColor: "border-purple-100",
+      buttonColor: "bg-gradient-to-r from-purple-500 to-purple-600"
+    }
+  ];
+
+  const features = [
+    {
+      icon: Workflow,
+      title: "Workflow Management",
+      description: "Streamlined processes and automated workflows for maximum efficiency"
+    },
+    {
+      icon: BarChart3,
+      title: "Analytics & Reports",
+      description: "Comprehensive analytics and real-time reporting for data-driven decisions"
+    },
+    {
+      icon: Building,
+      title: "Department Management",
+      description: "Organized department structure with clear hierarchy and responsibilities"
     }
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
       {/* Header */}
-      <header className="w-full bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
+      <header className="w-full bg-white shadow-sm border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <div className="flex items-center space-x-3">
-              <div className="p-2 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg">
-                <Shield className="h-6 w-6 text-white" />
+          <div className="flex justify-between items-center py-6">
+            <div className="flex items-center space-x-4">
+              <div className="p-3 bg-gradient-to-r from-blue-600 to-purple-700 rounded-xl shadow-lg">
+                <Shield className="h-7 w-7 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-                  CRM System
+                <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
+                  WorkFlow Pro
                 </h1>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                 MH Enterprise Management Solution
+                <p className="text-gray-600 text-sm font-medium">
+                  Enterprise Management Solution
                 </p>
               </div>
             </div>
@@ -74,117 +100,149 @@ export default function Home() {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         {/* Hero Section */}
-        <div className="text-center mb-16">
-          <h2 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-4">
-            Welcome to <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">CRM Dashboard</span>
-          </h2>
-          <p className="text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto">
-            Select your role to access the customized dashboard and management tools tailored for your position.
+        <div className="text-center mb-20">
+          <div className="inline-flex items-center px-4 py-2 rounded-full bg-blue-100 border border-blue-200 mb-6">
+            <span className="text-blue-700 text-sm font-semibold">Enterprise Ready CRM Platform</span>
+          </div>
+          <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6 leading-tight">
+            Welcome to{" "}
+            <span className="bg-gradient-to-r from-blue-600 to-purple-700 bg-clip-text text-transparent">
+              WorkFlow Pro
+            </span>
+          </h1>
+          <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
+            Streamline your business operations with our comprehensive CRM dashboard. 
+            Access role-specific tools and features designed to enhance productivity and collaboration.
           </p>
         </div>
 
         {/* Login Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-6xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-6xl mx-auto mb-20">
           {loginOptions.map((option) => {
             const IconComponent = option.icon;
             return (
               <Link
                 key={option.role}
                 href={option.href}
-                className={`group relative bg-white dark:bg-gray-800 rounded-2xl shadow-lg border ${option.borderColor} transition-all duration-300 hover:shadow-xl hover:scale-105 ${option.bgColor} overflow-hidden`}
+                className={`group relative bg-white rounded-2xl shadow-lg border-2 ${option.borderColor} transition-all duration-500 hover:shadow-2xl hover:scale-105 ${option.bgColor} overflow-hidden`}
               >
-                {/* Gradient Top Bar */}
-                <div className={`h-2 bg-gradient-to-r ${option.color}`}></div>
+                {/* Gradient Background Effect */}
+                <div className={`absolute inset-0 bg-gradient-to-br ${option.color} opacity-0 group-hover:opacity-5 transition-opacity duration-500`}></div>
                 
-                <div className="p-6">
-                  {/* Icon */}
-                  <div className="flex items-center justify-between mb-4">
-                    <div className={`p-3 rounded-xl bg-gradient-to-r ${option.color} shadow-lg`}>
-                      <IconComponent className="h-6 w-6 text-white" />
+                <div className="relative p-8">
+                  {/* Icon and Badge */}
+                  <div className="flex items-center justify-between mb-6">
+                    <div className={`p-4 rounded-2xl bg-gradient-to-r ${option.color} shadow-lg group-hover:scale-110 transition-transform duration-300`}>
+                      <IconComponent className="h-7 w-7 text-white" />
                     </div>
-                    <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                      <Star className="h-5 w-5 text-yellow-400" />
+                    <div className="opacity-0 group-hover:opacity-100 transform group-hover:translate-x-0 translate-x-4 transition-all duration-500">
+                      <Star className="h-5 w-5 text-yellow-400 fill-current" />
                     </div>
                   </div>
 
                   {/* Content */}
-                  <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+                  <h3 className="text-2xl font-bold text-gray-900 mb-3 group-hover:text-gray-800 transition-colors duration-300">
                     {option.role}
                   </h3>
-                  <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed mb-4">
+                  <p className="text-gray-600 text-base leading-relaxed mb-6">
                     {option.description}
                   </p>
 
                   {/* Action Button */}
                   <div className="flex items-center justify-between">
-                    <span className={`text-sm font-medium bg-gradient-to-r ${option.color} bg-clip-text text-transparent`}>
-                      Login Now
+                    <span className={`text-sm font-semibold bg-gradient-to-r ${option.color} bg-clip-text text-transparent group-hover:scale-105 transition-transform duration-300`}>
+                      Access Dashboard
                     </span>
-                    <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center group-hover:bg-gradient-to-r group-hover:from-blue-500 group-hover:to-purple-600 transition-all duration-300">
-                      <svg 
-                        className="w-4 h-4 text-gray-500 group-hover:text-white transition-colors duration-300" 
-                        fill="none" 
-                        stroke="currentColor" 
-                        viewBox="0 0 24 24"
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
+                    <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center group-hover:bg-gradient-to-r group-hover:from-blue-500 group-hover:to-purple-600 transition-all duration-500 group-hover:scale-110 shadow-sm">
+                      <ArrowRight className="w-5 h-5 text-gray-500 group-hover:text-white transition-colors duration-300" />
                     </div>
                   </div>
                 </div>
 
-                {/* Hover Effect */}
-                <div className="absolute inset-0 border-2 border-transparent group-hover:border-gray-300 dark:group-hover:border-gray-600 rounded-2xl transition-all duration-300 pointer-events-none"></div>
+                {/* Hover Border Effect */}
+                <div className="absolute inset-0 border-2 border-transparent group-hover:border-gray-200 rounded-2xl transition-all duration-500 pointer-events-none"></div>
               </Link>
             );
           })}
         </div>
 
         {/* Features Section */}
-        <div className="mt-20 text-center">
-          <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-8">
-            Powerful Features for Every Role
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
-            <div className="text-center p-6">
-              <Briefcase className="h-12 w-12 text-blue-500 mx-auto mb-4" />
-              <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                Project Management
-              </h4>
-              <p className="text-gray-600 dark:text-gray-300">
-                Manage projects, tasks, and team collaboration efficiently
-              </p>
-            </div>
-            <div className="text-center p-6">
-              <Target className="h-12 w-12 text-green-500 mx-auto mb-4" />
-              <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                Task Tracking
-              </h4>
-              <p className="text-gray-600 dark:text-gray-300">
-                Real-time task progress and performance monitoring
-              </p>
-            </div>
-            <div className="text-center p-6">
-              <Users className="h-12 w-12 text-purple-500 mx-auto mb-4" />
-              <h4 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                Team Collaboration
-              </h4>
-              <p className="text-gray-600 dark:text-gray-300">
-                Seamless communication and team coordination
-              </p>
+        <div className="bg-white rounded-3xl shadow-xl border border-gray-100 p-12">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl font-bold text-gray-900 mb-4">
+              Powerful Features for{" "}
+              <span className="bg-gradient-to-r from-blue-600 to-purple-700 bg-clip-text text-transparent">
+                Every Role
+              </span>
+            </h2>
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+              Comprehensive tools and features designed to empower every team member 
+              and streamline your business operations.
+            </p>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+            {features.map((feature, index) => {
+              const IconComponent = feature.icon;
+              return (
+                <div 
+                  key={feature.title}
+                  className="text-center p-8 rounded-2xl bg-gradient-to-br from-gray-50 to-white border border-gray-100 hover:shadow-lg transition-all duration-500 hover:scale-105 group"
+                >
+                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-r from-blue-500 to-purple-600 shadow-lg mb-6 group-hover:scale-110 transition-transform duration-300">
+                    <IconComponent className="h-8 w-8 text-white" />
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-900 mb-3">
+                    {feature.title}
+                  </h3>
+                  <p className="text-gray-600 leading-relaxed">
+                    {feature.description}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Stats Section */}
+          <div className="mt-16 pt-12 border-t border-gray-100">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
+              <div>
+                <div className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-700 bg-clip-text text-transparent mb-2">
+                  500+
+                </div>
+                <div className="text-gray-600 font-medium">Active Companies</div>
+              </div>
+              <div>
+                <div className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-700 bg-clip-text text-transparent mb-2">
+                  10K+
+                </div>
+                <div className="text-gray-600 font-medium">Daily Users</div>
+              </div>
+              <div>
+                <div className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-700 bg-clip-text text-transparent mb-2">
+                  99.9%
+                </div>
+                <div className="text-gray-600 font-medium">Uptime</div>
+              </div>
             </div>
           </div>
         </div>
       </main>
 
       {/* Footer */}
-      <footer className="mt-20 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="text-center text-gray-500 dark:text-gray-400">
-            <p>© 2024 CRM System. All rights reserved.</p>
-            <p className="text-sm mt-2">Secure enterprise management platform</p>
+      <footer className="border-t border-gray-200 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <div className="text-center">
+            <div className="flex items-center justify-center space-x-3 mb-4">
+              <div className="p-2 bg-gradient-to-r from-blue-600 to-purple-700 rounded-lg">
+                <Shield className="h-5 w-5 text-white" />
+              </div>
+              <span className="text-lg font-semibold text-gray-900">WorkFlow Pro</span>
+            </div>
+            <p className="text-gray-600 mb-2">© 2024 WorkFlow Pro. All rights reserved.</p>
+            <p className="text-gray-500 text-sm">Secure enterprise management platform</p>
           </div>
         </div>
       </footer>

@@ -2,18 +2,29 @@ import bcrypt from "bcrypt";
 import { NextResponse } from "next/server";
 import Employee from "@/models/Employee";
 import Department from "@/models/Department";
-import { dbConnect } from "@/lib/db";
+import  dbConnect  from "@/lib/db";
 import { sendEmployeeWelcomeEmail } from "@/helper/emails/manager/create-employee";
+import { authOptions } from "@/lib/auth";
+import { getServerSession } from "next-auth";
 
 export async function POST(req) {
   try {
     await dbConnect();
-    const { firstName, lastName, email, password, depId, managerId } = await req.json();
 
-    if (!firstName || !lastName || !email || !password || !depId || !managerId) {
+    // ✅ Session se managerId get karen
+    const session = await getServerSession(authOptions);
+    if (!session || session.user.role !== "Manager") {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    }
+
+    const managerId = session.user.userId || session.user.id;
+
+    const { firstName, lastName, email, password, depId } = await req.json();
+
+    if (!firstName || !lastName || !email || !password || !depId) {
       return NextResponse.json(
         { message: "All fields are required" },
-        { status: 409 }
+        { status: 400 }
       );
     }
 
@@ -48,7 +59,7 @@ export async function POST(req) {
       password: hashPassword,
       profilePic: avatarUrl,
       depId,
-      managerId,
+      managerId, // ✅ Backend se managerId use karen
     });
 
     await newEmployee.save();
@@ -74,28 +85,19 @@ export async function POST(req) {
 
 export async function GET(req) {
   try {
-    const { searchParams } = new URL(req.url);
-    const managerId = searchParams.get("managerId");
+    await dbConnect();
 
-    if (!managerId) {
-      return NextResponse.json(
-        { message: "Manager ID is required" },
-        { status: 400 }
-      );
+    // ✅ Session se managerId get karen
+    const session = await getServerSession(authOptions);
+    if (!session || session.user.role !== "Manager") {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    await dbConnect();
+    const managerId = session.user.userId || session.user.id;
 
     const employees = await Employee.find({ managerId }).select(
       "userId firstName lastName email profilePic createdAt"
     );
-
-    if (employees.length === 0) {
-      return NextResponse.json(
-        { message: "No Employees found for this manager" },
-        { status: 404 }
-      );
-    }
 
     return NextResponse.json(
       { message: "Employees fetched successfully", employees },
@@ -104,7 +106,7 @@ export async function GET(req) {
   } catch (error) {
     console.error("Error fetching Employees:", error);
     return NextResponse.json(
-      { message: "Error fetching Employees", error },
+      { message: "Error fetching Employees", error: error.message },
       { status: 500 }
     );
   }

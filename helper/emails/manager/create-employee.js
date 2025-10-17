@@ -1,6 +1,6 @@
 import { sendMail } from "@/lib/mail";
 
-export const sendTeamLeadWelcomeEmail = async (email, firstName, userId, password, departmentName) => {
+export const sendEmployeeWelcomeEmail = async (email, firstName, userId, password, departmentName) => {
   const subject = "🎉 Welcome to MH Circle Solutions - Your Team Lead Account";
 
   const html = `
@@ -8,7 +8,7 @@ export const sendTeamLeadWelcomeEmail = async (email, firstName, userId, passwor
     <div style="max-width: 600px; margin: auto; background: #ffffff; border-radius: 10px; padding: 25px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
       <h2 style="color: #d63384; text-align:center;">Welcome Aboard, ${firstName}! 💼</h2>
       <p style="font-size: 16px; color: #333;">
-        Congratulations! You’ve been successfully added as a <strong>Team Lead</strong> at <strong>MH Circle Solutions</strong>.
+        Congratulations! You’ve been successfully added as a <strong>Employee</strong> at <strong>MH Circle Solutions</strong>.
       </p>
 
       <p style="font-size: 16px; color: #333;">

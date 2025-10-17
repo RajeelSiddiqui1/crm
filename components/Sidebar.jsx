@@ -22,8 +22,7 @@ import {
   Shield,
   Wallet,
   Clock,
-  Award,
-  Bell
+  Award
 } from "lucide-react";
 
 export default function Sidebar() {
@@ -57,7 +56,7 @@ export default function Sidebar() {
   const links = {
     admin: [
       { href: "/adminhome", label: "Dashboard", icon: "Dashboard" },
-      { href: "/manage-users", label: "User Management", icon: "User Management" },
+      { href: "/users", label: "User Management", icon: "User Management" },
       { href: "/departments", label: "Departments", icon: "Departments" },
       { href: "/analytics", label: "Analytics", icon: "Analytics" },
       { href: "/reports", label: "Reports", icon: "Reports" },
@@ -94,38 +93,38 @@ export default function Sidebar() {
   return (
     <aside
       className={cn(
-        "bg-gradient-to-b from-gray-900 to-gray-800 text-white shadow-xl transition-all duration-300 flex flex-col border-r border-gray-700",
+        "bg-black text-white shadow-xl transition-all duration-300 flex flex-col border-r border-black",
         isCollapsed ? "w-20" : "w-80"
       )}
     >
       {/* Header */}
-      <div className="p-6 border-b border-gray-700 flex items-center justify-between bg-gray-900/50">
+      <div className="p-6 border-b border-black flex items-center justify-between bg-black">
         {!isCollapsed && (
           <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-              <Shield className="w-5 h-5 text-white" />
+            <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center">
+              <Shield className="w-5 h-5 text-black" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-white">WorkFlow Pro</h2>
+              <h2 className="text-lg font-bold text-white">MH Enterprises</h2>
               <p className="text-xs text-gray-400 capitalize">{role} Panel</p>
             </div>
           </div>
         )}
         {isCollapsed && (
-          <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center mx-auto">
-            <Shield className="w-5 h-5 text-white" />
+          <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center mx-auto">
+            <Shield className="w-5 h-5 text-black" />
           </div>
         )}
         <button
           onClick={() => setIsCollapsed(!isCollapsed)}
-          className="p-2 rounded-lg bg-gray-800 hover:bg-gray-700 transition-all duration-200 border border-gray-600 hover:border-gray-500"
+          className="p-2 rounded-lg bg-black hover:bg-black border border-gray-800 text-white"
         >
           {isCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
         </button>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 p-4 space-y-1">
+      <nav className="flex-1 p-4 space-y-2">
         {roleLinks.map((link) => {
           const IconComponent = iconMap[link.icon];
           const isActive = pathname === link.href;
@@ -135,11 +134,11 @@ export default function Sidebar() {
               key={link.href}
               href={link.href}
               className={cn(
-                "flex items-center rounded-xl transition-all duration-200 group relative overflow-hidden",
+                "flex items-center rounded-lg transition-all duration-200 group",
                 isActive 
-                  ? "bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg shadow-blue-500/25" 
-                  : "text-gray-300 hover:bg-gray-800/50 hover:text-white",
-                isCollapsed ? "p-3 justify-center" : "p-4"
+                  ? "bg-black text-white border border-gray-800" 
+                  : "text-gray-400 hover:bg-black hover:text-white border border-transparent",
+                isCollapsed ? "p-3 justify-center" : "p-3"
               )}
               title={isCollapsed ? link.label : undefined}
             >
@@ -162,12 +161,6 @@ export default function Sidebar() {
               {!isCollapsed && (
                 <span className="font-medium text-sm">{link.label}</span>
               )}
-
-              {/* Hover effect */}
-              <div className={cn(
-                "absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10 opacity-0 transition-opacity duration-200",
-                !isActive && "group-hover:opacity-100"
-              )}></div>
             </Link>
           );
         })}
@@ -175,9 +168,9 @@ export default function Sidebar() {
 
       {/* User Info (when expanded) */}
       {!isCollapsed && session?.user && (
-        <div className="p-4 border-t border-gray-700 bg-gray-900/30">
-          <div className="flex items-center space-x-3 p-3 rounded-lg bg-gray-800/50 border border-gray-700">
-            <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center text-white font-bold text-sm">
+        <div className="p-4 border-t border-black bg-black">
+          <div className="flex items-center space-x-3 p-3 rounded-lg bg-black border border-gray-800">
+            <div className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center text-white font-bold text-sm border border-gray-700">
               {session.user.name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'U'}
             </div>
             <div className="flex-1 min-w-0">
@@ -186,6 +179,9 @@ export default function Sidebar() {
               </p>
               <p className="text-xs text-gray-400 truncate">
                 {session.user.email || session.user.userId}
+              </p>
+              <p className="text-xs text-gray-300 font-medium capitalize">
+                {role}
               </p>
             </div>
           </div>
