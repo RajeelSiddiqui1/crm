@@ -40,6 +40,25 @@ export default function LoginPage() {
     }
   };
 
+  // Function to determine if register link should be shown
+  const shouldShowRegisterLink = () => {
+    return role === "Admin" || role === "Manager";
+  };
+
+  // Function to get register link based on role
+  const getRegisterLink = () => {
+    if (role === "Admin") return "/adminregister";
+    if (role === "Manager") return "/managerregister";
+    return "#";
+  };
+
+  // Function to get register text based on role
+  const getRegisterText = () => {
+    if (role === "Admin") return "Admin Register";
+    if (role === "Manager") return "Manager Register";
+    return "Register";
+  };
+
   return (
     <>
       <Toaster position="top-right" />
@@ -68,7 +87,7 @@ export default function LoginPage() {
                   id="role"
                   value={role}
                   onChange={(e) => setRole(e.target.value)}
-                  className="pl-10 w-full rounded-md border border-gray-300 bg-white py-2 px-3 text-gray-700 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none"
+                  className="pl-10 w-full rounded-md border border-gray-300 bg-white py-2 px-3 text-gray-700 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-colors duration-200"
                 >
                   <option value="Admin">Admin</option>
                   <option value="Manager">Manager</option>
@@ -99,7 +118,7 @@ export default function LoginPage() {
                   }
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
-                  className="pl-10 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                  className="pl-10 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors duration-200"
                 />
               </div>
             </LabelInputContainer>
@@ -117,7 +136,7 @@ export default function LoginPage() {
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="pl-10 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                  className="pl-10 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-colors duration-200"
                 />
               </div>
             </LabelInputContainer>
@@ -143,17 +162,20 @@ export default function LoginPage() {
               </span>
             </button>
 
-            {/* Register Link */}
-            <p className="text-center text-sm text-gray-600 mt-6">
-              Don't have an account?{" "}
-              <a
-                href={`/${role.toLowerCase()}register`}
-                className="text-blue-600 font-semibold hover:text-blue-700 hover:underline transition-colors duration-200"
-              >
-                Register here
-              </a>
-            </p>
-            {/* Forgot Password Link - Login page me add karo */}
+            {/* Conditional Register Link - Only show for Admin and Manager */}
+            {shouldShowRegisterLink() && (
+              <p className="text-center text-sm text-gray-600 mt-6">
+                Don't have an account?{" "}
+                <a
+                  href={getRegisterLink()}
+                  className="text-blue-600 font-semibold hover:text-blue-700 hover:underline transition-colors duration-200"
+                >
+                  {getRegisterText()} here
+                </a>
+              </p>
+            )}
+
+            {/* Forgot Password Link */}
             <p className="text-center text-sm text-gray-600 mt-4">
               Forgot your password?{" "}
               <a
@@ -163,6 +185,16 @@ export default function LoginPage() {
                 Reset here
               </a>
             </p>
+
+            {/* Information message for TeamLead and Employee */}
+            {!shouldShowRegisterLink() && (
+              <div className="mt-6 p-3 bg-blue-50 rounded-lg border border-blue-100">
+                <p className="text-xs text-blue-700 text-center">
+                  <span className="font-semibold">Note:</span> {role} accounts can only be created by Administrators.
+                  Please contact your system administrator for account access.
+                </p>
+              </div>
+            )}
           </form>
         </div>
       </div>
