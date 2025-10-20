@@ -25,6 +25,8 @@ const managerSchema = mongoose.Schema({
         type: String,
         required: false
     },
+    phone: { type: String, default: "" },
+    address: { type: String, default: "" },
     departments: [
         { type: mongoose.Schema.Types.ObjectId, ref: "Department" }
     ],

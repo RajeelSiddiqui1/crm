@@ -124,7 +124,7 @@ export default function Header() {
                                     <DropdownMenuSeparator className="bg-gray-800" />
                                     <DropdownMenuItem className="cursor-pointer bg-black text-gray-100 hover:bg-gray-900 focus:bg-gray-900">
                                         <User className="mr-2 h-4 w-4" />
-                                        <span>Profile</span>
+                                       <a href="/profile"><span>Profile</span></a> 
                                     </DropdownMenuItem>
                                     <DropdownMenuItem className="cursor-pointer bg-black text-gray-100 hover:bg-gray-900 focus:bg-gray-900">
                                         <Settings className="mr-2 h-4 w-4" />

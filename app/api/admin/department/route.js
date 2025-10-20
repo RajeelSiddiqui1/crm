@@ -1,68 +1,64 @@
 import { NextResponse } from "next/server";
-import Department from "@/models/Department";
+import Form from "@/models/Form";
 import dbConnect from "@/lib/db";
-import cloudinary from "@/lib/cloudinary";
 
 export async function POST(req) {
   try {
     await dbConnect();
 
-    const { name, description, logoBase64 } = await req.json();
+    const { title, description, fields } = await req.json();
 
     // ✅ Validation
-    if (!name || name.trim() === "") {
+    if (!title || title.trim() === "") {
       return NextResponse.json(
-        { message: "Department name is required" },
+        { message: "Form title is required" },
         { status: 400 }
       );
     }
 
-    if (description && description.length < 10) {
+    if (!fields || !Array.isArray(fields) || fields.length === 0) {
       return NextResponse.json(
-        { message: "Description must be at least 10 characters long" },
+        { message: "Form must have at least one field" },
         { status: 400 }
       );
     }
 
-    // ✅ Check duplicate department
-    const existing = await Department.findOne({ name });
-    if (existing) {
-      return NextResponse.json(
-        { message: "Department already exists" },
-        { status: 409 }
-      );
-    }
-
-    // ✅ Upload image (without folder)
-    let logoUrl = null;
-    if (logoBase64) {
-      try {
-        const upload = await cloudinary.uploader.upload(logoBase64, {
-          transformation: [{ width: 500, height: 500, crop: "limit" }],
-        });
-        logoUrl = upload.secure_url;
-      } catch (err) {
-        console.error("Cloudinary upload error:", err);
+    // ✅ Validate each field
+    for (const field of fields) {
+      if (!field.type || !field.label || !field.name) {
         return NextResponse.json(
-          { message: "Image upload failed", error: err.message },
-          { status: 500 }
+          { message: "Each field must have type, label, and name" },
+          { status: 400 }
         );
       }
     }
 
-    // ✅ Save department
-    const newDept = await Department.create({
-      name,
+    // ✅ Check duplicate form title (optional)
+    const existingForm = await Form.findOne({ title });
+    if (existingForm) {
+      return NextResponse.json(
+        { message: "Form with this title already exists" },
+        { status: 409 }
+      );
+    }
+
+    // ✅ Create form
+    const newForm = await Form.create({
+      title,
       description: description || "",
-      logoUrl,
+      fields,
+      createdBy: '65d1a1b2c3d4e5f6a7b8c9d0' // Replace with actual user ID from auth
     });
 
     return NextResponse.json(
-      { message: "Department created successfully", data: newDept },
+      { 
+        message: "Form created successfully", 
+        data: newForm 
+      },
       { status: 201 }
     );
   } catch (error) {
-    console.error("❌ Error creating department:", error);
+    console.error("❌ Error creating form:", error);
     return NextResponse.json(
       { message: "Server error", error: error.message },
       { status: 500 }
@@ -73,13 +69,16 @@ export async function POST(req) {
 export async function GET() {
   try {
     await dbConnect();
-    const departments = await Department.find().sort({ createdAt: -1 });
-    return NextResponse.json({ departments }, { status: 200 });
+    const forms = await Form.find({})
+      .populate('createdBy', 'name email')
+      .sort({ createdAt: -1 });
+    
+    return NextResponse.json({ forms }, { status: 200 });
   } catch (error) {
+    console.error("❌ Error fetching forms:", error);
     return NextResponse.json(
-      { message: "Error fetching departments", error: error.message },
+      { message: "Error fetching forms", error: error.message },
       { status: 500 }
     );
   }
 }
-

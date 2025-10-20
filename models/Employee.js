@@ -28,6 +28,8 @@ const employeeSchema = mongoose.Schema({
         type: String,
         required: false
     },
+    phone: { type: String, default: "" },
+    address: { type: String, default: "" },
     managerId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Manager"

@@ -24,6 +24,8 @@ const adminSchema = mongoose.Schema({
         type: String,
         required: false
     },
+    phone: { type: String, default: "" },
+    address: { type: String, default: "" },
     otp: {
         type: String,
         default: null,
