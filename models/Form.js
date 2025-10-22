@@ -1,51 +1,33 @@
-import mongoose from 'mongoose';
+import mongoose from "mongoose";
 
 const formFieldSchema = new mongoose.Schema({
-  type: {
-    type: String,
-    enum: ['text', 'email', 'number', 'date', 'select', 'textarea'],
-    required: true
-  },
-  label: {
-    type: String,
-    required: true
-  },
-  name: {
-    type: String,
-    required: true
-  },
-  required: {
-    type: Boolean,
-    default: false
-  },
-  options: [String],
-  foreignKey: {
-    type: Boolean,
-    default: false
-  },
-  depId: {
-    type: String
-  }
+  type: { type: String, required: true }, // 👈 No enum, fully flexible
+  label: { type: String, required: true },
+  name: { type: String, required: true },
+  required: { type: Boolean, default: false },
+  options: [String], // for select, radio, checkbox
+  placeholder: { type: String, default: "" },
+  defaultValue: { type: String, default: "" },
+  min: { type: Number },
+  max: { type: Number },
+  pattern: { type: String },
 });
 
-const formSchema = new mongoose.Schema({
-  title: {
-    type: String,
-    required: true
+const formSchema = new mongoose.Schema(
+  {
+    title: { type: String, required: true, trim: true },
+    description: { type: String, trim: true, default: "" },
+    depId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Department",
+      required: true,
+    },
+    fields: [formFieldSchema],
+    createdBy: { type: String, default: "System" },
   },
-  description: String,
-  fields: [formFieldSchema],
+  { timestamps: true }
+);
 
-  // 👇 ye optional field hai, error nahi ayega agar empty ho
-  createdBy: {
-    type: String,
-    default: "System" // ya null bhi rakh sakte ho
-  },
+formSchema.index({ title: 1, depId: 1 }, { unique: true });
 
-  createdAt: {
-    type: Date,
-    default: Date.now
-  }
-});
-
-export default mongoose.models.Form || mongoose.model('Form', formSchema);
+export default mongoose.models.Form || mongoose.model("Form", formSchema);

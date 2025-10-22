@@ -2,7 +2,8 @@ import mongoose from "mongoose";
 import bcrypt from "bcrypt";
 import { NextResponse } from "next/server";
 import Teamlead from "@/models/TeamLead";
-import dbConnect  from "@/lib/db";
+import Department from "@/models/Department"; // ✅ ADD THIS LINE
+import dbConnect from "@/lib/db";
 import { sendTeamLeadWelcomeEmail } from "@/helper/emails/manager/create-teamlead";
 import { authOptions } from "@/lib/auth";
 import { getServerSession } from "next-auth";
@@ -17,7 +18,6 @@ export async function POST(req) {
     }
 
     const managerId = session.user.userId || session.user.id;
-
     const { firstName, lastName, email, password, depId } = await req.json();
 
     if (!firstName || !lastName || !email || !password || !depId) {
@@ -31,7 +31,6 @@ export async function POST(req) {
 
     let userId;
     let isUnique = false;
-
     while (!isUnique) {
       const randomId = Math.floor(100000 + Math.random() * 900000);
       userId = `TL${randomId}`;
@@ -49,7 +48,7 @@ export async function POST(req) {
       email,
       password: hashPassword,
       profilePic: randomAvatar,
-      managerId: managerId,
+      managerId,
       depId,
     });
 
@@ -68,7 +67,7 @@ export async function POST(req) {
 export async function GET(req) {
   try {
     await dbConnect();
-    
+
     const session = await getServerSession(authOptions);
     if (!session || session.user.role !== "Manager") {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
@@ -77,11 +76,11 @@ export async function GET(req) {
     const managerId = session.user.userId || session.user.id;
 
     const teamLeads = await Teamlead.find({ managerId })
-      .populate("depId", "name");
+      .populate("depId", "name"); 
 
     return NextResponse.json({ teamLeads }, { status: 200 });
   } catch (error) {
     console.error("Fetch error:", error);
-    return NextResponse.json({ message: "Error fetching TeamLeads" }, { status: 500 });
+    return NextResponse.json({ message: "Error fetching TeamLeads", error: error.message }, { status: 500 });
   }
 }
