@@ -74,7 +74,7 @@ export default function Sidebar() {
     teamlead: [
       { href: "/teamleadhome", label: "Dashboard", icon: "Dashboard" },
       { href: "/team-members", label: "Team Members", icon: "Team Members" },
-      { href: "/tasks", label: "Tasks", icon: "Tasks" },
+      { href: "/teamlead/tasks", label: "Tasks", icon: "Tasks" },
       { href: "/performance", label: "Performance", icon: "Performance" },
       { href: "/messages", label: "Messages", icon: "Messages" },
     ],

@@ -1,3 +1,4 @@
+// models/FormSubmission.js
 import mongoose from "mongoose";
 
 const formSubmissionSchema = new mongoose.Schema(
@@ -10,12 +11,34 @@ const formSubmissionSchema = new mongoose.Schema(
         submittedBy: {
             type: String,
             required: true
-        }, // Manager ka name/ID
+        },
         assignedTo: {
             type: String,
             required: true
-        }, // TeamLead ka ID (jo aapke existing API se aata hai)
-
+        },
+        assignedEmployees: [{
+            employeeId: {
+                type: mongoose.Schema.Types.ObjectId,
+                ref: "Employee",
+                required: true
+            },
+            email: {
+                type: String,
+                required: true
+            },
+            status: {
+                type: String,
+                enum: ["pending", "in_progress", "completed", "rejected"],
+                default: "pending"
+            },
+            assignedAt: {
+                type: Date,
+                default: Date.now
+            },
+            completedAt: {
+                type: Date
+            }
+        }],
         formData: {
             type: Map,
             of: mongoose.Schema.Types.Mixed
@@ -25,7 +48,16 @@ const formSubmissionSchema = new mongoose.Schema(
             enum: ["pending", "in_progress", "completed", "approved", "rejected"],
             default: "pending"
         },
+        status2: {
+            type: String,
+            enum: ["pending", "in_progress", "completed", "approved", "rejected"],
+            default: "pending"
+        },
         teamLeadFeedback: {
+            type: String,
+            default: ""
+        },
+        managerComments: {
             type: String,
             default: ""
         },

@@ -94,30 +94,20 @@ export default function ManagerSubmissionsPage() {
         }
     };
 
-    const handleStatusUpdate = async (e) => {
-        e.preventDefault();
+    const handleStatusUpdate = async (submissionId, newStatus, comments = "") => {
         setLoading(true);
-
-        if (!statusUpdate.status) {
-            toast.error("Please select a status");
-            setLoading(false);
-            return;
-        }
 
         try {
             const updateData = {
-                submissionId: selectedSubmission._id,
-                status: statusUpdate.status,
-                managerComments: statusUpdate.managerComments
+                submissionId: submissionId,
+                status: newStatus,
+                managerComments: comments
             };
 
             const response = await axios.put("/api/manager/submissions", updateData);
 
             if (response.status === 200) {
                 toast.success("Status updated successfully!");
-                setStatusUpdate({ status: "", managerComments: "" });
-                setShowDetails(false);
-                setSelectedSubmission(null);
                 fetchSubmissions();
             }
         } catch (error) {
@@ -125,6 +115,10 @@ export default function ManagerSubmissionsPage() {
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleQuickStatusUpdate = async (submissionId, newStatus) => {
+        await handleStatusUpdate(submissionId, newStatus, "Status updated via quick action");
     };
 
     const handleEditSubmission = async (e) => {
@@ -637,9 +631,10 @@ export default function ManagerSubmissionsPage() {
                                     <TableHeader className="bg-gradient-to-r from-gray-50 to-blue-50/50">
                                         <TableRow className="hover:bg-transparent">
                                             <TableHead className="font-bold text-gray-900 text-sm uppercase tracking-wide py-4">Form Details</TableHead>
-                                            <TableHead className="font-bold text-gray-900 text-sm uppercase tracking-wide py-4">Assigned To</TableHead>
+                                        
                                             <TableHead className="font-bold text-gray-900 text-sm uppercase tracking-wide py-4">Status</TableHead>
-                                            <TableHead className="font-bold text-gray-900 text-sm uppercase tracking-wide py-4">Submitted</TableHead>
+                                            <TableHead className="font-bold text-gray-900 text-sm uppercase tracking-wide py-4">Quick Actions</TableHead>
+                                            
                                             <TableHead className="font-bold text-gray-900 text-sm uppercase tracking-wide py-4">Actions</TableHead>
                                         </TableRow>
                                     </TableHeader>
@@ -666,12 +661,7 @@ export default function ManagerSubmissionsPage() {
                                                         </div>
                                                     </div>
                                                 </TableCell>
-                                                <TableCell className="py-4">
-                                                    <div className="flex items-center gap-3 text-gray-800 group-hover:text-gray-900 transition-colors duration-200">
-                                                        <User className="w-5 h-5 text-green-500" />
-                                                        <span className="text-base font-medium">{submission.assignedTo}</span>
-                                                    </div>
-                                                </TableCell>
+                                              
                                                 <TableCell className="py-4">
                                                     <Badge className={`${getStatusVariant(submission.status)} border flex items-center gap-1 px-3 py-1.5 font-medium`}>
                                                         {getStatusIcon(submission.status)}
@@ -679,11 +669,40 @@ export default function ManagerSubmissionsPage() {
                                                     </Badge>
                                                 </TableCell>
                                                 <TableCell className="py-4">
-                                                    <div className="flex items-center gap-3 text-gray-700 group-hover:text-gray-900 transition-colors duration-200">
-                                                        <Calendar className="w-5 h-5 text-blue-500" />
-                                                        <span className="text-base font-medium">{formatDate(submission.createdAt)}</span>
+                                                    <div className="flex flex-wrap gap-2">
+                                                        <Button
+                                                            onClick={() => handleQuickStatusUpdate(submission._id, "approved")}
+                                                            size="sm"
+                                                            variant="outline"
+                                                            className="h-8 px-3 text-xs border-green-200 text-green-700 hover:bg-green-50 hover:border-green-300"
+                                                            disabled={loading}
+                                                        >
+                                                            <CheckCircle className="w-3 h-3 mr-1" />
+                                                            Approve
+                                                        </Button>
+                                                        <Button
+                                                            onClick={() => handleQuickStatusUpdate(submission._id, "rejected")}
+                                                            size="sm"
+                                                            variant="outline"
+                                                            className="h-8 px-3 text-xs border-red-200 text-red-700 hover:bg-red-50 hover:border-red-300"
+                                                            disabled={loading}
+                                                        >
+                                                            <XCircle className="w-3 h-3 mr-1" />
+                                                            Reject
+                                                        </Button>
+                                                        <Button
+                                                            onClick={() => handleQuickStatusUpdate(submission._id, "in_progress")}
+                                                            size="sm"
+                                                            variant="outline"
+                                                            className="h-8 px-3 text-xs border-blue-200 text-blue-700 hover:bg-blue-50 hover:border-blue-300"
+                                                            disabled={loading}
+                                                        >
+                                                            <Clock className="w-3 h-3 mr-1" />
+                                                            In Progress
+                                                        </Button>
                                                     </div>
                                                 </TableCell>
+                                               
                                                 <TableCell className="py-4">
                                                     <div className="flex gap-2">
                                                         <Button
@@ -829,7 +848,10 @@ export default function ManagerSubmissionsPage() {
                                 {/* Status Update Form */}
                                 <div className="mt-8 pt-6 border-t border-gray-200">
                                     <h3 className="text-lg font-semibold text-gray-900 mb-4">Update Status</h3>
-                                    <form onSubmit={handleStatusUpdate} className="space-y-4">
+                                    <form onSubmit={(e) => {
+                                        e.preventDefault();
+                                        handleStatusUpdate(selectedSubmission._id, statusUpdate.status, statusUpdate.managerComments);
+                                    }} className="space-y-4">
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                             <div className="space-y-3">
                                                 <Label htmlFor="status" className="text-gray-800 font-semibold">
