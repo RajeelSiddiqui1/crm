@@ -31,6 +31,7 @@ import {
     Trash2
 } from "lucide-react";
 import axios from "axios";
+import Link from "next/link"; // Add this import
 
 export default function TeamLeadSubmissionsPage() {
     const { data: session, status } = useSession();
@@ -353,6 +354,17 @@ export default function TeamLeadSubmissionsPage() {
                     </div>
 
                     <div className="flex gap-3">
+                        {/* View All Subtasks Button */}
+                        <Link href="/teamlead/subtasks">
+                            <Button
+                                variant="outline"
+                                className="border-purple-200 text-purple-700 hover:bg-purple-50"
+                            >
+                                <FileText className="w-4 h-4 mr-2" />
+                                View All Subtasks
+                            </Button>
+                        </Link>
+                        
                         <Button
                             onClick={fetchSubmissions}
                             variant="outline"
@@ -583,6 +595,18 @@ export default function TeamLeadSubmissionsPage() {
                                                     </TableCell>
                                                     <TableCell className="py-4">
                                                         <div className="flex gap-2">
+                                                            {/* Create Subtask Button */}
+                                                            <Link href={`/teamlead/subtasks/create?submissionId=${submission._id}`}>
+                                                                <Button
+                                                                    variant="outline"
+                                                                    size="sm"
+                                                                    className="border-green-200 text-green-700 hover:bg-green-50 hover:border-green-300 transition-all duration-200"
+                                                                >
+                                                                    <Plus className="w-4 h-4 mr-2" />
+                                                                    Create Subtask
+                                                                </Button>
+                                                            </Link>
+                                                            
                                                             <Button
                                                                 onClick={() => {
                                                                     setSelectedSubmission(submission);

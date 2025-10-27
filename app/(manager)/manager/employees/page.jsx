@@ -7,11 +7,14 @@ import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Plus, Search, Mail, Calendar, User, X, Loader2, Building } from "lucide-react";
+import { Plus, Search, Mail, Calendar, User, X, Loader2, Users, Building, MapPin, Phone, Clock, IdCard, Pencil, Eye, MoreVertical } from "lucide-react";
 import axios from "axios";
 
 export default function EmployeePage() {
@@ -22,6 +25,9 @@ export default function EmployeePage() {
   const [fetching, setFetching] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedEmployee, setSelectedEmployee] = useState(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [departments, setDepartments] = useState([]);
   const [formData, setFormData] = useState({
     firstName: "",
@@ -30,6 +36,16 @@ export default function EmployeePage() {
     password: "",
     confirmPassword: "",
     depId: "",
+  });
+
+  const [editFormData, setEditFormData] = useState({
+    firstName: "",
+    lastName: "",
+    phone: "",
+    address: "",
+    depId: "",
+    startTime: "09:00 AM",
+    endTime: "05:00 PM"
   });
 
   useEffect(() => {
@@ -130,11 +146,63 @@ export default function EmployeePage() {
     setShowForm(false);
   };
 
+  const handleEdit = (emp) => {
+    setSelectedEmployee(emp);
+    setEditFormData({
+      firstName: emp.firstName || "",
+      lastName: emp.lastName || "",
+      phone: emp.phone || "",
+      address: emp.address || "",
+      depId: emp.depId?._id || emp.depId || "",
+      startTime: emp.startTime || "09:00 AM",
+      endTime: emp.endTime || "05:00 PM"
+    });
+    setEditDialogOpen(true);
+  };
+
+  const handleView = (emp) => {
+    setSelectedEmployee(emp);
+    setViewDialogOpen(true);
+  };
+
+  const handleUpdate = async () => {
+    if (!selectedEmployee) return;
+
+    setLoading(true);
+    try {
+      const response = await fetch(`/api/manager/employee/${selectedEmployee._id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(editFormData),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        toast.success("Employee updated successfully!");
+        setEmployees(prev => prev.map(emp =>
+          emp._id === selectedEmployee._id ? data.employee : emp
+        ));
+        setEditDialogOpen(false);
+      } else {
+        toast.error(data.message || "Failed to update employee");
+      }
+    } catch (error) {
+      console.error("Update error:", error);
+      toast.error("Failed to update employee");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const filteredEmployees = employees.filter(emp =>
     emp.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     emp.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     emp.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    emp.userId?.toLowerCase().includes(searchTerm.toLowerCase())
+    emp.userId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    emp.depId?.name?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const formatDate = (dateString) => {
@@ -145,11 +213,20 @@ export default function EmployeePage() {
     });
   };
 
+  const timeOptions = [
+    "08:00 AM", "08:30 AM", "09:00 AM", "09:30 AM",
+    "10:00 AM", "10:30 AM", "11:00 AM", "11:30 AM",
+    "12:00 PM", "12:30 PM", "01:00 PM", "01:30 PM",
+    "02:00 PM", "02:30 PM", "03:00 PM", "03:30 PM",
+    "04:00 PM", "04:30 PM", "05:00 PM", "05:30 PM",
+    "06:00 PM"
+  ];
+
   if (status === "loading") {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
         <div className="flex items-center gap-2">
-          <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+          <Loader2 className="w-6 h-6 animate-spin text-green-600" />
           <span className="text-gray-600">Loading...</span>
         </div>
       </div>
@@ -295,12 +372,12 @@ export default function EmployeePage() {
                       id="depId"
                       value={formData.depId}
                       onChange={(e) => setFormData({ ...formData, depId: e.target.value })}
-                      className="w-full p-3 pl-10 border border-gray-300 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-200 bg-white transition-all duration-200 shadow-sm appearance-none"
+                      className="w-full p-3 pl-10 border border-gray-300 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-200 bg-white transition-all duration-200 shadow-sm appearance-none text-black"
                       required
                     >
-                      <option value="">Select a department</option>
+                      <option value="" className="text-gray-500">Select a department</option>
                       {departments.map((dept) => (
-                        <option key={dept._id} value={dept._id}>
+                        <option key={dept._id} value={dept._id} className="text-black">
                           {dept.name}
                         </option>
                       ))}
@@ -371,7 +448,7 @@ export default function EmployeePage() {
             ) : filteredEmployees.length === 0 ? (
               <div className="text-center py-16">
                 <div className="text-gray-300 mb-4">
-                  <User className="w-20 h-20 mx-auto" />
+                  <Users className="w-20 h-20 mx-auto" />
                 </div>
                 <h3 className="text-2xl font-bold text-gray-900 mb-3">
                   {employees.length === 0 ? "No team members yet" : "No matches found"}
@@ -399,8 +476,10 @@ export default function EmployeePage() {
                     <TableRow className="hover:bg-transparent">
                       <TableHead className="font-bold text-gray-900 text-sm uppercase tracking-wide py-4">Team Member</TableHead>
                       <TableHead className="font-bold text-gray-900 text-sm uppercase tracking-wide py-4">Employee ID</TableHead>
+                      <TableHead className="font-bold text-gray-900 text-sm uppercase tracking-wide py-4">Department</TableHead>
                       <TableHead className="font-bold text-gray-900 text-sm uppercase tracking-wide py-4">Contact</TableHead>
                       <TableHead className="font-bold text-gray-900 text-sm uppercase tracking-wide py-4">Join Date</TableHead>
+                      <TableHead className="font-bold text-gray-900 text-sm uppercase tracking-wide py-4">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -433,6 +512,12 @@ export default function EmployeePage() {
                           </Badge>
                         </TableCell>
                         <TableCell className="py-4">
+                          <Badge className="bg-gradient-to-r from-green-500 to-emerald-600 text-white border-0 font-medium px-3 py-1.5 shadow-lg shadow-green-500/20">
+                            <Building className="w-3 h-3 mr-2" />
+                            {emp.depId?.name || "No Department"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="py-4">
                           <div className="flex items-center gap-3 text-gray-700 group-hover:text-gray-900 transition-colors duration-200">
                             <Mail className="w-5 h-5 text-green-500" />
                             <span className="text-base font-medium">{emp.email}</span>
@@ -444,6 +529,25 @@ export default function EmployeePage() {
                             <span className="text-base font-medium">{formatDate(emp.createdAt)}</span>
                           </div>
                         </TableCell>
+                        <TableCell className="py-4">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" className="h-8 w-8 p-0">
+                                <MoreVertical className="h-4 w-4 text-black" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="bg-white text-black">
+                              <DropdownMenuItem onClick={() => handleView(emp)} className="text-black cursor-pointer">
+                                <Eye className="w-4 h-4 mr-2" />
+                                View Details
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleEdit(emp)} className="text-black cursor-pointer">
+                                <Pencil className="w-4 h-4 mr-2" />
+                                Edit
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -453,6 +557,260 @@ export default function EmployeePage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Edit Employee Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="sm:max-w-md bg-white text-black">
+          <DialogHeader>
+            <DialogTitle className="text-xl text-black">Edit Employee</DialogTitle>
+            <DialogDescription className="text-gray-600">
+              Update employee information and schedule
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="editFirstName" className="text-black">First Name</Label>
+                <Input
+                  id="editFirstName"
+                  value={editFormData.firstName}
+                  onChange={(e) => setEditFormData({ ...editFormData, firstName: e.target.value })}
+                  className="text-black"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="editLastName" className="text-black">Last Name</Label>
+                <Input
+                  id="editLastName"
+                  value={editFormData.lastName}
+                  onChange={(e) => setEditFormData({ ...editFormData, lastName: e.target.value })}
+                  className="text-black"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="editPhone" className="text-black">Phone</Label>
+              <Input
+                id="editPhone"
+                value={editFormData.phone}
+                onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })}
+                placeholder="+1 (555) 123-4567"
+                className="text-black"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="editAddress" className="text-black">Address</Label>
+              <Input
+                id="editAddress"
+                value={editFormData.address}
+                onChange={(e) => setEditFormData({ ...editFormData, address: e.target.value })}
+                placeholder="Enter address"
+                className="text-black"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="editDepId" className="text-black">
+                <Building className="w-4 h-4 inline mr-2" />
+                Department
+              </Label>
+              <Select value={editFormData.depId} onValueChange={(value) => setEditFormData({ ...editFormData, depId: value })}>
+                <SelectTrigger className="text-black">
+                  <SelectValue placeholder="Select department" />
+                </SelectTrigger>
+                <SelectContent className="bg-white text-black">
+                  {departments.map((dept) => (
+                    <SelectItem key={dept._id} value={dept._id} className="text-black">
+                      {dept.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="editStartTime" className="text-black">
+                  <Clock className="w-4 h-4 inline mr-2" />
+                  Start Time
+                </Label>
+                <Select value={editFormData.startTime} onValueChange={(value) => setEditFormData({ ...editFormData, startTime: value })}>
+                  <SelectTrigger className="text-black">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white text-black">
+                    {timeOptions.map((time) => (
+                      <SelectItem key={time} value={time} className="text-black">
+                        {time}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="editEndTime" className="text-black">
+                  <Clock className="w-4 h-4 inline mr-2" />
+                  End Time
+                </Label>
+                <Select value={editFormData.endTime} onValueChange={(value) => setEditFormData({ ...editFormData, endTime: value })}>
+                  <SelectTrigger className="text-black">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white text-black">
+                    {timeOptions.map((time) => (
+                      <SelectItem key={time} value={time} className="text-black">
+                        {time}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="flex gap-3 pt-4">
+              <Button
+                onClick={handleUpdate}
+                disabled={loading}
+                className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+              >
+                {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                Update Employee
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setEditDialogOpen(false)}
+                disabled={loading}
+                className="text-black border-gray-300"
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Employee Dialog */}
+      <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
+        <DialogContent className="sm:max-w-lg bg-white text-black">
+          <DialogHeader>
+            <DialogTitle className="text-xl text-black">Employee Details</DialogTitle>
+          </DialogHeader>
+          
+          {selectedEmployee && (
+            <div className="space-y-6">
+              <div className="flex items-center gap-4">
+                <Avatar className="w-20 h-20 border-4 border-green-100">
+                  <AvatarImage src={selectedEmployee.profilePic} />
+                  <AvatarFallback className="bg-gradient-to-r from-green-500 to-blue-600 text-white text-2xl font-bold">
+                    {selectedEmployee.firstName?.[0]}{selectedEmployee.lastName?.[0]}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1">
+                  <h2 className="text-2xl font-bold text-black">
+                    {selectedEmployee.firstName} {selectedEmployee.lastName}
+                  </h2>
+                  <p className="text-gray-600">Employee</p>
+                  <Badge className="mt-2 bg-green-100 text-green-800 hover:bg-green-100">
+                    <User className="w-3 h-3 mr-1" />
+                    Active
+                  </Badge>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Card className="bg-white">
+                  <CardContent className="p-4">
+                    <h3 className="font-semibold text-black mb-3 flex items-center gap-2">
+                      <IdCard className="w-4 h-4" />
+                      Basic Information
+                    </h3>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Employee ID:</span>
+                        <span className="font-mono font-bold text-black">{selectedEmployee.userId}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Join Date:</span>
+                        <span className="font-medium text-black">{formatDate(selectedEmployee.createdAt)}</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-white">
+                  <CardContent className="p-4">
+                    <h3 className="font-semibold text-black mb-3 flex items-center gap-2">
+                      <Building className="w-4 h-4" />
+                      Department
+                    </h3>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Department:</span>
+                        <Badge className="bg-green-100 text-green-800">
+                          {selectedEmployee.depId?.name || "No Department"}
+                        </Badge>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Team Lead:</span>
+                        <span className="font-medium text-black">{selectedEmployee.teamLeadId ? "Assigned" : "Not Assigned"}</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              <Card className="bg-white">
+                <CardContent className="p-4">
+                  <h3 className="font-semibold text-black mb-3">Contact Information</h3>
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3">
+                      <Mail className="w-4 h-4 text-gray-400" />
+                      <span className="text-sm text-black">{selectedEmployee.email}</span>
+                    </div>
+                    {selectedEmployee.phone && (
+                      <div className="flex items-center gap-3">
+                        <Phone className="w-4 h-4 text-gray-400" />
+                        <span className="text-sm text-black">{selectedEmployee.phone}</span>
+                      </div>
+                    )}
+                    {selectedEmployee.address && (
+                      <div className="flex items-center gap-3">
+                        <MapPin className="w-4 h-4 text-gray-400" />
+                        <span className="text-sm text-black">{selectedEmployee.address}</span>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-white">
+                <CardContent className="p-4">
+                  <h3 className="font-semibold text-black mb-3 flex items-center gap-2">
+                    <Clock className="w-4 h-4" />
+                    Work Schedule
+                  </h3>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div className="text-center p-3 bg-green-50 rounded-lg">
+                      <div className="text-gray-600">Start Time</div>
+                      <div className="font-bold text-green-700">{selectedEmployee.startTime || "09:00 AM"}</div>
+                    </div>
+                    <div className="text-center p-3 bg-blue-50 rounded-lg">
+                      <div className="text-gray-600">End Time</div>
+                      <div className="font-bold text-blue-700">{selectedEmployee.endTime || "05:00 PM"}</div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

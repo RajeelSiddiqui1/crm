@@ -39,6 +39,8 @@ const employeeSchema = mongoose.Schema({
         ref: "Department",
         required: true
     },
+    startTime: { type: String, default: "09:00 AM" }, // ✅ Added
+    endTime: { type: String, default: "05:00 PM" },
     otp: {
         type: String,
         default: null,
@@ -53,6 +55,6 @@ const employeeSchema = mongoose.Schema({
         timestamps: true
     })
 
-const Employee = mongoose.models.Employee || mongoose.model("Employee", employeeSchema)
+const Employee = mongoose.models.Employee || mongoose.model("Employee", employeeSchema);
 
 export default Employee;
