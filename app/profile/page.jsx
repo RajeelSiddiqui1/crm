@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Camera, Save, User, Mail, Phone, MapPin, Calendar, Building, Upload, X, Download, QrCode, Video, VideoOff, Scan, FlipHorizontal } from "lucide-react";
+import { Loader2, Camera, Save, User, Mail, Phone, MapPin, Calendar, Building, Upload, X, Download, QrCode, Video, VideoOff, Scan, FlipHorizontal, Clock } from "lucide-react";
 import axios from "axios";
 
 export default function ProfilePage() {
@@ -47,7 +47,6 @@ export default function ProfilePage() {
   const [stream, setStream] = useState(null);
   const [qrData, setQrData] = useState("");
 
-  // Simple QR Code Scanner without external library
   const handleManualScan = () => {
     if (!qrData.trim()) {
       toast.error("Please enter QR code data");
@@ -71,14 +70,12 @@ export default function ProfilePage() {
     try {
       let employeeId = session.user.id;
       
-      // Try to parse QR code data if it's a URL
       try {
         if (scannedData.includes('http')) {
           const parsed = new URL(scannedData);
           employeeId = parsed.searchParams.get("id") || session.user.id;
         }
       } catch (e) {
-        // If parsing fails, use the scanned data directly or session user ID
         employeeId = scannedData || session.user.id;
       }
 
@@ -109,7 +106,6 @@ export default function ProfilePage() {
     setAttendanceStatus("");
     setScanning(false);
     
-    // Check if browser supports media devices
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       setCameraError("Camera not supported in this browser.");
       return;
@@ -166,7 +162,6 @@ export default function ProfilePage() {
     }
   };
 
-  // Test camera function
   const testCamera = async () => {
     try {
       const testStream = await navigator.mediaDevices.getUserMedia({ video: true });
@@ -196,7 +191,6 @@ export default function ProfilePage() {
     }
   }, [session, status, router]);
 
-  // Cleanup camera on unmount
   useEffect(() => {
     return () => {
       if (stream) {
@@ -448,7 +442,6 @@ export default function ProfilePage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Left Sidebar - Profile Card */}
           <div className="lg:col-span-1">
             <Card className="border-0 shadow-xl shadow-green-500/10 bg-white/70 backdrop-blur-sm">
               <CardContent className="p-4 sm:p-6">
@@ -617,6 +610,14 @@ export default function ProfilePage() {
                         <span className="text-xs sm:text-sm truncate">Dept: {userData.depId}</span>
                       </div>
                     )}
+                    {(session.user.startTime && session.user.endTime) && (
+                      <div className="flex items-center gap-2 sm:gap-3 text-gray-600">
+                        <Clock className="w-4 h-4 text-purple-600 flex-shrink-0" />
+                        <span className="text-xs sm:text-sm">
+                          Shift: {session.user.startTime} - {session.user.endTime}
+                        </span>
+                      </div>
+                    )}
                     <div className="flex items-center gap-2 sm:gap-3 text-gray-600">
                       <Calendar className="w-4 h-4 text-orange-600 flex-shrink-0" />
                       <span className="text-xs sm:text-sm">
@@ -649,7 +650,6 @@ export default function ProfilePage() {
             </Card>
           </div>
 
-          {/* Right Content - Profile Form */}
           <div className="lg:col-span-3">
             <Tabs defaultValue="profile" className="space-y-4 sm:space-y-6">
               <TabsList className="grid w-full grid-cols-1 bg-gradient-to-r from-green-50 to-blue-50 p-1 h-auto">
@@ -777,7 +777,6 @@ export default function ProfilePage() {
         </div>
       </div>
       
-      {/* Attendance Modal */}
       {showAttendanceModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
           <div className="bg-white rounded-lg w-full max-w-md p-4 sm:p-6 shadow-xl mx-4">
@@ -824,7 +823,6 @@ export default function ProfilePage() {
                 </div>
               ) : (
                 <>
-                  {/* Camera Status */}
                   <div className="w-full flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
                       {cameraActive ? (
@@ -853,7 +851,6 @@ export default function ProfilePage() {
                     </Button>
                   </div>
 
-                  {/* Simple Camera View */}
                   <div className="w-full max-w-xs relative">
                     {cameraActive ? (
                       <div className="relative rounded-lg overflow-hidden border-2 border-green-500 shadow-lg bg-black">
@@ -868,12 +865,10 @@ export default function ProfilePage() {
                           }}
                         />
                         
-                        {/* Scanning Guide */}
                         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                           <div className="w-48 h-48 border-2 border-green-400 border-dashed rounded-lg"></div>
                         </div>
                         
-                        {/* Center Guide */}
                         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none">
                           <div className="w-32 h-32 border-2 border-white rounded-lg">
                             <div className="absolute -top-1 -left-1 w-4 h-4 border-t-2 border-l-2 border-white"></div>
@@ -883,7 +878,6 @@ export default function ProfilePage() {
                           </div>
                         </div>
 
-                        {/* Manual QR Input */}
                         <div className="absolute bottom-2 left-2 right-2 bg-black/70 p-2 rounded">
                           <div className="flex gap-2">
                             <Input
@@ -936,7 +930,6 @@ export default function ProfilePage() {
                     )}
                   </div>
 
-                  {/* Instructions */}
                   <div className="text-center w-full max-w-xs">
                     <p className="text-sm text-gray-600 mb-4">
                       {cameraActive 
@@ -983,7 +976,6 @@ export default function ProfilePage() {
                       </Button>
                     </div>
 
-                    {/* Help Text */}
                     <div className="mt-4 p-3 bg-blue-50 rounded-lg">
                       <p className="text-xs text-blue-700 text-left">
                         <strong>How to use:</strong><br/>

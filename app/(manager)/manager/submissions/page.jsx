@@ -44,7 +44,8 @@ import {
     X,
     Filter,
     Download,
-    RefreshCw
+    RefreshCw,
+    Users
 } from "lucide-react";
 import axios from "axios";
 
@@ -65,7 +66,6 @@ export default function ManagerSubmissionsPage() {
     });
     const [showPasswords, setShowPasswords] = useState({});
     const [statusFilter, setStatusFilter] = useState("all");
-    const [dateFilter, setDateFilter] = useState("all");
     const fileInputRefs = useRef({});
 
     useEffect(() => {
@@ -438,7 +438,6 @@ export default function ManagerSubmissionsPage() {
         }
     };
 
-    // Filter submissions based on search and status
     const filteredSubmissions = submissions.filter(submission => {
         const matchesSearch = 
             submission.formId?.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -460,7 +459,6 @@ export default function ManagerSubmissionsPage() {
         });
     };
 
-    // Status statistics
     const statusStats = {
         total: submissions.length,
         approved: submissions.filter(s => s.status === 'approved').length,
@@ -498,7 +496,6 @@ export default function ManagerSubmissionsPage() {
             </Button>
 
             <div className="max-w-7xl mx-auto">
-                {/* Header Section */}
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
                     <div className="text-center sm:text-left">
                         <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-indigo-700 bg-clip-text text-transparent">
@@ -521,7 +518,6 @@ export default function ManagerSubmissionsPage() {
                     </div>
                 </div>
 
-                {/* Status Statistics */}
                 <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-8">
                     <Card className="bg-white border-0 shadow-lg">
                         <CardContent className="p-4 text-center">
@@ -561,7 +557,6 @@ export default function ManagerSubmissionsPage() {
                     </Card>
                 </div>
 
-                {/* Submissions Table */}
                 <Card className="shadow-2xl shadow-blue-500/10 border-0 bg-gradient-to-br from-white to-blue-50/50 backdrop-blur-sm overflow-hidden">
                     <CardHeader className="bg-gradient-to-r from-white to-blue-50 border-b border-blue-100/50">
                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -631,10 +626,8 @@ export default function ManagerSubmissionsPage() {
                                     <TableHeader className="bg-gradient-to-r from-gray-50 to-blue-50/50">
                                         <TableRow className="hover:bg-transparent">
                                             <TableHead className="font-bold text-gray-900 text-sm uppercase tracking-wide py-4">Form Details</TableHead>
-                                        
-                                            <TableHead className="font-bold text-gray-900 text-sm uppercase tracking-wide py-4">Status</TableHead>
+                                            <TableHead className="font-bold text-gray-900 text-sm uppercase tracking-wide py-4">Status Hierarchy</TableHead>
                                             <TableHead className="font-bold text-gray-900 text-sm uppercase tracking-wide py-4">Quick Actions</TableHead>
-                                            
                                             <TableHead className="font-bold text-gray-900 text-sm uppercase tracking-wide py-4">Actions</TableHead>
                                         </TableRow>
                                     </TableHeader>
@@ -663,11 +656,33 @@ export default function ManagerSubmissionsPage() {
                                                 </TableCell>
                                               
                                                 <TableCell className="py-4">
-                                                    <Badge className={`${getStatusVariant(submission.status)} border flex items-center gap-1 px-3 py-1.5 font-medium`}>
-                                                        {getStatusIcon(submission.status)}
-                                                        {submission.status.replace('_', ' ')}
-                                                    </Badge>
+                                                    <div className="space-y-2">
+                                                        <div className="flex items-center gap-2">
+                                                            <User className="w-3 h-3 text-blue-600" />
+                                                            <Badge className={`${getStatusVariant(submission.status)} border flex items-center gap-1 px-2 py-1 text-xs`}>
+                                                                {getStatusIcon(submission.status)}
+                                                                Manager: {submission.status.replace('_', ' ')}
+                                                            </Badge>
+                                                        </div>
+                                                        <div className="flex items-center gap-2">
+                                                            <User className="w-3 h-3 text-green-600" />
+                                                            <Badge className={`${getStatusVariant(submission.status2)} border flex items-center gap-1 px-2 py-1 text-xs`}>
+                                                                {getStatusIcon(submission.status2)}
+                                                                Team Lead: {submission.status2.replace('_', ' ')}
+                                                            </Badge>
+                                                        </div>
+                                                        {submission.assignedEmployees?.map((emp, index) => (
+                                                            <div key={emp.employeeId} className="flex items-center gap-2">
+                                                                <Users className="w-3 h-3 text-purple-600" />
+                                                                <Badge className={`${getStatusVariant(emp.status)} border flex items-center gap-1 px-2 py-1 text-xs`}>
+                                                                    {getStatusIcon(emp.status)}
+                                                                    {emp.email.split('@')[0]}: {emp.status.replace('_', ' ')}
+                                                                </Badge>
+                                                            </div>
+                                                        ))}
+                                                    </div>
                                                 </TableCell>
+
                                                 <TableCell className="py-4">
                                                     <div className="flex flex-wrap gap-2">
                                                         <Button
@@ -743,7 +758,6 @@ export default function ManagerSubmissionsPage() {
                     </CardContent>
                 </Card>
 
-                {/* Submission Details Modal */}
                 {showDetails && selectedSubmission && (
                     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
                         <Card className="w-full max-w-4xl max-h-[90vh] overflow-hidden bg-white border-0 shadow-2xl">
@@ -770,7 +784,6 @@ export default function ManagerSubmissionsPage() {
                             </CardHeader>
                             <CardContent className="pt-6 overflow-y-auto">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                    {/* Submission Information */}
                                     <div className="space-y-6">
                                         <h3 className="text-lg font-semibold text-gray-900">Submission Information</h3>
 
@@ -786,11 +799,35 @@ export default function ManagerSubmissionsPage() {
                                             </div>
 
                                             <div>
-                                                <Label className="text-gray-800 font-semibold">Status</Label>
-                                                <Badge className={`${getStatusVariant(selectedSubmission.status)} border flex items-center gap-1 px-3 py-1.5 font-medium`}>
-                                                    {getStatusIcon(selectedSubmission.status)}
-                                                    {selectedSubmission.status.replace('_', ' ')}
-                                                </Badge>
+                                                <Label className="text-gray-800 font-semibold">Status Hierarchy</Label>
+                                                <div className="space-y-2 mt-2">
+                                                    <div className="flex items-center gap-2">
+                                                        <User className="w-4 h-4 text-blue-600" />
+                                                        <span className="text-gray-700 font-medium">Manager:</span>
+                                                        <Badge className={`${getStatusVariant(selectedSubmission.status)} border flex items-center gap-1 px-2 py-1`}>
+                                                            {getStatusIcon(selectedSubmission.status)}
+                                                            {selectedSubmission.status.replace('_', ' ')}
+                                                        </Badge>
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        <User className="w-4 h-4 text-green-600" />
+                                                        <span className="text-gray-700 font-medium">Team Lead:</span>
+                                                        <Badge className={`${getStatusVariant(selectedSubmission.status2)} border flex items-center gap-1 px-2 py-1`}>
+                                                            {getStatusIcon(selectedSubmission.status2)}
+                                                            {selectedSubmission.status2.replace('_', ' ')}
+                                                        </Badge>
+                                                    </div>
+                                                    {selectedSubmission.assignedEmployees?.map((emp, index) => (
+                                                        <div key={emp.employeeId} className="flex items-center gap-2">
+                                                            <Users className="w-4 h-4 text-purple-600" />
+                                                            <span className="text-gray-700 font-medium">{emp.email}:</span>
+                                                            <Badge className={`${getStatusVariant(emp.status)} border flex items-center gap-1 px-2 py-1`}>
+                                                                {getStatusIcon(emp.status)}
+                                                                {emp.status.replace('_', ' ')}
+                                                            </Badge>
+                                                        </div>
+                                                    ))}
+                                                </div>
                                             </div>
 
                                             {selectedSubmission.completedAt && (
@@ -816,7 +853,6 @@ export default function ManagerSubmissionsPage() {
                                         </div>
                                     </div>
 
-                                    {/* Form Data */}
                                     <div className="space-y-6">
                                         <h3 className="text-lg font-semibold text-gray-900">Form Data</h3>
 
@@ -845,7 +881,6 @@ export default function ManagerSubmissionsPage() {
                                     </div>
                                 </div>
 
-                                {/* Status Update Form */}
                                 <div className="mt-8 pt-6 border-t border-gray-200">
                                     <h3 className="text-lg font-semibold text-gray-900 mb-4">Update Status</h3>
                                     <form onSubmit={(e) => {
@@ -911,7 +946,6 @@ export default function ManagerSubmissionsPage() {
                     </div>
                 )}
 
-                {/* Edit Submission Modal */}
                 {showEditForm && editingSubmission && (
                     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
                         <Card className="w-full max-w-4xl max-h-[90vh] overflow-hidden bg-white border-0 shadow-2xl">
@@ -939,7 +973,6 @@ export default function ManagerSubmissionsPage() {
                             <CardContent className="pt-6 overflow-y-auto">
                                 <form onSubmit={handleEditSubmission} className="space-y-6">
                                     <div className="grid grid-cols-1 gap-8">
-                                        {/* Form Data */}
                                         <div className="space-y-6">
                                             <h3 className="text-lg font-semibold text-gray-900">Form Data</h3>
 
@@ -969,7 +1002,6 @@ export default function ManagerSubmissionsPage() {
                                             </div>
                                         </div>
 
-                                        {/* Manager Comments */}
                                         <div className="space-y-6">
                                             <h3 className="text-lg font-semibold text-gray-900">Manager Comments</h3>
 

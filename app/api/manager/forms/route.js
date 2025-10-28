@@ -3,19 +3,54 @@ import dbConnect from "@/lib/db";
 import Form from "@/models/Form";
 import FormSubmission from "@/models/FormSubmission";
 import TeamLead from "@/models/TeamLead";
+import Manager from "@/models/Manager";
 import cloudinary from "@/lib/cloudinary";
 import { updatedMailTemplate } from "@/helper/emails/manager/updatedMailTemplate";
 import { sendMail } from "@/lib/mail";
 import mongoose from "mongoose";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 
-// ✅ GET - Manager ke liye forms fetch karega
+// ✅ GET - Manager ke liye forms fetch karega (only from their departments)
 export async function GET(req) {
   try {
     await dbConnect();
+
+    const session = await getServerSession(authOptions);
+
+    // 🔒 Only Managers can fetch forms
+    if (!session || session.user.role !== "Manager") {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    }
+
     const { searchParams } = new URL(req.url);
     const depId = searchParams.get("depId");
 
-    const forms = depId ? await Form.find({ depId }) : await Form.find();
+    // ✅ Get manager and their assigned departments
+    const manager = await Manager.findById(session.user.id).lean();
+    if (!manager) {
+      return NextResponse.json({ message: "Manager not found" }, { status: 404 });
+    }
+
+    const managerDeptIds = manager.departments.map((d) => d.toString());
+
+    // ✅ Fetch forms logic:
+    let forms = [];
+
+    if (depId) {
+      // If depId given → check if it belongs to manager
+      if (!managerDeptIds.includes(depId)) {
+        return NextResponse.json(
+          { message: "You are not authorized to view this department's forms" },
+          { status: 403 }
+        );
+      }
+      forms = await Form.find({ depId });
+    } else {
+      // Otherwise → fetch forms for all manager’s departments
+      forms = await Form.find({ depId: { $in: managerDeptIds } });
+    }
+
     return NextResponse.json(forms, { status: 200 });
   } catch (error) {
     console.error("Fetch forms error:", error);
@@ -28,7 +63,6 @@ export async function POST(req) {
   try {
     await dbConnect();
 
-    // 👇 Agar form-data (with files) aayi ho to usko handle karte hain
     const contentType = req.headers.get("content-type") || "";
     let body = {};
     let fileUrl = null;
@@ -58,18 +92,15 @@ export async function POST(req) {
         fileUrl = uploadResponse.secure_url;
       }
     } else {
-      // Agar simple JSON request hai
       body = await req.json();
     }
 
     const { formId, submittedBy, assignedTo, formData } = body;
 
-    // ✅ Add file URL to formData (if exists)
     if (fileUrl) {
       formData.file = fileUrl;
     }
 
-    // ✅ Create new form submission
     const newSubmission = new FormSubmission({
       formId,
       submittedBy,
@@ -80,7 +111,7 @@ export async function POST(req) {
 
     await newSubmission.save();
 
-    // ✅ Send email notification
+    // ✅ Send email to assigned TeamLead
     let teamLead = null;
     if (mongoose.Types.ObjectId.isValid(assignedTo)) {
       teamLead = await TeamLead.findById(assignedTo);

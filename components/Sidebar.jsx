@@ -22,7 +22,9 @@ import {
   Shield,
   Wallet,
   Clock,
-  Award
+  Award,
+  FormInputIcon,
+  FormInput
 } from "lucide-react";
 
 export default function Sidebar() {
@@ -39,6 +41,8 @@ export default function Sidebar() {
     "Reports": PieChart,
     "Performance": Target,
     "Team Leads": Users,
+    "Forms": FormInputIcon,
+    "ManagerForms":FormInput,
     "Employees": User,
     "Projects": Briefcase,
     "Tasks": FileText,
@@ -66,6 +70,8 @@ export default function Sidebar() {
       { href: "/managerhome", label: "Dashboard", icon: "Dashboard" },
       { href: "/manager/teamleads", label: "Team Leads", icon: "Team Leads" },
       { href: "/manager/employees", label: "Employees", icon: "Employees" },
+      { href: "/manager/managerforms", label: "Forms", icon: "ManagerForms" },
+      { href: "/manager/employeeform", label: "Employee Forms", icon: "ManagerForms" },
       { href: "/manager/submissions", label: "Tasks", icon: "Tasks" },
       { href: "/performance", label: "Performance", icon: "Performance" },
       { href: "/attendance", label: "Attendance", icon: "Attendance" },

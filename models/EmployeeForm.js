@@ -14,7 +14,7 @@ const formFieldSchema = new mongoose.Schema({
   pattern: { type: String },
 });
 
-const formSchema = new mongoose.Schema(
+const employeeFormSchema = new mongoose.Schema(
   {
     title: { type: String, required: true, trim: true },
     description: { type: String, trim: true, default: "" },
@@ -33,6 +33,6 @@ const formSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-formSchema.index({ title: 1, depId: 1 }, { unique: true });
+employeeFormSchema.index({ title: 1, depId: 1 }, { unique: true });
 
-export default mongoose.models.Form || mongoose.model("Form", formSchema);
+export default mongoose.models.Form || mongoose.model("EmployeeForm", employeeFormSchema);
