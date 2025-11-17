@@ -1,12 +1,11 @@
 import mongoose from "mongoose";
-import { ref } from "pdfkit";
 
 const formFieldSchema = new mongoose.Schema({
-  type: { type: String, required: true }, // 👈 No enum, fully flexible
+  type: { type: String, required: true },
   label: { type: String, required: true },
   name: { type: String, required: true },
   required: { type: Boolean, default: false },
-  options: [String], // for select, radio, checkbox
+  options: [String],
   placeholder: { type: String, default: "" },
   defaultValue: { type: String, default: "" },
   min: { type: Number },
@@ -23,9 +22,9 @@ const employeeFormSchema = new mongoose.Schema(
       ref: "Department",
       required: true,
     },
-    managerId:{
+    managerId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Manager"
+      ref: "Manager",
     },
     fields: [formFieldSchema],
     createdBy: { type: String, default: "System" },
@@ -35,4 +34,4 @@ const employeeFormSchema = new mongoose.Schema(
 
 employeeFormSchema.index({ title: 1, depId: 1 }, { unique: true });
 
-export default mongoose.models.Form || mongoose.model("EmployeeForm", employeeFormSchema);
+export default mongoose.models.EmployeeForm || mongoose.model("EmployeeForm", employeeFormSchema);

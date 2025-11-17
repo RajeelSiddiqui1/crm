@@ -1,9 +1,14 @@
+// app/api/employee/subtasks/route.js
+
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import dbConnect from "@/lib/db";
+
+// ✅ Import all referenced models before use
 import Subtask from "@/models/Subtask";
-import "@/models/FormSubmission"; // ✅ Add this line
+import "@/models/FormSubmission"; 
+import "@/models/EmployeeFormSubmission"; // ✅ Add this line
 
 export async function GET(request) {
   try {

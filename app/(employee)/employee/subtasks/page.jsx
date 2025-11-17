@@ -234,8 +234,8 @@ export default function EmployeeSubtasksPage() {
                                                         key={status}
                                                         variant={selectedSubtask.employeeStatus === status ? "default" : "outline"}
                                                         className={`flex flex-col h-16 ${selectedSubtask.employeeStatus === status
-                                                                ? 'bg-blue-600 text-white'
-                                                                : 'border-gray-300 text-black hover:bg-gray-50'
+                                                            ? 'bg-blue-600 text-white'
+                                                            : 'border-gray-300 text-black hover:bg-gray-50'
                                                             }`}
                                                         onClick={() => updateSubtaskStatus(status)}
                                                     >
@@ -273,6 +273,28 @@ export default function EmployeeSubtasksPage() {
                                                 <label className="text-sm font-medium text-black">Time</label>
                                                 <p className="text-gray-700">{selectedSubtask.startTime} - {selectedSubtask.endTime}</p>
                                             </div>
+                                        </CardContent>
+                                    </Card>
+
+                                    {/* Submit Form Button in Modal */}
+                                    <Card className="border border-gray-200 shadow-sm">
+                                        <CardHeader>
+                                            <CardTitle className="text-black">Submit Form</CardTitle>
+                                        </CardHeader>
+                                        <CardContent>
+                                            <p className="text-sm text-gray-600 mb-4">
+                                                Fill out the required form for this subtask
+                                            </p>
+                                            <Button
+                                                onClick={() => {
+                                                    closeModal();
+                                                    router.push(`/employee/subtasks/${selectedSubtask._id}`);
+                                                }}
+                                                className="bg-green-600 text-white hover:bg-green-700 w-full"
+                                            >
+                                                <FileText className="w-4 h-4 mr-2" />
+                                                Submit Form for this Subtask
+                                            </Button>
                                         </CardContent>
                                     </Card>
                                 </div>
@@ -336,9 +358,6 @@ export default function EmployeeSubtasksPage() {
 
                                     {/* Parent Submission */}
                                     <Card className="border border-gray-200 shadow-sm">
-                                        {/* <CardHeader>
-                                            <CardTitle className="text-black">Parent Submission</CardTitle>
-                                        </CardHeader> */}
                                         <CardContent>
                                             <div className="space-y-2">
                                                 <h4 className="font-semibold text-black">
@@ -493,8 +512,6 @@ export default function EmployeeSubtasksPage() {
                                     <TableHeader className="bg-gradient-to-r from-gray-50 to-blue-50/50">
                                         <TableRow className="hover:bg-transparent">
                                             <TableHead className="font-bold text-black text-sm uppercase tracking-wide py-4">Task Details</TableHead>
-                                            {/* <TableHead className="font-bold text-black text-sm uppercase tracking-wide py-4">Parent Submission</TableHead> */}
-                                            <TableHead className="font-bold text-black text-sm uppercase tracking-wide py-4">Teamlead Status</TableHead>
                                             <TableHead className="font-bold text-black text-sm uppercase tracking-wide py-4">My Status</TableHead>
                                             <TableHead className="font-bold text-black text-sm uppercase tracking-wide py-4">Team Lead</TableHead>
                                             <TableHead className="font-bold text-black text-sm uppercase tracking-wide py-4">Timeline</TableHead>
@@ -531,20 +548,10 @@ export default function EmployeeSubtasksPage() {
                                                     </div>
                                                 </TableCell>
                                                 <TableCell className="py-4">
-                                                     <TableCell className="py-4">
                                                     <Badge className={`${getStatusVariant(subtask.employeeStatus || 'pending')} border flex items-center gap-1 px-3 py-1.5 font-medium`}>
                                                         {getStatusIcon(subtask.employeeStatus || 'pending')}
                                                         {(subtask.employeeStatus || 'pending').replace('_', ' ')}
                                                     </Badge>
-
-                                                </TableCell>
-                                                </TableCell>
-                                                <TableCell className="py-4">
-                                                    <Badge className={`${getStatusVariant(subtask.employeeStatus || 'pending')} border flex items-center gap-1 px-3 py-1.5 font-medium`}>
-                                                        {getStatusIcon(subtask.employeeStatus || 'pending')}
-                                                        {(subtask.employeeStatus || 'pending').replace('_', ' ')}
-                                                    </Badge>
-
                                                 </TableCell>
                                                 <TableCell className="py-4">
                                                     <div className="flex items-center gap-2">
@@ -571,15 +578,25 @@ export default function EmployeeSubtasksPage() {
                                                     </div>
                                                 </TableCell>
                                                 <TableCell className="py-4">
-                                                    <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        className="border-blue-200 text-blue-700 hover:bg-blue-50 hover:border-blue-300 transition-all duration-200"
-                                                        onClick={() => openModal(subtask)}
-                                                    >
-                                                        <Eye className="w-4 h-4 mr-2" />
-                                                        View Details
-                                                    </Button>
+                                                    <div className="flex gap-2">
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            className="border-blue-200 text-blue-700 hover:bg-blue-50 hover:border-blue-300 transition-all duration-200"
+                                                            onClick={() => openModal(subtask)}
+                                                        >
+                                                            <Eye className="w-4 h-4 mr-2" />
+                                                            View Details
+                                                        </Button>
+                                                        <Button
+                                                            onClick={() => router.push(`/employee/subtasks/${subtask._id}`)}
+                                                            size="sm"
+                                                            className="bg-green-600 text-white hover:bg-green-700"
+                                                        >
+                                                            <FileText className="w-4 h-4 mr-2" />
+                                                            Submit Form
+                                                        </Button>
+                                                    </div>
                                                 </TableCell>
                                             </TableRow>
                                         ))}

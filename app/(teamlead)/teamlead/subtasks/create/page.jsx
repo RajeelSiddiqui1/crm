@@ -22,7 +22,8 @@ import {
     Clock,
     FileText,
     Loader2,
-    AlertCircle
+    AlertCircle,
+    User
 } from "lucide-react";
 import axios from "axios";
 
@@ -35,6 +36,7 @@ export default function CreateSubtaskPage() {
     const [loading, setLoading] = useState(false);
     const [fetching, setFetching] = useState(true);
     const [submission, setSubmission] = useState(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const [formData, setFormData] = useState({
         title: "",
@@ -43,7 +45,8 @@ export default function CreateSubtaskPage() {
         endDate: "",
         startTime: "",
         endTime: "",
-        priority: "medium"
+        priority: "medium",
+        lead: ""
     });
 
     const [selectedEmployees, setSelectedEmployees] = useState([]);
@@ -60,6 +63,13 @@ export default function CreateSubtaskPage() {
             toast.error("Submission ID is required");
             router.back();
             return;
+        }
+
+        if (session.user) {
+            setFormData(prev => ({
+                ...prev,
+                lead: session.user.name || `${session.user.firstName} ${session.user.lastName}`
+            }));
         }
 
         fetchSubmissionDetails();
@@ -86,7 +96,7 @@ export default function CreateSubtaskPage() {
 
     const getAssignedEmployees = () => {
         if (!submission || !submission.assignedEmployees) return [];
-        
+
         return submission.assignedEmployees.map(emp => ({
             _id: emp.employeeId._id || emp.employeeId,
             firstName: emp.employeeId.firstName,
@@ -116,7 +126,12 @@ export default function CreateSubtaskPage() {
     const handleSubmit = async (e) => {
         e.preventDefault();
         
-        if (!formData.title || !formData.description || !formData.startDate || !formData.endDate || !formData.startTime || !formData.endTime) {
+        if (isSubmitting) {
+            toast.error("Please wait, submission in progress...");
+            return;
+        }
+
+        if (!formData.title || !formData.description || !formData.startDate || !formData.endDate || !formData.startTime || !formData.endTime || !formData.lead) {
             toast.error("Please fill all required fields");
             return;
         }
@@ -126,6 +141,7 @@ export default function CreateSubtaskPage() {
             return;
         }
 
+        setIsSubmitting(true);
         setLoading(true);
 
         try {
@@ -144,16 +160,25 @@ export default function CreateSubtaskPage() {
                 assignedEmployees: assignedEmployeesData
             };
 
+            console.log("Submitting subtask data:", subtaskData);
+
             const response = await axios.post('/api/teamlead/subtasks', subtaskData);
 
             if (response.status === 201) {
                 toast.success("Subtask created successfully!");
-                router.push('/teamlead/subtasks');
+                setTimeout(() => {
+                    router.push('/teamlead/subtasks');
+                }, 1000);
             }
         } catch (error) {
             console.error("Error creating subtask:", error);
-            toast.error(error.response?.data?.error || "Failed to create subtask");
+            if (error.response?.status === 409) {
+                toast.error("Subtask with this title already exists");
+            } else {
+                toast.error(error.response?.data?.error || "Failed to create subtask");
+            }
         } finally {
+            setIsSubmitting(false);
             setLoading(false);
         }
     };
@@ -197,7 +222,6 @@ export default function CreateSubtaskPage() {
             <Toaster position="top-right" />
 
             <div className="max-w-4xl mx-auto">
-                {/* Header */}
                 <div className="flex items-center gap-4 mb-8">
                     <Button
                         variant="outline"
@@ -218,7 +242,6 @@ export default function CreateSubtaskPage() {
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    {/* Main Form */}
                     <div className="lg:col-span-2">
                         <Card className="shadow-2xl shadow-blue-500/10 border-0 bg-gradient-to-br from-white to-blue-50/50 backdrop-blur-sm">
                             <CardHeader className="bg-gradient-to-r from-white to-blue-50 border-b border-blue-100/50">
@@ -231,7 +254,6 @@ export default function CreateSubtaskPage() {
                             </CardHeader>
                             <CardContent className="p-6">
                                 <form onSubmit={handleSubmit} className="space-y-6">
-                                    {/* Title */}
                                     <div className="space-y-2">
                                         <Label htmlFor="title" className="text-gray-800 font-semibold">
                                             Title *
@@ -246,7 +268,6 @@ export default function CreateSubtaskPage() {
                                         />
                                     </div>
 
-                                    {/* Description */}
                                     <div className="space-y-2">
                                         <Label htmlFor="description" className="text-gray-800 font-semibold">
                                             Description *
@@ -261,34 +282,62 @@ export default function CreateSubtaskPage() {
                                         />
                                     </div>
 
-                                    {/* Date and Time */}
+                                    <div className="space-y-2">
+                                        <Label htmlFor="lead" className="text-gray-800 font-semibold">
+                                            Lead *
+                                        </Label>
+                                        <div className="relative">
+                                            <User className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
+                                            <Input
+                                                id="lead"
+                                                value={formData.lead}
+                                                onChange={(e) => handleInputChange('lead', e.target.value)}
+                                                placeholder="Enter lead name"
+                                                className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900 pl-10"
+                                                required
+                                                disabled={isSubmitting}
+                                            />
+                                        </div>
+                                        <p className="text-xs text-gray-500">
+                                            Team lead responsible for this subtask
+                                        </p>
+                                    </div>
+
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div className="space-y-2">
                                             <Label htmlFor="startDate" className="text-gray-800 font-semibold">
                                                 Start Date *
                                             </Label>
-                                            <Input
-                                                id="startDate"
-                                                type="date"
-                                                value={formData.startDate}
-                                                onChange={(e) => handleInputChange('startDate', e.target.value)}
-                                                className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900"
-                                                required
-                                            />
+                                            <div className="relative">
+                                                <Calendar className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
+                                                <Input
+                                                    id="startDate"
+                                                    type="date"
+                                                    value={formData.startDate}
+                                                    onChange={(e) => handleInputChange('startDate', e.target.value)}
+                                                    className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900 pl-10"
+                                                    required
+                                                    disabled={isSubmitting}
+                                                />
+                                            </div>
                                         </div>
 
                                         <div className="space-y-2">
                                             <Label htmlFor="endDate" className="text-gray-800 font-semibold">
                                                 End Date *
                                             </Label>
-                                            <Input
-                                                id="endDate"
-                                                type="date"
-                                                value={formData.endDate}
-                                                onChange={(e) => handleInputChange('endDate', e.target.value)}
-                                                className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900"
-                                                required
-                                            />
+                                            <div className="relative">
+                                                <Calendar className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
+                                                <Input
+                                                    id="endDate"
+                                                    type="date"
+                                                    value={formData.endDate}
+                                                    onChange={(e) => handleInputChange('endDate', e.target.value)}
+                                                    className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900 pl-10"
+                                                    required
+                                                    disabled={isSubmitting}
+                                                />
+                                            </div>
                                         </div>
                                     </div>
 
@@ -297,32 +346,39 @@ export default function CreateSubtaskPage() {
                                             <Label htmlFor="startTime" className="text-gray-800 font-semibold">
                                                 Start Time *
                                             </Label>
-                                            <Input
-                                                id="startTime"
-                                                type="time"
-                                                value={formData.startTime}
-                                                onChange={(e) => handleInputChange('startTime', e.target.value)}
-                                                className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900"
-                                                required
-                                            />
+                                            <div className="relative">
+                                                <Clock className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
+                                                <Input
+                                                    id="startTime"
+                                                    type="time"
+                                                    value={formData.startTime}
+                                                    onChange={(e) => handleInputChange('startTime', e.target.value)}
+                                                    className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900 pl-10"
+                                                    required
+                                                    disabled={isSubmitting}
+                                                />
+                                            </div>
                                         </div>
 
                                         <div className="space-y-2">
                                             <Label htmlFor="endTime" className="text-gray-800 font-semibold">
                                                 End Time *
                                             </Label>
-                                            <Input
-                                                id="endTime"
-                                                type="time"
-                                                value={formData.endTime}
-                                                onChange={(e) => handleInputChange('endTime', e.target.value)}
-                                                className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900"
-                                                required
-                                            />
+                                            <div className="relative">
+                                                <Clock className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
+                                                <Input
+                                                    id="endTime"
+                                                    type="time"
+                                                    value={formData.endTime}
+                                                    onChange={(e) => handleInputChange('endTime', e.target.value)}
+                                                    className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900 pl-10"
+                                                    required
+                                                    disabled={isSubmitting}
+                                                />
+                                            </div>
                                         </div>
                                     </div>
 
-                                    {/* Priority */}
                                     <div className="space-y-2">
                                         <Label htmlFor="priority" className="text-gray-800 font-semibold">
                                             Priority
@@ -330,34 +386,54 @@ export default function CreateSubtaskPage() {
                                         <Select
                                             value={formData.priority}
                                             onValueChange={(value) => handleInputChange('priority', value)}
+                                            disabled={isSubmitting}
                                         >
                                             <SelectTrigger className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900">
                                                 <SelectValue placeholder="Select priority" />
                                             </SelectTrigger>
                                             <SelectContent className="text-black bg-white">
-                                                <SelectItem value="low">Low</SelectItem>
-                                                <SelectItem value="medium">Medium</SelectItem>
-                                                <SelectItem value="high">High</SelectItem>
+                                                <SelectItem value="low">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                                        Low
+                                                    </div>
+                                                </SelectItem>
+                                                <SelectItem value="medium">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                                                        Medium
+                                                    </div>
+                                                </SelectItem>
+                                                <SelectItem value="high">
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                                                        High
+                                                    </div>
+                                                </SelectItem>
                                             </SelectContent>
                                         </Select>
                                     </div>
 
-                                    {/* Employee Assignment */}
                                     <div className="space-y-4">
-                                        <Label className="text-gray-800 font-semibold">
-                                            Assign Employees *
-                                        </Label>
-                                        
-                                        <Select onValueChange={handleEmployeeSelect}>
+                                        <div className="flex items-center justify-between">
+                                            <Label className="text-gray-800 font-semibold">
+                                                Assign Employees *
+                                            </Label>
+                                            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                                                {selectedEmployees.length} selected
+                                            </Badge>
+                                        </div>
+
+                                        <Select onValueChange={handleEmployeeSelect} disabled={isSubmitting}>
                                             <SelectTrigger className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900">
                                                 <SelectValue placeholder="Select employees to assign" />
                                             </SelectTrigger>
-                                            <SelectContent className="text-black bg-white">
+                                            <SelectContent className="text-black bg-white max-h-60">
                                                 {assignedEmployees.map((employee) => (
-                                                    <SelectItem 
-                                                        key={employee._id} 
+                                                    <SelectItem
+                                                        key={employee._id}
                                                         value={employee._id}
-                                                        disabled={selectedEmployees.includes(employee._id)}
+                                                        disabled={selectedEmployees.includes(employee._id) || isSubmitting}
                                                     >
                                                         <div className="flex items-center gap-2">
                                                             <Avatar className="w-6 h-6">
@@ -383,7 +459,7 @@ export default function CreateSubtaskPage() {
                                         {selectedEmployees.length > 0 && (
                                             <div className="space-y-3">
                                                 <Label className="text-gray-800 font-semibold">
-                                                    Selected Employees ({selectedEmployees.length})
+                                                    Selected Employees
                                                 </Label>
                                                 <div className="space-y-2">
                                                     {selectedEmployees.map(empId => {
@@ -408,6 +484,7 @@ export default function CreateSubtaskPage() {
                                                                     size="sm"
                                                                     onClick={() => removeEmployee(empId)}
                                                                     className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                                                                    disabled={isSubmitting}
                                                                 >
                                                                     <X className="w-4 h-4" />
                                                                 </Button>
@@ -419,22 +496,22 @@ export default function CreateSubtaskPage() {
                                         )}
                                     </div>
 
-                                    {/* Submit Button */}
                                     <div className="flex gap-3 pt-4">
                                         <Button
                                             type="button"
                                             variant="outline"
                                             onClick={() => router.back()}
                                             className="flex-1 border-gray-300 text-gray-700 hover:bg-gray-50"
+                                            disabled={isSubmitting}
                                         >
                                             Cancel
                                         </Button>
                                         <Button
                                             type="submit"
-                                            disabled={loading || assignedEmployees.length === 0}
+                                            disabled={isSubmitting || loading || assignedEmployees.length === 0}
                                             className="flex-1 bg-blue-600 hover:bg-blue-700 text-white disabled:bg-gray-400"
                                         >
-                                            {loading ? (
+                                            {isSubmitting ? (
                                                 <>
                                                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                                                     Creating...
@@ -452,7 +529,6 @@ export default function CreateSubtaskPage() {
                         </Card>
                     </div>
 
-                    {/* Sidebar - Submission Info */}
                     <div className="space-y-6">
                         <Card className="shadow-2xl shadow-blue-500/10 border-0 bg-gradient-to-br from-white to-blue-50/50 backdrop-blur-sm">
                             <CardHeader className="bg-gradient-to-r from-white to-blue-50 border-b border-blue-100/50">
@@ -487,19 +563,18 @@ export default function CreateSubtaskPage() {
 
                                             <div>
                                                 <Label className="text-gray-800 font-semibold text-sm">Status</Label>
-                                                <Badge className={`mt-1 ${
-                                                    submission.status === 'completed' ? 'bg-green-100 text-green-800 border-green-200' :
-                                                    submission.status === 'in_progress' ? 'bg-blue-100 text-blue-800 border-blue-200' :
-                                                    submission.status === 'pending' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' :
-                                                    'bg-gray-100 text-gray-800 border-gray-200'
-                                                }`}>
+                                                <Badge className={`mt-1 ${submission.status === 'completed' ? 'bg-green-100 text-green-800 border-green-200' :
+                                                        submission.status === 'in_progress' ? 'bg-blue-100 text-blue-800 border-blue-200' :
+                                                            submission.status === 'pending' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' :
+                                                                'bg-gray-100 text-gray-800 border-gray-200'
+                                                    }`}>
                                                     {submission.status.replace('_', ' ')}
                                                 </Badge>
                                             </div>
 
                                             {assignedEmployees.length > 0 && (
                                                 <div>
-                                                    <Label className="text-gray-800 font-semibold text-sm">Assigned Employees ({assignedEmployees.length})</Label>
+                                                    <Label className="text-gray-800 font-semibold text-sm">Available Employees ({assignedEmployees.length})</Label>
                                                     <div className="mt-1 space-y-1">
                                                         {assignedEmployees.slice(0, 3).map((emp, index) => (
                                                             <div key={emp._id} className="flex items-center gap-2 text-xs">
@@ -532,7 +607,6 @@ export default function CreateSubtaskPage() {
                             </CardContent>
                         </Card>
 
-                        {/* Instructions */}
                         <Card className="shadow-2xl shadow-blue-500/10 border-0 bg-gradient-to-br from-white to-blue-50/50 backdrop-blur-sm">
                             <CardHeader className="bg-gradient-to-r from-white to-blue-50 border-b border-blue-100/50">
                                 <CardTitle className="text-xl font-bold text-gray-900">
@@ -560,6 +634,34 @@ export default function CreateSubtaskPage() {
                                     <div className="flex items-start gap-2">
                                         <div className="w-2 h-2 bg-blue-500 rounded-full mt-1.5"></div>
                                         <span>Only employees already assigned to the parent task can be selected</span>
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        <Card className="shadow-2xl shadow-blue-500/10 border-0 bg-gradient-to-br from-white to-blue-50/50 backdrop-blur-sm">
+                            <CardHeader className="bg-gradient-to-r from-white to-blue-50 border-b border-blue-100/50">
+                                <CardTitle className="text-xl font-bold text-gray-900">
+                                    Current Lead
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="p-6">
+                                <div className="flex items-center gap-3">
+                                    <Avatar className="border-2 border-white shadow-lg shadow-blue-500/20">
+                                        <AvatarFallback className="bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold">
+                                            <User className="w-4 h-4" />
+                                        </AvatarFallback>
+                                    </Avatar>
+                                    <div>
+                                        <div className="font-bold text-gray-900">
+                                            {session.user.name || `${session.user.firstName} ${session.user.lastName}`}
+                                        </div>
+                                        <div className="text-sm text-gray-600">
+                                            {session.user.email}
+                                        </div>
+                                        <Badge className="mt-1 bg-green-100 text-green-800 border-green-200">
+                                            Team Lead
+                                        </Badge>
                                     </div>
                                 </div>
                             </CardContent>
