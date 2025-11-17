@@ -5,8 +5,6 @@ import {
   UserCheck, 
   User,
   Shield,
-  Briefcase,
-  Target,
   Star,
   ArrowRight,
   Building,
@@ -19,7 +17,7 @@ export default function Home() {
     {
       role: "Admin",
       description: "System administrator with full access and control over all features",
-      href: "/adminlogin",
+      href: "/login",
       icon: UserCog,
       color: "from-red-500 to-rose-600",
       bgColor: "hover:bg-red-50",
@@ -29,7 +27,7 @@ export default function Home() {
     {
       role: "Manager", 
       description: "Team management, project oversight, and performance tracking",
-      href: "/managerlogin",
+      href: "/login",
       icon: Users,
       color: "from-blue-500 to-blue-600",
       bgColor: "hover:bg-blue-50",
@@ -39,7 +37,7 @@ export default function Home() {
     {
       role: "Team Lead",
       description: "Team leadership, task coordination, and member management",
-      href: "/teamleadlogin", 
+      href: "/login", 
       icon: UserCheck,
       color: "from-green-500 to-green-600",
       bgColor: "hover:bg-green-50",
@@ -49,7 +47,7 @@ export default function Home() {
     {
       role: "Employee",
       description: "Task execution, attendance tracking, and personal dashboard",
-      href: "/employeelogin",
+      href: "/login",
       icon: User,
       color: "from-purple-500 to-purple-600",
       bgColor: "hover:bg-purple-50",
@@ -88,10 +86,10 @@ export default function Home() {
               </div>
               <div>
                 <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
-                  WorkFlow Pro
+                  MH Enterprises CRM
                 </h1>
                 <p className="text-gray-600 text-sm font-medium">
-                  Enterprise Management Solution
+                  Complete Business Management Solution
                 </p>
               </div>
             </div>
@@ -109,12 +107,12 @@ export default function Home() {
           <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6 leading-tight">
             Welcome to{" "}
             <span className="bg-gradient-to-r from-blue-600 to-purple-700 bg-clip-text text-transparent">
-              WorkFlow Pro
+              MH Enterprises CRM
             </span>
           </h1>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
             Streamline your business operations with our comprehensive CRM dashboard. 
-            Access role-specific tools and features designed to enhance productivity and collaboration.
+            Select your role to access your personalized workspace.
           </p>
         </div>
 
@@ -205,26 +203,66 @@ export default function Home() {
             })}
           </div>
 
-          {/* Stats Section */}
+          {/* Role Highlights */}
           <div className="mt-16 pt-12 border-t border-gray-100">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
-              <div>
-                <div className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-700 bg-clip-text text-transparent mb-2">
-                  500+
+            <h3 className="text-2xl font-bold text-center text-gray-900 mb-10">
+              Role-Based Features
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="bg-gradient-to-br from-red-50 to-white p-6 rounded-xl border border-red-100">
+                <div className="flex items-center mb-4">
+                  <div className="p-2 bg-gradient-to-r from-red-500 to-rose-600 rounded-lg mr-3">
+                    <UserCog className="h-5 w-5 text-white" />
+                  </div>
+                  <h4 className="font-bold text-gray-900">Admin</h4>
                 </div>
-                <div className="text-gray-600 font-medium">Active Companies</div>
+                <ul className="text-sm text-gray-600 space-y-2">
+                  <li>• Full system control</li>
+                  <li>• User management</li>
+                  <li>• System configuration</li>
+                </ul>
               </div>
-              <div>
-                <div className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-700 bg-clip-text text-transparent mb-2">
-                  10K+
+              
+              <div className="bg-gradient-to-br from-blue-50 to-white p-6 rounded-xl border border-blue-100">
+                <div className="flex items-center mb-4">
+                  <div className="p-2 bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg mr-3">
+                    <Users className="h-5 w-5 text-white" />
+                  </div>
+                  <h4 className="font-bold text-gray-900">Manager</h4>
                 </div>
-                <div className="text-gray-600 font-medium">Daily Users</div>
+                <ul className="text-sm text-gray-600 space-y-2">
+                  <li>• Team oversight</li>
+                  <li>• Shared subtasks</li>
+                  <li>• Project management</li>
+                </ul>
               </div>
-              <div>
-                <div className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-700 bg-clip-text text-transparent mb-2">
-                  99.9%
+              
+              <div className="bg-gradient-to-br from-green-50 to-white p-6 rounded-xl border border-green-100">
+                <div className="flex items-center mb-4">
+                  <div className="p-2 bg-gradient-to-r from-green-500 to-green-600 rounded-lg mr-3">
+                    <UserCheck className="h-5 w-5 text-white" />
+                  </div>
+                  <h4 className="font-bold text-gray-900">Team Lead</h4>
                 </div>
-                <div className="text-gray-600 font-medium">Uptime</div>
+                <ul className="text-sm text-gray-600 space-y-2">
+                  <li>• Create subtasks</li>
+                  <li>• Team coordination</li>
+                  <li>• Task assignment</li>
+                </ul>
+              </div>
+              
+              <div className="bg-gradient-to-br from-purple-50 to-white p-6 rounded-xl border border-purple-100">
+                <div className="flex items-center mb-4">
+                  <div className="p-2 bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg mr-3">
+                    <User className="h-5 w-5 text-white" />
+                  </div>
+                  <h4 className="font-bold text-gray-900">Employee</h4>
+                </div>
+                <ul className="text-sm text-gray-600 space-y-2">
+                  <li>• Task execution</li>
+                  <li>• Progress tracking</li>
+                  <li>• Personal dashboard</li>
+                </ul>
               </div>
             </div>
           </div>
@@ -239,10 +277,10 @@ export default function Home() {
               <div className="p-2 bg-gradient-to-r from-blue-600 to-purple-700 rounded-lg">
                 <Shield className="h-5 w-5 text-white" />
               </div>
-              <span className="text-lg font-semibold text-gray-900">WorkFlow Pro</span>
+              <span className="text-lg font-semibold text-gray-900">MH Enterprises CRM</span>
             </div>
-            <p className="text-gray-600 mb-2">© 2024 WorkFlow Pro. All rights reserved.</p>
-            <p className="text-gray-500 text-sm">Secure enterprise management platform</p>
+            <p className="text-gray-600 mb-2">© 2024 MH Enterprises. All rights reserved.</p>
+            <p className="text-gray-500 text-sm">Complete business management platform</p>
           </div>
         </div>
       </footer>

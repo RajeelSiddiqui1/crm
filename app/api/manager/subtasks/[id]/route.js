@@ -2,21 +2,24 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import Subtask from "@/models/Subtask";
-import EmployeeFormSubmission from "@/models/EmployeeFormSubmission";
 import mongoose from "mongoose";
 import dbConnect from "@/lib/db";
 
-// GET - Single subtask details
+export const dynamic = "force-dynamic";
+
 export async function GET(request, { params }) {
     try {
         const session = await getServerSession(authOptions);
-        if (!session || session.user.role !== "TeamLead") {
+        
+        if (!session || session.user.role !== "Manager") {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
         await dbConnect();
 
-        const { id } = params;
+        // ✅ Await params first
+        const { id } = await params;
+        console.log("Subtask ID:", id);
 
         if (!mongoose.Types.ObjectId.isValid(id)) {
             return NextResponse.json({ error: "Invalid subtask ID" }, { status: 400 });
@@ -24,17 +27,14 @@ export async function GET(request, { params }) {
 
         const subtask = await Subtask.findById(id)
             .populate("submissionId", "title description formData status")
-            .populate("assignedEmployees.employeeId", "firstName lastName email department avatar")
-            .populate("teamLeadId", "firstName lastName email");
+            .populate("teamLeadId", "firstName lastName email")
+            .populate("assignedEmployees.employeeId", "firstName lastName email department");
 
         if (!subtask) {
             return NextResponse.json({ error: "Subtask not found" }, { status: 404 });
         }
 
-        // Authorization check
-        if (subtask.teamLeadId._id.toString() !== session.user.id) {
-            return NextResponse.json({ error: "Access denied" }, { status: 403 });
-        }
+        // Manager can access all subtasks, no authorization check needed
 
         return NextResponse.json(subtask, { status: 200 });
 

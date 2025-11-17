@@ -69,7 +69,6 @@ const handleStatusUpdate = async (submissionId, newStatus) => {
         const errorMessage = error.response?.data?.error || "Failed to update status";
         toast.error(errorMessage);
         
-        // Debugging info show karo
         if (error.response?.status === 403) {
             console.log("403 Error Details:", error.response.data);
         }
@@ -96,17 +95,17 @@ const handleStatusUpdate = async (submissionId, newStatus) => {
     const getStatusColor = (status) => {
         switch (status) {
             case "approved":
-                return "bg-green-100 text-green-800";
+                return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300";
             case "rejected":
-                return "bg-red-100 text-red-800";
+                return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300";
             case "completed":
-                return "bg-blue-100 text-blue-800";
+                return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300";
             case "in_progress":
-                return "bg-yellow-100 text-yellow-800";
+                return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300";
             case "late":
-                return "bg-orange-100 text-orange-800";
+                return "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300";
             default:
-                return "bg-gray-100 text-gray-800";
+                return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300";
         }
     };
 
@@ -149,17 +148,17 @@ const handleStatusUpdate = async (submissionId, newStatus) => {
             <div className="max-w-6xl mx-auto">
                 <div className="flex items-center gap-4 mb-8">
                     <Link href="/teamlead/dashboard">
-                        <Button variant="outline" size="icon" className="rounded-full">
+                        <Button variant="outline" size="icon" className="rounded-full dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800">
                             <ArrowLeft className="w-4 h-4" />
                         </Button>
                     </Link>
                     <div className="flex-1">
-                        <h1 className="text-3xl font-bold text-gray-900">Employee Form Submissions</h1>
-                        <p className="text-gray-600 mt-2">
+                        <h1 className="text-3xl font-bold text-gray-900 dark:text-dark">Employee Form Submissions</h1>
+                        <p className="text-gray-600 dark:text-gray-900 mt-2">
                             Review and manage employee form submissions for this task
                         </p>
                     </div>
-                    <Button onClick={fetchSubmissions} variant="outline">
+                    <Button onClick={fetchSubmissions} variant="outline" className="dark:border-gray-700 dark:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-white">
                         Refresh
                     </Button>
                 </div>
@@ -222,8 +221,8 @@ const handleStatusUpdate = async (submissionId, newStatus) => {
 
                 <Card>
                     <CardHeader>
-                        <CardTitle>Employee Submissions</CardTitle>
-                        <CardDescription>
+                        <CardTitle className="dark:text-white">Employee Submissions</CardTitle>
+                        <CardDescription className="dark:text-gray-400">
                             Review each submission and update their status accordingly
                         </CardDescription>
                     </CardHeader>
@@ -241,7 +240,7 @@ const handleStatusUpdate = async (submissionId, newStatus) => {
                                         <div className="flex items-start justify-between mb-4">
                                             <div className="flex-1">
                                                 <div className="flex items-center gap-3 mb-2">
-                                                    <h3 className="text-lg font-semibold text-gray-900">
+                                                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                                                         {submission.formId?.title || "Unknown Form"}
                                                     </h3>
                                                     <Badge variant="secondary" className={getStatusColor(submission.teamleadstatus)}>
@@ -252,7 +251,7 @@ const handleStatusUpdate = async (submissionId, newStatus) => {
                                                     </Badge>
                                                 </div>
                                                 
-                                                <div className="flex items-center gap-4 text-sm text-gray-600">
+                                                <div className="flex items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
                                                     <span className="flex items-center gap-1">
                                                         <User className="w-4 h-4" />
                                                         {submission.employeeId 
@@ -279,16 +278,16 @@ const handleStatusUpdate = async (submissionId, newStatus) => {
                                                     onValueChange={(value) => handleStatusUpdate(submission._id, value)}
                                                     disabled={updating}
                                                 >
-                                                    <SelectTrigger className="w-40">
+                                                    <SelectTrigger className="w-40 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
                                                         <SelectValue />
                                                     </SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="pending">Pending</SelectItem>
-                                                        <SelectItem value="in_progress">In Progress</SelectItem>
-                                                        <SelectItem value="completed">Completed</SelectItem>
-                                                        <SelectItem value="approved">Approved</SelectItem>
-                                                        <SelectItem value="rejected">Rejected</SelectItem>
-                                                        <SelectItem value="late">Late</SelectItem>
+                                                    <SelectContent className="dark:bg-gray-800 dark:border-gray-700">
+                                                        <SelectItem value="pending" className="dark:text-white dark:focus:bg-gray-700">Pending</SelectItem>
+                                                        <SelectItem value="in_progress" className="dark:text-white dark:focus:bg-gray-700">In Progress</SelectItem>
+                                                        <SelectItem value="completed" className="dark:text-white dark:focus:bg-gray-700">Completed</SelectItem>
+                                                        <SelectItem value="approved" className="dark:text-white dark:focus:bg-gray-700">Approved</SelectItem>
+                                                        <SelectItem value="rejected" className="dark:text-white dark:focus:bg-gray-700">Rejected</SelectItem>
+                                                        <SelectItem value="late" className="dark:text-white dark:focus:bg-gray-700">Late</SelectItem>
                                                     </SelectContent>
                                                 </Select>
 
@@ -298,6 +297,7 @@ const handleStatusUpdate = async (submissionId, newStatus) => {
                                                     onClick={() => setSelectedSubmission(
                                                         selectedSubmission?._id === submission._id ? null : submission
                                                     )}
+                                                    className="dark:border-gray-700 dark:text-gray-600 dark:hover:bg-gray-700 dark:hover:text-white"
                                                 >
                                                     <Eye className="w-4 h-4 mr-2" />
                                                     {selectedSubmission?._id === submission._id ? "Hide" : "View"}

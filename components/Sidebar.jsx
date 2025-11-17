@@ -73,6 +73,7 @@ export default function Sidebar() {
       { href: "/manager/managerforms", label: "Forms", icon: "ManagerForms" },
       { href: "/manager/employeeform", label: "Employee Forms", icon: "ManagerForms" },
       { href: "/manager/submissions", label: "Tasks", icon: "Tasks" },
+      { href: "/manager/subtasks", label: "Subtasks", icon: "Tasks" },
       { href: "/performance", label: "Performance", icon: "Performance" },
       { href: "/attendance", label: "Attendance", icon: "Attendance" },
       { href: "/reports", label: "Reports", icon: "Reports" },

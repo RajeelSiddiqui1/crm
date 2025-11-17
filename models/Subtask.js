@@ -46,6 +46,10 @@ const subtaskSchema = new mongoose.Schema(
       enum: ["low", "medium", "high"],
       default: "medium",
     },
+    depId:{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Departments"
+    },
     attachments: [
       {
         filename: String,
