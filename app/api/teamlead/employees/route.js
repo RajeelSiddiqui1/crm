@@ -10,23 +10,42 @@ export async function GET(req) {
     const session = await getServerSession(authOptions);
 
     if (!session) {
-      return NextResponse.json({ error: "Unauthorized access" }, { status: 401 });
+      return NextResponse.json(
+        { success: false, error: "Unauthorized access" },
+        { status: 401 }
+      );
     }
 
     if (session.user.role !== "TeamLead") {
-      return NextResponse.json({ error: "Access denied. TeamLead role required." }, { status: 403 });
+      return NextResponse.json(
+        { success: false, error: "Access denied. TeamLead role required." },
+        { status: 403 }
+      );
     }
 
     await dbConnect();
 
-    // Get employees from the same department as teamlead
+    // Debugging: Check depId from session
+    console.log("TeamLead depId:", session.user.depId);
+
+    // Ensure type-safe matching
     const employees = await Employee.find({ 
-      depId: session.user.depId 
+      depId: String(session.user.depId) // convert to string to match DB
     }).select("_id userId firstName lastName email position department");
 
-    return NextResponse.json(employees, { status: 200 });
+    if (!employees || employees.length === 0) {
+      return NextResponse.json(
+        { success: true, message: "No employees found in your department", employees: [] },
+        { status: 200 }
+      );
+    }
+
+    return NextResponse.json({ success: true, employees }, { status: 200 });
   } catch (error) {
     console.error("Fetch employees error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: error.message },
+      { status: 500 }
+    );
   }
 }

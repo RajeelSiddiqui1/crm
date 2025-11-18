@@ -35,7 +35,7 @@ const employeeFormSubmissionSchema = new mongoose.Schema(
             enum: ["pending", "in_progress", "completed", "approved", "rejected","late"],
             default: "pending"
         },
-        managerstatus: {
+        managerStatus: {
             type: String,
             enum: ["pending", "in_progress", "completed", "approved", "rejected"],
             default: "pending"
