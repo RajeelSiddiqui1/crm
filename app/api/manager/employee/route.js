@@ -97,7 +97,7 @@ export async function GET(req) {
 
     const employees = await Employee.find({ managerId }).select(
       "userId firstName lastName email profilePic createdAt"
-    );
+    ).populate("depId", "name desc");
 
     return NextResponse.json(
       { message: "Employees fetched successfully", employees },

@@ -59,9 +59,12 @@ export default function Sidebar() {
 
   const links = {
     admin: [
-      { href: "/adminhome", label: "Dashboard", icon: "Dashboard" },
+      { href: "/admin/adminhome", label: "Dashboard", icon: "Dashboard" },
       { href: "/users", label: "User Management", icon: "User Management" },
-      { href: "/departments", label: "Departments", icon: "Departments" },
+      { href: "/admin/departments", label: "Departments", icon: "Departments" },
+      { href: "/admin/managers", label: "Managers", icon: "Departments" },
+      { href: "/admin/teamleads", label: "TeamLeads", icon: "Departments" },
+      { href: "/admin/employees", label: "Employees", icon: "Departments" },
       { href: "/analytics", label: "Analytics", icon: "Analytics" },
       { href: "/reports", label: "Reports", icon: "Reports" },
       { href: "/settings", label: "Settings", icon: "Settings" },
@@ -74,6 +77,8 @@ export default function Sidebar() {
       { href: "/manager/employeeform", label: "Employee Forms", icon: "ManagerForms" },
       { href: "/manager/submissions", label: "Tasks", icon: "Tasks" },
       { href: "/manager/subtasks", label: "Subtasks", icon: "Tasks" },
+      { href: "/manager/received-tasks", label: "Shared Tasks", icon: "Tasks" },
+      { href: "/manager/operation-manager-task", label: "Operation Tasks", icon: "Tasks" },
       { href: "/performance", label: "Performance", icon: "Performance" },
       { href: "/attendance", label: "Attendance", icon: "Attendance" },
       { href: "/reports", label: "Reports", icon: "Reports" },

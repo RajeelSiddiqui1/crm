@@ -5,9 +5,25 @@ import { useRouter } from "next/navigation";
 import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, ArrowLeft, FileText, User, Calendar, Eye } from "lucide-react";
+import {
+  Loader2,
+  ArrowLeft,
+  FileText,
+  User,
+  Calendar,
+  Eye,
+  Users,
+  Truck,
+  Cpu,
+} from "lucide-react";
 import axios from "axios";
 import Link from "next/link";
 
@@ -19,10 +35,12 @@ export default function TeamLeadOperationTasksPage() {
 
   useEffect(() => {
     if (status === "loading") return;
+
     if (!session || session.user.role !== "TeamLead") {
       router.push("/login");
       return;
     }
+
     fetchTasks();
   }, [session, status, router]);
 
@@ -43,100 +61,281 @@ export default function TeamLeadOperationTasksPage() {
 
   const getStatusColor = (status) => {
     const colors = {
-      signed: "bg-green-100 text-green-800",
-      pending: "bg-yellow-100 text-yellow-800",
-      approved: "bg-blue-100 text-blue-800",
+      signed: "bg-green-100 text-green-800 border-green-200",
+      pending: "bg-yellow-100 text-yellow-800 border-yellow-200",
+      approved: "bg-blue-100 text-blue-800 border-blue-200",
     };
-    return colors[status] || "bg-gray-100 text-gray-800";
+    return colors[status] || "bg-gray-100 text-gray-800 border-gray-200";
+  };
+
+  const getVendorStatusColor = (status) => {
+    const colors = {
+      approved: "bg-green-100 text-green-800 border-green-200",
+      not_approved: "bg-red-100 text-red-800 border-red-200",
+      pending: "bg-yellow-100 text-yellow-800 border-yellow-200",
+    };
+    return colors[status] || "bg-gray-100 text-gray-800 border-gray-200";
+  };
+
+  const getMachineStatusColor = (status) => {
+    const colors = {
+      deployed: "bg-green-100 text-green-800 border-green-200",
+      cancelled: "bg-red-100 text-red-800 border-red-200",
+      pending: "bg-yellow-100 text-yellow-800 border-yellow-200",
+    };
+    return colors[status] || "bg-gray-100 text-gray-800 border-gray-200";
   };
 
   const formatDate = (dateString) => {
     if (!dateString) return "Not set";
-    return new Date(dateString).toLocaleDateString();
+    return new Date(dateString).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
   };
 
   if (status === "loading" || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin" />
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="w-8 h-8 animate-spin text-gray-600" />
+          <p className="text-gray-700">Loading operation tasks...</p>
+        </div>
       </div>
     );
   }
 
+  if (!session || session.user.role !== "TeamLead") {
+    return null;
+  }
+
+  const assignedTasks = tasks.filter(task => task.sharedOperationEmployee).length;
+  const pendingTasks = tasks.filter(task => !task.sharedOperationEmployee).length;
+  const approvedVendorTasks = tasks.filter(task => task.VendorStatus === "approved").length;
+  const deployedMachineTasks = tasks.filter(task => task.MachineStatus === "deployed").length;
+
   return (
     <div className="min-h-screen bg-gray-50 p-6">
-      <Toaster />
+      <Toaster position="top-right" />
       
-      <div className="max-w-6xl mx-auto">
-        <div className="flex items-center gap-4 mb-8">
-          <Link href="/teamlead/dashboard">
-            <Button variant="outline" size="icon">
-              <ArrowLeft className="w-4 h-4" />
-            </Button>
-          </Link>
-          <div>
-            <h1 className="text-3xl font-bold">Operation Tasks</h1>
-            <p className="text-gray-600">Tasks assigned to you for operation management</p>
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+          <div className="flex items-center gap-4">
+            <Link href="/teamlead/dashboard">
+              <Button
+                variant="outline"
+                size="icon"
+                className="rounded-full border-gray-300 hover:bg-gray-100 text-gray-700"
+              >
+                <ArrowLeft className="w-4 h-4" />
+              </Button>
+            </Link>
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Operation Tasks</h1>
+              <p className="text-gray-700 mt-2">
+                Tasks assigned to you for operation management
+              </p>
+            </div>
           </div>
+
+          <Button
+            onClick={fetchTasks}
+            variant="outline"
+            className="border-gray-700 text-gray-700 hover:bg-gray-700 hover:text-white"
+            disabled={loading}
+          >
+            <Loader2 className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`} />
+            Refresh
+          </Button>
         </div>
 
-        {tasks.length === 0 ? (
-          <Card>
-            <CardContent className="p-8 text-center">
-              <FileText className="w-12 h-12 mx-auto text-gray-400 mb-4" />
-              <h3 className="text-lg font-semibold mb-2">No Tasks Assigned</h3>
-              <p className="text-gray-600">You don't have any operation tasks assigned yet.</p>
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <Card className="bg-white border border-gray-200 shadow-sm">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-700">Total Tasks</p>
+                  <p className="text-2xl font-bold text-gray-900">{tasks.length}</p>
+                </div>
+                <FileText className="w-8 h-8 text-blue-600" />
+              </div>
             </CardContent>
           </Card>
-        ) : (
-          <div className="grid gap-4">
-            {tasks.map((task) => (
-              <Card key={task._id} className="hover:shadow-md transition-shadow">
-                <CardContent className="p-6">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <h3 className="text-lg font-semibold">{task.taskTitle}</h3>
-                        <Badge className={getStatusColor(task.status)}>
-                          {task.status}
-                        </Badge>
-                        {task.sharedOperationEmployee && (
-                          <Badge variant="secondary">Assigned to Employee</Badge>
+
+          <Card className="bg-white border border-gray-200 shadow-sm">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-700">Assigned to Employee</p>
+                  <p className="text-2xl font-bold text-green-600">{assignedTasks}</p>
+                </div>
+                <Users className="w-8 h-8 text-green-600" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-white border border-gray-200 shadow-sm">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-700">Pending Assignment</p>
+                  <p className="text-2xl font-bold text-yellow-600">{pendingTasks}</p>
+                </div>
+                <User className="w-8 h-8 text-yellow-600" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-white border border-gray-200 shadow-sm">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-700">Vendor Approved</p>
+                  <p className="text-2xl font-bold text-purple-600">{approvedVendorTasks}</p>
+                </div>
+                <Truck className="w-8 h-8 text-purple-600" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Tasks List */}
+        <Card className="bg-white border border-gray-200 shadow-sm">
+          <CardHeader className="bg-white border-b border-gray-200">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div>
+                <CardTitle className="text-xl font-bold text-gray-900">
+                  Assigned Tasks
+                </CardTitle>
+                <CardDescription className="text-gray-700">
+                  Manage and assign tasks to your team employees
+                </CardDescription>
+              </div>
+              <Badge
+                variant="outline"
+                className="bg-gray-100 text-gray-800 border-gray-300"
+              >
+                {tasks.length} task{tasks.length !== 1 ? "s" : ""}
+              </Badge>
+            </div>
+          </CardHeader>
+          <CardContent className="p-6">
+            {tasks.length === 0 ? (
+              <div className="text-center py-12">
+                <FileText className="w-16 h-16 mx-auto text-gray-400 mb-4" />
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  No Tasks Assigned
+                </h3>
+                <p className="text-gray-700 max-w-md mx-auto">
+                  You don't have any operation tasks assigned yet.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {tasks.map((task) => (
+                  <div
+                    key={task._id}
+                    className="border border-gray-200 rounded-lg p-6 bg-white hover:shadow-md transition-all duration-200"
+                  >
+                    <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
+                      <div className="flex-1">
+                        <div className="flex items-start justify-between mb-3">
+                          <div>
+                            <h3 className="text-lg font-semibold text-gray-900 mb-1">
+                              {task.taskTitle}
+                            </h3>
+                            <p className="text-sm text-gray-700 mb-2">
+                              Task ID: {task.originalTaskId}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Badge className={`${getStatusColor(task.status)} border flex items-center gap-1 px-3 py-1 font-medium`}>
+                              {task.status}
+                            </Badge>
+                            {task.sharedOperationEmployee && (
+                              <Badge className="bg-green-100 text-green-800 border-green-200 flex items-center gap-1 px-3 py-1 font-medium">
+                                <Users className="w-3 h-3" />
+                                Assigned
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+
+                        {task.taskDescription && (
+                          <p className="text-gray-800 mb-4">{task.taskDescription}</p>
                         )}
-                      </div>
-                      
-                      <p className="text-gray-600 mb-3">{task.taskDescription}</p>
-                      
-                      <div className="flex items-center gap-4 text-sm text-gray-500">
-                        <span className="flex items-center gap-1">
-                          <User className="w-4 h-4" />
-                          From: {task.sharedBy?.firstName} {task.sharedBy?.lastName}
-                        </span>
-                        {task.dueDate && (
-                          <span className="flex items-center gap-1">
-                            <Calendar className="w-4 h-4" />
-                            Due: {formatDate(task.dueDate)}
+
+                        <div className="flex flex-wrap items-center gap-4 text-sm text-gray-700 mb-3">
+                          <span className="flex items-center gap-2">
+                            <User className="w-4 h-4" />
+                            <span className="font-medium text-gray-900">
+                              From: {task.sharedBy?.firstName} {task.sharedBy?.lastName}
+                            </span>
                           </span>
+
+                          {task.dueDate && (
+                            <span className="flex items-center gap-2">
+                              <Calendar className="w-4 h-4" />
+                              <span>Due: {formatDate(task.dueDate)}</span>
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Vendor and Machine Status */}
+                        <div className="flex flex-wrap gap-4 mb-3">
+                          <Badge className={`${getVendorStatusColor(task.VendorStatus)} border flex items-center gap-1 px-3 py-1 font-medium`}>
+                            <Truck className="w-3 h-3" />
+                            Vendor: {task.VendorStatus}
+                          </Badge>
+                          <Badge className={`${getMachineStatusColor(task.MachineStatus)} border flex items-center gap-1 px-3 py-1 font-medium`}>
+                            <Cpu className="w-3 h-3" />
+                            Machine: {task.MachineStatus}
+                          </Badge>
+                        </div>
+
+                        {/* Assigned Employee Info */}
+                        {task.sharedOperationEmployee && (
+                          <div className="mt-3 p-3 bg-green-50 rounded-lg border border-green-200">
+                            <h5 className="font-semibold text-green-900 mb-2">Assigned to Employee</h5>
+                            <div className="flex items-center gap-2 text-sm text-green-800">
+                              <User className="w-4 h-4" />
+                              <span>
+                                {task.sharedOperationEmployee.firstName} {task.sharedOperationEmployee.lastName}
+                              </span>
+                              <span className="mx-2">•</span>
+                              <span>{task.sharedOperationEmployee.email}</span>
+                            </div>
+                          </div>
+                        )}
+
+                        {task.notes && (
+                          <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                            <p className="text-sm text-blue-900">
+                              <strong>Notes:</strong> {task.notes}
+                            </p>
+                          </div>
                         )}
                       </div>
-                    </div>
-                    
-                    <div className="flex gap-2">
-                      <Button 
-                        onClick={() => router.push(`/teamlead/operation-tasks/${task._id}`)}
-                        variant="outline"
-                        size="sm"
-                      >
-                        <Eye className="w-4 h-4 mr-1" />
-                        View
-                      </Button>
+
+                      <div className="flex flex-col gap-2">
+                        <Button
+                          onClick={() => router.push(`/teamlead/operation-tasks/${task._id}`)}
+                          className="bg-blue-600 hover:bg-blue-700 text-white"
+                        >
+                          <Eye className="w-4 h-4 mr-2" />
+                          View Details
+                        </Button>
+                      </div>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

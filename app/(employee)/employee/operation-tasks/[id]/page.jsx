@@ -5,10 +5,36 @@ import { useRouter, useParams } from "next/navigation";
 import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, ArrowLeft, FileText, User, Mail, Calendar, Truck, Cpu, Building, Clock } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Loader2,
+  ArrowLeft,
+  FileText,
+  CheckCircle,
+  XCircle,
+  Clock,
+  User,
+  Calendar,
+  Eye,
+  Mail,
+  RefreshCw,
+  Truck,
+  Cpu,
+} from "lucide-react";
 import axios from "axios";
 import Link from "next/link";
 
@@ -24,10 +50,12 @@ export default function EmployeeOperationTaskDetailPage() {
 
   useEffect(() => {
     if (status === "loading") return;
+
     if (!session || session.user.role !== "Employee") {
       router.push("/login");
       return;
     }
+
     fetchTaskDetails();
   }, [session, status, router, taskId]);
 
@@ -94,6 +122,15 @@ export default function EmployeeOperationTaskDetailPage() {
     });
   };
 
+  const formatSimpleDate = (dateString) => {
+    if (!dateString) return "Not set";
+    return new Date(dateString).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  };
+
   if (status === "loading" || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -139,21 +176,21 @@ export default function EmployeeOperationTaskDetailPage() {
               <Button
                 variant="outline"
                 size="icon"
-                className="rounded-full border-gray-300 hover:bg-gray-100"
+                className="rounded-full border-gray-300 hover:bg-gray-100 text-gray-700"
               >
                 <ArrowLeft className="w-4 h-4" />
               </Button>
             </Link>
             <div>
               <h1 className="text-3xl font-bold text-gray-900">{task.taskTitle}</h1>
-              <p className="text-gray-600 mt-1">Update vendor and machine status</p>
+              <p className="text-gray-700 mt-2">Update vendor and machine status</p>
             </div>
           </div>
 
           <Button
             onClick={fetchTaskDetails}
             variant="outline"
-            className="border-gray-300 hover:bg-gray-100"
+            className="border-gray-700 text-gray-700 hover:bg-gray-700 hover:text-white"
             disabled={loading}
           >
             <RefreshCw className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`} />
@@ -162,84 +199,86 @@ export default function EmployeeOperationTaskDetailPage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main Content */}
+          {/* Left Column - Task Details */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Task Details Card */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+            {/* Task Overview Card */}
+            <Card className="bg-white border border-gray-200 shadow-sm">
+              <CardHeader className="bg-white border-b border-gray-200">
+                <CardTitle className="text-xl font-bold text-gray-900 flex items-center gap-2">
                   <FileText className="w-5 h-5" />
-                  Task Details
+                  Task Overview
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <h3 className="font-semibold text-gray-900 mb-2">Description</h3>
-                  <p className="text-gray-700 bg-gray-50 p-4 rounded-lg border border-gray-200">
-                    {task.taskDescription || "No description provided"}
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <CardContent className="p-6">
+                <div className="space-y-4">
                   <div>
-                    <p className="text-sm font-medium text-gray-700">Due Date</p>
-                    <div className="flex items-center gap-2 mt-1 text-gray-900">
-                      <Calendar className="w-4 h-4 text-gray-600" />
-                      {task.dueDate ? formatDate(task.dueDate) : "Not set"}
-                    </div>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-gray-700">Priority</p>
-                    <div className="mt-1">
-                      <Badge variant="outline" className="bg-gray-100 text-gray-800">
-                        {task.priority || "Not set"}
-                      </Badge>
-                    </div>
-                  </div>
-                </div>
-
-                {task.notes && (
-                  <div>
-                    <h3 className="font-semibold text-gray-900 mb-2">Additional Notes</h3>
-                    <p className="text-gray-700 bg-blue-50 p-4 rounded-lg border border-blue-200">
-                      {task.notes}
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Description</h3>
+                    <p className="text-gray-700 bg-gray-50 p-4 rounded-lg border border-gray-200">
+                      {task.taskDescription || "No description provided"}
                     </p>
                   </div>
-                )}
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm font-medium text-gray-700">Due Date</label>
+                      <div className="flex items-center gap-2 mt-1 text-gray-900">
+                        <Calendar className="w-4 h-4 text-gray-600" />
+                        {formatSimpleDate(task.dueDate)}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-700">Priority</label>
+                      <div className="mt-1">
+                        <Badge variant="outline" className="bg-gray-100 text-gray-800">
+                          {task.priority || "Not set"}
+                        </Badge>
+                      </div>
+                    </div>
+                  </div>
+
+                  {task.notes && (
+                    <div>
+                      <label className="text-sm font-medium text-gray-700">Additional Notes</label>
+                      <p className="text-gray-700 bg-blue-50 p-4 rounded-lg border border-blue-200 mt-1">
+                        {task.notes}
+                      </p>
+                    </div>
+                  )}
+                </div>
               </CardContent>
             </Card>
 
             {/* Status Update Card */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
+            <Card className="bg-white border border-gray-200 shadow-sm">
+              <CardHeader className="bg-white border-b border-gray-200">
+                <CardTitle className="text-xl font-bold text-gray-900 flex items-center gap-2">
                   <Clock className="w-5 h-5" />
                   Update Status
                 </CardTitle>
-                <CardDescription>
+                <CardDescription className="text-gray-700">
                   Update vendor approval and machine deployment status
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Vendor Status */}
-                <div className="space-y-3">
-                  <label className="text-sm font-medium text-gray-900 flex items-center gap-2">
-                    <Truck className="w-4 h-4" />
-                    Vendor Status
-                  </label>
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+              <CardContent className="p-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Vendor Status */}
+                  <div className="space-y-3">
+                    <label className="text-sm font-medium text-gray-900 flex items-center gap-2">
+                      <Truck className="w-4 h-4" />
+                      Vendor Status
+                    </label>
                     <Select
                       value={task.VendorStatus}
                       onValueChange={(value) => handleStatusUpdate("VendorStatus", value)}
                       disabled={updating}
                     >
-                      <SelectTrigger className="bg-white border-gray-300 text-gray-900 w-48">
+                      <SelectTrigger className="bg-white border-gray-300 text-gray-900">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent className="bg-white text-gray-900">
                         <SelectItem value="pending">
                           <div className="flex items-center gap-2">
-                            <Loader2 className="w-4 h-4 text-yellow-600" />
+                            <Clock className="w-4 h-4 text-yellow-600" />
                             <span>Pending</span>
                           </div>
                         </SelectItem>
@@ -261,27 +300,25 @@ export default function EmployeeOperationTaskDetailPage() {
                       Current: {task.VendorStatus}
                     </Badge>
                   </div>
-                </div>
 
-                {/* Machine Status */}
-                <div className="space-y-3">
-                  <label className="text-sm font-medium text-gray-900 flex items-center gap-2">
-                    <Cpu className="w-4 h-4" />
-                    Machine Status
-                  </label>
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                  {/* Machine Status */}
+                  <div className="space-y-3">
+                    <label className="text-sm font-medium text-gray-900 flex items-center gap-2">
+                      <Cpu className="w-4 h-4" />
+                      Machine Status
+                    </label>
                     <Select
                       value={task.MachineStatus}
                       onValueChange={(value) => handleStatusUpdate("MachineStatus", value)}
                       disabled={updating}
                     >
-                      <SelectTrigger className="bg-white border-gray-300 text-gray-900 w-48">
+                      <SelectTrigger className="bg-white border-gray-300 text-gray-900">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent className="bg-white text-gray-900">
                         <SelectItem value="pending">
                           <div className="flex items-center gap-2">
-                            <Loader2 className="w-4 h-4 text-yellow-600" />
+                            <Clock className="w-4 h-4 text-yellow-600" />
                             <span>Pending</span>
                           </div>
                         </SelectItem>
@@ -306,7 +343,7 @@ export default function EmployeeOperationTaskDetailPage() {
                 </div>
 
                 {updating && (
-                  <div className="flex items-center gap-2 text-blue-600">
+                  <div className="flex items-center gap-2 text-blue-600 mt-4">
                     <Loader2 className="w-4 h-4 animate-spin" />
                     Updating status...
                   </div>
@@ -316,14 +353,14 @@ export default function EmployeeOperationTaskDetailPage() {
 
             {/* Form Data Card */}
             {task.formId && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
+              <Card className="bg-white border border-gray-200 shadow-sm">
+                <CardHeader className="bg-white border-b border-gray-200">
+                  <CardTitle className="text-xl font-bold text-gray-900 flex items-center gap-2">
                     <FileText className="w-5 h-5" />
                     Form Submission Data
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="p-6">
                   <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
                     <h4 className="font-semibold text-gray-900 mb-2">Form Information</h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
@@ -342,41 +379,47 @@ export default function EmployeeOperationTaskDetailPage() {
             )}
           </div>
 
-          {/* Sidebar */}
+          {/* Right Column - Sidebar */}
           <div className="space-y-6">
             {/* Current Status Card */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Current Status</CardTitle>
+            <Card className="bg-white border border-gray-200 shadow-sm">
+              <CardHeader className="bg-white border-b border-gray-200">
+                <CardTitle className="text-lg font-bold text-gray-900">
+                  Current Status
+                </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium text-gray-700">Vendor Status</span>
-                  <Badge className={getStatusColor(task.VendorStatus)}>
-                    {task.VendorStatus}
-                  </Badge>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium text-gray-700">Machine Status</span>
-                  <Badge className={getStatusColor(task.MachineStatus)}>
-                    {task.MachineStatus}
-                  </Badge>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium text-gray-700">Task Status</span>
-                  <Badge variant="outline" className="bg-gray-100 text-gray-800">
-                    {task.status}
-                  </Badge>
+              <CardContent className="p-4">
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium text-gray-700">Vendor Status</span>
+                    <Badge className={getStatusColor(task.VendorStatus)}>
+                      {task.VendorStatus}
+                    </Badge>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium text-gray-700">Machine Status</span>
+                    <Badge className={getStatusColor(task.MachineStatus)}>
+                      {task.MachineStatus}
+                    </Badge>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium text-gray-700">Task Status</span>
+                    <Badge variant="outline" className="bg-gray-100 text-gray-800">
+                      {task.status}
+                    </Badge>
+                  </div>
                 </div>
               </CardContent>
             </Card>
 
             {/* Assignment Info Card */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Assignment Info</CardTitle>
+            <Card className="bg-white border border-gray-200 shadow-sm">
+              <CardHeader className="bg-white border-b border-gray-200">
+                <CardTitle className="text-lg font-bold text-gray-900">
+                  Assignment Info
+                </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="p-4 space-y-4">
                 <div>
                   <h4 className="text-sm font-medium text-gray-700 mb-2">Assigned by TeamLead</h4>
                   <div className="bg-green-50 p-3 rounded-lg border border-green-200">
@@ -399,25 +442,59 @@ export default function EmployeeOperationTaskDetailPage() {
             </Card>
 
             {/* Timeline Card */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Timeline</CardTitle>
+            <Card className="bg-white border border-gray-200 shadow-sm">
+              <CardHeader className="bg-white border-b border-gray-200">
+                <CardTitle className="text-lg font-bold text-gray-900">
+                  Timeline
+                </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Created</span>
-                  <span className="text-sm font-medium text-gray-900">{formatDate(task.createdAt)}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600">Last Updated</span>
-                  <span className="text-sm font-medium text-gray-900">{formatDate(task.updatedAt)}</span>
-                </div>
-                {task.dueDate && (
+              <CardContent className="p-4">
+                <div className="space-y-3">
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">Due Date</span>
-                    <span className="text-sm font-medium text-gray-900">{formatDate(task.dueDate)}</span>
+                    <span className="text-sm text-gray-600">Created</span>
+                    <span className="text-sm font-medium text-gray-900">{formatDate(task.createdAt)}</span>
                   </div>
-                )}
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600">Last Updated</span>
+                    <span className="text-sm font-medium text-gray-900">{formatDate(task.updatedAt)}</span>
+                  </div>
+                  {task.dueDate && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600">Due Date</span>
+                      <span className="text-sm font-medium text-gray-900">{formatSimpleDate(task.dueDate)}</span>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Quick Actions Card */}
+            <Card className="bg-white border border-gray-200 shadow-sm">
+              <CardHeader className="bg-white border-b border-gray-200">
+                <CardTitle className="text-lg font-bold text-gray-900">Quick Actions</CardTitle>
+              </CardHeader>
+              <CardContent className="p-4">
+                <div className="space-y-2">
+                  <Button
+                    onClick={fetchTaskDetails}
+                    variant="outline"
+                    className="w-full border-gray-700 text-gray-700 hover:bg-gray-700 hover:text-white"
+                    size="sm"
+                  >
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    Refresh Data
+                  </Button>
+                  <Link href="/employee/operation-tasks">
+                    <Button
+                      variant="outline"
+                      className="w-full border-gray-700 text-gray-700 hover:bg-gray-700 hover:text-white"
+                      size="sm"
+                    >
+                      <ArrowLeft className="w-4 h-4 mr-2" />
+                      Back to List
+                    </Button>
+                  </Link>
+                </div>
               </CardContent>
             </Card>
           </div>
