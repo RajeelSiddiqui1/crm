@@ -6,12 +6,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -63,7 +58,7 @@ export default function ManagerAdminTasksPage() {
     try {
       setLoading(true);
       const response = await axios.get("/api/manager/admin-tasks");
-      
+
       if (response.data.success) {
         setTasks(response.data.tasks || []);
       } else {
@@ -98,7 +93,7 @@ export default function ManagerAdminTasksPage() {
           currentAudio.pause();
         }
       }
-      
+
       // Play new audio
       const audio = document.getElementById(`audio-${taskId}`);
       if (audio) {
@@ -179,14 +174,15 @@ export default function ManagerAdminTasksPage() {
               Tasks assigned to you by Admin with voice instructions and files
             </p>
           </div>
-          
+
           {/* Manager Info */}
           <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg rounded-2xl">
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
                 <Avatar className="w-12 h-12">
                   <AvatarFallback className="bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold">
-                    {session.user.firstName?.charAt(0)}{session.user.lastName?.charAt(0)}
+                    {session.user.firstName?.charAt(0)}
+                    {session.user.lastName?.charAt(0)}
                   </AvatarFallback>
                 </Avatar>
                 <div>
@@ -284,7 +280,8 @@ export default function ManagerAdminTasksPage() {
                   Your Tasks
                 </CardTitle>
                 <p className="text-gray-600 text-base mt-2">
-                  {tasks.length} task{tasks.length !== 1 ? "s" : ""} assigned to you
+                  {tasks.length} task{tasks.length !== 1 ? "s" : ""} assigned to
+                  you
                 </p>
               </div>
               <div className="relative w-full sm:w-80">
@@ -303,7 +300,9 @@ export default function ManagerAdminTasksPage() {
               <div className="flex justify-center items-center py-16">
                 <div className="flex items-center gap-3 text-gray-600">
                   <div className="w-8 h-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent"></div>
-                  <span className="text-lg font-medium">Loading your tasks...</span>
+                  <span className="text-lg font-medium">
+                    Loading your tasks...
+                  </span>
                 </div>
               </div>
             ) : filteredTasks.length === 0 ? (
@@ -312,7 +311,9 @@ export default function ManagerAdminTasksPage() {
                   <FileText className="w-24 h-24 mx-auto" />
                 </div>
                 <h3 className="text-2xl font-bold text-gray-900 mb-3">
-                  {tasks.length === 0 ? "No tasks assigned yet" : "No matches found"}
+                  {tasks.length === 0
+                    ? "No tasks assigned yet"
+                    : "No matches found"}
                 </h3>
                 <p className="text-gray-600 text-lg max-w-md mx-auto">
                   {tasks.length === 0
@@ -415,9 +416,25 @@ export default function ManagerAdminTasksPage() {
                               <Eye className="w-4 h-4 mr-2" />
                               View
                             </Button>
+
+                            <Button
+                              onClick={() =>
+                                router.push(
+                                  `/manager/forms/create?taskId=${task._id}`
+                                )
+                              }
+                              variant="outline"
+                              size="sm"
+                              className="rounded-lg border-green-300 text-green-700 hover:bg-green-50"
+                            >
+                              <FileText className="w-4 h-4 mr-2" />
+                              Create Form
+                            </Button>
                             {task.audioUrl && (
                               <Button
-                                onClick={() => playAudio(task._id, task.audioUrl)}
+                                onClick={() =>
+                                  playAudio(task._id, task.audioUrl)
+                                }
                                 variant="outline"
                                 size="sm"
                                 className={`rounded-lg ${
@@ -436,7 +453,12 @@ export default function ManagerAdminTasksPage() {
                             )}
                             {task.fileAttachments && (
                               <Button
-                                onClick={() => downloadFile(task.fileAttachments, `task_${task.title}_attachment`)}
+                                onClick={() =>
+                                  downloadFile(
+                                    task.fileAttachments,
+                                    `task_${task.title}_attachment`
+                                  )
+                                }
                                 variant="outline"
                                 size="sm"
                                 className="rounded-lg border-green-300 text-green-700 hover:bg-green-50"
@@ -468,11 +490,17 @@ export default function ManagerAdminTasksPage() {
 
       {/* View Task Dialog */}
       {selectedTask && (
-        <div className={`fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 ${viewDialogOpen ? 'block' : 'hidden'}`}>
+        <div
+          className={`fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 ${
+            viewDialogOpen ? "block" : "hidden"
+          }`}
+        >
           <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-gray-200">
               <div className="flex justify-between items-center">
-                <h2 className="text-2xl font-bold text-gray-900">Task Details</h2>
+                <h2 className="text-2xl font-bold text-gray-900">
+                  Task Details
+                </h2>
                 <Button
                   variant="ghost"
                   onClick={() => setViewDialogOpen(false)}
@@ -482,50 +510,78 @@ export default function ManagerAdminTasksPage() {
                 </Button>
               </div>
             </div>
-            
+
             <div className="p-6 space-y-6">
               {/* Basic Info */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Task Information</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                    Task Information
+                  </h3>
                   <div className="space-y-3">
                     <div>
-                      <label className="text-sm font-medium text-gray-600">Title</label>
-                      <p className="text-gray-900 font-semibold">{selectedTask.title}</p>
+                      <label className="text-sm font-medium text-gray-600">
+                        Title
+                      </label>
+                      <p className="text-gray-900 font-semibold">
+                        {selectedTask.title}
+                      </p>
                     </div>
                     <div>
-                      <label className="text-sm font-medium text-gray-600">Client</label>
-                      <p className="text-gray-900 font-semibold">{selectedTask.clientName || "No client"}</p>
+                      <label className="text-sm font-medium text-gray-600">
+                        Client
+                      </label>
+                      <p className="text-gray-900 font-semibold">
+                        {selectedTask.clientName || "No client"}
+                      </p>
                     </div>
                     <div>
-                      <label className="text-sm font-medium text-gray-600">Priority</label>
-                      <Badge className={`${getPriorityColor(selectedTask.priority)} capitalize`}>
+                      <label className="text-sm font-medium text-gray-600">
+                        Priority
+                      </label>
+                      <Badge
+                        className={`${getPriorityColor(
+                          selectedTask.priority
+                        )} capitalize`}
+                      >
                         {selectedTask.priority}
                       </Badge>
                     </div>
                     <div>
-                      <label className="text-sm font-medium text-gray-600">Due Date</label>
-                      <p className="text-gray-900 font-semibold">{formatDate(selectedTask.endDate)}</p>
+                      <label className="text-sm font-medium text-gray-600">
+                        Due Date
+                      </label>
+                      <p className="text-gray-900 font-semibold">
+                        {formatDate(selectedTask.endDate)}
+                      </p>
                     </div>
                   </div>
                 </div>
 
                 {/* Assigned Managers */}
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Assigned To</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                    Assigned To
+                  </h3>
                   <div className="space-y-3">
                     {selectedTask.managers?.map((manager) => (
-                      <div key={manager._id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                      <div
+                        key={manager._id}
+                        className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg"
+                      >
                         <Avatar className="w-10 h-10">
                           <AvatarFallback className="bg-blue-500 text-white">
-                            {manager.firstName?.charAt(0)}{manager.lastName?.charAt(0)}
+                            {manager.firstName?.charAt(0)}
+                            {manager.lastName?.charAt(0)}
                           </AvatarFallback>
                         </Avatar>
                         <div>
                           <p className="font-semibold text-gray-900">
                             {manager.firstName} {manager.lastName}
                           </p>
-                          <p className="text-sm text-gray-600">{manager.email}</p>
+                          <p className="text-sm text-gray-600">
+                            {manager.email}
+                          </p>
                         </div>
                       </div>
                     ))}
@@ -536,7 +592,9 @@ export default function ManagerAdminTasksPage() {
               {/* Audio Section */}
               {selectedTask.audioUrl && (
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Voice Instructions</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                    Voice Instructions
+                  </h3>
                   <div className="bg-gray-50 rounded-lg p-4">
                     <audio controls className="w-full">
                       <source src={selectedTask.audioUrl} type="audio/wav" />
@@ -549,18 +607,29 @@ export default function ManagerAdminTasksPage() {
               {/* File Attachments */}
               {selectedTask.fileAttachments && (
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">File Attachments</h3>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                    File Attachments
+                  </h3>
                   <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <FileText className="w-8 h-8 text-green-600" />
                         <div>
-                          <p className="font-semibold text-green-800">File Attached</p>
-                          <p className="text-sm text-green-600">Click to download the file</p>
+                          <p className="font-semibold text-green-800">
+                            File Attached
+                          </p>
+                          <p className="text-sm text-green-600">
+                            Click to download the file
+                          </p>
                         </div>
                       </div>
                       <Button
-                        onClick={() => downloadFile(selectedTask.fileAttachments, `task_${selectedTask.title}_attachment`)}
+                        onClick={() =>
+                          downloadFile(
+                            selectedTask.fileAttachments,
+                            `task_${selectedTask.title}_attachment`
+                          )
+                        }
                         className="bg-green-600 hover:bg-green-700 text-white"
                       >
                         <Download className="w-4 h-4 mr-2" />

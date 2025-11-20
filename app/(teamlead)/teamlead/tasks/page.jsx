@@ -49,6 +49,7 @@ import {
   Plus,
   Trash2,
   ArrowRight,
+  MessageCircle,
 } from "lucide-react";
 import axios from "axios";
 import Link from "next/link";
@@ -759,7 +760,19 @@ export default function TeamLeadSubmissionsPage() {
                                   View Subtasks
                                 </Button>
                               </Link>
-
+                              <Button
+                                onClick={() =>
+                                  router.push(
+                                    `/group-chat?submissionId=${submission._id}`
+                                  )
+                                }
+                                variant="outline"
+                                size="sm"
+                                className="border-purple-200 text-purple-700 hover:bg-purple-50 transition-colors"
+                              >
+                                <MessageCircle className="w-4 h-4 mr-1" />
+                                Group Chat
+                              </Button>
                               <Button
                                 onClick={() => {
                                   setSelectedSubmission(submission);
