@@ -1,4 +1,3 @@
-// app/api/group-chat/route.js
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import GroupChat from "@/models/GroupChat";
@@ -35,56 +34,65 @@ export async function POST(req) {
       });
     }
 
-    // Get all participants
+    // Get all participants with proper role identification
     const participants = [];
 
-    // Add Admin if exists
-    if (submission.adminTask) {
-      // You might need to populate admin details based on your admin model
+    // Add current user based on their role
+    participants.push({
+      userId: session.user.id,
+      userModel: session.user.role,
+      email: session.user.email,
+      name: session.user.name,
+      role: session.user.role
+    });
+
+    // Add other participants based on submission data
+    // Add Manager (submittedBy) if different from current user
+    if (submission.submittedBy && submission.submittedBy !== session.user.email) {
       participants.push({
-        userId: submission.adminTask, // Adjust based on your admin model
-        userModel: 'Admin',
-        email: 'admin@system.com', // Adjust based on your admin data
-        name: 'System Admin',
-        role: 'Admin'
+        userId: submission.submittedByUserId, // You need to store this in your submission
+        userModel: 'Manager',
+        email: submission.submittedBy,
+        name: 'Manager',
+        role: 'Manager'
       });
     }
 
-    // Add Manager (submittedBy)
-    participants.push({
-      userId: session.user.id, // Adjust based on your user management
-      userModel: 'Manager',
-      email: submission.submittedBy,
-      name: 'Manager',
-      role: 'Manager'
-    });
-
-    // Add TeamLead (assignedTo)
-    participants.push({
-      userId: session.user.id, // Adjust based on your user management
-      userModel: 'TeamLead',
-      email: submission.assignedTo,
-      name: 'Team Lead',
-      role: 'TeamLead'
-    });
+    // Add TeamLead (assignedTo) if different from current user
+    if (submission.assignedTo && submission.assignedTo !== session.user.email) {
+      participants.push({
+        userId: submission.assignedToUserId, // You need to store this in your submission
+        userModel: 'TeamLead',
+        email: submission.assignedTo,
+        name: 'Team Lead',
+        role: 'TeamLead'
+      });
+    }
 
     // Add Employees
     if (submission.assignedEmployees && submission.assignedEmployees.length > 0) {
       submission.assignedEmployees.forEach(emp => {
-        participants.push({
-          userId: emp.employeeId._id,
-          userModel: 'Employee',
-          email: emp.email,
-          name: `${emp.employeeId.firstName} ${emp.employeeId.lastName}`,
-          role: 'Employee'
-        });
+        if (emp.email !== session.user.email) {
+          participants.push({
+            userId: emp.employeeId._id,
+            userModel: 'Employee',
+            email: emp.email,
+            name: `${emp.employeeId.firstName} ${emp.employeeId.lastName}`,
+            role: 'Employee'
+          });
+        }
       });
     }
+
+    // Remove duplicate participants
+    const uniqueParticipants = participants.filter((participant, index, self) =>
+      index === self.findIndex(p => p.email === participant.email)
+    );
 
     // Create group chat
     const groupChat = new GroupChat({
       submissionId,
-      participants
+      participants: uniqueParticipants
     });
 
     await groupChat.save();
@@ -105,7 +113,7 @@ export async function POST(req) {
 
 export async function GET(req) {
   try {
-    await connectToDatabase();
+    await dbConnect();
     const session = await getServerSession(authOptions);
     
     if (!session) {

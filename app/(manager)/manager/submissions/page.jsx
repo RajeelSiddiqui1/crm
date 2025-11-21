@@ -102,11 +102,10 @@ export default function ManagerSubmissionsPage() {
   const fetchSubmissions = async () => {
     try {
       setFetching(true);
-      const response = await axios.get(
-        `/api/manager/submissions?departmentId=${session.user.depId}`
-      );
+      const response = await axios.get(`/api/manager/submissions`);
       if (response.status === 200) {
         setSubmissions(response.data || []);
+        console.log("Fetched submissions:", response.data);
       }
     } catch (error) {
       console.error("Error fetching submissions:", error);
@@ -592,10 +591,10 @@ export default function ManagerSubmissionsPage() {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
           <div className="text-center sm:text-left">
             <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-indigo-700 bg-clip-text text-transparent">
-              Form Submissions
+              My Form Submissions
             </h1>
             <p className="text-gray-800 mt-3 text-lg">
-              Track and manage form submissions from your team
+              Track and manage your form submissions
             </p>
           </div>
 
@@ -667,7 +666,7 @@ export default function ManagerSubmissionsPage() {
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <div>
                 <CardTitle className="text-2xl font-bold text-gray-900">
-                  All Submissions
+                  My Submissions
                 </CardTitle>
                 <CardDescription className="text-gray-700 text-base">
                   {filteredSubmissions.length} submission
@@ -723,7 +722,7 @@ export default function ManagerSubmissionsPage() {
                 </h3>
                 <p className="text-gray-700 text-lg max-w-md mx-auto mb-6">
                   {submissions.length === 0
-                    ? "Form submissions from your team will appear here."
+                    ? "Your form submissions will appear here."
                     : "Try adjusting your search terms to find what you're looking for."}
                 </p>
               </div>
@@ -898,8 +897,7 @@ export default function ManagerSubmissionsPage() {
                               <Edit className="w-4 h-4 mr-2" />
                               Edit
                             </Button>
-                            // Add this to the actions buttons in your TeamLead
-                            page
+                           
                             <Button
                               onClick={() =>
                                 router.push(
@@ -935,10 +933,11 @@ export default function ManagerSubmissionsPage() {
           </CardContent>
         </Card>
 
+        {/* View Details Modal with Scroll Bar */}
         {showDetails && selectedSubmission && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <Card className="w-full max-w-4xl max-h-[90vh] overflow-hidden bg-white border-0 shadow-2xl">
-              <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white">
+            <Card className="w-full max-w-4xl max-h-[90vh] overflow-hidden bg-white border-0 shadow-2xl flex flex-col">
+              <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white flex-shrink-0">
                 <div className="flex justify-between items-center">
                   <div>
                     <CardTitle className="text-white text-2xl">
@@ -961,7 +960,7 @@ export default function ManagerSubmissionsPage() {
                   </Button>
                 </div>
               </CardHeader>
-              <CardContent className="pt-6 overflow-y-auto">
+              <CardContent className="pt-6 overflow-y-auto flex-1">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <div className="space-y-6">
                     <h3 className="text-lg font-semibold text-gray-900">
@@ -1084,7 +1083,7 @@ export default function ManagerSubmissionsPage() {
                       Form Data
                     </h3>
 
-                    <div className="space-y-4 max-h-96 overflow-y-auto">
+                    <div className="space-y-4 max-h-80 overflow-y-auto pr-2 custom-scrollbar">
                       {selectedSubmission.formData &&
                         Object.entries(selectedSubmission.formData).map(
                           ([key, value]) => {
@@ -1173,7 +1172,7 @@ export default function ManagerSubmissionsPage() {
                           <SelectTrigger className="w-full focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900">
                             <SelectValue placeholder="Select status" />
                           </SelectTrigger>
-                          <SelectContent>
+                          <SelectContent className="bg-white text-black">
                             {canManagerUpdateStatus(selectedSubmission) ? (
                               <>
                                 <SelectItem value="approved">
@@ -1254,10 +1253,11 @@ export default function ManagerSubmissionsPage() {
           </div>
         )}
 
+        {/* Edit Form Modal with Scroll Bar */}
         {showEditForm && editingSubmission && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <Card className="w-full max-w-4xl max-h-[90vh] overflow-hidden bg-white border-0 shadow-2xl">
-              <CardHeader className="bg-gradient-to-r from-green-600 to-emerald-700 text-white">
+            <Card className="w-full max-w-4xl max-h-[90vh] overflow-hidden bg-white border-0 shadow-2xl flex flex-col">
+              <CardHeader className="bg-gradient-to-r from-green-600 to-emerald-700 text-white flex-shrink-0">
                 <div className="flex justify-between items-center">
                   <div>
                     <CardTitle className="text-white text-2xl">
@@ -1280,7 +1280,7 @@ export default function ManagerSubmissionsPage() {
                   </Button>
                 </div>
               </CardHeader>
-              <CardContent className="pt-6 overflow-y-auto">
+              <CardContent className="pt-6 overflow-y-auto flex-1">
                 <form onSubmit={handleEditSubmission} className="space-y-6">
                   <div className="grid grid-cols-1 gap-8">
                     <div className="space-y-6">
@@ -1288,7 +1288,7 @@ export default function ManagerSubmissionsPage() {
                         Form Data
                       </h3>
 
-                      <div className="space-y-4 max-h-96 overflow-y-auto p-4 border border-gray-200 rounded-lg bg-gray-50">
+                      <div className="space-y-4 max-h-96 overflow-y-auto p-4 border border-gray-200 rounded-lg bg-gray-50 pr-2 custom-scrollbar">
                         {editingSubmission.formData &&
                           Object.entries(editingSubmission.formData).map(
                             ([fieldName, fieldValue]) => {
@@ -1403,6 +1403,24 @@ export default function ManagerSubmissionsPage() {
           </div>
         )}
       </div>
+
+      {/* Custom Scrollbar Styles */}
+      <style jsx>{`
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: #f1f5f9;
+          border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: #cbd5e1;
+          border-radius: 10px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: #94a3b8;
+        }
+      `}</style>
     </div>
   );
 }

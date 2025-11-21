@@ -65,3 +65,37 @@ export async function POST(req) {
     );
   }
 }
+
+// Delete audio from Cloudinary
+export async function DELETE(req) {
+  try {
+    const session = await getServerSession(authOptions);
+
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { public_id } = await req.json();
+
+    if (!public_id) {
+      return NextResponse.json({ error: "Public ID required" }, { status: 400 });
+    }
+
+    const result = await cloudinary.uploader.destroy(public_id, {
+      resource_type: "raw"
+    });
+
+    if (result.result !== 'ok') {
+      return NextResponse.json({ error: "Failed to delete audio" }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true, message: "Audio deleted successfully" });
+
+  } catch (error) {
+    console.error("Error deleting audio:", error);
+    return NextResponse.json(
+      { error: "Failed to delete audio" },
+      { status: 500 }
+    );
+  }
+}

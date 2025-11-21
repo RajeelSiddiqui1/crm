@@ -2,25 +2,35 @@ import { NextResponse } from "next/server";
 import dbConnect from "@/lib/db";
 import FormSubmission from "@/models/FormSubmission";
 import Form from "@/models/Form";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 
-// ✅ GET - Manager ke department ki submissions fetch karega
+// ✅ GET - Manager ke liye sirf unki department ki submissions fetch karega
 export async function GET(req) {
   try {
     await dbConnect();
-    
-    const { searchParams } = new URL(req.url);
-    const departmentId = searchParams.get('departmentId');
-    
-    if (!departmentId) {
-      return NextResponse.json(
-        { error: "Department ID required" },
-        { status: 400 }
-      );
+
+    const session = await getServerSession(authOptions);
+
+    if (!session || session.user.role !== "Manager") {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    const submissions = await FormSubmission.find()
-      .populate('formId')
+    // Get the logged-in manager's ID
+    const managerId = session.user.id;
+    
+    console.log("Manager ID:", managerId);
+    console.log("Session user:", session.user);
+
+    // Fetch submissions where submittedBy matches the manager's ID
+    const submissions = await FormSubmission.find({ 
+      submittedBy: managerId 
+    })
+      .populate("formId")
+      .populate("assignedEmployees.employeeId")
       .sort({ createdAt: -1 });
+
+    console.log("Found submissions:", submissions.length);
 
     return NextResponse.json(submissions, { status: 200 });
   } catch (error) {
@@ -44,10 +54,23 @@ export async function PUT(req) {
       );
     }
 
-    const submission = await FormSubmission.findById(submissionId);
+    const session = await getServerSession(authOptions);
+    
+    if (!session || session.user.role !== "Manager") {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    }
+
+    const managerId = session.user.id;
+
+    // Find submission and verify it belongs to this manager
+    const submission = await FormSubmission.findOne({
+      _id: submissionId,
+      submittedBy: managerId
+    });
+
     if (!submission) {
       return NextResponse.json(
-        { error: "Submission not found" },
+        { error: "Submission not found or access denied" },
         { status: 404 }
       );
     }

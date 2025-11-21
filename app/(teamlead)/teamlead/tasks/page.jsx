@@ -282,11 +282,15 @@ export default function TeamLeadSubmissionsPage() {
 
   // Get available employees for assignment (excluding already assigned ones)
   const getAvailableEmployees = (submission) => {
+    // Fix: Check if employees is an array before calling filter
+    if (!Array.isArray(employees)) return [];
+    
     if (!submission || !submission.assignedEmployees) return employees;
 
     const assignedEmployeeIds = submission.assignedEmployees.map(
-      (emp) => emp.employeeId._id
-    );
+      (emp) => emp.employeeId?._id
+    ).filter(id => id); // Filter out undefined IDs
+    
     return employees.filter(
       (employee) => !assignedEmployeeIds.includes(employee._id)
     );
@@ -556,241 +560,243 @@ export default function TeamLeadSubmissionsPage() {
             ) : (
               <div className="overflow-x-auto h-full">
                 <div className="max-h-[calc(100vh-400px)] overflow-y-auto">
-                  <Table>
-                    <TableHeader className="bg-gray-50 sticky top-0">
-                      <TableRow className="hover:bg-transparent">
-                        <TableHead className="font-semibold text-gray-700 text-sm uppercase tracking-wide py-3">
-                          Form Details
-                        </TableHead>
-                        <TableHead className="font-semibold text-gray-700 text-sm uppercase tracking-wide py-3">
-                          Status
-                        </TableHead>
-                        <TableHead className="font-semibold text-gray-700 text-sm uppercase tracking-wide py-3">
-                          Assigned Employees
-                        </TableHead>
-                        <TableHead className="font-semibold text-gray-700 text-sm uppercase tracking-wide py-3">
-                          Quick Actions
-                        </TableHead>
-                        <TableHead className="font-semibold text-gray-700 text-sm uppercase tracking-wide py-3">
-                          Assigned Date
-                        </TableHead>
-                        <TableHead className="font-semibold text-gray-700 text-sm uppercase tracking-wide py-3">
-                          Actions
-                        </TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredSubmissions.map((submission) => (
-                        <TableRow
-                          key={submission._id}
-                          className="group hover:bg-gray-50 transition-colors duration-150 border-b border-gray-100"
-                        >
-                          <TableCell className="py-3">
-                            <div className="flex items-center gap-3">
-                              <Avatar className="border border-gray-200">
-                                <AvatarFallback className="bg-gray-100 text-gray-600 font-semibold">
-                                  <FileText className="w-4 h-4" />
-                                </AvatarFallback>
-                              </Avatar>
-                              <div>
-                                <div className="font-semibold text-gray-900 group-hover:text-gray-700 transition-colors">
-                                  {submission.formId?.title || "Untitled Form"}
-                                </div>
-                                <div className="text-sm text-gray-600">
-                                  {submission.formId?.description ||
-                                    "No description"}
-                                </div>
-                                {submission.assignedEmployees &&
-                                  submission.assignedEmployees.length > 0 && (
-                                    <div className="flex items-center gap-1 mt-1">
-                                      <Users className="w-3 h-3 text-gray-500" />
-                                      <span className="text-xs text-gray-500">
-                                        {submission.assignedEmployees.length}{" "}
-                                        employee(s)
-                                      </span>
-                                    </div>
-                                  )}
-                              </div>
-                            </div>
-                          </TableCell>
-                          <TableCell className="py-3">
-                            <Badge
-                              className={`${getStatusVariant(
-                                submission.status
-                              )} border flex items-center gap-1 px-2 py-1 font-medium`}
-                            >
-                              {getStatusIcon(submission.status)}
-                              {submission.status.replace("_", " ")}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="py-3">
-                            <div className="flex flex-col gap-1">
-                              {submission.assignedEmployees &&
-                              submission.assignedEmployees.length > 0 ? (
-                                submission.assignedEmployees
-                                  .slice(0, 3)
-                                  .map((emp, index) => (
-                                    <div
-                                      key={emp.employeeId._id}
-                                      className="flex items-center justify-between"
-                                    >
-                                      <div className="flex items-center gap-2">
-                                        <Avatar className="w-6 h-6">
-                                          <AvatarFallback className="text-xs bg-blue-100 text-blue-600">
-                                            {emp.employeeId.firstName?.[0]}
-                                            {emp.employeeId.lastName?.[0]}
-                                          </AvatarFallback>
-                                        </Avatar>
-                                        <span className="text-xs text-gray-700">
-                                          {emp.employeeId.firstName}{" "}
-                                          {emp.employeeId.lastName}
+                  <div className="min-w-[1200px]"> {/* Added min-width for horizontal scroll */}
+                    <Table>
+                      <TableHeader className="bg-gray-50 sticky top-0">
+                        <TableRow className="hover:bg-transparent">
+                          <TableHead className="font-semibold text-gray-700 text-sm uppercase tracking-wide py-3 min-w-[250px]">
+                            Form Details
+                          </TableHead>
+                          <TableHead className="font-semibold text-gray-700 text-sm uppercase tracking-wide py-3 min-w-[120px]">
+                            Status
+                          </TableHead>
+                          <TableHead className="font-semibold text-gray-700 text-sm uppercase tracking-wide py-3 min-w-[200px]">
+                            Assigned Employees
+                          </TableHead>
+                          <TableHead className="font-semibold text-gray-700 text-sm uppercase tracking-wide py-3 min-w-[150px]">
+                            Quick Actions
+                          </TableHead>
+                          <TableHead className="font-semibold text-gray-700 text-sm uppercase tracking-wide py-3 min-w-[150px]">
+                            Assigned Date
+                          </TableHead>
+                          <TableHead className="font-semibold text-gray-700 text-sm uppercase tracking-wide py-3 min-w-[300px]">
+                            Actions
+                          </TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredSubmissions.map((submission) => (
+                          <TableRow
+                            key={submission._id}
+                            className="group hover:bg-gray-50 transition-colors duration-150 border-b border-gray-100"
+                          >
+                            <TableCell className="py-3 min-w-[250px]">
+                              <div className="flex items-center gap-3">
+                                <Avatar className="border border-gray-200">
+                                  <AvatarFallback className="bg-gray-100 text-gray-600 font-semibold">
+                                    <FileText className="w-4 h-4" />
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div>
+                                  <div className="font-semibold text-gray-900 group-hover:text-gray-700 transition-colors">
+                                    {submission.formId?.title || "Untitled Form"}
+                                  </div>
+                                  <div className="text-sm text-gray-600">
+                                    {submission.formId?.description ||
+                                      "No description"}
+                                  </div>
+                                  {submission.assignedEmployees &&
+                                    submission.assignedEmployees.length > 0 && (
+                                      <div className="flex items-center gap-1 mt-1">
+                                        <Users className="w-3 h-3 text-gray-500" />
+                                        <span className="text-xs text-gray-500">
+                                          {submission.assignedEmployees.length}{" "}
+                                          employee(s)
                                         </span>
                                       </div>
-                                      <Badge
-                                        variant="outline"
-                                        className={`text-xs ${getStatusVariant(
-                                          emp.status
-                                        )}`}
+                                    )}
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell className="py-3 min-w-[120px]">
+                              <Badge
+                                className={`${getStatusVariant(
+                                  submission.status
+                                )} border flex items-center gap-1 px-2 py-1 font-medium`}
+                              >
+                                {getStatusIcon(submission.status)}
+                                {submission.status.replace("_", " ")}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="py-3 min-w-[200px]">
+                              <div className="flex flex-col gap-1">
+                                {submission.assignedEmployees &&
+                                submission.assignedEmployees.length > 0 ? (
+                                  submission.assignedEmployees
+                                    .slice(0, 3)
+                                    .map((emp, index) => (
+                                      <div
+                                        key={emp.employeeId._id}
+                                        className="flex items-center justify-between"
                                       >
-                                        {emp.status}
-                                      </Badge>
-                                    </div>
-                                  ))
-                              ) : (
-                                <span className="text-xs text-gray-500">
-                                  No employees assigned
-                                </span>
-                              )}
-                              {submission.assignedEmployees &&
-                                submission.assignedEmployees.length > 3 && (
+                                        <div className="flex items-center gap-2">
+                                          <Avatar className="w-6 h-6">
+                                            <AvatarFallback className="text-xs bg-blue-100 text-blue-600">
+                                              {emp.employeeId.firstName?.[0]}
+                                              {emp.employeeId.lastName?.[0]}
+                                            </AvatarFallback>
+                                          </Avatar>
+                                          <span className="text-xs text-gray-700">
+                                            {emp.employeeId.firstName}{" "}
+                                            {emp.employeeId.lastName}
+                                          </span>
+                                        </div>
+                                        <Badge
+                                          variant="outline"
+                                          className={`text-xs ${getStatusVariant(
+                                            emp.status
+                                          )}`}
+                                        >
+                                          {emp.status}
+                                        </Badge>
+                                      </div>
+                                    ))
+                                ) : (
                                   <span className="text-xs text-gray-500">
-                                    +{submission.assignedEmployees.length - 3}{" "}
-                                    more
+                                    No employees assigned
                                   </span>
                                 )}
-                            </div>
-                          </TableCell>
-                          <TableCell className="py-3">
-                            <div className="flex flex-wrap gap-2">
-                              <Select
-                                onValueChange={(value) =>
-                                  handleQuickStatusUpdate(submission._id, value)
-                                }
-                                disabled={loading}
-                              >
-                                <SelectTrigger className="w-32 h-8 text-xs border border-gray-300 bg-white text-gray-900 focus:border-gray-400 focus:ring-1 focus:ring-gray-400">
-                                  <SelectValue placeholder="Update Status" />
-                                </SelectTrigger>
-                                <SelectContent className="bg-white border border-gray-200 min-w-[140px] text-gray-900">
-                                  <SelectItem
-                                    value="pending"
-                                    className="text-xs py-2 bg-white text-gray-900"
-                                  >
-                                    <div className="flex items-center gap-2">
-                                      <AlertCircle className="w-3 h-3 text-amber-600" />
-                                      <span>Pending</span>
-                                    </div>
-                                  </SelectItem>
-                                  <SelectItem
-                                    value="in_progress"
-                                    className="text-xs py-2 bg-white text-gray-900"
-                                  >
-                                    <div className="flex items-center gap-2">
-                                      <Clock className="w-3 h-3 text-blue-600" />
-                                      <span>In Progress</span>
-                                    </div>
-                                  </SelectItem>
-                                  <SelectItem
-                                    value="completed"
-                                    className="text-xs py-2 bg-white text-gray-900"
-                                  >
-                                    <div className="flex items-center gap-2">
-                                      <CheckCircle className="w-3 h-3 text-green-600" />
-                                      <span>Completed</span>
-                                    </div>
-                                  </SelectItem>
-                                  <SelectItem
-                                    value="rejected"
-                                    className="text-xs py-2 bg-white text-gray-900"
-                                  >
-                                    <div className="flex items-center gap-2">
-                                      <XCircle className="w-3 h-3 text-red-600" />
-                                      <span>Rejected</span>
-                                    </div>
-                                  </SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          </TableCell>
+                                {submission.assignedEmployees &&
+                                  submission.assignedEmployees.length > 3 && (
+                                    <span className="text-xs text-gray-500">
+                                      +{submission.assignedEmployees.length - 3}{" "}
+                                      more
+                                    </span>
+                                  )}
+                              </div>
+                            </TableCell>
+                            <TableCell className="py-3 min-w-[150px]">
+                              <div className="flex flex-wrap gap-2">
+                                <Select
+                                  onValueChange={(value) =>
+                                    handleQuickStatusUpdate(submission._id, value)
+                                  }
+                                  disabled={loading}
+                                >
+                                  <SelectTrigger className="w-32 h-8 text-xs border border-gray-300 bg-white text-gray-900 focus:border-gray-400 focus:ring-1 focus:ring-gray-400">
+                                    <SelectValue placeholder="Update Status" />
+                                  </SelectTrigger>
+                                  <SelectContent className="bg-white border border-gray-200 min-w-[140px] text-gray-900">
+                                    <SelectItem
+                                      value="pending"
+                                      className="text-xs py-2 bg-white text-gray-900"
+                                    >
+                                      <div className="flex items-center gap-2">
+                                        <AlertCircle className="w-3 h-3 text-amber-600" />
+                                        <span>Pending</span>
+                                      </div>
+                                    </SelectItem>
+                                    <SelectItem
+                                      value="in_progress"
+                                      className="text-xs py-2 bg-white text-gray-900"
+                                    >
+                                      <div className="flex items-center gap-2">
+                                        <Clock className="w-3 h-3 text-blue-600" />
+                                        <span>In Progress</span>
+                                      </div>
+                                    </SelectItem>
+                                    <SelectItem
+                                      value="completed"
+                                      className="text-xs py-2 bg-white text-gray-900"
+                                    >
+                                      <div className="flex items-center gap-2">
+                                        <CheckCircle className="w-3 h-3 text-green-600" />
+                                        <span>Completed</span>
+                                      </div>
+                                    </SelectItem>
+                                    <SelectItem
+                                      value="rejected"
+                                      className="text-xs py-2 bg-white text-gray-900"
+                                    >
+                                      <div className="flex items-center gap-2">
+                                        <XCircle className="w-3 h-3 text-red-600" />
+                                        <span>Rejected</span>
+                                      </div>
+                                    </SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </TableCell>
 
-                          <TableCell className="py-3">
-                            <div className="flex items-center gap-2 text-gray-700 group-hover:text-gray-900 transition-colors">
-                              <Calendar className="w-4 h-4 text-gray-500" />
-                              <span className="text-sm font-medium">
-                                {formatDate(submission.createdAt)}
-                              </span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="py-3">
-                            <div className="flex gap-2">
-                              {/* Create Subtask Button */}
-                              <Link
-                                href={`/teamlead/subtasks/create?submissionId=${submission._id}`}
-                              >
+                            <TableCell className="py-3 min-w-[150px]">
+                              <div className="flex items-center gap-2 text-gray-700 group-hover:text-gray-900 transition-colors">
+                                <Calendar className="w-4 h-4 text-gray-500" />
+                                <span className="text-sm font-medium">
+                                  {formatDate(submission.createdAt)}
+                                </span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="py-3 min-w-[300px]">
+                              <div className="flex gap-2 flex-wrap">
+                                {/* Create Subtask Button */}
+                                <Link
+                                  href={`/teamlead/subtasks/create?submissionId=${submission._id}`}
+                                >
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-colors"
+                                  >
+                                    <Plus className="w-4 h-4 mr-1" />
+                                    Create Subtask
+                                  </Button>
+                                </Link>
+
+                                {/* View Subtasks Button */}
+                                {/* <Link
+                                  href={`/teamlead/subtasks/${submission._id}`}
+                                >
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-colors"
+                                  >
+                                    <ArrowRight className="w-4 h-4 mr-1" />
+                                    View Subtasks
+                                  </Button>
+                                </Link> */}
                                 <Button
+                                  onClick={() =>
+                                    router.push(
+                                      `/group-chat?submissionId=${submission._id}`
+                                    )
+                                  }
                                   variant="outline"
                                   size="sm"
-                                  className="border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-colors"
+                                  className="border-purple-200 text-purple-700 hover:bg-purple-50 transition-colors"
                                 >
-                                  <Plus className="w-4 h-4 mr-1" />
-                                  Create Subtask
+                                  <MessageCircle className="w-4 h-4 mr-1" />
+                                  Group Chat
                                 </Button>
-                              </Link>
-
-                              {/* View Subtasks Button */}
-                              <Link
-                                href={`/teamlead/subtasks/${submission._id}`}
-                              >
                                 <Button
-                                  variant="outline"
+                                  onClick={() => {
+                                    setSelectedSubmission(submission);
+                                    setShowDetails(true);
+                                    setSelectedEmployees([]);
+                                  }}
+                                  className="bg-gray-900 text-white hover:bg-gray-800 transition-colors"
                                   size="sm"
-                                  className="border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-colors"
                                 >
-                                  <ArrowRight className="w-4 h-4 mr-1" />
-                                  View Subtasks
+                                  <Eye className="w-4 h-4 mr-1" />
+                                  View Details
                                 </Button>
-                              </Link>
-                              <Button
-                                onClick={() =>
-                                  router.push(
-                                    `/group-chat?submissionId=${submission._id}`
-                                  )
-                                }
-                                variant="outline"
-                                size="sm"
-                                className="border-purple-200 text-purple-700 hover:bg-purple-50 transition-colors"
-                              >
-                                <MessageCircle className="w-4 h-4 mr-1" />
-                                Group Chat
-                              </Button>
-                              <Button
-                                onClick={() => {
-                                  setSelectedSubmission(submission);
-                                  setShowDetails(true);
-                                  setSelectedEmployees([]);
-                                }}
-                                className="bg-gray-900 text-white hover:bg-gray-800 transition-colors"
-                                size="sm"
-                              >
-                                <Eye className="w-4 h-4 mr-1" />
-                                View Details
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
                 </div>
               </div>
             )}
