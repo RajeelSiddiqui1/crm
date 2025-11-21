@@ -398,7 +398,7 @@ export default function EmployeeTasksPage() {
                 </div>
               </div>
             ) : (
-              <div className="overflow-x-auto h-full">
+              <div className="overflow-x-hidden h-full">
                 <div className="max-h-[calc(100vh-400px)] overflow-y-auto">
                   <Table>
                     <TableHeader className="bg-gradient-to-r from-gray-50 to-green-50/50 sticky top-0">
