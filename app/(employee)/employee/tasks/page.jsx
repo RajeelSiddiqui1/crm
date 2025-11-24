@@ -267,96 +267,87 @@ export default function EmployeeTasksPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50 p-4 sm:p-6 overflow-x-hidden">
       <Toaster position="top-right" />
 
-      <div className="max-w-7xl mx-auto h-[calc(100vh-3rem)] flex flex-col">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+      <div className="max-w-[100vw] mx-auto w-full flex flex-col">
+        {/* Header Section */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
           <div className="text-center sm:text-left">
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-green-600 to-blue-700 bg-clip-text text-transparent">
+            <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-green-600 to-blue-700 bg-clip-text text-transparent">
               My Assigned Tasks
             </h1>
-            <p className="text-gray-800 mt-3 text-lg">
+            <p className="text-gray-800 mt-1 sm:mt-2 text-sm sm:text-base">
               Welcome, {session.user.firstName}! Manage your assigned tasks
             </p>
           </div>
 
-          <div className="flex gap-3">
+          <div className="flex gap-2 sm:gap-3 w-full sm:w-auto">
             <Button
               onClick={fetchTasks}
               variant="outline"
-              className="border-green-200 text-green-700 hover:bg-green-50"
+              className="border-green-200 text-green-700 hover:bg-green-50 flex-1 sm:flex-none text-xs sm:text-sm"
               disabled={fetching}
+              size="sm"
             >
               <RefreshCw
-                className={`w-4 h-4 mr-2 ${fetching ? "animate-spin" : ""}`}
+                className={`w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 ${fetching ? "animate-spin" : ""}`}
               />
               {fetching ? "Refreshing..." : "Refresh"}
             </Button>
           </div>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-4 mb-8">
-          <Card className="bg-white border-0 shadow-lg">
-            <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-gray-900">
-                {statusStats.total}
-              </div>
-              <div className="text-sm text-gray-600">Total Tasks</div>
-            </CardContent>
-          </Card>
-          <Card className="bg-white border-0 shadow-lg">
-            <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-yellow-600">
-                {statusStats.pending}
-              </div>
-              <div className="text-sm text-gray-600">Pending</div>
-            </CardContent>
-          </Card>
-          <Card className="bg-white border-0 shadow-lg">
-            <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-blue-600">
-                {statusStats.in_progress}
-              </div>
-              <div className="text-sm text-gray-600">In Progress</div>
-            </CardContent>
-          </Card>
-          <Card className="bg-white border-0 shadow-lg">
-            <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-green-600">
-                {statusStats.completed}
-              </div>
-              <div className="text-sm text-gray-600">Completed</div>
-            </CardContent>
-          </Card>
+        {/* Stats Cards */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+          {[
+            { label: "Total Tasks", value: statusStats.total, color: "gray" },
+            { label: "Pending", value: statusStats.pending, color: "yellow" },
+            { label: "In Progress", value: statusStats.in_progress, color: "blue" },
+            { label: "Completed", value: statusStats.completed, color: "green" },
+          ].map((stat, index) => (
+            <Card key={index} className="bg-white border-0 shadow-lg">
+              <CardContent className="p-3 text-center">
+                <div className={`text-lg sm:text-xl font-bold ${
+                  stat.color === 'gray' ? 'text-gray-900' :
+                  stat.color === 'yellow' ? 'text-yellow-600' :
+                  stat.color === 'blue' ? 'text-blue-600' : 'text-green-600'
+                }`}>
+                  {stat.value}
+                </div>
+                <div className="text-xs sm:text-sm text-gray-600">{stat.label}</div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
 
-        <Card className="shadow-2xl shadow-green-500/10 border-0 bg-gradient-to-br from-white to-green-50/50 backdrop-blur-sm overflow-hidden flex-1 flex flex-col">
-          <CardHeader className="bg-gradient-to-r from-white to-green-50 border-b border-green-100/50">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        {/* Main Content Card */}
+        <Card className="shadow-lg border-0 bg-gradient-to-br from-white to-green-50/50 backdrop-blur-sm overflow-hidden flex-1 flex flex-col">
+          <CardHeader className="bg-gradient-to-r from-white to-green-50 border-b border-green-100/50 p-4">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
               <div>
-                <CardTitle className="text-2xl font-bold text-gray-900">
+                <CardTitle className="text-lg sm:text-xl font-bold text-gray-900">
                   My Tasks
                 </CardTitle>
-                <CardDescription className="text-gray-700 text-base">
+                <CardDescription className="text-gray-700 text-sm">
                   {filteredTasks.length} task
                   {filteredTasks.length !== 1 ? "s" : ""} found
                 </CardDescription>
               </div>
 
-              <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-                <div className="relative w-full sm:w-64">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+              <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                <div className="relative w-full sm:w-48">
+                  <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-gray-400" />
                   <Input
                     placeholder="Search tasks..."
-                    className="pl-10 pr-4 focus:border-green-500 focus:ring-2 focus:ring-green-200 transition-all duration-200 shadow-sm h-11 text-base text-gray-900"
+                    className="pl-7 pr-3 focus:border-green-500 focus:ring-1 focus:ring-green-200 shadow-sm h-9 text-sm text-gray-900"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                   />
                 </div>
 
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-full sm:w-40 focus:border-green-500 focus:ring-2 focus:ring-green-200 text-gray-900">
+                  <SelectTrigger className="w-full sm:w-36 focus:border-green-500 focus:ring-1 focus:ring-green-200 text-gray-900 h-9 text-sm">
                     <SelectValue placeholder="Filter Status" />
                   </SelectTrigger>
                   <SelectContent className="text-black bg-white">
@@ -373,55 +364,144 @@ export default function EmployeeTasksPage() {
 
           <CardContent className="p-0 flex-1">
             {fetching ? (
-              <div className="flex justify-center items-center py-16 h-full">
-                <div className="flex items-center gap-3 text-gray-800">
-                  <Loader2 className="w-6 h-6 animate-spin text-green-600" />
-                  <span className="text-lg">Loading tasks...</span>
+              <div className="flex justify-center items-center py-12">
+                <div className="flex items-center gap-2 text-gray-800">
+                  <Loader2 className="w-5 h-5 animate-spin text-green-600" />
+                  <span className="text-sm">Loading tasks...</span>
                 </div>
               </div>
             ) : filteredTasks.length === 0 ? (
-              <div className="text-center py-16 h-full flex items-center justify-center">
-                <div>
-                  <div className="text-gray-300 mb-4">
-                    <FileText className="w-20 h-20 mx-auto" />
-                  </div>
-                  <h3 className="text-2xl font-bold text-gray-900 mb-3">
-                    {tasks.length === 0
-                      ? "No tasks assigned"
-                      : "No matches found"}
-                  </h3>
-                  <p className="text-gray-700 text-lg max-w-md mx-auto mb-6">
-                    {tasks.length === 0
-                      ? "Tasks assigned to you will appear here."
-                      : "Try adjusting your search terms to find what you're looking for."}
-                  </p>
+              <div className="text-center py-12">
+                <div className="text-gray-300 mb-3">
+                  <FileText className="w-12 h-12 sm:w-16 sm:h-16 mx-auto" />
                 </div>
+                <h3 className="text-base sm:text-lg font-bold text-gray-900 mb-1">
+                  {tasks.length === 0 ? "No tasks assigned" : "No matches found"}
+                </h3>
+                <p className="text-gray-700 text-sm max-w-md mx-auto">
+                  {tasks.length === 0
+                    ? "Tasks assigned to you will appear here."
+                    : "Try adjusting your search terms."}
+                </p>
               </div>
             ) : (
-              <div className="overflow-x-hidden h-full">
-                <div className="max-h-[calc(100vh-400px)] overflow-y-auto">
+              <div className="overflow-x-auto">
+                {/* Mobile View - Cards */}
+                <div className="block lg:hidden space-y-3 p-3">
+                  {filteredTasks.map((task) => (
+                    <Card key={task._id} className="p-3 hover:shadow-md transition-shadow duration-200">
+                      <CardContent className="space-y-3 p-0">
+                        {/* Header */}
+                        <div className="flex justify-between items-start">
+                          <div className="flex items-center gap-2 flex-1 min-w-0">
+                            <Avatar className="border-2 border-white shadow w-8 h-8">
+                              <AvatarFallback className="bg-gradient-to-r from-green-500 to-blue-600 text-white text-xs font-bold">
+                                <FileText className="w-3 h-3" />
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="min-w-0 flex-1">
+                              <h3 className="font-semibold text-gray-900 text-sm line-clamp-1">
+                                {task.formId?.title || "Untitled Task"}
+                              </h3>
+                              <p className="text-xs text-gray-600 truncate">
+                                Assigned by: {task.assignedTo}
+                              </p>
+                            </div>
+                          </div>
+                          <Badge
+                            className={`${getStatusVariant(
+                              task.employeeStatus
+                            )} text-xs font-semibold capitalize px-2 py-1 rounded border flex items-center gap-1 flex-shrink-0 ml-2`}
+                          >
+                            {getStatusIcon(task.employeeStatus)}
+                            <span className="hidden sm:inline">
+                              {task.employeeStatus.replace("_", " ")}
+                            </span>
+                            <span className="sm:hidden">
+                              {task.employeeStatus === 'completed' ? 'Done' : 
+                               task.employeeStatus === 'in_progress' ? 'Progress' : 
+                               task.employeeStatus === 'pending' ? 'Pending' : 
+                               task.employeeStatus.slice(0,3)}
+                            </span>
+                          </Badge>
+                        </div>
+
+                        {/* Status Badges */}
+                        <div className="flex flex-wrap gap-1">
+                          <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700">
+                            M: {task.status?.replace("_", " ") || "N/A"}
+                          </Badge>
+                          <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700">
+                            TL: {task.status2?.replace("_", " ") || "N/A"}
+                          </Badge>
+                        </div>
+
+                        {/* Details */}
+                        <div className="grid grid-cols-2 gap-2 text-xs">
+                          <div>
+                            <span className="text-gray-500">Assigned:</span>
+                            <p className="font-medium">{formatDate(task.assignedAt).split(',')[0]}</p>
+                          </div>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex gap-2 pt-1">
+                          <Select
+                            onValueChange={(value) =>
+                              handleQuickStatusUpdate(task._id, value)
+                            }
+                            disabled={loading}
+                            className="flex-1"
+                          >
+                            <SelectTrigger className="w-full h-7 text-xs border-gray-300">
+                              <SelectValue placeholder="Update" />
+                            </SelectTrigger>
+                            <SelectContent className="bg-white border border-gray-200">
+                              <SelectItem value="pending" className="text-xs">Pending</SelectItem>
+                              <SelectItem value="in_progress" className="text-xs">In Progress</SelectItem>
+                              <SelectItem value="completed" className="text-xs">Completed</SelectItem>
+                              <SelectItem value="rejected" className="text-xs">Rejected</SelectItem>
+                            </SelectContent>
+                          </Select>
+
+                          <Button
+                            onClick={() => {
+                              setSelectedTask(task);
+                              setShowDetails(true);
+                            }}
+                            className="bg-gray-900 text-white hover:bg-gray-800 text-xs h-7 flex-1"
+                            size="sm"
+                          >
+                            <Eye className="w-3 h-3 mr-1" />
+                            View
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+
+                {/* Desktop View - Table */}
+                <div className="hidden lg:block">
                   <Table>
-                    <TableHeader className="bg-gradient-to-r from-gray-50 to-green-50/50 sticky top-0">
+                    <TableHeader className="bg-gradient-to-r from-gray-50 to-green-50/50">
                       <TableRow className="hover:bg-transparent">
-                        <TableHead className="font-bold text-gray-900 text-sm uppercase tracking-wide py-4">
+                        <TableHead className="font-semibold text-gray-900 text-sm py-3 w-[250px]">
                           Task Details
                         </TableHead>
-                        <TableHead className="font-bold text-gray-900 text-sm uppercase tracking-wide py-4">
-                          Manager Status
+                        <TableHead className="font-semibold text-gray-900 text-sm py-3 w-[100px]">
+                          Manager
                         </TableHead>
-                        <TableHead className="font-bold text-gray-900 text-sm uppercase tracking-wide py-4">
-                          TeamLead Status
+                        <TableHead className="font-semibold text-gray-900 text-sm py-3 w-[100px]">
+                          TeamLead
                         </TableHead>
-                        <TableHead className="font-bold text-gray-900 text-sm uppercase tracking-wide py-4">
+                        <TableHead className="font-semibold text-gray-900 text-sm py-3 w-[100px]">
                           Your Status
                         </TableHead>
-                        <TableHead className="font-bold text-gray-900 text-sm uppercase tracking-wide py-4">
+                        <TableHead className="font-semibold text-gray-900 text-sm py-3 w-[120px]">
                           Quick Actions
                         </TableHead>
-                        <TableHead className="font-bold text-gray-900 text-sm uppercase tracking-wide py-4">
-                          Assigned Date
-                        </TableHead>
-                        <TableHead className="font-bold text-gray-900 text-sm uppercase tracking-wide py-4">
+                        <TableHead className="font-semibold text-gray-900 text-sm py-3 w-[150px]">
                           Actions
                         </TableHead>
                       </TableRow>
@@ -432,118 +512,79 @@ export default function EmployeeTasksPage() {
                           key={task._id}
                           className="group hover:bg-gradient-to-r hover:from-green-50/80 hover:to-blue-50/80 transition-all duration-300 border-b border-gray-100/50"
                         >
-                          <TableCell className="py-4">
-                            <div className="flex items-center gap-4">
-                              <Avatar className="border-2 border-white shadow-lg shadow-green-500/20 group-hover:shadow-xl group-hover:shadow-green-600/30 transition-all duration-300">
-                                <AvatarFallback className="bg-gradient-to-r from-green-500 to-blue-600 text-white font-bold">
+                          <TableCell className="py-3">
+                            <div className="flex items-center gap-3">
+                              <Avatar className="border-2 border-white shadow w-10 h-10">
+                                <AvatarFallback className="bg-gradient-to-r from-green-500 to-blue-600 text-white font-bold text-sm">
                                   <FileText className="w-4 h-4" />
                                 </AvatarFallback>
                               </Avatar>
-                              <div>
-                                <div className="font-bold text-gray-900 text-lg group-hover:text-green-700 transition-colors duration-200">
+                              <div className="min-w-0 flex-1">
+                                <div className="font-semibold text-gray-900 text-sm group-hover:text-green-700 transition-colors duration-200 truncate">
                                   {task.formId?.title || "Untitled Task"}
                                 </div>
-                                <div className="text-sm text-gray-600">
-                                  {task.formId?.description || "No description"}
-                                </div>
-                                <div className="text-xs text-gray-500 mt-1">
+                                <div className="text-xs text-gray-600 truncate">
                                   Assigned by: {task.assignedTo}
+                                </div>
+                                <div className="flex items-center gap-1 mt-1">
+                                  <Calendar className="w-3 h-3 text-gray-500" />
+                                  <span className="text-xs text-gray-500">
+                                    {formatDate(task.assignedAt)}
+                                  </span>
                                 </div>
                               </div>
                             </div>
                           </TableCell>
-                          <TableCell className="py-4">
+                          <TableCell className="py-3">
                             <Badge
                               className={`${getStatusVariant(
                                 task.status
-                              )} border flex items-center gap-1 px-3 py-1.5 font-medium`}
+                              )} border flex items-center gap-1 px-2 py-1 font-medium text-xs`}
                             >
                               {getStatusIcon(task.status)}
                               {task.status?.replace("_", " ") || "N/A"}
                             </Badge>
                           </TableCell>
-                          <TableCell className="py-4">
+                          <TableCell className="py-3">
                             <Badge
                               className={`${getStatusVariant(
                                 task.status2
-                              )} border flex items-center gap-1 px-3 py-1.5 font-medium`}
+                              )} border flex items-center gap-1 px-2 py-1 font-medium text-xs`}
                             >
                               {getStatusIcon(task.status2)}
                               {task.status2?.replace("_", " ") || "N/A"}
                             </Badge>
                           </TableCell>
-                          <TableCell className="py-4">
+                          <TableCell className="py-3">
                             <Badge
                               className={`${getStatusVariant(
                                 task.employeeStatus
-                              )} border flex items-center gap-1 px-3 py-1.5 font-medium`}
+                              )} border flex items-center gap-1 px-2 py-1 font-medium text-xs`}
                             >
                               {getStatusIcon(task.employeeStatus)}
                               {task.employeeStatus.replace("_", " ")}
                             </Badge>
                           </TableCell>
-                          <TableCell className="py-4">
-                            <div className="flex flex-wrap gap-2">
-                              <Select
-                                onValueChange={(value) =>
-                                  handleQuickStatusUpdate(task._id, value)
-                                }
-                                disabled={loading}
-                              >
-                                <SelectTrigger className="w-36 h-8 text-xs text-black focus:border-green-500 focus:ring-2 focus:ring-green-200">
-                                  <SelectValue placeholder="Update Status" />
-                                </SelectTrigger>
-                                <SelectContent className="text-black bg-white min-w-[140px]">
-                                  <SelectItem
-                                    value="pending"
-                                    className="text-xs py-2"
-                                  >
-                                    <div className="flex items-center gap-2">
-                                      <AlertCircle className="w-3 h-3 text-yellow-600" />
-                                      <span>Pending</span>
-                                    </div>
-                                  </SelectItem>
-                                  <SelectItem
-                                    value="in_progress"
-                                    className="text-xs py-2"
-                                  >
-                                    <div className="flex items-center gap-2">
-                                      <Clock className="w-3 h-3 text-blue-600" />
-                                      <span>In Progress</span>
-                                    </div>
-                                  </SelectItem>
-                                  <SelectItem
-                                    value="completed"
-                                    className="text-xs py-2"
-                                  >
-                                    <div className="flex items-center gap-2">
-                                      <CheckCircle className="w-3 h-3 text-green-600" />
-                                      <span>Completed</span>
-                                    </div>
-                                  </SelectItem>
-                                  <SelectItem
-                                    value="rejected"
-                                    className="text-xs py-2"
-                                  >
-                                    <div className="flex items-center gap-2">
-                                      <XCircle className="w-3 h-3 text-red-600" />
-                                      <span>Rejected</span>
-                                    </div>
-                                  </SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
+                          <TableCell className="py-3">
+                            <Select
+                              onValueChange={(value) =>
+                                handleQuickStatusUpdate(task._id, value)
+                              }
+                              disabled={loading}
+                            >
+                              <SelectTrigger className="w-28 h-7 text-xs border-gray-300">
+                                <SelectValue placeholder="Update" />
+                              </SelectTrigger>
+                              <SelectContent className="bg-white border border-gray-200 min-w-[120px]">
+                                <SelectItem value="pending" className="text-xs">Pending</SelectItem>
+                                <SelectItem value="in_progress" className="text-xs">In Progress</SelectItem>
+                                <SelectItem value="completed" className="text-xs">Completed</SelectItem>
+                                <SelectItem value="rejected" className="text-xs">Rejected</SelectItem>
+                              </SelectContent>
+                            </Select>
                           </TableCell>
-                          <TableCell className="py-4">
-                            <div className="flex items-center gap-3 text-gray-700 group-hover:text-gray-900 transition-colors duration-200">
-                              <Calendar className="w-5 h-5 text-green-500" />
-                              <span className="text-base font-medium">
-                                {formatDate(task.assignedAt)}
-                              </span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="py-4">
-                            <div className="flex gap-2">
+                          <TableCell className="py-3">
+                            <div className="flex gap-1 flex-wrap">
                               <Button
                                 onClick={() => {
                                   setSelectedTask(task);
@@ -551,27 +592,24 @@ export default function EmployeeTasksPage() {
                                 }}
                                 variant="outline"
                                 size="sm"
-                                className="border-green-200 text-green-700 hover:bg-green-50 hover:border-green-300 transition-all duration-200"
+                                className="border-green-200 text-green-700 hover:bg-green-50 text-xs h-7"
                               >
-                                <Eye className="w-4 h-4 mr-2" />
-                                View Details
+                                <Eye className="w-3 h-3 mr-1" />
+                                Details
+                              </Button>
+                              <Button
+                                onClick={() =>
+                                  router.push(
+                                    `/group-chat?submissionId=${task._id}`
+                                  )
+                                }
+                                variant="outline"
+                                size="sm"
+                                className="border-purple-200 text-purple-700 hover:bg-purple-50 text-xs h-7"
+                              >
+                                <MessageCircle className="w-3 h-3" />
                               </Button>
                             </div>
-                          </TableCell >
-                          <TableCell className="py-4">
-                          <Button
-                            onClick={() =>
-                              router.push(
-                                `/group-chat?submissionId=${submission._id}`
-                              )
-                            }
-                            variant="outline"
-                            size="sm"
-                            className="border-purple-200 text-purple-700 hover:bg-purple-50 transition-colors"
-                          >
-                            <MessageCircle className="w-4 h-4 " />
-                            Group Chat
-                          </Button>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -583,16 +621,17 @@ export default function EmployeeTasksPage() {
           </CardContent>
         </Card>
 
+        {/* Details Modal */}
         {showDetails && selectedTask && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <Card className="w-full max-w-6xl max-h-[90vh] overflow-hidden bg-white border-0 shadow-2xl">
-              <CardHeader className="bg-gradient-to-r from-green-600 to-blue-700 text-white">
+            <Card className="w-full max-w-4xl max-h-[90vh] overflow-hidden bg-white border-0 shadow-2xl">
+              <CardHeader className="bg-gradient-to-r from-green-600 to-blue-700 text-white p-4">
                 <div className="flex justify-between items-center">
-                  <div>
-                    <CardTitle className="text-white text-2xl">
+                  <div className="flex-1 min-w-0">
+                    <CardTitle className="text-white text-lg truncate">
                       {selectedTask.formId?.title || "Task Details"}
                     </CardTitle>
-                    <CardDescription className="text-green-100">
+                    <CardDescription className="text-green-100 text-sm truncate">
                       View task details and update your status
                     </CardDescription>
                   </div>
@@ -604,216 +643,141 @@ export default function EmployeeTasksPage() {
                       setSelectedTask(null);
                       setFeedback("");
                     }}
-                    className="h-8 w-8 text-white hover:bg-white/20"
+                    className="h-7 w-7 text-white hover:bg-white/20 flex-shrink-0 ml-2"
                   >
                     <X className="w-4 h-4" />
                   </Button>
                 </div>
               </CardHeader>
-              <CardContent className="pt-6 overflow-y-auto max-h-[calc(90vh-80px)]">
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                  <div className="lg:col-span-2 space-y-6">
-                    <div className="space-y-6">
-                      <h3 className="text-lg font-semibold text-gray-900">
-                        Task Information
-                      </h3>
-
-                      <div className="space-y-4">
-                        <div>
-                          <Label className="text-gray-800 font-semibold">
-                            Assigned Date
-                          </Label>
-                          <p className="text-gray-900 font-medium">
-                            {formatDate(selectedTask.assignedAt)}
-                          </p>
-                        </div>
-
-                        <div className="grid grid-cols-3 gap-4">
-                          <div>
-                            <Label className="text-gray-800 font-semibold">
-                              Manager Status
-                            </Label>
-                            <Badge
-                              className={`${getStatusVariant(
-                                selectedTask.status
-                              )} border flex items-center gap-1 px-3 py-1.5 font-medium`}
-                            >
-                              {getStatusIcon(selectedTask.status)}
-                              {selectedTask.status?.replace("_", " ") || "N/A"}
-                            </Badge>
-                          </div>
-                          <div>
-                            <Label className="text-gray-800 font-semibold">
-                              TeamLead Status
-                            </Label>
-                            <Badge
-                              className={`${getStatusVariant(
-                                selectedTask.status2
-                              )} border flex items-center gap-1 px-3 py-1.5 font-medium`}
-                            >
-                              {getStatusIcon(selectedTask.status2)}
-                              {selectedTask.status2?.replace("_", " ") || "N/A"}
-                            </Badge>
-                          </div>
-                          <div>
-                            <Label className="text-gray-800 font-semibold">
-                              Your Status
-                            </Label>
-                            <Badge
-                              className={`${getStatusVariant(
-                                selectedTask.employeeStatus
-                              )} border flex items-center gap-1 px-3 py-1.5 font-medium`}
-                            >
-                              {getStatusIcon(selectedTask.employeeStatus)}
-                              {selectedTask.employeeStatus.replace("_", " ")}
-                            </Badge>
-                          </div>
-                        </div>
-
-                        {selectedTask.completedAt && (
-                          <div>
-                            <Label className="text-gray-800 font-semibold">
-                              Completed Date
-                            </Label>
-                            <p className="text-gray-900 font-medium">
-                              {formatDate(selectedTask.completedAt)}
-                            </p>
-                          </div>
-                        )}
-
-                        {selectedTask.managerComments && (
-                          <div>
-                            <Label className="text-gray-800 font-semibold">
-                              Manager Comments
-                            </Label>
-                            <p className="text-gray-900 font-medium">
-                              {selectedTask.managerComments}
-                            </p>
-                          </div>
-                        )}
-
-                        {selectedTask.teamLeadFeedback && (
-                          <div>
-                            <Label className="text-gray-800 font-semibold">
-                              TeamLead Feedback
-                            </Label>
-                            <p className="text-gray-900 font-medium">
-                              {selectedTask.teamLeadFeedback}
-                            </p>
-                          </div>
-                        )}
+              <CardContent className="pt-4 overflow-y-auto max-h-[calc(90vh-80px)]">
+                <div className="space-y-4">
+                  {/* Task Information */}
+                  <div className="space-y-3">
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      Task Information
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div>
+                        <Label className="text-gray-800 font-semibold text-sm">
+                          Assigned Date
+                        </Label>
+                        <p className="text-gray-900 font-medium text-sm">
+                          {formatDate(selectedTask.assignedAt)}
+                        </p>
+                      </div>
+                      <div>
+                        <Label className="text-gray-800 font-semibold text-sm">
+                          Manager Status
+                        </Label>
+                        <Badge
+                          className={`${getStatusVariant(
+                            selectedTask.status
+                          )} border flex items-center gap-1 px-2 py-1 font-medium text-xs`}
+                        >
+                          {getStatusIcon(selectedTask.status)}
+                          {selectedTask.status?.replace("_", " ") || "N/A"}
+                        </Badge>
+                      </div>
+                      <div>
+                        <Label className="text-gray-800 font-semibold text-sm">
+                          TeamLead Status
+                        </Label>
+                        <Badge
+                          className={`${getStatusVariant(
+                            selectedTask.status2
+                          )} border flex items-center gap-1 px-2 py-1 font-medium text-xs`}
+                        >
+                          {getStatusIcon(selectedTask.status2)}
+                          {selectedTask.status2?.replace("_", " ") || "N/A"}
+                        </Badge>
                       </div>
                     </div>
-
-                    <div className="space-y-6">
-                      <h3 className="text-lg font-semibold text-gray-900">
-                        Form Data
-                      </h3>
-
-                      <div className="space-y-4 max-h-96 overflow-y-auto">
-                        {selectedTask.formData &&
-                          Object.entries(selectedTask.formData).map(
-                            ([key, value]) => (
-                              <div
-                                key={key}
-                                className="border border-gray-200 rounded-lg p-4 bg-white"
-                              >
-                                <div className="flex items-center gap-3 mb-3">
-                                  <div className="p-2 rounded-lg bg-green-100 text-green-600">
-                                    <FileText className="w-4 h-4" />
-                                  </div>
-                                  <Label className="text-gray-800 font-semibold capitalize">
-                                    {key.replace(/([A-Z])/g, " $1").trim()}
-                                  </Label>
-                                </div>
-                                <div className="text-gray-900 font-medium">
-                                  {formatFieldValue(value)}
-                                </div>
-                              </div>
-                            )
-                          )}
-                      </div>
+                    <div className="mt-2">
+                      <Label className="text-gray-800 font-semibold text-sm">
+                        Your Status
+                      </Label>
+                      <Badge
+                        className={`${getStatusVariant(
+                          selectedTask.employeeStatus
+                        )} border flex items-center gap-1 px-2 py-1 font-medium text-sm`}
+                      >
+                        {getStatusIcon(selectedTask.employeeStatus)}
+                        {selectedTask.employeeStatus.replace("_", " ")}
+                      </Badge>
                     </div>
                   </div>
 
-                  <div className="space-y-6">
-                    <div className="space-y-4">
-                      <h3 className="text-lg font-semibold text-gray-900">
-                        Update Your Status
-                      </h3>
+                  {/* Form Data */}
+                  <div className="space-y-3">
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      Form Data
+                    </h3>
+                    <div className="space-y-2 max-h-60 overflow-y-auto">
+                      {selectedTask.formData &&
+                        Object.entries(selectedTask.formData).map(
+                          ([key, value]) => (
+                            <div
+                              key={key}
+                              className="border border-gray-200 rounded-lg p-3 bg-white"
+                            >
+                              <Label className="text-gray-800 font-semibold capitalize text-sm block mb-1">
+                                {key.replace(/([A-Z])/g, " $1").trim()}
+                              </Label>
+                              <div className="text-gray-900 font-medium text-sm">
+                                {formatFieldValue(value)}
+                              </div>
+                            </div>
+                          )
+                        )}
+                    </div>
+                  </div>
 
-                      <div className="flex flex-wrap gap-2">
+                  {/* Update Status */}
+                  <div className="space-y-3">
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      Update Your Status
+                    </h3>
+                    <div className="flex flex-wrap gap-2">
+                      {[
+                        { status: "pending", label: "Pending", variant: "outline", color: "yellow" },
+                        { status: "in_progress", label: "In Progress", variant: "outline", color: "blue" },
+                        { status: "completed", label: "Completed", variant: "default", color: "green" },
+                        { status: "rejected", label: "Rejected", variant: "default", color: "red" },
+                      ].map((action) => (
                         <Button
+                          key={action.status}
                           onClick={() =>
                             handleStatusUpdate(
                               selectedTask._id,
-                              "pending",
+                              action.status,
                               feedback
                             )
                           }
-                          variant="outline"
-                          className="border-yellow-200 text-yellow-700 hover:bg-yellow-50"
-                          disabled={loading}
-                        >
-                          Set Pending
-                        </Button>
-                        <Button
-                          onClick={() =>
-                            handleStatusUpdate(
-                              selectedTask._id,
-                              "in_progress",
-                              feedback
-                            )
+                          variant={action.variant}
+                          className={
+                            action.variant === "default" 
+                              ? `bg-${action.color}-600 text-white hover:bg-${action.color}-700 text-sm`
+                              : `border-${action.color}-200 text-${action.color}-700 hover:bg-${action.color}-50 text-sm`
                           }
-                          variant="outline"
-                          className="border-blue-200 text-blue-700 hover:bg-blue-50"
                           disabled={loading}
+                          size="sm"
                         >
-                          Set In Progress
+                          {action.label}
                         </Button>
-                        <Button
-                          onClick={() =>
-                            handleStatusUpdate(
-                              selectedTask._id,
-                              "completed",
-                              feedback
-                            )
-                          }
-                          className="bg-green-600 text-white hover:bg-green-700"
-                          disabled={loading}
-                        >
-                          Set Completed
-                        </Button>
-                        <Button
-                          onClick={() =>
-                            handleStatusUpdate(
-                              selectedTask._id,
-                              "rejected",
-                              feedback
-                            )
-                          }
-                          className="bg-red-600 text-white hover:bg-red-700"
-                          disabled={loading}
-                        >
-                          Set Rejected
-                        </Button>
-                      </div>
+                      ))}
+                    </div>
 
-                      <div className="space-y-3">
-                        <Label
-                          htmlFor="feedback"
-                          className="text-gray-800 font-semibold"
-                        >
-                          Feedback (Optional)
-                        </Label>
-                        <Textarea
-                          value={feedback}
-                          onChange={(e) => setFeedback(e.target.value)}
-                          placeholder="Add your feedback or comments about this task..."
-                          className="focus:border-green-500 focus:ring-2 focus:ring-green-200 text-gray-900"
-                          rows={3}
-                        />
-                      </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="feedback" className="text-gray-800 font-semibold text-sm">
+                        Feedback (Optional)
+                      </Label>
+                      <Textarea
+                        value={feedback}
+                        onChange={(e) => setFeedback(e.target.value)}
+                        placeholder="Add your feedback or comments about this task..."
+                        className="focus:border-green-500 focus:ring-1 focus:ring-green-200 text-gray-900 text-sm"
+                        rows={2}
+                      />
                     </div>
                   </div>
                 </div>

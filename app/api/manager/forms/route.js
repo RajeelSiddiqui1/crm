@@ -29,7 +29,6 @@ export async function GET(req) {
     }
 
     const managerDeptIds = manager.departments.map((d) => d.toString());
-
     let forms = [];
 
     if (depId) {
@@ -42,7 +41,6 @@ export async function GET(req) {
     }
 
     return NextResponse.json(forms, { status: 200 });
-
   } catch (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
@@ -52,10 +50,16 @@ export async function POST(req) {
   try {
     await dbConnect();
 
+    const session = await getServerSession(authOptions);
+    if (!session || session.user.role !== "Manager") {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    }
+
     const contentType = req.headers.get("content-type") || "";
     let body = {};
-    let fileUrl = null;
+    let uploadedFileUrl = null;
 
+    // Handle multipart/form-data
     if (contentType.includes("multipart/form-data")) {
       const formData = await req.formData();
 
@@ -67,29 +71,25 @@ export async function POST(req) {
 
       const file = formData.get("file");
       if (file && file.name) {
-        const arrayBuffer = await file.arrayBuffer();
-        const buffer = Buffer.from(arrayBuffer);
-
-        const uploadResponse = await new Promise((resolve, reject) => {
+        const buffer = Buffer.from(await file.arrayBuffer());
+        const uploadResult = await new Promise((resolve, reject) => {
           cloudinary.uploader
-            .upload_stream({ folder: "form_uploads" }, (error, result) => {
-              if (error) reject(error);
+            .upload_stream({ folder: "form_uploads" }, (err, result) => {
+              if (err) reject(err);
               else resolve(result);
             })
             .end(buffer);
         });
-
-        fileUrl = uploadResponse.secure_url;
+        uploadedFileUrl = uploadResult.secure_url;
       }
-
     } else {
       body = await req.json();
     }
 
     const { formId, adminTaskId, submittedBy, assignedTo, formData } = body;
 
-    if (fileUrl) {
-      formData.file = fileUrl;
+    if (uploadedFileUrl) {
+      formData.file = uploadedFileUrl;
     }
 
     const newSubmission = new FormSubmission({
@@ -125,8 +125,8 @@ export async function POST(req) {
       { message: "Form submitted successfully", submission: newSubmission },
       { status: 201 }
     );
-
   } catch (error) {
+    console.error("Form Submission Error:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

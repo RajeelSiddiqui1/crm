@@ -61,6 +61,7 @@ export default function ManagerFormsPage() {
 
     const [dynamicFormData, setDynamicFormData] = useState({});
     const [showPasswords, setShowPasswords] = useState({});
+    const [dragOver, setDragOver] = useState({});
 
     useEffect(() => {
         if (status === "loading") return;
@@ -120,12 +121,16 @@ export default function ManagerFormsPage() {
                 case 'rating':
                     initialData[field.name] = field.defaultRating || 0;
                     break;
+                case 'file':
+                    initialData[field.name] = null;
+                    break;
                 default:
                     initialData[field.name] = "";
             }
         });
         setDynamicFormData(initialData);
         setShowPasswords({});
+        setDragOver({});
     };
 
     const handleDynamicFieldChange = (fieldName, value) => {
@@ -140,6 +145,36 @@ export default function ManagerFormsPage() {
             ...prev,
             [fieldName]: !prev[fieldName]
         }));
+    };
+
+    // File Upload Handlers
+    const handleFileInputClick = (fieldName) => {
+        document.getElementById(`file-input-${fieldName}`)?.click();
+    };
+
+    const handleFileChange = (fieldName, files) => {
+        handleDynamicFieldChange(fieldName, files);
+        toast.success(`${files.length} file(s) selected`);
+    };
+
+    const handleDragOver = (e, fieldName) => {
+        e.preventDefault();
+        setDragOver(prev => ({ ...prev, [fieldName]: true }));
+    };
+
+    const handleDragLeave = (e, fieldName) => {
+        e.preventDefault();
+        setDragOver(prev => ({ ...prev, [fieldName]: false }));
+    };
+
+    const handleDrop = (e, fieldName) => {
+        e.preventDefault();
+        setDragOver(prev => ({ ...prev, [fieldName]: false }));
+        
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            handleFileChange(fieldName, files);
+        }
     };
 
     const handleSubmit = async (e) => {
@@ -198,10 +233,12 @@ export default function ManagerFormsPage() {
         setSelectedForm(null);
         setShowForm(false);
         setShowPasswords({});
+        setDragOver({});
     };
 
     const renderFormField = (field) => {
         const fieldValue = dynamicFormData[field.name] || "";
+        const isDragOver = dragOver[field.name] || false;
 
         switch (field.type) {
             case "text":
@@ -331,21 +368,78 @@ export default function ManagerFormsPage() {
                     </div>
                 );
             case "file":
+                const files = fieldValue;
+                const fileCount = files ? (field.multiple ? files.length : 1) : 0;
+                
                 return (
-                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center bg-white cursor-pointer hover:border-gray-400 transition-colors">
-                        <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                        <p className="text-sm text-gray-600">Click to upload or drag and drop</p>
-                        <p className="text-xs text-gray-500 mt-1">
-                            {field.multiple ? 'Multiple files allowed' : 'Single file only'} • {field.accept || 'Any file type'}
-                        </p>
+                    <div className="space-y-3">
+                        {/* Hidden File Input */}
                         <Input
+                            id={`file-input-${field.name}`}
                             type="file"
-                            onChange={(e) => handleDynamicFieldChange(field.name, e.target.files)}
+                            onChange={(e) => handleFileChange(field.name, e.target.files)}
                             className="hidden"
                             multiple={field.multiple}
                             accept={field.accept}
-                            required={field.required}
+                            required={field.required && !fileCount}
                         />
+                        
+                        {/* Drag & Drop Area */}
+                        <div
+                            onClick={() => handleFileInputClick(field.name)}
+                            onDragOver={(e) => handleDragOver(e, field.name)}
+                            onDragLeave={(e) => handleDragLeave(e, field.name)}
+                            onDrop={(e) => handleDrop(e, field.name)}
+                            className={`
+                                border-2 border-dashed rounded-lg p-6 text-center bg-white cursor-pointer transition-all duration-200
+                                ${isDragOver 
+                                    ? 'border-blue-500 bg-blue-50 scale-105' 
+                                    : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'
+                                }
+                            `}
+                        >
+                            <Upload className={`w-8 h-8 mx-auto mb-2 ${isDragOver ? 'text-blue-500' : 'text-gray-400'}`} />
+                            <p className={`text-sm font-medium ${isDragOver ? 'text-blue-700' : 'text-gray-600'}`}>
+                                {isDragOver ? 'Drop files here' : 'Click to upload or drag and drop'}
+                            </p>
+                            <p className="text-xs text-gray-500 mt-1">
+                                {field.multiple ? 'Multiple files allowed' : 'Single file only'} • {field.accept || 'Any file type'}
+                            </p>
+                        </div>
+
+                        {/* Selected Files Preview */}
+                        {fileCount > 0 && (
+                            <div className="space-y-2">
+                                <p className="text-sm text-gray-600 font-medium">
+                                    Selected {fileCount} file{fileCount !== 1 ? 's' : ''}:
+                                </p>
+                                <div className="space-y-1 max-h-32 overflow-y-auto">
+                                    {Array.from(files).map((file, index) => (
+                                        <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded border">
+                                            <div className="flex items-center space-x-2">
+                                                <FileText className="w-4 h-4 text-gray-500" />
+                                                <span className="text-sm text-gray-700 truncate max-w-xs">
+                                                    {file.name}
+                                                </span>
+                                            </div>
+                                            <span className="text-xs text-gray-500">
+                                                {(file.size / 1024 / 1024).toFixed(2)} MB
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleFileInputClick(field.name)}
+                                    className="text-xs"
+                                >
+                                    <Upload className="w-3 h-3 mr-1" />
+                                    Change Files
+                                </Button>
+                            </div>
+                        )}
                     </div>
                 );
             case "rating":
