@@ -19,6 +19,10 @@ const managerPostSchema = new Schema(
       default: false,
     },
 
+    submmittedBy:{
+       type:mongoose.Schema.Types.ObjectId,
+       ref:"Manager"
+    },
  views: [
       {
         userId: { type: mongoose.Schema.Types.ObjectId, required: true, refPath: 'views.userModel' },

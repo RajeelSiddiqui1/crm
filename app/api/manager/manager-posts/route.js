@@ -34,6 +34,7 @@ export async function POST(req) {
       title,
       description,
       attachmentUrl: uploadAttachment,
+      submmittedBy: session.user.id
     });
 
     await newManagerPost.save();
