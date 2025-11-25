@@ -86,6 +86,8 @@ export default function Sidebar() {
     ],
     manager: [
       { href: "/managerhome", label: "Dashboard", icon: "Dashboard" },
+      { href: "/manager/post", label: "Manager Post", icon: "Dashboard" },
+      { href: "/managerhome", label: "Dashboard", icon: "Dashboard" },
       { href: "/manager/teamleads", label: "Team Leads", icon: "Team Leads" },
       { href: "/manager/admin-tasks", label: "Admin Tasks", icon: "AdminTasks" },
       { href: "/manager/employees", label: "Employees", icon: "Employees" },

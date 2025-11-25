@@ -402,7 +402,7 @@ export default function FormBuilderPage() {
             {/* Form Preview Modal */}
             {activeForm && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                    <Card className="w-full max-w-2xl max-h-[90vh] overflow-hidden bg-white">
+                    <Card className="w-full max-w-2xl max-h-[90vh] overflow-auto bg-white">
                         <CardHeader className="bg-white border-b">
                             <div className="flex justify-between items-center">
                                 <div>
