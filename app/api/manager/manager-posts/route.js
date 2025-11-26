@@ -69,7 +69,7 @@ export async function GET() {
       );
     }
 
-    const posts = await ManagerPost.find().sort({ createdAt: -1 });
+    const posts = await ManagerPost.find({submmittedBy: session.user.id}).sort({ createdAt: -1 });
 
     return NextResponse.json(
       {

@@ -9,10 +9,10 @@ export async function middleware(req) {
 
     if (token && publicPaths.includes(pathname)) {
         const roleRedirects = {
-            Admin: "/adminhome",
-            Manager: "/managerhome",
-            TeamLead: "/teamleadhome",
-            Employee: "/employeehome",
+            Admin: "/admin/home",
+            Manager: "/manager/home",
+            TeamLead: "/teamlead/home",
+            Employee: "/employee/home",
         };
 
         return NextResponse.redirect(new URL(roleRedirects[token.role] || "/", req.url))

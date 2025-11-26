@@ -56,6 +56,7 @@ import {
   Check,
   Download,
   Play,
+  View,
 } from "lucide-react";
 import axios from "axios";
 
@@ -244,7 +245,7 @@ export default function ManagerPostsPage() {
 
       const fileType = getFileType(file);
       const reader = new FileReader();
-      
+
       reader.onloadend = () => {
         if (isEdit) {
           setEditFormData((prev) => ({
@@ -255,8 +256,8 @@ export default function ManagerPostsPage() {
           }));
           toast.success(`${fileType === 'image' ? 'Image' : fileType === 'video' ? 'Video' : 'File'} attached successfully!`);
         } else {
-          setFormData((prev) => ({ 
-            ...prev, 
+          setFormData((prev) => ({
+            ...prev,
             attachmentUrl: reader.result,
             fileType: fileType,
             fileName: file.name,
@@ -270,19 +271,19 @@ export default function ManagerPostsPage() {
 
   const removeFileAttachment = (isEdit = false) => {
     if (isEdit) {
-      setEditFormData((prev) => ({ 
-        ...prev, 
+      setEditFormData((prev) => ({
+        ...prev,
         attachmentUrl: "",
         fileType: "",
-        fileName: "" 
+        fileName: ""
       }));
       toast.info("File removed");
     } else {
-      setFormData((prev) => ({ 
-        ...prev, 
+      setFormData((prev) => ({
+        ...prev,
         attachmentUrl: "",
         fileType: "",
-        fileName: "" 
+        fileName: ""
       }));
       toast.info("File removed");
     }
@@ -324,14 +325,14 @@ export default function ManagerPostsPage() {
     if (!attachmentUrl) return null;
 
     const baseClass = "w-full rounded-lg border border-gray-200";
-    
+
     switch (fileType) {
       case 'image':
         return (
           <div className="space-y-3">
-            <img 
-              src={attachmentUrl} 
-              alt={fileName || "Attachment"} 
+            <img
+              src={attachmentUrl}
+              alt={fileName || "Attachment"}
               className={`${baseClass} max-h-64 object-cover`}
             />
             <p className="text-sm text-gray-600 text-center">{fileName}</p>
@@ -340,8 +341,8 @@ export default function ManagerPostsPage() {
       case 'video':
         return (
           <div className="space-y-3">
-            <video 
-              controls 
+            <video
+              controls
               className={`${baseClass} max-h-64`}
               poster={attachmentUrl} // You can add a thumbnail later
             >
@@ -368,19 +369,19 @@ export default function ManagerPostsPage() {
     if (!post.attachmentUrl) return null;
 
     // Determine file type from URL or use attachmentType
-    const fileType = post.attachmentType || 
-      (post.attachmentUrl.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? 'image' : 
-       post.attachmentUrl.match(/\.(mp4|mov|avi|mkv|webm)$/i) ? 'video' : 'file');
+    const fileType = post.attachmentType ||
+      (post.attachmentUrl.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? 'image' :
+        post.attachmentUrl.match(/\.(mp4|mov|avi|mkv|webm)$/i) ? 'video' : 'file');
 
     const baseClass = "w-full rounded-lg border border-gray-200";
-    
+
     switch (fileType) {
       case 'image':
         return (
           <div className="space-y-3">
-            <img 
-              src={post.attachmentUrl} 
-              alt="Attachment" 
+            <img
+              src={post.attachmentUrl}
+              alt="Attachment"
               className={`${baseClass} max-h-64 object-cover cursor-pointer hover:opacity-90 transition-opacity`}
               onClick={() => window.open(post.attachmentUrl, '_blank')}
             />
@@ -389,8 +390,8 @@ export default function ManagerPostsPage() {
       case 'video':
         return (
           <div className="space-y-3">
-            <video 
-              controls 
+            <video
+              controls
               className={`${baseClass} max-h-64`}
             >
               <source src={post.attachmentUrl} type="video/mp4" />
@@ -400,7 +401,7 @@ export default function ManagerPostsPage() {
         );
       default:
         return (
-          <div 
+          <div
             className="flex items-center gap-3 p-4 bg-gray-50 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors"
             onClick={() => window.open(post.attachmentUrl, '_blank')}
           >
@@ -446,9 +447,9 @@ export default function ManagerPostsPage() {
   };
 
   const getPostFileType = (post) => {
-    return post.attachmentType || 
-      (post.attachmentUrl?.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? 'image' : 
-       post.attachmentUrl?.match(/\.(mp4|mov|avi|mkv|webm)$/i) ? 'video' : 'file');
+    return post.attachmentType ||
+      (post.attachmentUrl?.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? 'image' :
+        post.attachmentUrl?.match(/\.(mp4|mov|avi|mkv|webm)$/i) ? 'video' : 'file');
   };
 
   if (status === "loading") {
@@ -647,7 +648,7 @@ export default function ManagerPostsPage() {
                     className="rounded-xl border-gray-300 h-12"
                     accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt"
                   />
-                  
+
                   {/* File Preview */}
                   {formData.attachmentUrl && (
                     <div className="space-y-4 p-4 bg-green-50 border border-green-200 rounded-xl">
@@ -676,7 +677,7 @@ export default function ManagerPostsPage() {
                           Remove
                         </Button>
                       </div>
-                      
+
                       {/* Preview */}
                       {renderFilePreview(formData.attachmentUrl, formData.fileType, formData.fileName)}
                     </div>
@@ -848,11 +849,10 @@ export default function ManagerPostsPage() {
                                 variant="outline"
                                 size="sm"
                                 onClick={() => handleVisibilityToggle(post._id, post.visible)}
-                                className={`${
-                                  post.visible 
-                                    ? "border-orange-300 text-orange-700 hover:bg-orange-50" 
-                                    : "border-green-300 text-green-700 hover:bg-green-50"
-                                } rounded-lg font-semibold`}
+                                className={`${post.visible
+                                  ? "border-orange-300 text-orange-700 hover:bg-orange-50"
+                                  : "border-green-300 text-green-700 hover:bg-green-50"
+                                  } rounded-lg font-semibold`}
                               >
                                 {post.visible ? <EyeOff className="w-4 h-4 mr-1" /> : <Eye className="w-4 h-4 mr-1" />}
                                 {post.visible ? "Hide" : "Publish"}
@@ -891,6 +891,20 @@ export default function ManagerPostsPage() {
                                     <Trash2 className="w-4 h-4" />
                                     Delete
                                   </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() =>
+                                      router.push(
+                                        `/manager/post/${post._id}`
+                                      )
+                                    }
+                                   
+                                     className="text-red-600 cursor-pointer text-sm px-4 py-3 hover:bg-red-50 rounded-lg flex items-center gap-3"
+                                  >
+                                    <View className="w-4 h-4 mr-2" />
+                                    View Detail
+                                  </DropdownMenuItem>
+
+
                                 </DropdownMenuContent>
                               </DropdownMenu>
                             </div>
@@ -980,11 +994,10 @@ export default function ManagerPostsPage() {
               </Label>
               <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl border border-gray-200">
                 <div
-                  className={`w-6 h-6 border-2 rounded-lg flex items-center justify-center cursor-pointer transition-all ${
-                    editFormData.visible
-                      ? "bg-green-600 border-green-600 text-white"
-                      : "border-gray-300 bg-white"
-                  }`}
+                  className={`w-6 h-6 border-2 rounded-lg flex items-center justify-center cursor-pointer transition-all ${editFormData.visible
+                    ? "bg-green-600 border-green-600 text-white"
+                    : "border-gray-300 bg-white"
+                    }`}
                   onClick={() => setEditFormData(prev => ({ ...prev, visible: !prev.visible }))}
                 >
                   {editFormData.visible && <Check className="w-4 h-4" />}
@@ -994,8 +1007,8 @@ export default function ManagerPostsPage() {
                     {editFormData.visible ? "Published" : "Hidden"}
                   </p>
                   <p className="text-sm text-gray-600">
-                    {editFormData.visible 
-                      ? "This post is visible to users" 
+                    {editFormData.visible
+                      ? "This post is visible to users"
                       : "This post is hidden from users"}
                   </p>
                 </div>
@@ -1238,8 +1251,8 @@ export default function ManagerPostsPage() {
                     <CardTitle className="text-lg flex items-center gap-3 text-gray-900">
                       {getFileIcon(getPostFileType(selectedPost))}
                       <span>
-                        {getPostFileType(selectedPost) === 'image' ? 'Image' : 
-                         getPostFileType(selectedPost) === 'video' ? 'Video' : 'File'} Attachment
+                        {getPostFileType(selectedPost) === 'image' ? 'Image' :
+                          getPostFileType(selectedPost) === 'video' ? 'Video' : 'File'} Attachment
                       </span>
                     </CardTitle>
                   </CardHeader>
@@ -1262,6 +1275,7 @@ export default function ManagerPostsPage() {
                           <Download className="w-5 h-5 mr-2" />
                           Download
                         </Button>
+
                       </div>
                     </div>
                   </CardContent>
