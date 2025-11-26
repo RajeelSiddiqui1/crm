@@ -85,14 +85,13 @@ export default function Sidebar() {
       { href: "/admin/employees", label: "Employees", icon: "Employees" },
     ],
     manager: [
-      { href: "/managerhome", label: "Dashboard", icon: "Dashboard" },
+      { href: "/manager/home", label: "Dashboard", icon: "Dashboard" },
       { href: "/manager/post", label: "Manager Post", icon: "Dashboard" },
-      { href: "/managerhome", label: "Dashboard", icon: "Dashboard" },
       { href: "/manager/teamleads", label: "Team Leads", icon: "Team Leads" },
       { href: "/manager/admin-tasks", label: "Admin Tasks", icon: "AdminTasks" },
       { href: "/manager/employees", label: "Employees", icon: "Employees" },
       { href: "/manager/managerforms", label: "Forms", icon: "Forms" },
-      { href: "/manager/employeeform", label: "Employee Forms", icon: "EmployeeForms" },
+      { href: "/manager/employeeform", label: "Employ]ee Forms", icon: "EmployeeForms" },
       { href: "/manager/submissions", label: "Submissions", icon: "Submissions" },
       { href: "/manager/subtasks", label: "Subtasks", icon: "Subtasks" },
       { href: "/manager/received-tasks", label: "Shared Tasks", icon: "SharedTasks" },
@@ -129,7 +128,7 @@ export default function Sidebar() {
       <div className="p-4 border-b border-gray-800 flex items-center justify-between bg-black">
         {!isCollapsed && (
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-full overflow-hidden bg-white flex items-center justify-center">
+            <div className="w-15 h-15 rounded-full overflow-hidden bg-white flex items-center justify-center">
               <img
                 src="/office/mhsolution.png"
                 alt="MH Logo"

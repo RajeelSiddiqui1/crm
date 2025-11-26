@@ -22,7 +22,8 @@ import {
   Image as ImageIcon,
   FileText,
   File,
-  Heart
+  Heart,
+  Play
 } from "lucide-react";
 import Link from "next/link";
 
@@ -46,12 +47,10 @@ export default function PostsPage() {
 
   useEffect(() => {
     if (status === "loading") return;
-
     if (!session) {
       router.push("/login");
       return;
     }
-
     fetchPosts();
   }, [session, status, router, filter]);
 
@@ -60,7 +59,6 @@ export default function PostsPage() {
       setLoading(true);
       const response = await fetch(`/api/posts?filter=${filter}`);
       const data = await response.json();
-
       if (data.success) {
         setPosts(data.posts || []);
       }
@@ -83,7 +81,6 @@ export default function PostsPage() {
           data: { reactionType }
         }),
       });
-
       const data = await response.json();
       if (data.success) {
         setPosts(posts.map(post => 
@@ -183,6 +180,8 @@ function PostCard({ post, session, onReaction }) {
   const router = useRouter();
   const [showReactions, setShowReactions] = useState(false);
   const [currentReaction, setCurrentReaction] = useState(null);
+  const [imageError, setImageError] = useState(false);
+  const [videoError, setVideoError] = useState(false);
 
   const postType = post.submmittedBy ? "manager" : "admin";
   const userReaction = post.reactions?.find(reaction => 
@@ -219,14 +218,25 @@ function PostCard({ post, session, onReaction }) {
   const getAttachmentIcon = () => {
     if (!post.attachmentUrl) return null;
     
-    if (post.attachmentType === 'video' || post.attachmentUrl.includes('video')) {
+    if (post.attachmentType === 'video' || post.attachmentUrl.includes('video') || post.attachmentUrl.match(/\.(mp4|mov|avi|wmv|flv|webm)$/i)) {
       return <Video className="w-4 h-4" />;
-    } else if (post.attachmentType === 'image' || post.attachmentUrl.match(/\.(jpg|jpeg|png|gif)$/i)) {
+    } else if (post.attachmentType === 'image' || post.attachmentUrl.match(/\.(jpg|jpeg|png|gif|webp|bmp)$/i)) {
       return <ImageIcon className="w-4 h-4" />;
     } else {
       return <FileText className="w-4 h-4" />;
     }
   };
+
+  const isVideoFile = post.attachmentUrl && (
+    post.attachmentType === 'video' || 
+    post.attachmentUrl.includes('video') || 
+    post.attachmentUrl.match(/\.(mp4|mov|avi|wmv|flv|webm)$/i)
+  );
+
+  const isImageFile = post.attachmentUrl && (
+    post.attachmentType === 'image' || 
+    post.attachmentUrl.match(/\.(jpg|jpeg|png|gif|webp|bmp)$/i)
+  );
 
   const handleReactionClick = (reactionType) => {
     onReaction(post._id, reactionType);
@@ -306,16 +316,54 @@ function PostCard({ post, session, onReaction }) {
               {getAttachmentIcon()}
               <span>Attachment</span>
             </div>
-            {post.attachmentType === 'image' && (
+            
+            {isImageFile && !imageError && (
               <div 
-                className="w-full h-48 bg-gray-100 rounded-lg cursor-pointer overflow-hidden group/image"
+                className="w-full h-48 bg-gray-100 rounded-lg cursor-pointer overflow-hidden group/image relative"
                 onClick={() => router.push(`/post/${post._id}`)}
               >
                 <img
                   src={post.attachmentUrl}
                   alt="Post attachment"
                   className="w-full h-full object-cover group-hover/image:scale-105 transition-transform duration-300"
+                  onError={() => setImageError(true)}
                 />
+                <div className="absolute inset-0 bg-black bg-opacity-0 group-hover/image:bg-opacity-10 transition-all duration-300" />
+              </div>
+            )}
+
+            {isVideoFile && !videoError && (
+              <div 
+                className="w-full h-48 bg-gray-100 rounded-lg cursor-pointer overflow-hidden group/video relative"
+                onClick={() => router.push(`/post/${post._id}`)}
+              >
+                <video
+                  src={post.attachmentUrl}
+                  className="w-full h-full object-cover"
+                  onError={() => setVideoError(true)}
+                />
+                <div className="absolute inset-0 bg-black bg-opacity-30 flex items-center justify-center group-hover/video:bg-opacity-20 transition-all duration-300">
+                  <div className="w-12 h-12 bg-white bg-opacity-90 rounded-full flex items-center justify-center group-hover/video:scale-110 transition-transform duration-300">
+                    <Play className="w-6 h-6 text-gray-900 ml-1" />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {(imageError || videoError) && (
+              <div className="w-full h-32 bg-gray-100 rounded-lg flex items-center justify-center border border-gray-200">
+                <div className="text-center text-gray-500">
+                  <FileText className="w-8 h-8 mx-auto mb-2" />
+                  <p className="text-sm">Preview not available</p>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="mt-2"
+                    onClick={() => window.open(post.attachmentUrl, '_blank')}
+                  >
+                    Download File
+                  </Button>
+                </div>
               </div>
             )}
           </div>

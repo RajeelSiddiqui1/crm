@@ -63,7 +63,7 @@ const managerPostSchema = new Schema(
         userId: { type: mongoose.Schema.Types.ObjectId, required: true, refPath: 'comments.userModel' },
         userModel: {
           type: String,
-          enum: ["Admin", "TeamLead", "Employee"],
+          enum: ["Manager","Admin", "TeamLead", "Employee"],
           required: true,
         },
         comment: {
