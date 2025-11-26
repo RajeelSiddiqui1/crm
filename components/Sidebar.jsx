@@ -4,13 +4,13 @@ import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { 
-  ChevronLeft, 
-  ChevronRight, 
+import {
+  ChevronLeft,
+  ChevronRight,
   LayoutDashboard,
-  Users, 
-  FileText, 
-  Settings, 
+  Users,
+  FileText,
+  Settings,
   Briefcase,
   User,
   Building,
@@ -129,11 +129,16 @@ export default function Sidebar() {
       <div className="p-4 border-b border-gray-800 flex items-center justify-between bg-black">
         {!isCollapsed && (
           <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center">
-              <Shield className="w-5 h-5 text-black" />
+            <div className="w-10 h-10 rounded-full overflow-hidden bg-white flex items-center justify-center">
+              <img
+                src="/office/mhsolution.png"
+                alt="MH Logo"
+                className="w-full h-full object-cover"
+              />
             </div>
+
             <div>
-              <h2 className="text-lg font-bold text-white">MH Enterprises</h2>
+              <h2 className="text-lg font-bold text-white">MH Solutions</h2>
               <p className="text-xs text-gray-400 capitalize">{role} Panel</p>
             </div>
           </div>
@@ -156,15 +161,15 @@ export default function Sidebar() {
         {roleLinks.map((link) => {
           const IconComponent = iconMap[link.icon];
           const isActive = pathname === link.href;
-          
+
           return (
             <Link
               key={link.href}
               href={link.href}
               className={cn(
                 "flex items-center rounded-lg transition-all duration-200 group relative",
-                isActive 
-                  ? "bg-blue-600 text-white shadow-lg" 
+                isActive
+                  ? "bg-blue-600 text-white shadow-lg"
                   : "text-gray-400 hover:bg-gray-900 hover:text-white",
                 isCollapsed ? "p-3 justify-center" : "p-3"
               )}
@@ -174,18 +179,18 @@ export default function Sidebar() {
               {isActive && isCollapsed && (
                 <div className="absolute left-0 top-1/2 transform -translate-y-1/2 w-1 h-6 bg-white rounded-r-full"></div>
               )}
-              
+
               {IconComponent && (
-                <IconComponent 
-                  size={20} 
+                <IconComponent
+                  size={20}
                   className={cn(
                     "transition-transform duration-200 flex-shrink-0",
                     isCollapsed ? "" : "mr-3",
                     isActive ? "text-white" : "text-gray-400 group-hover:text-white"
-                  )} 
+                  )}
                 />
               )}
-              
+
               {!isCollapsed && (
                 <span className="font-medium text-sm whitespace-nowrap">{link.label}</span>
               )}
