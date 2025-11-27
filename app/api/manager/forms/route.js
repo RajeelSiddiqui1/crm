@@ -10,11 +10,11 @@ import { sendMail } from "@/lib/mail";
 import mongoose from "mongoose";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { sendNotification } from "@/lib/sendNotification";
 
 export async function GET(req) {
   try {
     await dbConnect();
-
     const session = await getServerSession(authOptions);
     if (!session || session.user.role !== "Manager") {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
@@ -24,17 +24,13 @@ export async function GET(req) {
     const depId = searchParams.get("depId");
 
     const manager = await Manager.findById(session.user.id).lean();
-    if (!manager) {
-      return NextResponse.json({ message: "Manager not found" }, { status: 404 });
-    }
+    if (!manager) return NextResponse.json({ message: "Manager not found" }, { status: 404 });
 
     const managerDeptIds = manager.departments.map((d) => d.toString());
     let forms = [];
 
     if (depId) {
-      if (!managerDeptIds.includes(depId)) {
-        return NextResponse.json({ message: "Not authorized for this department" }, { status: 403 });
-      }
+      if (!managerDeptIds.includes(depId)) return NextResponse.json({ message: "Not authorized for this department" }, { status: 403 });
       forms = await Form.find({ depId });
     } else {
       forms = await Form.find({ depId: { $in: managerDeptIds } });
@@ -49,7 +45,6 @@ export async function GET(req) {
 export async function POST(req) {
   try {
     await dbConnect();
-
     const session = await getServerSession(authOptions);
     if (!session || session.user.role !== "Manager") {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
@@ -59,7 +54,6 @@ export async function POST(req) {
     let body = {};
     let uploadedFileUrl = null;
 
-    // Handle multipart/form-data
     if (contentType.includes("multipart/form-data")) {
       const formData = await req.formData();
 
@@ -87,10 +81,7 @@ export async function POST(req) {
     }
 
     const { formId, adminTaskId, submittedBy, assignedTo, formData } = body;
-
-    if (uploadedFileUrl) {
-      formData.file = uploadedFileUrl;
-    }
+    if (uploadedFileUrl) formData.file = uploadedFileUrl;
 
     const newSubmission = new FormSubmission({
       formId,
@@ -110,21 +101,35 @@ export async function POST(req) {
       teamLead = await TeamLead.findOne({ email: assignedTo });
     }
 
-    if (teamLead?.email) {
-      const html = updatedMailTemplate(
-        teamLead.name || "Team Lead",
-        "New Form Assigned",
-        "Manager",
-        "Pending",
-        "A new form has been assigned to you."
-      );
-      await sendMail(teamLead.email, "New Form Assigned", html);
+    if (teamLead) {
+      if (teamLead.email) {
+        const html = updatedMailTemplate(
+          teamLead.name || "Team Lead",
+          "New Form Assigned",
+          "Manager",
+          "Pending",
+          "A new form has been assigned to you."
+        );
+        await sendMail(teamLead.email, "New Form Assigned", html);
+      }
+
+      // Send notification
+      await sendNotification({
+        senderId: session.user.id,
+        senderModel: "Manager",
+        senderName: session.user.name || "Manager",
+        receiverId: teamLead._id,
+        receiverModel: "TeamLead",
+        type: "form_assigned",
+        title: "New Form Assigned",
+        message: `A new form "${newSubmission.formId}" has been assigned to you.`,
+        link: `${process.env.TASK_LINK}/teamlead/submissions/${newSubmission._id}`,
+        referenceId: newSubmission._id,
+        referenceModel: "FormSubmission",
+      });
     }
 
-    return NextResponse.json(
-      { message: "Form submitted successfully", submission: newSubmission },
-      { status: 201 }
-    );
+    return NextResponse.json({ message: "Form submitted successfully", submission: newSubmission }, { status: 201 });
   } catch (error) {
     console.error("Form Submission Error:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });

@@ -108,8 +108,10 @@ export default function TeamLeadSubmissionsPage() {
     try {
       setFetchingEmployees(true);
       const response = await axios.get("/api/teamlead/employees");
+      console.log("Employees API Response:", response.data); // Debug log
       if (response.status === 200) {
-        setEmployees(response.data || []);
+        setEmployees(response.data.employees || []);
+        toast.success(`Loaded ${response.data.employees?.length || 0} employees`);
       }
     } catch (error) {
       console.error("Error fetching employees:", error);
@@ -187,7 +189,7 @@ export default function TeamLeadSubmissionsPage() {
         const employee = employees.find((e) => e._id === empId);
         return {
           employeeId: empId,
-          email: employee.email,
+          email: employee?.email || "",
           status: "pending",
         };
       });
@@ -280,19 +282,41 @@ export default function TeamLeadSubmissionsPage() {
     }
   };
 
-  // Get available employees for assignment (excluding already assigned ones)
+  // Fixed getAvailableEmployees function
   const getAvailableEmployees = (submission) => {
-    if (!Array.isArray(employees)) return [];
+    console.log("All employees:", employees); // Debug log
+    console.log("Current submission:", submission); // Debug log
+    
+    if (!Array.isArray(employees) || employees.length === 0) {
+      console.log("No employees available");
+      return [];
+    }
 
-    if (!submission || !submission.assignedEmployees) return employees;
+    // If no submission or no assigned employees, return all employees
+    if (!submission || !submission.assignedEmployees || submission.assignedEmployees.length === 0) {
+      console.log("Returning all employees:", employees.length);
+      return employees;
+    }
 
+    // Get assigned employee IDs safely
     const assignedEmployeeIds = submission.assignedEmployees
-      .map((emp) => emp.employeeId?._id)
-      .filter((id) => id);
+      .map((emp) => {
+        // Handle both object and string formats
+        if (emp.employeeId && typeof emp.employeeId === 'object') {
+          return emp.employeeId._id;
+        }
+        return emp.employeeId; // if it's already a string
+      })
+      .filter((id) => id && id !== "");
 
-    return employees.filter(
+    console.log("Assigned employee IDs:", assignedEmployeeIds);
+
+    const availableEmployees = employees.filter(
       (employee) => !assignedEmployeeIds.includes(employee._id)
     );
+
+    console.log("Available employees:", availableEmployees.length);
+    return availableEmployees;
   };
 
   const filteredSubmissions = submissions.filter((submission) => {
@@ -390,20 +414,17 @@ export default function TeamLeadSubmissionsPage() {
       <Toaster position="top-right" />
 
       <div className="max-w-[100vw] mx-auto w-full flex flex-col">
-        {/* Header Section */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
           <div className="text-center sm:text-left">
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
               My Assigned Tasks
             </h1>
             <p className="text-gray-600 mt-1 sm:mt-2 text-sm sm:text-base">
-              Welcome, {session.user.firstName}! Manage your assigned form
-              submissions
+              Welcome, {session.user.firstName}! Manage your assigned form submissions
             </p>
           </div>
 
           <div className="flex gap-2 sm:gap-3 w-full sm:w-auto">
-            {/* View All Subtasks Button */}
             <Link href="/teamlead/subtasks" className="flex-1 sm:flex-none">
               <Button
                 variant="outline"
@@ -432,7 +453,6 @@ export default function TeamLeadSubmissionsPage() {
           </div>
         </div>
 
-        {/* Stats Cards */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
           {[
             { label: "Total Tasks", value: statusStats.total, color: "gray" },
@@ -474,7 +494,6 @@ export default function TeamLeadSubmissionsPage() {
           ))}
         </div>
 
-        {/* Main Content Card */}
         <Card className="shadow-md border border-gray-200 bg-white overflow-hidden flex-1 flex flex-col">
           <CardHeader className="bg-white border-b border-gray-200 p-4">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
@@ -541,7 +560,6 @@ export default function TeamLeadSubmissionsPage() {
               </div>
             ) : (
               <div className="overflow-x-auto">
-                {/* Mobile View - Cards */}
                 <div className="block lg:hidden space-y-3 p-3">
                   {filteredSubmissions.map((submission) => (
                     <Card
@@ -549,7 +567,6 @@ export default function TeamLeadSubmissionsPage() {
                       className="p-3 hover:shadow-md transition-shadow duration-200"
                     >
                       <CardContent className="space-y-3 p-0">
-                        {/* Header */}
                         <div className="flex justify-between items-start">
                           <div className="flex items-center gap-2 flex-1 min-w-0">
                             <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -586,7 +603,6 @@ export default function TeamLeadSubmissionsPage() {
                           </Badge>
                         </div>
 
-                        {/* Details */}
                         <div className="grid grid-cols-2 gap-2 text-xs">
                           <div>
                             <span className="text-gray-500">Assigned:</span>
@@ -602,7 +618,6 @@ export default function TeamLeadSubmissionsPage() {
                           </div>
                         </div>
 
-                        {/* Actions */}
                         <div className="flex gap-2 pt-1">
                           <Link
                             href={`/teamlead/subtasks/create?submissionId=${submission._id}`}
@@ -636,7 +651,6 @@ export default function TeamLeadSubmissionsPage() {
                   ))}
                 </div>
 
-                {/* Desktop View - Table */}
                 <div className="hidden lg:block">
                   <Table>
                     <TableHeader className="bg-gray-50">
@@ -707,18 +721,18 @@ export default function TeamLeadSubmissionsPage() {
                                     .slice(0, 2)
                                     .map((emp, index) => (
                                       <div
-                                        key={emp.employeeId._id}
+                                        key={emp.employeeId?._id || index}
                                         className="flex items-center justify-between"
                                       >
                                         <div className="flex items-center gap-2">
                                           <Avatar className="w-6 h-6">
                                             <AvatarFallback className="text-xs bg-blue-100 text-blue-600">
-                                              {emp.employeeId.firstName?.[0]}
-                                              {emp.employeeId.lastName?.[0]}
+                                              {emp.employeeId?.firstName?.[0] || 'E'}
+                                              {emp.employeeId?.lastName?.[0] || 'm'}
                                             </AvatarFallback>
                                           </Avatar>
                                           <span className="text-xs text-gray-700 truncate max-w-[80px]">
-                                            {emp.employeeId.firstName}
+                                            {emp.employeeId?.firstName || 'Unknown'}
                                           </span>
                                         </div>
                                         <Badge
@@ -745,6 +759,7 @@ export default function TeamLeadSubmissionsPage() {
                               )}
                             </div>
                           </TableCell>
+                          
                           <TableCell className="py-3">
                             <Select
                               onValueChange={(value) =>
@@ -818,7 +833,6 @@ export default function TeamLeadSubmissionsPage() {
           </CardContent>
         </Card>
 
-        {/* Details Modal */}
         {showDetails && selectedSubmission && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
             <Card className="w-full max-w-4xl max-h-[90vh] overflow-hidden bg-white border border-gray-200 shadow-xl">
@@ -849,7 +863,6 @@ export default function TeamLeadSubmissionsPage() {
               </CardHeader>
               <CardContent className="pt-4 overflow-y-auto max-h-[calc(90vh-80px)]">
                 <div className="space-y-4">
-                  {/* Task Information */}
                   <div className="space-y-3">
                     <h3 className="text-lg font-semibold text-gray-900">
                       Task Information
@@ -879,7 +892,91 @@ export default function TeamLeadSubmissionsPage() {
                     </div>
                   </div>
 
-                  {/* Form Data */}
+                  <div className="space-y-3">
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      Assign Employees
+                    </h3>
+                    
+                    <div className="space-y-2">
+                      <Label className="text-gray-700 font-semibold text-sm">
+                        Select Employees ({getAvailableEmployees(selectedSubmission).length} available)
+                      </Label>
+                      
+                      <Select 
+                        onValueChange={(value) => {
+                          if (value && !selectedEmployees.includes(value)) {
+                            setSelectedEmployees([...selectedEmployees, value]);
+                          }
+                        }}
+                        disabled={fetchingEmployees || getAvailableEmployees(selectedSubmission).length === 0}
+                      >
+                        <SelectTrigger className="w-full border border-gray-300 bg-white text-gray-900 focus:border-gray-400 focus:ring-1 focus:ring-gray-400">
+                          <SelectValue placeholder={
+                            fetchingEmployees 
+                              ? "Loading employees..." 
+                              : getAvailableEmployees(selectedSubmission).length === 0
+                                ? "No employees available"
+                                : "Select employee to assign"
+                          } />
+                        </SelectTrigger>
+                        <SelectContent className="bg-white border border-gray-200 text-gray-900">
+                          {getAvailableEmployees(selectedSubmission).map((employee) => (
+                            <SelectItem 
+                              key={employee._id} 
+                              value={employee._id}
+                              className="text-gray-900"
+                            >
+                              {employee.firstName} {employee.lastName} - {employee.email}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {selectedEmployees.length > 0 && (
+                      <div className="space-y-2">
+                        <Label className="text-gray-700 font-semibold text-sm">
+                          Selected Employees ({selectedEmployees.length})
+                        </Label>
+                        <div className="flex flex-wrap gap-2">
+                          {selectedEmployees.map((empId) => {
+                            const employee = employees.find(e => e._id === empId);
+                            return (
+                              <Badge 
+                                key={empId} 
+                                variant="secondary" 
+                                className="bg-blue-100 text-blue-800 border-blue-200 px-3 py-1 flex items-center gap-1"
+                              >
+                                <User className="w-3 h-3" />
+                                {employee?.firstName} {employee?.lastName}
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-4 w-4 ml-1 hover:bg-blue-200"
+                                  onClick={() => setSelectedEmployees(selectedEmployees.filter(id => id !== empId))}
+                                >
+                                  <X className="w-3 h-3" />
+                                </Button>
+                              </Badge>
+                            );
+                          })}
+                        </div>
+                        <Button
+                          onClick={() => handleAssignEmployees(selectedSubmission._id)}
+                          disabled={loading}
+                          className="bg-blue-600 text-white hover:bg-blue-700"
+                        >
+                          {loading ? (
+                            <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                          ) : (
+                            <Users className="w-4 h-4 mr-2" />
+                          )}
+                          Assign Selected Employees
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+
                   <div className="space-y-3">
                     <h3 className="text-lg font-semibold text-gray-900">
                       Form Data
@@ -904,46 +1001,54 @@ export default function TeamLeadSubmissionsPage() {
                     </div>
                   </div>
 
-                  <div className="w-full lg:w-32">
-                    <Label
-                      htmlFor="status"
-                      className="text-xs font-medium text-gray-900 mb-1"
-                    >
-                      Status
-                    </Label>
-
-                    <Select
-                      value={statusFilter}
-                      onValueChange={setStatusFilter}
-                    >
-                      <SelectTrigger className="h-9 rounded-lg text-sm w-full">
-                        <SelectValue placeholder="All Status" />
-                      </SelectTrigger>
-
-                      <SelectContent className="bg-white text-gray-900">
-                        <SelectItem value="all" className="text-gray-900">
-                          All Status
-                        </SelectItem>
-                        <SelectItem value="pending" className="text-gray-900">
-                          Pending
-                        </SelectItem>
-                        <SelectItem
-                          value="in_progress"
-                          className="text-gray-900"
+                  <div className="space-y-3">
+                    <h3 className="text-lg font-semibold text-gray-900">
+                      Update Status
+                    </h3>
+                    <div className="space-y-3">
+                      <Textarea
+                        placeholder="Add feedback or comments..."
+                        value={feedback}
+                        onChange={(e) => setFeedback(e.target.value)}
+                        className="min-h-[80px] border border-gray-300 bg-white text-gray-900 focus:border-gray-400 focus:ring-1 focus:ring-gray-400"
+                      />
+                      <div className="flex gap-2 flex-wrap">
+                        <Button
+                          onClick={() => handleStatusUpdate(selectedSubmission._id, "pending", feedback)}
+                          variant="outline"
+                          className="border-amber-300 text-amber-700 hover:bg-amber-50"
+                          disabled={loading}
                         >
-                          In Progress
-                        </SelectItem>
-                        <SelectItem value="completed" className="text-gray-900">
-                          Completed
-                        </SelectItem>
-                        <SelectItem value="approved" className="text-gray-900">
-                          Approved
-                        </SelectItem>
-                        <SelectItem value="rejected" className="text-gray-900">
-                          Rejected
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
+                          <AlertCircle className="w-4 h-4 mr-2" />
+                          Mark Pending
+                        </Button>
+                        <Button
+                          onClick={() => handleStatusUpdate(selectedSubmission._id, "in_progress", feedback)}
+                          variant="outline"
+                          className="border-blue-300 text-blue-700 hover:bg-blue-50"
+                          disabled={loading}
+                        >
+                          <Clock className="w-4 h-4 mr-2" />
+                          Mark In Progress
+                        </Button>
+                        <Button
+                          onClick={() => handleStatusUpdate(selectedSubmission._id, "completed", feedback)}
+                          className="bg-green-600 text-white hover:bg-green-700"
+                          disabled={loading}
+                        >
+                          <CheckCircle className="w-4 h-4 mr-2" />
+                          Mark Completed
+                        </Button>
+                        <Button
+                          onClick={() => handleStatusUpdate(selectedSubmission._id, "rejected", feedback)}
+                          className="bg-red-600 text-white hover:bg-red-700"
+                          disabled={loading}
+                        >
+                          <XCircle className="w-4 h-4 mr-2" />
+                          Reject
+                        </Button>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </CardContent>

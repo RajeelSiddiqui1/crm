@@ -6,22 +6,26 @@ import AdminTask from "@/models/AdminTask";
 import Employee from "@/models/Employee";
 import Form from "@/models/Form"; 
 import Manager from "@/models/Manager";
+import mongoose from "mongoose";
 
 export async function GET(req) {
   await dbConnect();
 
   try {
-    const searchParams = req.nextUrl.searchParams;
+    const { searchParams } = new URL(req.url);
     const status = searchParams.get("status");
     const search = searchParams.get("search");
+    const page = parseInt(searchParams.get("page")) || 1;
+    const limit = parseInt(searchParams.get("limit")) || 20;
 
     const query = {};
 
+    // Status filter
     if (status && status !== "all") {
       query.status = status;
     }
 
-    // Build search query if search term exists
+    // Search filter
     if (search) {
       query.$or = [
         { submittedBy: { $regex: search, $options: "i" } },
@@ -29,6 +33,8 @@ export async function GET(req) {
         { "formData.$**": { $regex: search, $options: "i" } }
       ];
     }
+
+    const skip = (page - 1) * limit;
 
     const formSubmissions = await FormSubmission.find(query)
       .populate({
@@ -38,7 +44,7 @@ export async function GET(req) {
       })
       .populate({
         path: "assignedEmployees.employeeId",
-        select: "name email role department firstName lastName",
+        select: "name email role department firstName lastName avatar",
         model: Employee,
       })
       .populate({
@@ -46,40 +52,60 @@ export async function GET(req) {
         select: "title clientName endDate priority managers",
         model: AdminTask,
       })
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean();
 
-    // Agar submittedBy mein Manager ID hai to uska naam fetch karo
+    const total = await FormSubmission.countDocuments(query);
+
+    // Process submissions with manager names and formatted form data
     const submissionsWithManagerNames = await Promise.all(
       formSubmissions.map(async (submission) => {
-        const submissionObj = submission.toObject();
-        
         try {
-          // Check if submittedBy is a valid ObjectId (Manager ID)
+          // Get manager details if submittedBy is ObjectId
           if (mongoose.Types.ObjectId.isValid(submission.submittedBy)) {
             const manager = await Manager.findById(submission.submittedBy)
-              .select("firstName lastName email")
+              .select("firstName lastName email phone department")
               .lean();
             
             if (manager) {
-              return {
-                ...submissionObj,
-                submittedBy: `${manager.firstName} ${manager.lastName}`,
-                managerEmail: manager.email,
-                managerDetails: manager
-              };
+              submission.submittedBy = `${manager.firstName} ${manager.lastName}`;
+              submission.managerEmail = manager.email;
+              submission.managerPhone = manager.phone;
+              submission.managerDepartment = manager.department;
             }
           }
-          return submissionObj;
+
+          // Convert Map to Object for formData
+          if (submission.formData && submission.formData instanceof Map) {
+            submission.formData = Object.fromEntries(submission.formData);
+          } else if (!submission.formData) {
+            submission.formData = {};
+          }
+
+          // Format dates
+          submission.formattedCreatedAt = new Date(submission.createdAt).toLocaleDateString();
+          submission.formattedUpdatedAt = new Date(submission.updatedAt).toLocaleDateString();
+
+          return submission;
         } catch (error) {
-          console.error("Error fetching manager:", error);
-          return submissionObj;
+          console.error("Error processing submission:", error);
+          return submission;
         }
       })
     );
 
     return NextResponse.json({ 
       success: true, 
-      formSubmissions: submissionsWithManagerNames || [] 
+      formSubmissions: submissionsWithManagerNames,
+      pagination: {
+        currentPage: page,
+        totalPages: Math.ceil(total / limit),
+        totalItems: total,
+        hasNext: page < Math.ceil(total / limit),
+        hasPrev: page > 1
+      }
     });
   } catch (error) {
     console.error("Error fetching manager tasks:", error);

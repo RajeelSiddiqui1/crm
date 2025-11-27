@@ -1,3 +1,4 @@
+// components/Header.jsx
 "use client";
 import { signOut, useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
@@ -10,9 +11,14 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import axios from "axios";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 export default function Header() {
     const { data: session } = useSession();
+    const router = useRouter();
+    const [count, setCount] = useState(0);
 
     const handleLogout = async () => {
         await signOut({
@@ -20,6 +26,41 @@ export default function Header() {
             redirect: true,
         });
     };
+
+    const fetchNotifications = async () => {
+        try {
+            const res = await axios.get("/api/notifications");
+            if (res.data.success) {
+                setCount(res.data.unseenCount);
+            }
+        } catch (error) {
+            console.error("Error fetching notifications:", error);
+        }
+    };
+
+    const handleNotificationClick = async () => {
+        try {
+            // Mark all notifications as seen for this user only
+            await axios.patch("/api/notifications/seen");
+            setCount(0);
+            // Redirect to notifications page
+            router.push("/notifications");
+        } catch (error) {
+            console.error("Error marking notifications as seen:", error);
+            // Still redirect even if marking fails
+            router.push("/notifications");
+        }
+    };
+
+    useEffect(() => {
+        if (session?.user) {
+            fetchNotifications();
+            
+            // Refresh notifications every 30 seconds
+            const interval = setInterval(fetchNotifications, 30000);
+            return () => clearInterval(interval);
+        }
+    }, [session]);
 
     // Get user initials for fallback
     const getUserInitials = () => {
@@ -69,14 +110,17 @@ export default function Header() {
                 <div className="flex items-center gap-4">
                     {/* Notifications */}
                     <Button
+                        onClick={handleNotificationClick}
                         variant="ghost"
                         size="icon"
                         className="relative h-10 w-10 rounded-lg bg-gray-900 hover:bg-gray-800 border border-gray-800 text-gray-300 hover:text-white"
                     >
                         <Bell className="w-5 h-5" />
-                        <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-600 text-white text-xs rounded-full flex items-center justify-center">
-                            3
-                        </span>
+                        {count > 0 && (
+                            <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-600 text-white text-xs rounded-full flex items-center justify-center font-bold">
+                                {count > 99 ? '99+' : count}
+                            </span>
+                        )}
                     </Button>
 
                     {session?.user && (
@@ -124,7 +168,7 @@ export default function Header() {
                                     <DropdownMenuSeparator className="bg-gray-800" />
                                     <DropdownMenuItem className="cursor-pointer bg-black text-gray-100 hover:bg-gray-900 focus:bg-gray-900">
                                         <User className="mr-2 h-4 w-4" />
-                                       <a href="/profile"><span>Profile</span></a> 
+                                        <a href="/profile"><span>Profile</span></a>
                                     </DropdownMenuItem>
                                     <DropdownMenuItem className="cursor-pointer bg-black text-gray-100 hover:bg-gray-900 focus:bg-gray-900">
                                         <Settings className="mr-2 h-4 w-4" />

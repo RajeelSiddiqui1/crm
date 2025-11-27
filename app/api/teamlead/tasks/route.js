@@ -1,4 +1,3 @@
-// app/api/teamlead/tasks/route.js
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import dbConnect from "@/lib/db";
@@ -9,26 +8,18 @@ import { authOptions } from "@/lib/auth";
 import { sendMail } from "@/lib/mail";
 import { sendTaskStatusUpdateMail } from "@/helper/emails/teamlead/task-status-update";
 import { sendEmployeeTaskAssignmentMail } from "@/helper/emails/teamlead/employee-assignment";
+import { sendNotification } from "@/lib/sendNotification";
 
 export async function GET(req) {
   try {
     const session = await getServerSession(authOptions);
-
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized access" }, { status: 401 });
-    }
-
-    if (session.user.role !== "TeamLead") {
-      return NextResponse.json({ error: "Access denied. TeamLead role required." }, { status: 403 });
-    }
+    if (!session) return NextResponse.json({ error: "Unauthorized access" }, { status: 401 });
+    if (session.user.role !== "TeamLead") return NextResponse.json({ error: "Access denied. TeamLead role required." }, { status: 403 });
 
     await dbConnect();
 
     const assignedTo = session.user.email;
-
-    if (!assignedTo) {
-      return NextResponse.json({ error: "TeamLead email not found in session" }, { status: 400 });
-    }
+    if (!assignedTo) return NextResponse.json({ error: "TeamLead email not found in session" }, { status: 400 });
 
     const submissions = await FormSubmission.find({ assignedTo })
       .populate("formId")
@@ -46,18 +37,11 @@ export async function POST(req) {
   try {
     await dbConnect();
     const session = await getServerSession(authOptions);
-
-    if (!session || session.user.role !== "TeamLead") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    if (!session || session.user.role !== "TeamLead") return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { formId, submittedBy, formData, assignedEmployees } = await req.json();
+    if (!formId || !submittedBy || !formData) return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
 
-    if (!formId || !submittedBy || !formData) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
-    }
-
-    // Create new submission with assigned employees
     const submission = new FormSubmission({
       formId,
       submittedBy,
@@ -70,7 +54,6 @@ export async function POST(req) {
 
     await submission.save();
 
-    // Send emails to assigned employees
     if (assignedEmployees && assignedEmployees.length > 0) {
       for (const emp of assignedEmployees) {
         try {
@@ -87,13 +70,31 @@ export async function POST(req) {
         } catch (mailError) {
           console.warn(`Failed to send email to employee ${emp.employeeId}:`, mailError.message);
         }
+
+        try {
+          const employee = await Employee.findById(emp.employeeId);
+          if (employee) {
+            await sendNotification({
+              senderId: session.user.id,
+              senderModel: "TeamLead",
+              senderName: `${session.user.firstName} ${session.user.lastName}`,
+              receiverId: employee._id,
+              receiverModel: "Employee",
+              type: "task_assigned",
+              title: "New Task Assigned",
+              message: `A new task "${submission.formId?.title}" has been assigned to you.`,
+              link: `${process.env.TASK_LINK}/employee/tasks`,
+              referenceId: submission._id,
+              referenceModel: "FormSubmission"
+            });
+          }
+        } catch (notifyError) {
+          console.error(`Notification failed for employee ${emp.employeeId}:`, notifyError.message);
+        }
       }
     }
 
-    return NextResponse.json(
-      { message: "Task created successfully", submission },
-      { status: 201 }
-    );
+    return NextResponse.json({ message: "Task created successfully", submission }, { status: 201 });
   } catch (error) {
     console.error("POST tasks error:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
@@ -104,54 +105,69 @@ export async function PUT(req) {
   try {
     await dbConnect();
     const session = await getServerSession(authOptions);
-
-    if (!session || session.user.role !== "TeamLead") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    if (!session || session.user.role !== "TeamLead") return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { submissionId, statusType, status, teamLeadFeedback, assignedEmployees } = await req.json();
-
-    if (!submissionId) {
-      return NextResponse.json({ error: "Submission ID required" }, { status: 400 });
-    }
+    if (!submissionId) return NextResponse.json({ error: "Submission ID required" }, { status: 400 });
 
     const submission = await FormSubmission.findById(submissionId)
       .populate("formId")
       .populate("assignedEmployees.employeeId");
+    if (!submission) return NextResponse.json({ error: "Submission not found" }, { status: 404 });
 
-    if (!submission) {
-      return NextResponse.json({ error: "Submission not found" }, { status: 404 });
-    }
-
-    // Update status if provided
     if (statusType && status) {
-      if (statusType === "status") {
-        submission.status = status;
-      } else if (statusType === "status2") {
-        submission.status2 = status;
-      }
+      if (statusType === "status") submission.status = status;
+      else if (statusType === "status2") submission.status2 = status;
 
       if (teamLeadFeedback) submission.teamLeadFeedback = teamLeadFeedback;
-
-      if (
-        (statusType === "status" && status === "completed") ||
-        (statusType === "status2" && status === "completed")
-      ) {
-        submission.completedAt = new Date();
-      }
+      if ((statusType === "status" || statusType === "status2") && status === "completed") submission.completedAt = new Date();
     }
 
-    // Update assigned employees if provided
-    if (assignedEmployees) {
-      submission.assignedEmployees = assignedEmployees;
-    }
+    if (assignedEmployees) submission.assignedEmployees = assignedEmployees;
 
     await submission.save();
 
-    return NextResponse.json(
-      { message: "Task updated successfully", submission },
-      { status: 200 }
-    );
+    if (status === "completed" && assignedEmployees && assignedEmployees.length > 0) {
+      for (const emp of assignedEmployees) {
+        try {
+          const employee = await Employee.findById(emp.employeeId);
+          if (employee && employee.email) {
+            const html = sendTaskStatusUpdateMail({
+              name: `${employee.firstName} ${employee.lastName}`,
+              formTitle: submission.formId?.title || "Task",
+              status,
+              updatedBy: `${session.user.firstName} ${session.user.lastName}`
+            });
+            await sendMail(employee.email, "Task Status Updated", html);
+          }
+        } catch (mailError) {
+          console.warn(`Failed to send email to employee ${emp.employeeId}:`, mailError.message);
+        }
+
+        try {
+          const employee = await Employee.findById(emp.employeeId);
+          if (employee) {
+            await sendNotification({
+              senderId: session.user.id,
+              senderModel: "TeamLead",
+              senderName: `${session.user.firstName} ${session.user.lastName}`,
+              receiverId: employee._id,
+              receiverModel: "Employee",
+              type: "task_status_updated",
+              title: "Task Status Updated",
+              message: `Task "${submission.formId?.title}" status updated to ${status}.`,
+              link: `${process.env.TASK_LINK}/employee/tasks`,
+              referenceId: submission._id,
+              referenceModel: "FormSubmission"
+            });
+          }
+        } catch (notifyError) {
+          console.error(`Notification failed for employee ${emp.employeeId}:`, notifyError.message);
+        }
+      }
+    }
+
+    return NextResponse.json({ message: "Task updated successfully", submission }, { status: 200 });
   } catch (error) {
     console.error("PUT tasks error:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });

@@ -76,6 +76,7 @@ export default function Sidebar() {
   const links = {
     admin: [
       { href: "/admin/adminhome", label: "Dashboard", icon: "Dashboard" },
+      { href: "/admin/posts", label: "Post", icon: "Dashboard" },
       { href: "/admin/forms", label: "Forms", icon: "Forms" },
       { href: "/admin/admin-tasks", label: "Admin Tasks", icon: "AdminTasks" },
       { href: "/admin/manager-tasks", label: "Manager Tasks", icon: "ManagerTasks" },
