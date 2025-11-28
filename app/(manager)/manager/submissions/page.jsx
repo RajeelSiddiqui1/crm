@@ -66,6 +66,9 @@ import {
   RefreshCw,
   Users,
   MessageCircle,
+  Building,
+  FolderOpen,
+  BarChart3,
 } from "lucide-react";
 import axios from "axios";
 
@@ -86,13 +89,14 @@ export default function ManagerSubmissionsPage() {
   });
   const [showPasswords, setShowPasswords] = useState({});
   const [statusFilter, setStatusFilter] = useState("all");
+  const [departmentFilter, setDepartmentFilter] = useState("all");
   const fileInputRefs = useRef({});
 
   useEffect(() => {
     if (status === "loading") return;
 
     if (!session || session.user.role !== "Manager") {
-      router.push("/managerlogin");
+      router.push("/login");
       return;
     }
 
@@ -277,16 +281,16 @@ export default function ManagerSubmissionsPage() {
 
   const formatFieldValue = (value) => {
     if (value === null || value === undefined || value === "") {
-      return <span className="text-gray-500">Not provided</span>;
+      return <span className="text-gray-500 italic">Not provided</span>;
     }
 
     if (typeof value === "object" && !Array.isArray(value)) {
       return (
-        <div className="space-y-1 text-sm">
+        <div className="space-y-2 text-sm">
           {Object.entries(value).map(([key, val]) => (
-            <div key={key} className="flex">
-              <span className="font-medium capitalize w-20">{key}:</span>
-              <span className="text-gray-900">{val || "N/A"}</span>
+            <div key={key} className="flex items-start">
+              <span className="font-medium capitalize w-20 text-gray-700">{key}:</span>
+              <span className="text-gray-900 flex-1">{val || "N/A"}</span>
             </div>
           ))}
         </div>
@@ -294,14 +298,26 @@ export default function ManagerSubmissionsPage() {
     }
 
     if (Array.isArray(value)) {
-      return value.join(", ");
+      return (
+        <div className="flex flex-wrap gap-1">
+          {value.map((item, index) => (
+            <Badge key={index} variant="secondary" className="text-xs">
+              {item}
+            </Badge>
+          ))}
+        </div>
+      );
     }
 
     if (typeof value === "boolean") {
-      return value ? "Yes" : "No";
+      return (
+        <Badge variant={value ? "default" : "secondary"}>
+          {value ? "Yes" : "No"}
+        </Badge>
+      );
     }
 
-    return value.toString();
+    return <span className="text-gray-900">{value.toString()}</span>;
   };
 
   const renderEditFormField = (fieldConfig, fieldName, fieldValue) => {
@@ -349,7 +365,7 @@ export default function ManagerSubmissionsPage() {
             <button
               type="button"
               onClick={() => togglePasswordVisibility(fieldName)}
-              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
             >
               {showPasswords[fieldName] ? (
                 <EyeOff className="w-4 h-4" />
@@ -368,7 +384,7 @@ export default function ManagerSubmissionsPage() {
               fieldConfig.placeholder ||
               `Enter ${fieldConfig.label.toLowerCase()}`
             }
-            className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900"
+            className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900 min-h-[100px] resize-vertical"
             rows={4}
           />
         );
@@ -406,23 +422,23 @@ export default function ManagerSubmissionsPage() {
         );
       case "checkbox":
         return (
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg bg-white">
             <input
               type="checkbox"
               checked={!!fieldValue}
               onChange={(e) =>
                 handleEditFieldChange(fieldName, e.target.checked)
               }
-              className="rounded border-gray-300 bg-white w-4 h-4"
+              className="rounded border-gray-300 bg-white w-5 h-5 text-blue-600 focus:ring-blue-500"
             />
-            <Label className="text-gray-700">{fieldConfig.label}</Label>
+            <Label className="text-gray-700 font-medium">{fieldConfig.label}</Label>
           </div>
         );
       case "radio":
         return (
-          <div className="space-y-2">
+          <div className="space-y-3">
             {fieldConfig.options?.map((option, idx) => (
-              <div key={idx} className="flex items-center space-x-2">
+              <div key={idx} className="flex items-center space-x-3 p-2">
                 <input
                   type="radio"
                   name={fieldName}
@@ -431,7 +447,7 @@ export default function ManagerSubmissionsPage() {
                   onChange={(e) =>
                     handleEditFieldChange(fieldName, e.target.value)
                   }
-                  className="rounded-full border-gray-300 bg-white w-4 h-4"
+                  className="rounded-full border-gray-300 bg-white w-4 h-4 text-blue-600 focus:ring-blue-500"
                 />
                 <Label className="text-gray-700">{option}</Label>
               </div>
@@ -441,21 +457,25 @@ export default function ManagerSubmissionsPage() {
       case "file":
         return (
           <div
-            className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center bg-white cursor-pointer hover:border-gray-400 transition-colors"
+            className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center bg-white cursor-pointer hover:border-blue-400 transition-all duration-200 group"
             onClick={() => handleFileUploadClick(fieldName)}
           >
-            <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-            <p className="text-sm text-gray-600">
+            <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2 group-hover:text-blue-500 transition-colors" />
+            <p className="text-sm text-gray-600 group-hover:text-gray-700">
               Click to upload or drag and drop
+            </p>
+            <p className="text-xs text-gray-500 mt-1">
+              {fieldConfig.accept || "Any file type"}
             </p>
             <Input
               ref={(el) => (fileInputRefs.current[fieldName] = el)}
               type="file"
               onChange={(e) => handleFileChange(fieldName, e)}
               className="hidden"
+              accept={fieldConfig.accept}
             />
             {fieldValue && (
-              <p className="text-sm text-green-600 mt-2">
+              <p className="text-sm text-green-600 mt-2 font-medium">
                 {fieldValue.name || "File selected"}
               </p>
             )}
@@ -499,15 +519,15 @@ export default function ManagerSubmissionsPage() {
     switch (status) {
       case "completed":
       case "approved":
-        return "bg-green-100 text-green-800 border-green-200";
+        return "bg-green-100 text-green-800 border-green-200 hover:bg-green-200";
       case "in_progress":
-        return "bg-blue-100 text-blue-800 border-blue-200";
+        return "bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200";
       case "pending":
-        return "bg-yellow-100 text-yellow-800 border-yellow-200";
+        return "bg-yellow-100 text-yellow-800 border-yellow-200 hover:bg-yellow-200";
       case "rejected":
-        return "bg-red-100 text-red-800 border-red-200";
+        return "bg-red-100 text-red-800 border-red-200 hover:bg-red-200";
       default:
-        return "bg-gray-100 text-gray-800 border-gray-200";
+        return "bg-gray-100 text-gray-800 border-gray-200 hover:bg-gray-200";
     }
   };
 
@@ -515,16 +535,50 @@ export default function ManagerSubmissionsPage() {
     switch (status) {
       case "completed":
       case "approved":
-        return <CheckCircle className="w-4 h-4" />;
+        return <CheckCircle className="w-3 h-3" />;
       case "in_progress":
-        return <Clock className="w-4 h-4" />;
+        return <Clock className="w-3 h-3" />;
       case "pending":
-        return <AlertCircle className="w-4 h-4" />;
+        return <AlertCircle className="w-3 h-3" />;
       case "rejected":
-        return <XCircle className="w-4 h-4" />;
+        return <XCircle className="w-3 h-3" />;
       default:
-        return <AlertCircle className="w-4 h-4" />;
+        return <AlertCircle className="w-3 h-3" />;
     }
+  };
+
+  // Get employee full name with fallback
+  const getEmployeeFullName = (employee) => {
+    if (!employee) return "Unknown Employee";
+
+    if (employee.firstName && employee.lastName) {
+      return `${employee.firstName} ${employee.lastName}`;
+    }
+
+    if (employee.name) {
+      return employee.name;
+    }
+
+    // Fallback to email username
+    if (employee.email) {
+      return employee.email.split('@')[0];
+    }
+
+    return "Unknown Employee";
+  };
+
+  // Get department from submission or employee
+  const getSubmissionDepartment = (submission) => {
+    if (submission.formId?.department) {
+      return submission.formId.department;
+    }
+
+    // Try to get department from assigned employees
+    if (submission.assignedEmployees?.[0]?.employeeId?.department) {
+      return submission.assignedEmployees[0].employeeId.department;
+    }
+
+    return "Unknown Department";
   };
 
   const filteredSubmissions = submissions.filter((submission) => {
@@ -533,15 +587,24 @@ export default function ManagerSubmissionsPage() {
         ?.toLowerCase()
         .includes(searchTerm.toLowerCase()) ||
       submission.assignedTo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      submission.status?.toLowerCase().includes(searchTerm.toLowerCase());
+      submission.status?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      getSubmissionDepartment(submission)?.toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesStatus =
       statusFilter === "all" || submission.status === statusFilter;
 
-    return matchesSearch && matchesStatus;
+    const matchesDepartment =
+      departmentFilter === "all" ||
+      getSubmissionDepartment(submission) === departmentFilter;
+
+    return matchesSearch && matchesStatus && matchesDepartment;
   });
 
+  // Get unique departments for filter
+  const departments = [...new Set(submissions.map(sub => getSubmissionDepartment(sub)))].filter(Boolean);
+
   const formatDate = (dateString) => {
+    if (!dateString) return "Not set";
     return new Date(dateString).toLocaleDateString("en-US", {
       year: "numeric",
       month: "short",
@@ -562,10 +625,16 @@ export default function ManagerSubmissionsPage() {
 
   if (status === "loading") {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-white">
-        <div className="flex items-center gap-2">
-          <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
-          <span className="text-gray-900">Loading...</span>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+        <div className="flex flex-col items-center gap-4 p-8 bg-white rounded-2xl shadow-lg border border-blue-100">
+          <div className="relative">
+            <Loader2 className="w-12 h-12 animate-spin text-blue-600" />
+            <div className="absolute inset-0 rounded-full border-2 border-blue-200 animate-ping"></div>
+          </div>
+          <div className="text-center">
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Loading Dashboard</h3>
+            <p className="text-gray-600">Preparing your submissions...</p>
+          </div>
         </div>
       </div>
     );
@@ -576,126 +645,163 @@ export default function ManagerSubmissionsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 p-6">
-      <Toaster position="top-right" />
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 p-4 lg:p-6">
+      <Toaster position="top-right" richColors />
 
+      {/* Floating Action Button */}
       <Button
         onClick={() => router.push("/manager/forms")}
-        className="fixed bottom-8 right-8 bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white rounded-full p-6 shadow-lg shadow-blue-500/30 hover:shadow-blue-600/40 transition-all duration-300 transform hover:scale-110 z-50"
+        className="fixed bottom-6 right-6 bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white rounded-full p-5 shadow-2xl shadow-blue-500/30 hover:shadow-blue-600/40 transition-all duration-300 transform hover:scale-110 z-50 group"
+        size="lg"
       >
-        <FileText className="w-6 h-6 mr-2" />
+        <FileText className="w-5 h-5 mr-2 group-hover:scale-110 transition-transform" />
         Add Form
+        <div className="absolute inset-0 rounded-full bg-white opacity-0 group-hover:opacity-10 transition-opacity"></div>
       </Button>
 
       <div className="max-w-7xl mx-auto">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-          <div className="text-center sm:text-left">
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-indigo-700 bg-clip-text text-transparent">
-              My Form Submissions
-            </h1>
-            <p className="text-gray-800 mt-3 text-lg">
-              Track and manage your form submissions
-            </p>
+        {/* Header Section */}
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-8">
+          <div className="text-center lg:text-left">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="p-3 bg-white rounded-2xl shadow-lg border border-blue-100">
+                <FolderOpen className="w-8 h-8 text-blue-600" />
+              </div>
+              <div>
+                <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-indigo-700 bg-clip-text text-transparent">
+                  My Submissions
+                </h1>
+                <p className="text-gray-600 mt-2 text-lg">
+                  Track and manage your form submissions
+                </p>
+              </div>
+            </div>
           </div>
 
-          <div className="flex gap-3">
+          <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
             <Button
               onClick={fetchSubmissions}
               variant="outline"
-              className="border-blue-200 text-blue-700 hover:bg-blue-50"
+              className="border-blue-200 text-blue-700 hover:bg-blue-50 hover:border-blue-300 transition-all duration-200 shadow-sm"
+              disabled={fetching}
             >
-              <RefreshCw className="w-4 h-4 mr-2" />
-              Refresh
+              <RefreshCw className={`w-4 h-4 mr-2 ${fetching ? 'animate-spin' : ''}`} />
+              {fetching ? 'Refreshing...' : 'Refresh'}
             </Button>
+
           </div>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-6 gap-4 mb-8">
-          <Card className="bg-white border-0 shadow-lg">
+        {/* Statistics Cards */}
+        <div className="grid grid-cols-2 lg:grid-cols-6 gap-4 mb-8">
+          <Card className="bg-white border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
             <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-gray-900">
-                {statusStats.total}
+              <div className="text-2xl font-bold text-gray-900">{statusStats.total}</div>
+              <div className="text-sm text-gray-600 flex items-center justify-center gap-1">
+                <FileText className="w-4 h-4" />
+                Total
               </div>
-              <div className="text-sm text-gray-600">Total</div>
             </CardContent>
           </Card>
-          <Card className="bg-white border-0 shadow-lg">
+          <Card className="bg-white border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
             <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-green-600">
-                {statusStats.approved}
+              <div className="text-2xl font-bold text-green-600">{statusStats.approved}</div>
+              <div className="text-sm text-gray-600 flex items-center justify-center gap-1">
+                <CheckCircle className="w-4 h-4" />
+                Approved
               </div>
-              <div className="text-sm text-gray-600">Approved</div>
             </CardContent>
           </Card>
-          <Card className="bg-white border-0 shadow-lg">
+          <Card className="bg-white border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
             <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-blue-600">
-                {statusStats.in_progress}
+              <div className="text-2xl font-bold text-blue-600">{statusStats.in_progress}</div>
+              <div className="text-sm text-gray-600 flex items-center justify-center gap-1">
+                <Clock className="w-4 h-4" />
+                In Progress
               </div>
-              <div className="text-sm text-gray-600">In Progress</div>
             </CardContent>
           </Card>
-          <Card className="bg-white border-0 shadow-lg">
+          <Card className="bg-white border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
             <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-yellow-600">
-                {statusStats.pending}
+              <div className="text-2xl font-bold text-yellow-600">{statusStats.pending}</div>
+              <div className="text-sm text-gray-600 flex items-center justify-center gap-1">
+                <AlertCircle className="w-4 h-4" />
+                Pending
               </div>
-              <div className="text-sm text-gray-600">Pending</div>
             </CardContent>
           </Card>
-          <Card className="bg-white border-0 shadow-lg">
+          <Card className="bg-white border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
             <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-red-600">
-                {statusStats.rejected}
+              <div className="text-2xl font-bold text-red-600">{statusStats.rejected}</div>
+              <div className="text-sm text-gray-600 flex items-center justify-center gap-1">
+                <XCircle className="w-4 h-4" />
+                Rejected
               </div>
-              <div className="text-sm text-gray-600">Rejected</div>
             </CardContent>
           </Card>
-          <Card className="bg-white border-0 shadow-lg">
+          <Card className="bg-white border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
             <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-indigo-600">
-                {statusStats.completed}
+              <div className="text-2xl font-bold text-indigo-600">{statusStats.completed}</div>
+              <div className="text-sm text-gray-600 flex items-center justify-center gap-1">
+                <CheckCircle className="w-4 h-4" />
+                Completed
               </div>
-              <div className="text-sm text-gray-600">Completed</div>
             </CardContent>
           </Card>
         </div>
 
+        {/* Main Content Card */}
         <Card className="shadow-2xl shadow-blue-500/10 border-0 bg-gradient-to-br from-white to-blue-50/50 backdrop-blur-sm overflow-hidden">
           <CardHeader className="bg-gradient-to-r from-white to-blue-50 border-b border-blue-100/50">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
               <div>
-                <CardTitle className="text-2xl font-bold text-gray-900">
-                  My Submissions
+                <CardTitle className="text-2xl font-bold text-gray-900 flex items-center gap-3">
+                  <FolderOpen className="w-7 h-7 text-blue-600" />
+                  Submission Management
                 </CardTitle>
-                <CardDescription className="text-gray-700 text-base">
-                  {filteredSubmissions.length} submission
-                  {filteredSubmissions.length !== 1 ? "s" : ""} found
+                <CardDescription className="text-gray-600 text-base">
+                  {filteredSubmissions.length} submission{filteredSubmissions.length !== 1 ? "s" : ""} found
                 </CardDescription>
               </div>
 
-              <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+              <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
                 <div className="relative w-full sm:w-64">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                   <Input
                     placeholder="Search submissions..."
-                    className="pl-10 pr-4 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 shadow-sm h-11 text-base text-gray-900"
+                    className="pl-10 pr-4 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 shadow-sm h-11 text-base text-gray-900 bg-white"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                   />
                 </div>
 
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-full sm:w-40 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900">
+                  <SelectTrigger className="w-full sm:w-40 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900 bg-white">
+                    <Filter className="w-4 h-4 mr-2" />
                     <SelectValue placeholder="Filter status" />
                   </SelectTrigger>
-                  <SelectContent className="text-black bg-white">
+                  <SelectContent className="bg-white text-black">
                     <SelectItem value="all">All Status</SelectItem>
                     <SelectItem value="pending">Pending</SelectItem>
                     <SelectItem value="in_progress">In Progress</SelectItem>
                     <SelectItem value="completed">Completed</SelectItem>
                     <SelectItem value="approved">Approved</SelectItem>
                     <SelectItem value="rejected">Rejected</SelectItem>
+                  </SelectContent>
+                </Select>
+
+                <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
+                  <SelectTrigger className="w-full sm:w-48 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900 bg-white">
+                    <Building className="w-4 h-4 mr-2" />
+                    <SelectValue placeholder="Filter department" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white text-black">
+                    <SelectItem value="all">All Departments</SelectItem>
+                    {departments.map((dept) => (
+                      <SelectItem key={dept} value={dept}>
+                        {dept}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -705,34 +811,46 @@ export default function ManagerSubmissionsPage() {
           <CardContent className="p-0">
             {fetching ? (
               <div className="flex justify-center items-center py-16">
-                <div className="flex items-center gap-3 text-gray-800">
-                  <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
+                <div className="flex flex-col items-center gap-4 text-gray-600">
+                  <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
                   <span className="text-lg">Loading submissions...</span>
                 </div>
               </div>
             ) : filteredSubmissions.length === 0 ? (
               <div className="text-center py-16">
                 <div className="text-gray-300 mb-4">
-                  <FileText className="w-20 h-20 mx-auto" />
+                  <FileText className="w-24 h-24 mx-auto opacity-50" />
                 </div>
                 <h3 className="text-2xl font-bold text-gray-900 mb-3">
                   {submissions.length === 0
                     ? "No submissions yet"
                     : "No matches found"}
                 </h3>
-                <p className="text-gray-700 text-lg max-w-md mx-auto mb-6">
+                <p className="text-gray-600 text-lg max-w-md mx-auto mb-6">
                   {submissions.length === 0
-                    ? "Your form submissions will appear here."
-                    : "Try adjusting your search terms to find what you're looking for."}
+                    ? "Your form submissions will appear here once you create and submit forms."
+                    : "Try adjusting your search terms or filters to find what you're looking for."}
                 </p>
+                {submissions.length === 0 && (
+                  <Button
+                    onClick={() => router.push("/manager/forms")}
+                    className="bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white"
+                  >
+                    <FileText className="w-4 h-4 mr-2" />
+                    Create Your First Form
+                  </Button>
+                )}
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader className="bg-gradient-to-r from-gray-50 to-blue-50/50">
-                    <TableRow className="hover:bg-transparent">
+                    <TableRow className="hover:bg-transparent border-b border-gray-200">
                       <TableHead className="font-bold text-gray-900 text-sm uppercase tracking-wide py-4">
                         Form Details
+                      </TableHead>
+                      <TableHead className="font-bold text-gray-900 text-sm uppercase tracking-wide py-4">
+                        Department & Team
                       </TableHead>
                       <TableHead className="font-bold text-gray-900 text-sm uppercase tracking-wide py-4">
                         Status Hierarchy
@@ -751,72 +869,101 @@ export default function ManagerSubmissionsPage() {
                         key={submission._id}
                         className="group hover:bg-gradient-to-r hover:from-blue-50/80 hover:to-indigo-50/80 transition-all duration-300 border-b border-gray-100/50"
                       >
-                        <TableCell className="py-4">
+                        <TableCell className="py-5">
                           <div className="flex items-center gap-4">
-                            <Avatar className="border-2 border-white shadow-lg shadow-blue-500/20 group-hover:shadow-xl group-hover:shadow-blue-600/30 transition-all duration-300">
-                              <AvatarFallback className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-bold">
-                                <FileText className="w-4 h-4" />
+                            <Avatar className="border-2 border-white shadow-lg shadow-blue-500/20 group-hover:shadow-xl group-hover:shadow-blue-600/30 transition-all duration-300 size-12">
+                              <AvatarFallback className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-bold text-sm">
+                                <FileText className="w-5 h-5" />
                               </AvatarFallback>
                             </Avatar>
-                            <div>
-                              <div className="font-bold text-gray-900 text-lg group-hover:text-blue-700 transition-colors duration-200">
+                            <div className="flex-1 min-w-0">
+                              <div className="font-bold text-gray-900 text-lg group-hover:text-blue-700 transition-colors duration-200 truncate">
                                 {submission.formId?.title || "Untitled Form"}
                               </div>
-                              <div className="text-sm text-gray-600">
-                                {submission.formId?.description ||
-                                  "No description"}
+                              <div className="text-sm text-gray-600 line-clamp-2">
+                                {submission.formId?.description || "No description provided"}
+                              </div>
+                              <div className="flex items-center gap-2 mt-2">
+                                <Calendar className="w-3 h-3 text-gray-400" />
+                                <span className="text-xs text-gray-500">
+                                  {formatDate(submission.createdAt)}
+                                </span>
                               </div>
                             </div>
                           </div>
                         </TableCell>
 
-                        <TableCell className="py-4">
+                        <TableCell className="py-5">
                           <div className="space-y-2">
                             <div className="flex items-center gap-2">
-                              <User className="w-3 h-3 text-blue-600" />
+                              <Building className="w-4 h-4 text-blue-600" />
+                              <span className="text-sm font-medium text-gray-900">
+                                {getSubmissionDepartment(submission)}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <User className="w-4 h-4 text-green-600" />
+                              <span className="text-sm text-gray-700">
+                                {submission.assignedTo || "Unassigned"}
+                              </span>
+                            </div>
+                            {submission.assignedEmployees && submission.assignedEmployees.length > 0 && (
+                              <div className="flex items-center gap-2">
+                                <Users className="w-4 h-4 text-purple-600" />
+                                <span className="text-sm text-gray-700">
+                                  {submission.assignedEmployees.length} employee
+                                  {submission.assignedEmployees.length !== 1 ? 's' : ''}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </TableCell>
+
+                        <TableCell className="py-5">
+                          <div className="space-y-3">
+                            <div className="flex items-center gap-2">
+                              <User className="w-4 h-4 text-blue-600" />
                               <Badge
                                 className={`${getStatusVariant(
                                   submission.status
-                                )} border flex items-center gap-1 px-2 py-1 text-xs`}
+                                )} border flex items-center gap-1 px-2 py-1 text-xs font-medium transition-colors`}
                               >
                                 {getStatusIcon(submission.status)}
                                 Manager: {submission.status.replace("_", " ")}
                               </Badge>
                             </div>
                             <div className="flex items-center gap-2">
-                              <User className="w-3 h-3 text-green-600" />
+                              <User className="w-4 h-4 text-green-600" />
                               <Badge
                                 className={`${getStatusVariant(
                                   submission.status2
-                                )} border flex items-center gap-1 px-2 py-1 text-xs`}
+                                )} border flex items-center gap-1 px-2 py-1 text-xs font-medium transition-colors`}
                               >
                                 {getStatusIcon(submission.status2)}
-                                Team Lead:{" "}
-                                {submission.status2.replace("_", " ")}
+                                Team Lead: {submission.status2.replace("_", " ")}
                               </Badge>
                             </div>
                             {submission.assignedEmployees?.map((emp, index) => (
                               <div
-                                key={emp.employeeId}
+                                key={emp.employeeId?._id || index}
                                 className="flex items-center gap-2"
                               >
-                                <Users className="w-3 h-3 text-purple-600" />
+                                <Users className="w-4 h-4 text-purple-600" />
                                 <Badge
                                   className={`${getStatusVariant(
                                     emp.status
-                                  )} border flex items-center gap-1 px-2 py-1 text-xs`}
+                                  )} border flex items-center gap-1 px-2 py-1 text-xs font-medium transition-colors`}
                                 >
                                   {getStatusIcon(emp.status)}
-                                  {emp.email.split("@")[0]}:{" "}
-                                  {emp.status.replace("_", " ")}
+                                  {getEmployeeFullName(emp.employeeId)}: {emp.status.replace("_", " ")}
                                 </Badge>
                               </div>
                             ))}
                           </div>
                         </TableCell>
 
-                        <TableCell className="py-4">
-                          <div className="flex flex-wrap gap-2">
+                        <TableCell className="py-5">
+                          <div className="flex flex-col gap-2">
                             {canManagerUpdateStatus(submission) ? (
                               <>
                                 <Button
@@ -828,7 +975,7 @@ export default function ManagerSubmissionsPage() {
                                   }
                                   size="sm"
                                   variant="outline"
-                                  className="h-8 px-3 text-xs border-green-200 text-green-700 hover:bg-green-50 hover:border-green-300"
+                                  className="h-8 px-3 text-xs border-green-200 text-green-700 hover:bg-green-50 hover:border-green-300 hover:text-green-800 transition-all duration-200"
                                   disabled={loading}
                                 >
                                   <CheckCircle className="w-3 h-3 mr-1" />
@@ -843,7 +990,7 @@ export default function ManagerSubmissionsPage() {
                                   }
                                   size="sm"
                                   variant="outline"
-                                  className="h-8 px-3 text-xs border-red-200 text-red-700 hover:bg-red-50 hover:border-red-300"
+                                  className="h-8 px-3 text-xs border-red-200 text-red-700 hover:bg-red-50 hover:border-red-300 hover:text-red-800 transition-all duration-200"
                                   disabled={loading}
                                 >
                                   <XCircle className="w-3 h-3 mr-1" />
@@ -851,8 +998,9 @@ export default function ManagerSubmissionsPage() {
                                 </Button>
                               </>
                             ) : (
-                              <div className="text-xs text-yellow-600 bg-yellow-50 border border-yellow-200 rounded px-3 py-2">
-                                Wait for Team Lead approval
+                              <div className="text-xs text-yellow-600 bg-yellow-50 border border-yellow-200 rounded px-3 py-2 text-center">
+                                <Clock className="w-3 h-3 inline mr-1" />
+                                Wait for Team Lead
                               </div>
                             )}
                             <Button
@@ -864,7 +1012,7 @@ export default function ManagerSubmissionsPage() {
                               }
                               size="sm"
                               variant="outline"
-                              className="h-8 px-3 text-xs border-blue-200 text-blue-700 hover:bg-blue-50 hover:border-blue-300"
+                              className="h-8 px-3 text-xs border-blue-200 text-blue-700 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-800 transition-all duration-200"
                               disabled={loading}
                             >
                               <Clock className="w-3 h-3 mr-1" />
@@ -873,16 +1021,16 @@ export default function ManagerSubmissionsPage() {
                           </div>
                         </TableCell>
 
-                        <TableCell className="py-4">
-                          <div className="flex gap-2">
+                        <TableCell className="py-5">
+                          <div className="flex flex-col gap-2">
                             <Button
                               onClick={() => viewSubmissionDetails(submission)}
                               variant="outline"
                               size="sm"
-                              className="border-blue-200 text-blue-700 hover:bg-blue-50 hover:border-blue-300 transition-all duration-200"
+                              className="border-blue-200 text-blue-700 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-800 transition-all duration-200 justify-start"
                             >
                               <Eye className="w-4 h-4 mr-2" />
-                              View
+                              View Details
                             </Button>
                             <Button
                               onClick={() =>
@@ -890,14 +1038,14 @@ export default function ManagerSubmissionsPage() {
                                   `/manager/submissions/${submission._id}`
                                 )
                               }
+
                               variant="outline"
                               size="sm"
-                              className="border-green-200 text-green-700 hover:bg-green-50 hover:border-green-300 transition-all duration-200"
+                              className="border-green-200 text-green-700 hover:bg-green-50 hover:border-green-300 hover:text-green-800 transition-all duration-200 justify-start"
                             >
                               <Edit className="w-4 h-4 mr-2" />
                               Edit
                             </Button>
-                           
                             <Button
                               onClick={() =>
                                 router.push(
@@ -906,9 +1054,9 @@ export default function ManagerSubmissionsPage() {
                               }
                               variant="outline"
                               size="sm"
-                              className="border-purple-200 text-purple-700 hover:bg-purple-50 transition-colors"
+                              className="border-purple-200 text-purple-700 hover:bg-purple-50 hover:border-purple-300 hover:text-purple-800 transition-all duration-200 justify-start"
                             >
-                              <MessageCircle className="w-4 h-4 mr-1" />
+                              <MessageCircle className="w-4 h-4 mr-2" />
                               Group Chat
                             </Button>
                             <Button
@@ -917,7 +1065,7 @@ export default function ManagerSubmissionsPage() {
                               }
                               variant="outline"
                               size="sm"
-                              className="border-red-200 text-red-700 hover:bg-red-50 hover:border-red-300 transition-all duration-200"
+                              className="border-red-200 text-red-700 hover:bg-red-50 hover:border-red-300 hover:text-red-800 transition-all duration-200 justify-start"
                             >
                               <Trash2 className="w-4 h-4 mr-2" />
                               Delete
@@ -933,19 +1081,24 @@ export default function ManagerSubmissionsPage() {
           </CardContent>
         </Card>
 
-        {/* View Details Modal with Scroll Bar */}
+        {/* View Details Modal */}
         {showDetails && selectedSubmission && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <Card className="w-full max-w-4xl max-h-[90vh] overflow-hidden bg-white border-0 shadow-2xl flex flex-col">
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+            <Card className="w-full max-w-6xl max-h-[95vh] overflow-hidden bg-white border-0 shadow-2xl flex flex-col animate-in fade-in-90 zoom-in-95">
               <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white flex-shrink-0">
                 <div className="flex justify-between items-center">
-                  <div>
-                    <CardTitle className="text-white text-2xl">
-                      {selectedSubmission.formId?.title || "Submission Details"}
-                    </CardTitle>
-                    <CardDescription className="text-blue-100">
-                      View and update submission status
-                    </CardDescription>
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-white/20 rounded-lg">
+                      <FileText className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-white text-2xl">
+                        {selectedSubmission.formId?.title || "Submission Details"}
+                      </CardTitle>
+                      <CardDescription className="text-blue-100">
+                        {getSubmissionDepartment(selectedSubmission)} • {formatDate(selectedSubmission.createdAt)}
+                      </CardDescription>
+                    </div>
                   </div>
                   <Button
                     variant="ghost"
@@ -954,123 +1107,155 @@ export default function ManagerSubmissionsPage() {
                       setShowDetails(false);
                       setSelectedSubmission(null);
                     }}
-                    className="h-8 w-8 text-white hover:bg-white/20"
+                    className="h-9 w-9 text-white hover:bg-white/20 rounded-lg transition-colors"
                   >
-                    <X className="w-4 h-4" />
+                    <X className="w-5 h-5" />
                   </Button>
                 </div>
               </CardHeader>
-              <CardContent className="pt-6 overflow-y-auto flex-1">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <CardContent className="pt-6 overflow-y-auto flex-1 custom-scrollbar">
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+                  {/* Left Column - Submission Info */}
                   <div className="space-y-6">
-                    <h3 className="text-lg font-semibold text-gray-900">
-                      Submission Information
-                    </h3>
+                    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-6 border border-blue-100">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                        <User className="w-5 h-5 text-blue-600" />
+                        Submission Information
+                      </h3>
 
-                    <div className="space-y-4">
-                      <div>
-                        <Label className="text-gray-800 font-semibold">
-                          Assigned To
-                        </Label>
-                        <p className="text-gray-900 font-medium">
-                          {selectedSubmission.assignedTo}
-                        </p>
-                      </div>
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-1 gap-4">
+                          <div className="p-3 bg-white border border-gray-200 rounded-lg shadow-sm">
+                            <Label className="text-gray-600 font-medium text-sm">
+                              Assigned To
+                            </Label>
 
-                      <div>
-                        <Label className="text-gray-800 font-semibold">
-                          Submission Date
-                        </Label>
-                        <p className="text-gray-900 font-medium">
-                          {formatDate(selectedSubmission.createdAt)}
-                        </p>
-                      </div>
-
-                      <div>
-                        <Label className="text-gray-800 font-semibold">
-                          Status Hierarchy
-                        </Label>
-                        <div className="space-y-2 mt-2">
-                          <div className="flex items-center gap-2">
-                            <User className="w-4 h-4 text-blue-600" />
-                            <span className="text-gray-700 font-medium">
-                              Manager:
-                            </span>
-                            <Badge
-                              className={`${getStatusVariant(
-                                selectedSubmission.status
-                              )} border flex items-center gap-1 px-2 py-1`}
-                            >
-                              {getStatusIcon(selectedSubmission.status)}
-                              {selectedSubmission.status.replace("_", " ")}
-                            </Badge>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="text-gray-900 font-semibold text-sm">
+                                Team Lead:
+                              </span>
+                              <span className="text-purple-700 font-semibold">
+                                {selectedSubmission.assignedTo}
+                              </span>
+                            </div>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <User className="w-4 h-4 text-green-600" />
-                            <span className="text-gray-700 font-medium">
-                              Team Lead:
-                            </span>
-                            <Badge
-                              className={`${getStatusVariant(
-                                selectedSubmission.status2
-                              )} border flex items-center gap-1 px-2 py-1`}
-                            >
-                              {getStatusIcon(selectedSubmission.status2)}
-                              {selectedSubmission.status2.replace("_", " ")}
-                            </Badge>
-                          </div>
-                          {selectedSubmission.assignedEmployees?.map(
-                            (emp, index) => (
-                              <div
-                                key={emp.employeeId}
-                                className="flex items-center gap-2"
-                              >
-                                <Users className="w-4 h-4 text-purple-600" />
-                                <span className="text-gray-700 font-medium">
-                                  {emp.email}:
-                                </span>
-                                <Badge
-                                  className={`${getStatusVariant(
-                                    emp.status
-                                  )} border flex items-center gap-1 px-2 py-1`}
-                                >
-                                  {getStatusIcon(emp.status)}
-                                  {emp.status.replace("_", " ")}
-                                </Badge>
-                              </div>
-                            )
-                          )}
+
+                          {/* <div>
+                            <Label className="text-gray-700 font-medium text-sm">Department</Label>
+                            <p className="text-gray-900 font-semibold mt-1">
+                              {getSubmissionDepartment(selectedSubmission)}
+                            </p>
+                          </div> */}
                         </div>
-                      </div>
 
-                      {selectedSubmission.completedAt && (
                         <div>
-                          <Label className="text-gray-800 font-semibold">
-                            Completed Date
-                          </Label>
-                          <p className="text-gray-900 font-medium">
-                            {formatDate(selectedSubmission.completedAt)}
+                          <Label className="text-gray-700 font-medium text-sm">Submission Date</Label>
+                          <p className="text-gray-900 font-semibold mt-1">
+                            {formatDate(selectedSubmission.createdAt)}
                           </p>
                         </div>
-                      )}
 
+                        {selectedSubmission.completedAt && (
+                          <div>
+                            <Label className="text-gray-700 font-medium text-sm">Completed Date</Label>
+                            <p className="text-gray-900 font-semibold mt-1">
+                              {formatDate(selectedSubmission.completedAt)}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Status Hierarchy */}
+                    <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-md">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-5 flex items-center gap-2">
+                        <BarChart3 className="w-5 h-5 text-green-600" />
+                        Status Hierarchy
+                      </h3>
+
+                      <div className="space-y-4">
+
+                        {/* Manager */}
+                        <div className="flex items-center justify-between p-4 rounded-xl border border-blue-200 bg-blue-50/70 hover:bg-blue-100 transition">
+                          <div className="flex items-center gap-3">
+                            <User className="w-5 h-5 text-blue-600" />
+                            <span className="text-gray-800 font-medium text-sm">Manager</span>
+                          </div>
+
+                          <Badge
+                            className={`${getStatusVariant(selectedSubmission.status)} border text-sm flex items-center gap-1 px-3 py-1 font-medium`}
+                          >
+                            {getStatusIcon(selectedSubmission.status)}
+                            {selectedSubmission.status.replace("_", " ")}
+                          </Badge>
+                        </div>
+
+                        {/* Team Lead */}
+                        <div className="flex items-center justify-between p-4 rounded-xl border border-green-200 bg-green-50/70 hover:bg-green-100 transition">
+                          <div className="flex items-center gap-3">
+                            <User className="w-5 h-5 text-green-600" />
+                            <span className="text-gray-800 font-medium text-sm">Team Lead</span>
+                          </div>
+
+                          <Badge
+                            className={`${getStatusVariant(selectedSubmission.status2)} border text-sm flex items-center gap-1 px-3 py-1 font-medium`}
+                          >
+                            {getStatusIcon(selectedSubmission.status2)}
+                            {selectedSubmission.status2.replace("_", " ")}
+                          </Badge>
+                        </div>
+
+                        {/* Employees */}
+                        {selectedSubmission.assignedEmployees?.map((emp, index) => (
+                          <div
+                            key={emp.employeeId?._id || index}
+                            className="flex items-center justify-between p-4 rounded-xl border border-purple-200 bg-purple-50/70 hover:bg-purple-100 transition"
+                          >
+                            <div className="flex items-center gap-3">
+                              <Users className="w-5 h-5 text-purple-600" />
+
+                              <div className="flex flex-col">
+                                <span className="text-gray-800 font-medium text-sm">Employee</span>
+
+                                <div className="flex items-center gap-2 mt-0.5">
+                                  <span className="text-gray-600 text-xs font-medium">
+                                    {getEmployeeFullName(emp.employeeId)}
+                                  </span>
+
+                                  <Badge className="bg-green-700 text-white px-2 py-0.5 rounded-md text-[10px]">
+                                    {emp.email}
+                                  </Badge>
+                                </div>
+                              </div>
+                            </div>
+
+                            <Badge
+                              className={`${getStatusVariant(emp.status)} border text-sm flex items-center gap-1 px-3 py-1 font-medium`}
+                            >
+                              {getStatusIcon(emp.status)}
+                              {emp.status.replace("_", " ")}
+                            </Badge>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+
+                    {/* Feedback Section */}
+                    <div className="space-y-4">
                       {selectedSubmission.teamLeadFeedback && (
-                        <div>
-                          <Label className="text-gray-800 font-semibold">
-                            Team Lead Feedback
-                          </Label>
-                          <p className="text-gray-900 font-medium">
+                        <div className="bg-yellow-50 rounded-2xl p-4 border border-yellow-200">
+                          <Label className="text-gray-700 font-medium text-sm">Team Lead Feedback</Label>
+                          <p className="text-gray-900 mt-2 bg-white p-3 rounded-lg border border-yellow-100">
                             {selectedSubmission.teamLeadFeedback}
                           </p>
                         </div>
                       )}
 
                       {selectedSubmission.managerComments && (
-                        <div>
-                          <Label className="text-gray-800 font-semibold">
-                            Manager Comments
-                          </Label>
-                          <p className="text-gray-900 font-medium">
+                        <div className="bg-blue-50 rounded-2xl p-4 border border-blue-200">
+                          <Label className="text-gray-700 font-medium text-sm">Your Comments</Label>
+                          <p className="text-gray-900 mt-2 bg-white p-3 rounded-lg border border-blue-100">
                             {selectedSubmission.managerComments}
                           </p>
                         </div>
@@ -1078,194 +1263,215 @@ export default function ManagerSubmissionsPage() {
                     </div>
                   </div>
 
+                  {/* Right Column - Form Data */}
                   <div className="space-y-6">
-                    <h3 className="text-lg font-semibold text-gray-900">
-                      Form Data
-                    </h3>
+                    <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                        <FileText className="w-5 h-5 text-indigo-600" />
+                        Form Data
+                      </h3>
 
-                    <div className="space-y-4 max-h-80 overflow-y-auto pr-2 custom-scrollbar">
-                      {selectedSubmission.formData &&
-                        Object.entries(selectedSubmission.formData).map(
-                          ([key, value]) => {
-                            const fieldConfig =
-                              selectedSubmission.formId?.fields?.find(
-                                (f) => f.name === key
-                              );
-                            const IconComponent = fieldConfig
-                              ? getFieldIcon(fieldConfig.type)
-                              : FileText;
+                      <div className="space-y-4 max-h-96 overflow-y-auto pr-2 custom-scrollbar">
+                        {selectedSubmission.formData &&
+                          Object.entries(selectedSubmission.formData).map(
+                            ([key, value]) => {
+                              const fieldConfig =
+                                selectedSubmission.formId?.fields?.find(
+                                  (f) => f.name === key
+                                );
+                              const IconComponent = fieldConfig
+                                ? getFieldIcon(fieldConfig.type)
+                                : FileText;
 
-                            return (
-                              <div
-                                key={key}
-                                className="border border-gray-200 rounded-lg p-4 bg-white"
-                              >
-                                <div className="flex items-center gap-3 mb-3">
-                                  <div className="p-2 rounded-lg bg-blue-100 text-blue-600">
-                                    <IconComponent className="w-4 h-4" />
+                              return (
+                                <div
+                                  key={key}
+                                  className="border border-gray-200 rounded-xl p-4 bg-white hover:border-gray-300 transition-colors duration-200"
+                                >
+                                  <div className="flex items-center gap-3 mb-3">
+                                    <div className="p-2 rounded-lg bg-indigo-100 text-indigo-600">
+                                      <IconComponent className="w-4 h-4" />
+                                    </div>
+                                    <Label className="text-gray-800 font-semibold capitalize text-sm">
+                                      {key.replace(/([A-Z])/g, " $1").trim()}
+                                    </Label>
                                   </div>
-                                  <Label className="text-gray-800 font-semibold capitalize">
-                                    {key.replace(/([A-Z])/g, " $1").trim()}
-                                  </Label>
+                                  <div className="text-gray-900">
+                                    {formatFieldValue(value)}
+                                  </div>
                                 </div>
-                                <div className="text-gray-900 font-medium">
-                                  {formatFieldValue(value)}
-                                </div>
-                              </div>
-                            );
-                          }
-                        )}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-8 pt-6 border-t border-gray-200">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                    Update Status
-                  </h3>
-                  {!canManagerUpdateStatus(selectedSubmission) && (
-                    <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                      <div className="flex items-center gap-2 text-yellow-800">
-                        <AlertCircle className="w-4 h-4" />
-                        <span className="font-medium">
-                          Waiting for Team Lead approval
-                        </span>
+                              );
+                            }
+                          )}
                       </div>
-                      <p className="text-yellow-700 text-sm mt-1">
-                        You can only set status to "In Progress" until the Team
-                        Lead approves this submission.
-                      </p>
                     </div>
-                  )}
-                  <form
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      handleStatusUpdate(
-                        selectedSubmission._id,
-                        statusUpdate.status,
-                        statusUpdate.managerComments
-                      );
-                    }}
-                    className="space-y-4"
-                  >
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-3">
-                        <Label
-                          htmlFor="status"
-                          className="text-gray-800 font-semibold"
-                        >
-                          Status *
-                        </Label>
-                        <Select
-                          value={statusUpdate.status}
-                          onValueChange={(value) =>
-                            setStatusUpdate((prev) => ({
-                              ...prev,
-                              status: value,
-                            }))
-                          }
-                          disabled={
-                            !canManagerUpdateStatus(selectedSubmission) &&
-                            statusUpdate.status !== "in_progress"
-                          }
-                        >
-                          <SelectTrigger className="w-full focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900">
-                            <SelectValue placeholder="Select status" />
-                          </SelectTrigger>
-                          <SelectContent className="bg-white text-black">
-                            {canManagerUpdateStatus(selectedSubmission) ? (
+
+                    {/* Update Status Section */}
+                    <div className="bg-gradient-to-br from-gray-50 to-blue-50 rounded-2xl p-6 border border-gray-200">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                        <Edit className="w-5 h-5 text-blue-600" />
+                        Update Status
+                      </h3>
+                      {!canManagerUpdateStatus(selectedSubmission) && (
+                        <div className="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                          <div className="flex items-center gap-2 text-yellow-800">
+                            <AlertCircle className="w-4 h-4" />
+                            <span className="font-medium">
+                              Waiting for Team Lead approval
+                            </span>
+                          </div>
+                          <p className="text-yellow-700 text-sm mt-1">
+                            You can only set status to "In Progress" until the Team
+                            Lead approves this submission.
+                          </p>
+                        </div>
+                      )}
+                      <form
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          handleStatusUpdate(
+                            selectedSubmission._id,
+                            statusUpdate.status,
+                            statusUpdate.managerComments
+                          );
+                        }}
+                        className="space-y-4"
+                      >
+                        <div className="grid grid-cols-1 gap-4">
+                          <div className="space-y-3">
+                            <Label
+                              htmlFor="status"
+                              className="text-gray-800 font-semibold"
+                            >
+                              Status *
+                            </Label>
+                            <Select
+                              value={statusUpdate.status}
+                              onValueChange={(value) =>
+                                setStatusUpdate((prev) => ({
+                                  ...prev,
+                                  status: value,
+                                }))
+                              }
+                              disabled={
+                                !canManagerUpdateStatus(selectedSubmission) &&
+                                statusUpdate.status !== "in_progress"
+                              }
+                            >
+                              <SelectTrigger className="w-full focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900 bg-white">
+                                <SelectValue placeholder="Select status" />
+                              </SelectTrigger>
+                              <SelectContent className="bg-white text-black">
+                                {canManagerUpdateStatus(selectedSubmission) ? (
+                                  <>
+                                    <SelectItem value="approved">
+                                      Approved
+                                    </SelectItem>
+                                    <SelectItem value="rejected">
+                                      Rejected
+                                    </SelectItem>
+                                    <SelectItem value="in_progress">
+                                      In Progress
+                                    </SelectItem>
+                                    <SelectItem value="pending">Pending</SelectItem>
+                                    <SelectItem value="completed">
+                                      Completed
+                                    </SelectItem>
+                                  </>
+                                ) : (
+                                  <SelectItem value="in_progress">
+                                    In Progress
+                                  </SelectItem>
+                                )}
+                              </SelectContent>
+                            </Select>
+                            {!canManagerUpdateStatus(selectedSubmission) && (
+                              <p className="text-xs text-yellow-600">
+                                Only "In Progress" available until Team Lead approves
+                              </p>
+                            )}
+                          </div>
+
+                          <div className="space-y-3">
+                            <Label
+                              htmlFor="managerComments"
+                              className="text-gray-800 font-semibold"
+                            >
+                              Your Comments
+                            </Label>
+                            <Textarea
+                              value={statusUpdate.managerComments}
+                              onChange={(e) =>
+                                setStatusUpdate((prev) => ({
+                                  ...prev,
+                                  managerComments: e.target.value,
+                                }))
+                              }
+                              placeholder="Add your comments or feedback..."
+                              className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900 min-h-[100px] resize-vertical bg-white"
+                              rows={4}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="flex gap-3 pt-4">
+                          <Button
+                            type="submit"
+                            disabled={
+                              loading ||
+                              (!canManagerUpdateStatus(selectedSubmission) &&
+                                statusUpdate.status !== "in_progress")
+                            }
+                            className="bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white px-8 py-2.5 shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-600/30 transition-all duration-300 transform hover:scale-105 disabled:transform-none disabled:hover:scale-100 disabled:opacity-50"
+                          >
+                            {loading ? (
                               <>
-                                <SelectItem value="approved">
-                                  Approved
-                                </SelectItem>
-                                <SelectItem value="rejected">
-                                  Rejected
-                                </SelectItem>
-                                <SelectItem value="in_progress">
-                                  In Progress
-                                </SelectItem>
-                                <SelectItem value="pending">Pending</SelectItem>
-                                <SelectItem value="completed">
-                                  Completed
-                                </SelectItem>
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                Updating...
                               </>
                             ) : (
-                              <SelectItem value="in_progress">
-                                In Progress
-                              </SelectItem>
+                              "Update Status"
                             )}
-                          </SelectContent>
-                        </Select>
-                        {!canManagerUpdateStatus(selectedSubmission) && (
-                          <p className="text-xs text-yellow-600">
-                            Only "In Progress" available until Team Lead
-                            approves
-                          </p>
-                        )}
-                      </div>
-
-                      <div className="space-y-3">
-                        <Label
-                          htmlFor="managerComments"
-                          className="text-gray-800 font-semibold"
-                        >
-                          Manager Comments
-                        </Label>
-                        <Textarea
-                          value={statusUpdate.managerComments}
-                          onChange={(e) =>
-                            setStatusUpdate((prev) => ({
-                              ...prev,
-                              managerComments: e.target.value,
-                            }))
-                          }
-                          placeholder="Add your comments..."
-                          className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900"
-                          rows={3}
-                        />
-                      </div>
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => {
+                              setShowDetails(false);
+                              setSelectedSubmission(null);
+                            }}
+                            className="border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400 px-6 py-2.5 transition-all duration-200 shadow-sm"
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      </form>
                     </div>
-
-                    <div className="flex gap-3 pt-4">
-                      <Button
-                        type="submit"
-                        disabled={
-                          loading ||
-                          (!canManagerUpdateStatus(selectedSubmission) &&
-                            statusUpdate.status !== "in_progress")
-                        }
-                        className="bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white px-8 py-2.5 shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-600/30 transition-all duration-300 transform hover:scale-105 disabled:transform-none disabled:hover:scale-100"
-                      >
-                        {loading ? (
-                          <>
-                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                            Updating...
-                          </>
-                        ) : (
-                          "Update Status"
-                        )}
-                      </Button>
-                    </div>
-                  </form>
+                  </div>
                 </div>
               </CardContent>
             </Card>
           </div>
         )}
 
-        {/* Edit Form Modal with Scroll Bar */}
+        {/* Edit Form Modal */}
         {showEditForm && editingSubmission && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <Card className="w-full max-w-4xl max-h-[90vh] overflow-hidden bg-white border-0 shadow-2xl flex flex-col">
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+            <Card className="w-full max-w-4xl max-h-[95vh] overflow-hidden bg-white border-0 shadow-2xl flex flex-col animate-in fade-in-90 zoom-in-95">
               <CardHeader className="bg-gradient-to-r from-green-600 to-emerald-700 text-white flex-shrink-0">
                 <div className="flex justify-between items-center">
-                  <div>
-                    <CardTitle className="text-white text-2xl">
-                      Edit Submission
-                    </CardTitle>
-                    <CardDescription className="text-green-100">
-                      Update form data and comments
-                    </CardDescription>
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-white/20 rounded-lg">
+                      <Edit className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-white text-2xl">
+                        Edit Submission
+                      </CardTitle>
+                      <CardDescription className="text-green-100">
+                        Update form data and comments
+                      </CardDescription>
+                    </div>
                   </div>
                   <Button
                     variant="ghost"
@@ -1274,21 +1480,22 @@ export default function ManagerSubmissionsPage() {
                       setShowEditForm(false);
                       setEditingSubmission(null);
                     }}
-                    className="h-8 w-8 text-white hover:bg-white/20"
+                    className="h-9 w-9 text-white hover:bg-white/20 rounded-lg transition-colors"
                   >
-                    <X className="w-4 h-4" />
+                    <X className="w-5 h-5" />
                   </Button>
                 </div>
               </CardHeader>
-              <CardContent className="pt-6 overflow-y-auto flex-1">
+              <CardContent className="pt-6 overflow-y-auto flex-1 custom-scrollbar">
                 <form onSubmit={handleEditSubmission} className="space-y-6">
                   <div className="grid grid-cols-1 gap-8">
                     <div className="space-y-6">
-                      <h3 className="text-lg font-semibold text-gray-900">
+                      <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                        <FileText className="w-5 h-5 text-blue-600" />
                         Form Data
                       </h3>
 
-                      <div className="space-y-4 max-h-96 overflow-y-auto p-4 border border-gray-200 rounded-lg bg-gray-50 pr-2 custom-scrollbar">
+                      <div className="space-y-4 max-h-96 overflow-y-auto p-4 border border-gray-200 rounded-xl bg-gray-50/50 pr-2 custom-scrollbar">
                         {editingSubmission.formData &&
                           Object.entries(editingSubmission.formData).map(
                             ([fieldName, fieldValue]) => {
@@ -1303,20 +1510,18 @@ export default function ManagerSubmissionsPage() {
                               return (
                                 <div
                                   key={fieldName}
-                                  className="space-y-3 p-4 border border-gray-200 rounded-lg bg-white"
+                                  className="space-y-3 p-4 border border-gray-200 rounded-xl bg-white hover:border-gray-300 transition-colors duration-200"
                                 >
                                   <div className="flex items-center gap-3 mb-3">
                                     <div className="p-2 rounded-lg bg-blue-100 text-blue-600">
                                       <IconComponent className="w-4 h-4" />
                                     </div>
-                                    <Label className="text-gray-800 font-semibold text-lg capitalize">
+                                    <Label className="text-gray-800 font-semibold text-base capitalize">
                                       {fieldName
                                         .replace(/([A-Z])/g, " $1")
                                         .trim()}
                                       {fieldConfig?.required && (
-                                        <span className="text-red-500 ml-1">
-                                          *
-                                        </span>
+                                        <span className="text-red-500 ml-1">*</span>
                                       )}
                                     </Label>
                                   </div>
@@ -1338,7 +1543,8 @@ export default function ManagerSubmissionsPage() {
                     </div>
 
                     <div className="space-y-6">
-                      <h3 className="text-lg font-semibold text-gray-900">
+                      <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                        <MessageCircle className="w-5 h-5 text-green-600" />
                         Manager Comments
                       </h3>
 
@@ -1348,7 +1554,7 @@ export default function ManagerSubmissionsPage() {
                             htmlFor="managerComments"
                             className="text-gray-800 font-semibold"
                           >
-                            Comments
+                            Your Comments
                           </Label>
                           <Textarea
                             value={editingSubmission.managerComments || ""}
@@ -1358,8 +1564,8 @@ export default function ManagerSubmissionsPage() {
                                 managerComments: e.target.value,
                               }))
                             }
-                            placeholder="Add your comments..."
-                            className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900"
+                            placeholder="Add your comments, feedback, or notes about this submission..."
+                            className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900 min-h-[120px] resize-vertical bg-white"
                             rows={6}
                           />
                         </div>
@@ -1371,7 +1577,7 @@ export default function ManagerSubmissionsPage() {
                     <Button
                       type="submit"
                       disabled={loading}
-                      className="bg-gradient-to-r from-green-600 to-emerald-700 hover:from-green-700 hover:to-emerald-800 text-white px-8 py-2.5 shadow-lg shadow-green-500/25 hover:shadow-xl hover:shadow-green-600/30 transition-all duration-300 transform hover:scale-105 disabled:transform-none disabled:hover:scale-100"
+                      className="bg-gradient-to-r from-green-600 to-emerald-700 hover:from-green-700 hover:to-emerald-800 text-white px-8 py-2.5 shadow-lg shadow-green-500/25 hover:shadow-xl hover:shadow-green-600/30 transition-all duration-300 transform hover:scale-105 disabled:transform-none disabled:hover:scale-100 disabled:opacity-50"
                     >
                       {loading ? (
                         <>
@@ -1407,7 +1613,7 @@ export default function ManagerSubmissionsPage() {
       {/* Custom Scrollbar Styles */}
       <style jsx>{`
         .custom-scrollbar::-webkit-scrollbar {
-          width: 6px;
+          width: 8px;
         }
         .custom-scrollbar::-webkit-scrollbar-track {
           background: #f1f5f9;
@@ -1416,9 +1622,16 @@ export default function ManagerSubmissionsPage() {
         .custom-scrollbar::-webkit-scrollbar-thumb {
           background: #cbd5e1;
           border-radius: 10px;
+          border: 2px solid #f1f5f9;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
           background: #94a3b8;
+        }
+        .line-clamp-2 {
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
         }
       `}</style>
     </div>
