@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Toaster } from "@/components/ui/sonner";
@@ -15,6 +15,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"; // Import all Select components together
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -42,6 +49,11 @@ export default function ManagerAdminTasksPage() {
   const [selectedTask, setSelectedTask] = useState(null);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [audioPlaying, setAudioPlaying] = useState(null);
+  const [managers, setManagers] = useState([]); // Initialize as empty array
+  const [selectedManager, setSelectedManager] = useState("");
+
+  // Use ref to track current audio element
+  const audioRef = useRef(null);
 
   useEffect(() => {
     if (status === "loading") return;
@@ -52,6 +64,7 @@ export default function ManagerAdminTasksPage() {
     }
 
     fetchTasks();
+    fetchManagers();
   }, [session, status, router]);
 
   const fetchTasks = async () => {
@@ -72,36 +85,55 @@ export default function ManagerAdminTasksPage() {
     }
   };
 
+  const fetchManagers = async () => {
+    try {
+      const response = await axios.get("/api/manager/managers");
+      if (response.data.success) {
+        setManagers(response.data.managers || []);
+      }
+    } catch (error) {
+      console.error("Error fetching managers:", error);
+      toast.error("Failed to load managers");
+    }
+  };
+
   const handleView = (task) => {
     setSelectedTask(task);
     setViewDialogOpen(true);
   };
 
   const playAudio = (taskId, audioUrl) => {
-    if (audioPlaying === taskId) {
-      // Pause audio
-      const audio = document.getElementById(`audio-${taskId}`);
-      if (audio) {
-        audio.pause();
-      }
-      setAudioPlaying(null);
-    } else {
-      // Stop any currently playing audio
-      if (audioPlaying) {
-        const currentAudio = document.getElementById(`audio-${audioPlaying}`);
-        if (currentAudio) {
-          currentAudio.pause();
-        }
-      }
-
-      // Play new audio
-      const audio = document.getElementById(`audio-${taskId}`);
-      if (audio) {
-        audio.play();
-        audio.onended = () => setAudioPlaying(null);
-        setAudioPlaying(taskId);
-      }
+    // Stop any currently playing audio
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      audioRef.current = null;
     }
+
+    if (audioPlaying === taskId) {
+      // If clicking the same audio, just stop it
+      setAudioPlaying(null);
+      return;
+    }
+
+    // Create new audio element
+    const audio = new Audio(audioUrl);
+    audioRef.current = audio;
+
+    audio.onplay = () => setAudioPlaying(taskId);
+    audio.onpause = () => {
+      if (audioRef.current === audio) {
+        setAudioPlaying(null);
+      }
+    };
+    audio.onended = () => {
+      if (audioRef.current === audio) {
+        setAudioPlaying(null);
+        audioRef.current = null;
+      }
+    };
+
+    audio.play();
   };
 
   const downloadFile = (fileData, fileName = "attachment") => {
@@ -134,6 +166,22 @@ export default function ManagerAdminTasksPage() {
         return "bg-gray-100 text-gray-800 border-gray-200";
     }
   };
+
+  const handleManagerChange = (managerId) => {
+    setSelectedManager(managerId);
+    // Here you can add logic to assign the task to selected manager
+    toast.success("Manager assigned successfully");
+  };
+
+  // Clean up audio on unmount
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+    };
+  }, []);
 
   const filteredTasks = tasks.filter(
     (task) =>
@@ -330,13 +378,7 @@ export default function ManagerAdminTasksPage() {
                         Task Details
                       </TableHead>
                       <TableHead className="font-bold text-gray-900 text-sm uppercase tracking-wide py-4 px-6">
-                        Client
-                      </TableHead>
-                      <TableHead className="font-bold text-gray-900 text-sm uppercase tracking-wide py-4 px-6">
-                        Priority
-                      </TableHead>
-                      <TableHead className="font-bold text-gray-900 text-sm uppercase tracking-wide py-4 px-6">
-                        Due Date
+                        Assign Manager
                       </TableHead>
                       <TableHead className="font-bold text-gray-900 text-sm uppercase tracking-wide py-4 px-6">
                         Actions
@@ -384,26 +426,32 @@ export default function ManagerAdminTasksPage() {
                           </div>
                         </TableCell>
                         <TableCell className="py-4 px-6">
-                          <div className="text-base text-gray-700 font-medium">
-                            {task.clientName || "No client"}
-                          </div>
-                        </TableCell>
-                        <TableCell className="py-4 px-6">
-                          <Badge
-                            className={`${getPriorityColor(
-                              task.priority
-                            )} text-sm font-semibold capitalize px-3 py-1.5 rounded-lg border`}
+                          <Select
+                            value={selectedManager}
+                            onValueChange={handleManagerChange}
                           >
-                            {task.priority}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="py-4 px-6">
-                          <div className="flex items-center gap-3 text-gray-600">
-                            <Calendar className="w-5 h-5 text-blue-600" />
-                            <span className="text-sm font-semibold">
-                              {formatDate(task.endDate)}
-                            </span>
-                          </div>
+                            <SelectTrigger className="w-full">
+                              <SelectValue placeholder="Select a manager" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {managers.map((manager) => (
+                                <SelectItem key={manager._id} value={manager._id}>
+                                  <div className="flex items-center gap-2">
+                                    <User className="w-4 h-4 text-gray-600" />
+                                    <span className="text-gray-900">
+                                      {manager.firstName} {manager.lastName}
+                                    </span>
+                                    <Badge
+                                      variant="outline"
+                                      className="ml-2 text-xs text-gray-600"
+                                    >
+                                      {manager.email}
+                                    </Badge>
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </TableCell>
                         <TableCell className="py-4 px-6">
                           <div className="flex gap-2">
@@ -468,15 +516,6 @@ export default function ManagerAdminTasksPage() {
                               </Button>
                             )}
                           </div>
-                          {/* Hidden audio element */}
-                          {task.audioUrl && (
-                            <audio
-                              id={`audio-${task._id}`}
-                              src={task.audioUrl}
-                              onEnded={() => setAudioPlaying(null)}
-                              className="hidden"
-                            />
-                          )}
                         </TableCell>
                       </TableRow>
                     ))}
@@ -503,7 +542,16 @@ export default function ManagerAdminTasksPage() {
                 </h2>
                 <Button
                   variant="ghost"
-                  onClick={() => setViewDialogOpen(false)}
+                  onClick={() => {
+                    setViewDialogOpen(false);
+                    // Stop audio when closing dialog
+                    if (audioRef.current) {
+                      audioRef.current.pause();
+                      audioRef.current.currentTime = 0;
+                      audioRef.current = null;
+                    }
+                    setAudioPlaying(null);
+                  }}
                   className="rounded-lg"
                 >
                   ✕
@@ -596,7 +644,13 @@ export default function ManagerAdminTasksPage() {
                     Voice Instructions
                   </h3>
                   <div className="bg-gray-50 rounded-lg p-4">
-                    <audio controls className="w-full">
+                    <audio
+                      controls
+                      className="w-full"
+                      onPlay={() => setAudioPlaying(selectedTask._id)}
+                      onPause={() => setAudioPlaying(null)}
+                      onEnded={() => setAudioPlaying(null)}
+                    >
                       <source src={selectedTask.audioUrl} type="audio/wav" />
                       Your browser does not support the audio element.
                     </audio>

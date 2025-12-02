@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { toast, Toaster } from "sonner";
 import { Mail, Lock, ArrowRight, Shield, User } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
   const [identifier, setIdentifier] = useState("");
@@ -13,32 +14,38 @@ export default function LoginPage() {
   const [role, setRole] = useState("Admin");
   const [loading, setLoading] = useState(false);
 
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    if (!identifier || !password || !role) {
-      toast.warning("Please fill in all fields.", { duration: 2000 });
-      return;
-    }
+  const router = useRouter();
 
-    setLoading(true);
-    const res = await signIn("credentials", {
-      redirect: false, // Handle redirect manually to catch errors
-      identifier,
-      password,
-      role,
-      callbackUrl: `/${role.toLowerCase()}home`, // Set desired redirect URL
-    });
-    setLoading(false);
+const handleLogin = async (e) => {
+  e.preventDefault();
 
-    if (res?.error) {
-      toast.error(res.error || "Login failed.", { duration: 2000 });
-    } else if (res?.url) {
-      toast.success(`Welcome ${role} 👋`, { duration: 1500 });
-      window.location.href = `/${role.toLowerCase()}home`; // Manual redirect
-    } else {
-      toast.error("Unexpected error during login.", { duration: 2000 });
-    }
-  };
+  if (!identifier || !password || !role) {
+    toast.warning("Please fill in all fields.", { duration: 2000 });
+    return;
+  }
+
+  setLoading(true);
+
+  const res = await signIn("credentials", {
+    redirect: false, // IMPORTANT: no server redirect
+    identifier,
+    password,
+    role,
+  });
+
+  setLoading(false);
+
+  if (res?.error) {
+    toast.error(res.error || "Login failed.", { duration: 2000 });
+  } else {
+    toast.success(`Welcome ${role} 👋`, { duration: 1500 });
+
+    // Client-side redirect → no reload
+    router.push(`/${role.toLowerCase()}/home`);
+  }
+};
+
+
 
   // Function to determine if register link should be shown
   const shouldShowRegisterLink = () => {

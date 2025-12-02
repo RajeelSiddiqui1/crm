@@ -1,4 +1,4 @@
-import mongoose, { Schema, model, models } from "mongoose";
+import mongoose, { Schema, model, models, mongo } from "mongoose";
 
 const adminTaskSchema = Schema(
   {
@@ -26,6 +26,11 @@ const adminTaskSchema = Schema(
     },
     endDate: {
       type: Date,
+      required: false,
+    },
+    sharedBYManager:{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Manager",
       required: false,
     },
     managers: [
