@@ -69,6 +69,21 @@ import {
   Building,
   FolderOpen,
   BarChart3,
+  Zap,
+  Crown,
+  UserCheck,
+  UserX,
+  TrendingUp,
+  Target,
+  Award,
+  Shield,
+  Sparkles,
+  Rocket,
+  Bell,
+  ClipboardCheck,
+  Check,
+  ChevronRight,
+  ExternalLink,
 } from "lucide-react";
 import axios from "axios";
 
@@ -109,7 +124,6 @@ export default function ManagerSubmissionsPage() {
       const response = await axios.get(`/api/manager/submissions`);
       if (response.status === 200) {
         setSubmissions(response.data || []);
-        console.log("Fetched submissions:", response.data);
       }
     } catch (error) {
       console.error("Error fetching submissions:", error);
@@ -279,12 +293,80 @@ export default function ManagerSubmissionsPage() {
     }
   };
 
+  const getTeamLeadFullName = (teamLead) => {
+    if (!teamLead) return "Unassigned";
+    
+    if (teamLead.firstName && teamLead.lastName) {
+      return `${teamLead.firstName} ${teamLead.lastName}`;
+    }
+    
+    if (teamLead.name) {
+      return teamLead.name;
+    }
+    
+    return teamLead.email || "Unknown Team Lead";
+  };
+
+  const getTeamLeadEmail = (teamLead) => {
+    if (!teamLead) return "";
+    return teamLead.email || "";
+  };
+
+  const isTaskClaimed = (submission) => {
+    return submission.assignedTo && submission.claimedAt;
+  };
+
+  const getClaimStatus = (submission) => {
+    if (isTaskClaimed(submission)) {
+      return {
+        status: "claimed",
+        message: `Claimed by ${getTeamLeadFullName(submission.assignedTo)}`,
+        icon: Crown,
+        color: "bg-purple-100 text-purple-800 border-purple-200 hover:bg-purple-200"
+      };
+    }
+    
+    if (submission.multipleTeamLeadAssigned && submission.multipleTeamLeadAssigned.length > 0) {
+      return {
+        status: "available",
+        message: `Available for ${submission.multipleTeamLeadAssigned.length} team leads`,
+        icon: Users,
+        color: "bg-green-100 text-green-800 border-green-200 hover:bg-green-200"
+      };
+    }
+    
+    return {
+      status: "single",
+      message: "Assigned to single team lead",
+      icon: User,
+      color: "bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200"
+    };
+  };
+
   const formatFieldValue = (value) => {
     if (value === null || value === undefined || value === "") {
       return <span className="text-gray-500 italic">Not provided</span>;
     }
 
     if (typeof value === "object" && !Array.isArray(value)) {
+      if (value.email || value.firstName || value.lastName) {
+        return (
+          <div className="flex items-center gap-2">
+            <Avatar className="h-6 w-6">
+              <AvatarFallback className="text-xs">
+                {value.firstName?.charAt(0) || value.email?.charAt(0) || 'T'}
+              </AvatarFallback>
+            </Avatar>
+            <div>
+              <div className="font-medium text-sm">
+                {getTeamLeadFullName(value)}
+              </div>
+              <div className="text-xs text-gray-500">{value.email}</div>
+            </div>
+          </div>
+        );
+      }
+      
       return (
         <div className="space-y-2 text-sm">
           {Object.entries(value).map(([key, val]) => (
@@ -298,6 +380,28 @@ export default function ManagerSubmissionsPage() {
     }
 
     if (Array.isArray(value)) {
+      if (value.length > 0 && (value[0].email || value[0].firstName)) {
+        return (
+          <div className="space-y-2">
+            {value.map((teamLead, index) => (
+              <div key={teamLead._id || index} className="flex items-center gap-2 p-2 border rounded-lg">
+                <Avatar className="h-8 w-8">
+                  <AvatarFallback className="bg-blue-100 text-blue-600 text-xs">
+                    {teamLead.firstName?.charAt(0) || teamLead.email?.charAt(0) || 'T'}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <div className="font-medium text-sm">
+                    {getTeamLeadFullName(teamLead)}
+                  </div>
+                  <div className="text-xs text-gray-500">{teamLead.email}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        );
+      }
+      
       return (
         <div className="flex flex-wrap gap-1">
           {value.map((item, index) => (
@@ -318,6 +422,91 @@ export default function ManagerSubmissionsPage() {
     }
 
     return <span className="text-gray-900">{value.toString()}</span>;
+  };
+
+  const getFieldIcon = (fieldType) => {
+    const fieldIcons = {
+      text: FileText,
+      email: Mail,
+      number: Hash,
+      tel: Phone,
+      url: Link,
+      password: Lock,
+      date: Calendar,
+      select: List,
+      textarea: FileText,
+      checkbox: CheckSquare,
+      radio: Radio,
+      range: SlidersHorizontal,
+      file: Upload,
+      rating: Star,
+      toggle: ToggleLeft,
+      address: MapPin,
+      creditCard: CreditCard,
+    };
+    return fieldIcons[fieldType] || FileText;
+  };
+
+  const getStatusVariant = (status) => {
+    switch (status) {
+      case "completed":
+      case "approved":
+        return "bg-green-100 text-green-800 border-green-200 hover:bg-green-200";
+      case "in_progress":
+        return "bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200";
+      case "pending":
+        return "bg-yellow-100 text-yellow-800 border-yellow-200 hover:bg-yellow-200";
+      case "rejected":
+        return "bg-red-100 text-red-800 border-red-200 hover:bg-red-200";
+      default:
+        return "bg-gray-100 text-gray-800 border-gray-200 hover:bg-gray-200";
+    }
+  };
+
+  const getStatusIcon = (status) => {
+    switch (status) {
+      case "completed":
+      case "approved":
+        return <CheckCircle className="w-3 h-3" />;
+      case "in_progress":
+        return <Clock className="w-3 h-3" />;
+      case "pending":
+        return <AlertCircle className="w-3 h-3" />;
+      case "rejected":
+        return <XCircle className="w-3 h-3" />;
+      default:
+        return <AlertCircle className="w-3 h-3" />;
+    }
+  };
+
+  const getEmployeeFullName = (employee) => {
+    if (!employee) return "Unknown Employee";
+
+    if (employee.firstName && employee.lastName) {
+      return `${employee.firstName} ${employee.lastName}`;
+    }
+
+    if (employee.name) {
+      return employee.name;
+    }
+
+    if (employee.email) {
+      return employee.email.split('@')[0];
+    }
+
+    return "Unknown Employee";
+  };
+
+  const getSubmissionDepartment = (submission) => {
+    if (submission.formId?.department) {
+      return submission.formId.department;
+    }
+
+    if (submission.assignedEmployees?.[0]?.employeeId?.department) {
+      return submission.assignedEmployees[0].employeeId.department;
+    }
+
+    return "Unknown Department";
   };
 
   const renderEditFormField = (fieldConfig, fieldName, fieldValue) => {
@@ -492,93 +681,228 @@ export default function ManagerSubmissionsPage() {
     }
   };
 
-  const getFieldIcon = (fieldType) => {
-    const fieldIcons = {
-      text: FileText,
-      email: Mail,
-      number: Hash,
-      tel: Phone,
-      url: Link,
-      password: Lock,
-      date: Calendar,
-      select: List,
-      textarea: FileText,
-      checkbox: CheckSquare,
-      radio: Radio,
-      range: SlidersHorizontal,
-      file: Upload,
-      rating: Star,
-      toggle: ToggleLeft,
-      address: MapPin,
-      creditCard: CreditCard,
-    };
-    return fieldIcons[fieldType] || FileText;
+  const renderTeamInformationCell = (submission) => {
+    const claimStatus = getClaimStatus(submission);
+    const StatusIcon = claimStatus.icon;
+
+    return (
+      <TableCell className="py-5">
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Building className="w-4 h-4 text-blue-600" />
+            <span className="text-sm font-medium text-gray-900">
+              {getSubmissionDepartment(submission)}
+            </span>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <StatusIcon className="w-4 h-4" />
+            <Badge className={`${claimStatus.color} border text-xs px-2 py-1`}>
+              {claimStatus.message}
+            </Badge>
+          </div>
+          
+          {isTaskClaimed(submission) && submission.assignedTo && (
+            <div className="flex items-center gap-2 bg-purple-50 p-2 rounded-lg border border-purple-200">
+              <UserCheck className="w-4 h-4 text-purple-600" />
+              <div className="min-w-0">
+                <div className="text-sm font-medium text-gray-900 truncate">
+                  {getTeamLeadFullName(submission.assignedTo)}
+                </div>
+                <div className="text-xs text-gray-500">
+                  Claimed on {formatDate(submission.claimedAt)}
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {!isTaskClaimed(submission) && submission.multipleTeamLeadAssigned && submission.multipleTeamLeadAssigned.length > 0 && (
+            <div className="space-y-1">
+              <div className="text-xs text-gray-600 font-medium">Available for:</div>
+              <div className="flex flex-wrap gap-1">
+                {submission.multipleTeamLeadAssigned.slice(0, 3).map((teamLead, idx) => (
+                  <Badge key={teamLead._id || idx} variant="outline" className="text-xs text-gray-700">
+                    {teamLead.firstName?.charAt(0) || teamLead.email?.charAt(0) || 'T'}
+                  </Badge>
+                ))}
+                {submission.multipleTeamLeadAssigned.length > 3 && (
+                  <Badge variant="secondary" className="text-xs text-gray-700">
+                    +{submission.multipleTeamLeadAssigned.length - 3}
+                  </Badge>
+                )}
+              </div>
+            </div>
+          )}
+          
+          {!isTaskClaimed(submission) && submission.assignedTo && (!submission.multipleTeamLeadAssigned || submission.multipleTeamLeadAssigned.length === 0) && (
+            <div className="flex items-center gap-2 bg-blue-50 p-2 rounded-lg border border-blue-200">
+              <User className="w-4 h-4 text-blue-600" />
+              <div className="min-w-0">
+                <div className="text-sm font-medium text-gray-900 truncate">
+                  {getTeamLeadFullName(submission.assignedTo)}
+                </div>
+                <div className="text-xs text-gray-500">
+                  Directly assigned
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {submission.assignedEmployees && submission.assignedEmployees.length > 0 && (
+            <div className="flex items-center gap-2 pt-2 border-t">
+              <Users className="w-4 h-4 text-green-600" />
+              <span className="text-sm text-gray-700">
+                {submission.assignedEmployees.length} employee
+                {submission.assignedEmployees.length !== 1 ? 's' : ''}
+              </span>
+            </div>
+          )}
+        </div>
+      </TableCell>
+    );
   };
 
-  const getStatusVariant = (status) => {
-    switch (status) {
-      case "completed":
-      case "approved":
-        return "bg-green-100 text-green-800 border-green-200 hover:bg-green-200";
-      case "in_progress":
-        return "bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200";
-      case "pending":
-        return "bg-yellow-100 text-yellow-800 border-yellow-200 hover:bg-yellow-200";
-      case "rejected":
-        return "bg-red-100 text-red-800 border-red-200 hover:bg-red-200";
-      default:
-        return "bg-gray-100 text-gray-800 border-gray-200 hover:bg-gray-200";
-    }
-  };
+  const renderTeamLeadSection = (submission) => {
+    const claimStatus = getClaimStatus(submission);
+    const StatusIcon = claimStatus.icon;
 
-  const getStatusIcon = (status) => {
-    switch (status) {
-      case "completed":
-      case "approved":
-        return <CheckCircle className="w-3 h-3" />;
-      case "in_progress":
-        return <Clock className="w-3 h-3" />;
-      case "pending":
-        return <AlertCircle className="w-3 h-3" />;
-      case "rejected":
-        return <XCircle className="w-3 h-3" />;
-      default:
-        return <AlertCircle className="w-3 h-3" />;
-    }
-  };
+    return (
+      <div className="bg-gradient-to-br from-purple-50 via-white to-indigo-50 rounded-2xl p-6 border border-purple-100 shadow-sm">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+          <Users className="w-5 h-5 text-purple-600" />
+          Team Lead Assignment
+        </h3>
 
-  // Get employee full name with fallback
-  const getEmployeeFullName = (employee) => {
-    if (!employee) return "Unknown Employee";
+        <div className="space-y-4">
+          <div className="flex items-center justify-between p-3 bg-white rounded-lg border shadow-sm">
+            <div className="flex items-center gap-2">
+              <StatusIcon className="w-4 h-4" />
+              <span className="font-medium text-gray-900">Status:</span>
+            </div>
+            <Badge className={`${claimStatus.color} border`}>
+              {claimStatus.message}
+            </Badge>
+          </div>
 
-    if (employee.firstName && employee.lastName) {
-      return `${employee.firstName} ${employee.lastName}`;
-    }
+          {isTaskClaimed(submission) && submission.assignedTo && (
+            <div className="bg-white rounded-lg border p-4 shadow-sm">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <Crown className="w-4 h-4 text-yellow-600" />
+                  <span className="font-medium text-gray-900">Claimed By:</span>
+                </div>
+                <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">
+                  <Sparkles className="w-3 h-3 mr-1" />
+                  Claimed
+                </Badge>
+              </div>
+              <div className="flex items-center gap-3 mt-3">
+                <Avatar className="h-10 w-10 ring-2 ring-yellow-200">
+                  <AvatarFallback className="bg-yellow-100 text-yellow-600 font-semibold">
+                    {submission.assignedTo.firstName?.charAt(0) || submission.assignedTo.email?.charAt(0) || 'T'}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold text-gray-900 truncate">
+                    {getTeamLeadFullName(submission.assignedTo)}
+                  </div>
+                  <div className="text-sm text-gray-600 truncate">{submission.assignedTo.email}</div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    <Clock className="w-3 h-3 inline mr-1" />
+                    Claimed on {formatDate(submission.claimedAt)}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
-    if (employee.name) {
-      return employee.name;
-    }
+          {submission.multipleTeamLeadAssigned && submission.multipleTeamLeadAssigned.length > 0 && (
+            <div className="bg-white rounded-lg border p-4 shadow-sm">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <Users className="w-4 h-4 text-green-600" />
+                  <span className="font-medium text-gray-900">
+                    Available for {submission.multipleTeamLeadAssigned.length} Team Leads
+                  </span>
+                </div>
+                <Badge variant="outline" className="text-green-700 border-green-300">
+                  <Zap className="w-3 h-3 mr-1" />
+                  Multiple
+                </Badge>
+              </div>
+              <div className="space-y-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
+                {submission.multipleTeamLeadAssigned.map((teamLead) => (
+                  <div 
+                    key={teamLead._id} 
+                    className={`flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors ${
+                      isTaskClaimed(submission) && submission.assignedTo?._id === teamLead._id 
+                        ? 'border-yellow-300 bg-yellow-50' 
+                        : 'border-gray-200'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <Avatar className="h-8 w-8">
+                        <AvatarFallback className={`text-xs ${
+                          isTaskClaimed(submission) && submission.assignedTo?._id === teamLead._id 
+                            ? 'bg-yellow-100 text-yellow-600' 
+                            : 'bg-green-100 text-green-600'
+                        }`}>
+                          {teamLead.firstName?.charAt(0) || teamLead.email?.charAt(0) || 'T'}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-sm text-gray-900 truncate">
+                          {getTeamLeadFullName(teamLead)}
+                        </div>
+                        <div className="text-xs text-gray-500 truncate">{teamLead.email}</div>
+                      </div>
+                    </div>
+                    {isTaskClaimed(submission) && submission.assignedTo?._id === teamLead._id && (
+                      <Badge className="bg-yellow-100 text-yellow-800 text-xs ml-2 whitespace-nowrap">
+                        <Crown className="w-3 h-3 mr-1" />
+                        Claimed
+                      </Badge>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
-    // Fallback to email username
-    if (employee.email) {
-      return employee.email.split('@')[0];
-    }
-
-    return "Unknown Employee";
-  };
-
-  // Get department from submission or employee
-  const getSubmissionDepartment = (submission) => {
-    if (submission.formId?.department) {
-      return submission.formId.department;
-    }
-
-    // Try to get department from assigned employees
-    if (submission.assignedEmployees?.[0]?.employeeId?.department) {
-      return submission.assignedEmployees[0].employeeId.department;
-    }
-
-    return "Unknown Department";
+          {!isTaskClaimed(submission) && submission.assignedTo && (!submission.multipleTeamLeadAssigned || submission.multipleTeamLeadAssigned.length === 0) && (
+            <div className="bg-white rounded-lg border p-4 shadow-sm">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <User className="w-4 h-4 text-blue-600" />
+                  <span className="font-medium text-gray-900">Directly Assigned To:</span>
+                </div>
+                <Badge variant="outline" className="text-blue-700 border-blue-300">
+                  <Target className="w-3 h-3 mr-1" />
+                  Single
+                </Badge>
+              </div>
+              <div className="flex items-center gap-3">
+                <Avatar className="h-10 w-10 ring-2 ring-blue-200">
+                  <AvatarFallback className="bg-blue-100 text-blue-600 font-semibold">
+                    {submission.assignedTo.firstName?.charAt(0) || submission.assignedTo.email?.charAt(0) || 'T'}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                  <div className="font-semibold text-gray-900 truncate">
+                    {getTeamLeadFullName(submission.assignedTo)}
+                  </div>
+                  <div className="text-sm text-gray-600 truncate">{submission.assignedTo.email}</div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    <UserCheck className="w-3 h-3 inline mr-1" />
+                    Direct assignment
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
   };
 
   const filteredSubmissions = submissions.filter((submission) => {
@@ -586,9 +910,14 @@ export default function ManagerSubmissionsPage() {
       submission.formId?.title
         ?.toLowerCase()
         .includes(searchTerm.toLowerCase()) ||
-      submission.assignedTo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      submission.assignedTo?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       submission.status?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      getSubmissionDepartment(submission)?.toLowerCase().includes(searchTerm.toLowerCase());
+      getSubmissionDepartment(submission)?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (submission.multipleTeamLeadAssigned && submission.multipleTeamLeadAssigned.some(tl => 
+        tl.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        tl.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        tl.lastName?.toLowerCase().includes(searchTerm.toLowerCase())
+      ));
 
     const matchesStatus =
       statusFilter === "all" || submission.status === statusFilter;
@@ -600,7 +929,6 @@ export default function ManagerSubmissionsPage() {
     return matchesSearch && matchesStatus && matchesDepartment;
   });
 
-  // Get unique departments for filter
   const departments = [...new Set(submissions.map(sub => getSubmissionDepartment(sub)))].filter(Boolean);
 
   const formatDate = (dateString) => {
@@ -621,6 +949,12 @@ export default function ManagerSubmissionsPage() {
     in_progress: submissions.filter((s) => s.status === "in_progress").length,
     rejected: submissions.filter((s) => s.status === "rejected").length,
     completed: submissions.filter((s) => s.status === "completed").length,
+  };
+
+  const claimStats = {
+    claimed: submissions.filter(s => isTaskClaimed(s)).length,
+    available: submissions.filter(s => s.multipleTeamLeadAssigned && s.multipleTeamLeadAssigned.length > 0 && !isTaskClaimed(s)).length,
+    single: submissions.filter(s => s.assignedTo && (!s.multipleTeamLeadAssigned || s.multipleTeamLeadAssigned.length === 0)).length,
   };
 
   if (status === "loading") {
@@ -648,7 +982,6 @@ export default function ManagerSubmissionsPage() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 p-4 lg:p-6">
       <Toaster position="top-right" richColors />
 
-      {/* Floating Action Button */}
       <Button
         onClick={() => router.push("/manager/forms")}
         className="fixed bottom-6 right-6 bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white rounded-full p-5 shadow-2xl shadow-blue-500/30 hover:shadow-blue-600/40 transition-all duration-300 transform hover:scale-110 z-50 group"
@@ -660,7 +993,6 @@ export default function ManagerSubmissionsPage() {
       </Button>
 
       <div className="max-w-7xl mx-auto">
-        {/* Header Section */}
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-8">
           <div className="text-center lg:text-left">
             <div className="flex items-center gap-3 mb-3">
@@ -688,21 +1020,57 @@ export default function ManagerSubmissionsPage() {
               <RefreshCw className={`w-4 h-4 mr-2 ${fetching ? 'animate-spin' : ''}`} />
               {fetching ? 'Refreshing...' : 'Refresh'}
             </Button>
-
           </div>
         </div>
 
-        {/* Statistics Cards */}
-        <div className="grid grid-cols-2 lg:grid-cols-6 gap-4 mb-8">
-          <Card className="bg-white border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
-            <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-gray-900">{statusStats.total}</div>
-              <div className="text-sm text-gray-600 flex items-center justify-center gap-1">
-                <FileText className="w-4 h-4" />
-                Total
+        <div className="grid grid-cols-2 lg:grid-cols-8 gap-4 mb-8">
+          <Card className="bg-white border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 col-span-2">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-2xl font-bold text-gray-900">{statusStats.total}</div>
+                  <div className="text-sm text-gray-600 flex items-center gap-1">
+                    <FileText className="w-4 h-4" />
+                    Total Submissions
+                  </div>
+                </div>
+                <div className="p-3 bg-blue-100 rounded-full">
+                  <TrendingUp className="w-6 h-6 text-blue-600" />
+                </div>
               </div>
             </CardContent>
           </Card>
+          
+          <Card className="bg-white border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+            <CardContent className="p-4 text-center">
+              <div className="text-2xl font-bold text-purple-600">{claimStats.claimed}</div>
+              <div className="text-sm text-gray-600 flex items-center justify-center gap-1">
+                <Crown className="w-4 h-4" />
+                Claimed
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card className="bg-white border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+            <CardContent className="p-4 text-center">
+              <div className="text-2xl font-bold text-green-600">{claimStats.available}</div>
+              <div className="text-sm text-gray-600 flex items-center justify-center gap-1">
+                <Users className="w-4 h-4" />
+                Available
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card className="bg-white border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+            <CardContent className="p-4 text-center">
+              <div className="text-2xl font-bold text-blue-600">{claimStats.single}</div>
+              <div className="text-sm text-gray-600 flex items-center justify-center gap-1">
+                <User className="w-4 h-4" />
+                Single
+              </div>
+            </CardContent>
+          </Card>
+
           <Card className="bg-white border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
             <CardContent className="p-4 text-center">
               <div className="text-2xl font-bold text-green-600">{statusStats.approved}</div>
@@ -739,28 +1107,19 @@ export default function ManagerSubmissionsPage() {
               </div>
             </CardContent>
           </Card>
-          <Card className="bg-white border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
-            <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-indigo-600">{statusStats.completed}</div>
-              <div className="text-sm text-gray-600 flex items-center justify-center gap-1">
-                <CheckCircle className="w-4 h-4" />
-                Completed
-              </div>
-            </CardContent>
-          </Card>
         </div>
 
-        {/* Main Content Card */}
         <Card className="shadow-2xl shadow-blue-500/10 border-0 bg-gradient-to-br from-white to-blue-50/50 backdrop-blur-sm overflow-hidden">
           <CardHeader className="bg-gradient-to-r from-white to-blue-50 border-b border-blue-100/50">
             <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
               <div>
                 <CardTitle className="text-2xl font-bold text-gray-900 flex items-center gap-3">
-                  <FolderOpen className="w-7 h-7 text-blue-600" />
+                  <ClipboardCheck className="w-7 h-7 text-blue-600" />
                   Submission Management
                 </CardTitle>
                 <CardDescription className="text-gray-600 text-base">
-                  {filteredSubmissions.length} submission{filteredSubmissions.length !== 1 ? "s" : ""} found
+                  {filteredSubmissions.length} submission{filteredSubmissions.length !== 1 ? "s" : ""} found • 
+                  <span className="ml-2 text-green-600 font-medium">{claimStats.available} available for claiming</span>
                 </CardDescription>
               </div>
 
@@ -850,7 +1209,7 @@ export default function ManagerSubmissionsPage() {
                         Form Details
                       </TableHead>
                       <TableHead className="font-bold text-gray-900 text-sm uppercase tracking-wide py-4">
-                        Department & Team
+                        Team Assignment
                       </TableHead>
                       <TableHead className="font-bold text-gray-900 text-sm uppercase tracking-wide py-4">
                         Status Hierarchy
@@ -893,31 +1252,7 @@ export default function ManagerSubmissionsPage() {
                           </div>
                         </TableCell>
 
-                        <TableCell className="py-5">
-                          <div className="space-y-2">
-                            <div className="flex items-center gap-2">
-                              <Building className="w-4 h-4 text-blue-600" />
-                              <span className="text-sm font-medium text-gray-900">
-                                {getSubmissionDepartment(submission)}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <User className="w-4 h-4 text-green-600" />
-                              <span className="text-sm text-gray-700">
-                                {submission.assignedTo || "Unassigned"}
-                              </span>
-                            </div>
-                            {submission.assignedEmployees && submission.assignedEmployees.length > 0 && (
-                              <div className="flex items-center gap-2">
-                                <Users className="w-4 h-4 text-purple-600" />
-                                <span className="text-sm text-gray-700">
-                                  {submission.assignedEmployees.length} employee
-                                  {submission.assignedEmployees.length !== 1 ? 's' : ''}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        </TableCell>
+                        {renderTeamInformationCell(submission)}
 
                         <TableCell className="py-5">
                           <div className="space-y-3">
@@ -1018,6 +1353,12 @@ export default function ManagerSubmissionsPage() {
                               <Clock className="w-3 h-3 mr-1" />
                               In Progress
                             </Button>
+                            {isTaskClaimed(submission) && (
+                              <div className="text-xs text-purple-600 bg-purple-50 border border-purple-200 rounded px-3 py-2 text-center">
+                                <Crown className="w-3 h-3 inline mr-1" />
+                                Task Claimed
+                              </div>
+                            )}
                           </div>
                         </TableCell>
 
@@ -1038,7 +1379,6 @@ export default function ManagerSubmissionsPage() {
                                   `/manager/submissions/${submission._id}`
                                 )
                               }
-
                               variant="outline"
                               size="sm"
                               className="border-green-200 text-green-700 hover:bg-green-50 hover:border-green-300 hover:text-green-800 transition-all duration-200 justify-start"
@@ -1081,9 +1421,8 @@ export default function ManagerSubmissionsPage() {
           </CardContent>
         </Card>
 
-        {/* View Details Modal */}
         {showDetails && selectedSubmission && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm animate-in fade-in">
             <Card className="w-full max-w-6xl max-h-[95vh] overflow-hidden bg-white border-0 shadow-2xl flex flex-col animate-in fade-in-90 zoom-in-95">
               <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white flex-shrink-0">
                 <div className="flex justify-between items-center">
@@ -1115,7 +1454,6 @@ export default function ManagerSubmissionsPage() {
               </CardHeader>
               <CardContent className="pt-6 overflow-y-auto flex-1 custom-scrollbar">
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-                  {/* Left Column - Submission Info */}
                   <div className="space-y-6">
                     <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-6 border border-blue-100">
                       <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
@@ -1129,44 +1467,44 @@ export default function ManagerSubmissionsPage() {
                             <Label className="text-gray-600 font-medium text-sm">
                               Assigned To
                             </Label>
-
-                            <div className="flex items-center gap-2 mt-1">
-                              <span className="text-gray-900 font-semibold text-sm">
-                                Team Lead:
-                              </span>
-                              <span className="text-purple-700 font-semibold">
-                                {selectedSubmission.assignedTo}
-                              </span>
+                            <div className="mt-2 space-y-2">
+                              {selectedSubmission.assignedTo && (
+                                <div className="flex items-center gap-2">
+                                  <span className="text-gray-900 font-semibold text-sm">
+                                    Team Lead:
+                                  </span>
+                                  <span className="text-purple-700 font-semibold">
+                                    {getTeamLeadFullName(selectedSubmission.assignedTo)}
+                                  </span>
+                                </div>
+                              )}
+                              {selectedSubmission.multipleTeamLeadAssigned && selectedSubmission.multipleTeamLeadAssigned.length > 0 && (
+                                <div className="text-sm text-gray-600">
+                                  {selectedSubmission.multipleTeamLeadAssigned.length} team leads assigned
+                                </div>
+                              )}
                             </div>
                           </div>
 
-                          {/* <div>
-                            <Label className="text-gray-700 font-medium text-sm">Department</Label>
-                            <p className="text-gray-900 font-semibold mt-1">
-                              {getSubmissionDepartment(selectedSubmission)}
-                            </p>
-                          </div> */}
-                        </div>
-
-                        <div>
-                          <Label className="text-gray-700 font-medium text-sm">Submission Date</Label>
-                          <p className="text-gray-900 font-semibold mt-1">
-                            {formatDate(selectedSubmission.createdAt)}
-                          </p>
-                        </div>
-
-                        {selectedSubmission.completedAt && (
                           <div>
-                            <Label className="text-gray-700 font-medium text-sm">Completed Date</Label>
+                            <Label className="text-gray-700 font-medium text-sm">Submission Date</Label>
                             <p className="text-gray-900 font-semibold mt-1">
-                              {formatDate(selectedSubmission.completedAt)}
+                              {formatDate(selectedSubmission.createdAt)}
                             </p>
                           </div>
-                        )}
+
+                          {selectedSubmission.completedAt && (
+                            <div>
+                              <Label className="text-gray-700 font-medium text-sm">Completed Date</Label>
+                              <p className="text-gray-900 font-semibold mt-1">
+                                {formatDate(selectedSubmission.completedAt)}
+                              </p>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
 
-                    {/* Status Hierarchy */}
                     <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-md">
                       <h3 className="text-lg font-semibold text-gray-900 mb-5 flex items-center gap-2">
                         <BarChart3 className="w-5 h-5 text-green-600" />
@@ -1174,8 +1512,6 @@ export default function ManagerSubmissionsPage() {
                       </h3>
 
                       <div className="space-y-4">
-
-                        {/* Manager */}
                         <div className="flex items-center justify-between p-4 rounded-xl border border-blue-200 bg-blue-50/70 hover:bg-blue-100 transition">
                           <div className="flex items-center gap-3">
                             <User className="w-5 h-5 text-blue-600" />
@@ -1190,7 +1526,6 @@ export default function ManagerSubmissionsPage() {
                           </Badge>
                         </div>
 
-                        {/* Team Lead */}
                         <div className="flex items-center justify-between p-4 rounded-xl border border-green-200 bg-green-50/70 hover:bg-green-100 transition">
                           <div className="flex items-center gap-3">
                             <User className="w-5 h-5 text-green-600" />
@@ -1205,7 +1540,6 @@ export default function ManagerSubmissionsPage() {
                           </Badge>
                         </div>
 
-                        {/* Employees */}
                         {selectedSubmission.assignedEmployees?.map((emp, index) => (
                           <div
                             key={emp.employeeId?._id || index}
@@ -1240,8 +1574,8 @@ export default function ManagerSubmissionsPage() {
                       </div>
                     </div>
 
+                    {renderTeamLeadSection(selectedSubmission)}
 
-                    {/* Feedback Section */}
                     <div className="space-y-4">
                       {selectedSubmission.teamLeadFeedback && (
                         <div className="bg-yellow-50 rounded-2xl p-4 border border-yellow-200">
@@ -1263,7 +1597,6 @@ export default function ManagerSubmissionsPage() {
                     </div>
                   </div>
 
-                  {/* Right Column - Form Data */}
                   <div className="space-y-6">
                     <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
                       <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
@@ -1306,7 +1639,6 @@ export default function ManagerSubmissionsPage() {
                       </div>
                     </div>
 
-                    {/* Update Status Section */}
                     <div className="bg-gradient-to-br from-gray-50 to-blue-50 rounded-2xl p-6 border border-gray-200">
                       <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                         <Edit className="w-5 h-5 text-blue-600" />
@@ -1454,7 +1786,6 @@ export default function ManagerSubmissionsPage() {
           </div>
         )}
 
-        {/* Edit Form Modal */}
         {showEditForm && editingSubmission && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
             <Card className="w-full max-w-4xl max-h-[95vh] overflow-hidden bg-white border-0 shadow-2xl flex flex-col animate-in fade-in-90 zoom-in-95">
@@ -1610,7 +1941,6 @@ export default function ManagerSubmissionsPage() {
         )}
       </div>
 
-      {/* Custom Scrollbar Styles */}
       <style jsx>{`
         .custom-scrollbar::-webkit-scrollbar {
           width: 8px;

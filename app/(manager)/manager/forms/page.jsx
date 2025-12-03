@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
     Plus,
     Search,
@@ -39,7 +40,9 @@ import {
     Mail,
     Lock,
     Hash,
-    List
+    List,
+    UserPlus,
+    UserCheck
 } from "lucide-react";
 import axios from "axios";
 
@@ -55,7 +58,9 @@ export default function ManagerFormsPage() {
     const [searchTerm, setSearchTerm] = useState("");
 
     const [formData, setFormData] = useState({
+        assignmentType: "single",
         assignedTo: "",
+        multipleTeamLeadAssigned: [],
         teamLeadFeedback: ""
     });
 
@@ -129,6 +134,12 @@ export default function ManagerFormsPage() {
             }
         });
         setDynamicFormData(initialData);
+        setFormData({
+            assignmentType: "single",
+            assignedTo: "",
+            multipleTeamLeadAssigned: [],
+            teamLeadFeedback: ""
+        });
         setShowPasswords({});
         setDragOver({});
     };
@@ -145,6 +156,27 @@ export default function ManagerFormsPage() {
             ...prev,
             [fieldName]: !prev[fieldName]
         }));
+    };
+
+    const handleAssignmentTypeChange = (type) => {
+        setFormData({
+            ...formData,
+            assignmentType: type,
+            assignedTo: type === "single" ? formData.assignedTo : "",
+            multipleTeamLeadAssigned: type === "multiple" ? formData.multipleTeamLeadAssigned : []
+        });
+    };
+
+    const handleMultipleTeamLeadToggle = (teamLeadId) => {
+        setFormData(prev => {
+            const isSelected = prev.multipleTeamLeadAssigned.includes(teamLeadId);
+            return {
+                ...prev,
+                multipleTeamLeadAssigned: isSelected
+                    ? prev.multipleTeamLeadAssigned.filter(id => id !== teamLeadId)
+                    : [...prev.multipleTeamLeadAssigned, teamLeadId]
+            };
+        });
     };
 
     // File Upload Handlers
@@ -181,8 +213,15 @@ export default function ManagerFormsPage() {
         e.preventDefault();
         setLoading(true);
 
-        if (!formData.assignedTo) {
+        // Validate assignments based on type
+        if (formData.assignmentType === "single" && !formData.assignedTo) {
             toast.error("Please select a team lead");
+            setLoading(false);
+            return;
+        }
+
+        if (formData.assignmentType === "multiple" && formData.multipleTeamLeadAssigned.length === 0) {
+            toast.error("Please select at least one team lead");
             setLoading(false);
             return;
         }
@@ -204,7 +243,9 @@ export default function ManagerFormsPage() {
             const submitData = {
                 formId: selectedForm._id,
                 submittedBy: session.user.id,
+                assignmentType: formData.assignmentType,
                 assignedTo: formData.assignedTo,
+                multipleTeamLeadAssigned: formData.multipleTeamLeadAssigned,
                 formData: dynamicFormData,
                 departmentId: session.user.depId
             };
@@ -215,7 +256,7 @@ export default function ManagerFormsPage() {
                 toast.success("Form submitted successfully!");
                 resetForm();
                 fetchForms();
-                router.push('/manager/submissions')
+                router.push('/manager/submissions');
             }
         } catch (error) {
             toast.error(error.response?.data?.error || "Failed to submit form");
@@ -226,7 +267,9 @@ export default function ManagerFormsPage() {
 
     const resetForm = () => {
         setFormData({
+            assignmentType: "single",
             assignedTo: "",
+            multipleTeamLeadAssigned: [],
             teamLeadFeedback: ""
         });
         setDynamicFormData({});
@@ -373,7 +416,6 @@ export default function ManagerFormsPage() {
                 
                 return (
                     <div className="space-y-3">
-                        {/* Hidden File Input */}
                         <Input
                             id={`file-input-${field.name}`}
                             type="file"
@@ -384,7 +426,6 @@ export default function ManagerFormsPage() {
                             required={field.required && !fileCount}
                         />
                         
-                        {/* Drag & Drop Area */}
                         <div
                             onClick={() => handleFileInputClick(field.name)}
                             onDragOver={(e) => handleDragOver(e, field.name)}
@@ -407,7 +448,6 @@ export default function ManagerFormsPage() {
                             </p>
                         </div>
 
-                        {/* Selected Files Preview */}
                         {fileCount > 0 && (
                             <div className="space-y-2">
                                 <p className="text-sm text-gray-600 font-medium">
@@ -479,112 +519,6 @@ export default function ManagerFormsPage() {
                         <Label className="text-gray-700">{fieldValue ? 'On' : 'Off'}</Label>
                     </div>
                 );
-            case "address":
-                return (
-                    <div className="space-y-2">
-                        <Input
-                            type="text"
-                            placeholder="Street address"
-                            className="bg-white"
-                            value={fieldValue.street || ""}
-                            onChange={(e) => handleDynamicFieldChange(field.name, {
-                                ...fieldValue,
-                                street: e.target.value
-                            })}
-                        />
-                        <div className="grid grid-cols-2 gap-2">
-                            <Input
-                                type="text"
-                                placeholder="City"
-                                className="bg-white"
-                                value={fieldValue.city || ""}
-                                onChange={(e) => handleDynamicFieldChange(field.name, {
-                                    ...fieldValue,
-                                    city: e.target.value
-                                })}
-                            />
-                            <Input
-                                type="text"
-                                placeholder="State"
-                                className="bg-white"
-                                value={fieldValue.state || ""}
-                                onChange={(e) => handleDynamicFieldChange(field.name, {
-                                    ...fieldValue,
-                                    state: e.target.value
-                                })}
-                            />
-                        </div>
-                        <div className="grid grid-cols-2 gap-2">
-                            <Input
-                                type="text"
-                                placeholder="ZIP code"
-                                className="bg-white"
-                                value={fieldValue.zip || ""}
-                                onChange={(e) => handleDynamicFieldChange(field.name, {
-                                    ...fieldValue,
-                                    zip: e.target.value
-                                })}
-                            />
-                            <Input
-                                type="text"
-                                placeholder="Country"
-                                className="bg-white"
-                                value={fieldValue.country || ""}
-                                onChange={(e) => handleDynamicFieldChange(field.name, {
-                                    ...fieldValue,
-                                    country: e.target.value
-                                })}
-                            />
-                        </div>
-                    </div>
-                );
-            case "creditCard":
-                return (
-                    <div className="space-y-2">
-                        <Input
-                            type="text"
-                            placeholder="Card number"
-                            className="bg-white"
-                            value={fieldValue.number || ""}
-                            onChange={(e) => handleDynamicFieldChange(field.name, {
-                                ...fieldValue,
-                                number: e.target.value
-                            })}
-                        />
-                        <div className="grid grid-cols-2 gap-2">
-                            <Input
-                                type="text"
-                                placeholder="MM/YY"
-                                className="bg-white"
-                                value={fieldValue.expiry || ""}
-                                onChange={(e) => handleDynamicFieldChange(field.name, {
-                                    ...fieldValue,
-                                    expiry: e.target.value
-                                })}
-                            />
-                            <Input
-                                type="text"
-                                placeholder="CVC"
-                                className="bg-white"
-                                value={fieldValue.cvc || ""}
-                                onChange={(e) => handleDynamicFieldChange(field.name, {
-                                    ...fieldValue,
-                                    cvc: e.target.value
-                                })}
-                            />
-                        </div>
-                        <Input
-                            type="text"
-                            placeholder="Cardholder name"
-                            className="bg-white"
-                            value={fieldValue.name || ""}
-                            onChange={(e) => handleDynamicFieldChange(field.name, {
-                                ...fieldValue,
-                                name: e.target.value
-                            })}
-                        />
-                    </div>
-                );
             default:
                 return (
                     <Input
@@ -616,8 +550,6 @@ export default function ManagerFormsPage() {
             file: Upload,
             rating: Star,
             toggle: ToggleLeft,
-            address: MapPin,
-            creditCard: CreditCard
         };
         return fieldIcons[fieldType] || FileText;
     };
@@ -655,7 +587,6 @@ export default function ManagerFormsPage() {
             <Toaster position="top-right" />
 
             <div className="max-w-7xl mx-auto">
-                {/* Header Section */}
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
                     <div className="text-center sm:text-left">
                         <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-indigo-700 bg-clip-text text-transparent">
@@ -667,7 +598,6 @@ export default function ManagerFormsPage() {
                     </div>
                 </div>
 
-                {/* Forms List */}
                 <Card className="shadow-2xl shadow-blue-500/10 border-0 bg-gradient-to-br from-white to-blue-50/50 backdrop-blur-sm overflow-hidden mb-8">
                     <CardHeader className="bg-gradient-to-r from-white to-blue-50 border-b border-blue-100/50">
                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -790,7 +720,6 @@ export default function ManagerFormsPage() {
                     </CardContent>
                 </Card>
 
-                {/* Form Submission Modal */}
                 {showForm && selectedForm && (
                     <Card className="border-0 shadow-2xl shadow-blue-500/10 bg-gradient-to-br from-white to-blue-50/50 backdrop-blur-sm">
                         <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white rounded-t-lg">
@@ -813,7 +742,6 @@ export default function ManagerFormsPage() {
                         </CardHeader>
                         <CardContent className="pt-8">
                             <form onSubmit={handleSubmit} className="space-y-6">
-                                {/* Dynamic Form Fields */}
                                 <div className="space-y-6">
                                     <h3 className="text-lg font-semibold text-gray-900">Form Details</h3>
                                     {selectedForm.fields.map((field, index) => (
@@ -829,29 +757,141 @@ export default function ManagerFormsPage() {
                                     ))}
                                 </div>
 
-                                {/* Team Lead Assignment */}
+                                {/* Assignment Type Selection */}
                                 <div className="space-y-3 p-4 border border-gray-200 rounded-lg bg-white/50">
-                                    <Label htmlFor="assignedTo" className="text-gray-800 font-semibold">
-                                        Assign to Team Lead *
+                                    <Label className="text-gray-800 font-semibold">
+                                        Assignment Type *
                                     </Label>
-                                    <div className="relative">
-                                        <Users className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                                        <select
-                                            id="assignedTo"
-                                            value={formData.assignedTo}
-                                            onChange={(e) => setFormData({ ...formData, assignedTo: e.target.value })}
-                                            className="w-full p-3 pl-10 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 bg-white transition-all duration-200 shadow-sm appearance-none text-gray-900"
-                                            required
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                        <div
+                                            className={`p-4 border-2 rounded-lg cursor-pointer transition-all duration-200 ${formData.assignmentType === 'single'
+                                                    ? 'border-blue-500 bg-blue-50'
+                                                    : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                                                }`}
+                                            onClick={() => handleAssignmentTypeChange('single')}
                                         >
-                                            <option value="">Select a team lead</option>
-                                            {teamLeads.map((tl) => (
-                                                <option key={tl.id} value={tl.id}>
-                                                    {tl.name} - {tl.email}
-                                                </option>
-                                            ))}
-                                        </select>
+                                            <div className="flex items-center gap-3">
+                                                <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${formData.assignmentType === 'single'
+                                                        ? 'border-blue-500'
+                                                        : 'border-gray-300'
+                                                    }`}>
+                                                    {formData.assignmentType === 'single' && (
+                                                        <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                                                    )}
+                                                </div>
+                                                <div>
+                                                    <div className="flex items-center gap-2">
+                                                        <User className="w-5 h-5 text-gray-700" />
+                                                        <span className="font-semibold text-gray-900">Single Team Lead</span>
+                                                    </div>
+                                                    <p className="text-sm text-gray-600 mt-1">
+                                                        Assign to one team lead
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div
+                                            className={`p-4 border-2 rounded-lg cursor-pointer transition-all duration-200 ${formData.assignmentType === 'multiple'
+                                                    ? 'border-blue-500 bg-blue-50'
+                                                    : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                                                }`}
+                                            onClick={() => handleAssignmentTypeChange('multiple')}
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${formData.assignmentType === 'multiple'
+                                                        ? 'border-blue-500'
+                                                        : 'border-gray-300'
+                                                    }`}>
+                                                    {formData.assignmentType === 'multiple' && (
+                                                        <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                                                    )}
+                                                </div>
+                                                <div>
+                                                    <div className="flex items-center gap-2">
+                                                        <Users className="w-5 h-5 text-gray-700" />
+                                                        <span className="font-semibold text-gray-900">Multiple Team Leads</span>
+                                                    </div>
+                                                    <p className="text-sm text-gray-600 mt-1">
+                                                        Assign to multiple team leads
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
+
+                                {/* Team Lead Assignment - Based on Type */}
+                                {formData.assignmentType === 'single' ? (
+                                    <div className="space-y-3 p-4 border border-gray-200 rounded-lg bg-white/50">
+                                        <Label htmlFor="assignedTo" className="text-gray-800 font-semibold">
+                                            Select Team Lead *
+                                        </Label>
+                                        <div className="relative">
+                                            <Users className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                                            <select
+                                                id="assignedTo"
+                                                value={formData.assignedTo}
+                                                onChange={(e) => setFormData({ ...formData, assignedTo: e.target.value })}
+                                                className="w-full p-3 pl-10 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 bg-white transition-all duration-200 shadow-sm appearance-none text-gray-900"
+                                                required
+                                            >
+                                                <option value="">Select a team lead</option>
+                                                {teamLeads.map((tl) => (
+                                                    <option key={tl._id} value={tl._id}>
+                                                        {tl.name} - {tl.email}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <p className="text-sm text-gray-500">
+                                            The form will be assigned to a single team lead
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-3 p-4 border border-gray-200 rounded-lg bg-white/50">
+                                        <Label className="text-gray-800 font-semibold">
+                                            Select Team Leads *
+                                        </Label>
+                                        <p className="text-sm text-gray-600 mb-3">
+                                            Select one or more team leads to assign this form
+                                        </p>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-64 overflow-y-auto p-2">
+                                            {teamLeads.map((tl) => (
+                                                <div
+                                                    key={tl._id}
+                                                    className={`p-3 border rounded-lg cursor-pointer transition-all duration-200 flex items-center justify-between ${formData.multipleTeamLeadAssigned.includes(tl._id)
+                                                            ? 'border-blue-500 bg-blue-50'
+                                                            : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                                                        }`}
+                                                    onClick={() => handleMultipleTeamLeadToggle(tl._id)}
+                                                >
+                                                    <div className="flex items-center gap-3">
+                                                        <Avatar className="h-8 w-8">
+                                                            <AvatarFallback className="bg-blue-100 text-blue-600 text-xs">
+                                                                {tl.name?.charAt(0) || tl.email?.charAt(0) || 'U'}
+                                                            </AvatarFallback>
+                                                        </Avatar>
+                                                        <div>
+                                                            <div className="font-medium text-gray-900">{tl.name}</div>
+                                                            <div className="text-xs text-gray-500">{tl.email}</div>
+                                                        </div>
+                                                    </div>
+                                                    <div className={`w-5 h-5 border rounded flex items-center justify-center ${formData.multipleTeamLeadAssigned.includes(tl._id)
+                                                            ? 'bg-blue-500 border-blue-500'
+                                                            : 'border-gray-300'
+                                                        }`}>
+                                                        {formData.multipleTeamLeadAssigned.includes(tl._id) && (
+                                                            <CheckSquare className="w-3 h-3 text-white" />
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <p className="text-sm text-gray-500">
+                                            {formData.multipleTeamLeadAssigned.length} team lead{formData.multipleTeamLeadAssigned.length !== 1 ? 's' : ''} selected
+                                        </p>
+                                    </div>
+                                )}
 
                                 <div className="flex gap-3 pt-6">
                                     <Button
@@ -867,7 +907,7 @@ export default function ManagerFormsPage() {
                                         ) : (
                                             <>
                                                 <Send className="w-4 h-4 mr-2" />
-                                                Submit Form
+                                                {formData.assignmentType === 'multiple' ? 'Assign to Multiple Leads' : 'Assign to Team Lead'}
                                             </>
                                         )}
                                     </Button>

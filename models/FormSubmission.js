@@ -9,12 +9,24 @@ const formSubmissionSchema = new mongoose.Schema(
       required: true,
     },
     submittedBy: {
-      type: String,
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Manager",
       required: true,
     },
+
+    multipleTeamLeadAssigned: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "TeamLead",
+        default: [],
+      },
+    ],
     assignedTo: {
-      type: String,
-      required: true,
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "TeamLead",
+    },
+    claimedAt: {
+      type: Date,
     },
     assignedEmployees: [
       {

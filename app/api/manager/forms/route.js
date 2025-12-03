@@ -12,6 +12,147 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { sendNotification } from "@/lib/sendNotification";
 
+export async function POST(req) {
+  try {
+    await dbConnect();
+    const session = await getServerSession(authOptions);
+    if (!session || session.user.role !== "Manager") {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    }
+
+    const contentType = req.headers.get("content-type") || "";
+    let body = {};
+    let uploadedFileUrl = null;
+
+    if (contentType.includes("multipart/form-data")) {
+      const formData = await req.formData();
+      body.formId = formData.get("formId");
+      body.adminTaskId = formData.get("adminTaskId");
+      body.submittedBy = formData.get("submittedBy");
+      body.assignmentType = formData.get("assignmentType") || "single";
+      body.assignedTo = formData.get("assignedTo");
+      body.multipleTeamLeadAssigned = JSON.parse(formData.get("multipleTeamLeadAssigned") || "[]");
+      body.formData = JSON.parse(formData.get("formData") || "{}");
+
+      const file = formData.get("file");
+      if (file && file.name) {
+        const buffer = Buffer.from(await file.arrayBuffer());
+        const uploadResult = await new Promise((resolve, reject) => {
+          cloudinary.uploader
+            .upload_stream({ folder: "form_uploads" }, (err, result) => {
+              if (err) reject(err);
+              else resolve(result);
+            })
+            .end(buffer);
+        });
+        uploadedFileUrl = uploadResult.secure_url;
+      }
+    } else {
+      body = await req.json();
+    }
+
+    const { formId, adminTaskId, submittedBy, assignmentType, assignedTo, multipleTeamLeadAssigned, formData } = body;
+    if (uploadedFileUrl) formData.file = uploadedFileUrl;
+
+    const submissionData = {
+      formId,
+      adminTask: adminTaskId || null,
+      submittedBy,
+      formData,
+      status: "pending",
+    };
+
+    if (assignmentType === "multiple" && multipleTeamLeadAssigned?.length > 0) {
+      submissionData.multipleTeamLeadAssigned = multipleTeamLeadAssigned.map(id => new mongoose.Types.ObjectId(id));
+    } else if (assignmentType === "single" && assignedTo) {
+      submissionData.assignedTo = new mongoose.Types.ObjectId(assignedTo);
+      submissionData.multipleTeamLeadAssigned = [];
+    } else {
+      return NextResponse.json({ error: "Invalid assignment data" }, { status: 400 });
+    }
+
+    const newSubmission = new FormSubmission(submissionData);
+    await newSubmission.save();
+
+    if (assignmentType === "multiple" && multipleTeamLeadAssigned?.length > 0) {
+      for (const tlId of multipleTeamLeadAssigned) {
+        const teamLead = await TeamLead.findById(tlId);
+        if (teamLead) {
+          try {
+            if (teamLead.email) {
+              const html = updatedMailTemplate(
+                teamLead.name || "Team Lead",
+                "New Form Assigned",
+                "Manager",
+                "Pending",
+                "A new form has been assigned to you."
+              );
+              await sendMail(teamLead.email, "New Form Assigned", html);
+            }
+          } catch (e) {}
+
+          await sendNotification({
+            senderId: session.user.id,
+            senderModel: "Manager",
+            senderName: session.user.name || "Manager",
+            receiverId: teamLead._id,
+            receiverModel: "TeamLead",
+            type: "form_assigned",
+            title: "New Form Assigned",
+            message: `A new form has been assigned to you.`,
+            link: `/teamlead/task-offer/`,
+            referenceId: newSubmission._id,
+            referenceModel: "FormSubmission",
+          });
+        }
+      }
+    }
+
+    if (assignmentType === "single" && assignedTo) {
+      const teamLead = await TeamLead.findById(assignedTo);
+      if (teamLead) {
+        try {
+          if (teamLead.email) {
+            const html = updatedMailTemplate(
+              teamLead.name || "Team Lead",
+              "New Form Assigned",
+              "Manager",
+              "Pending",
+              "A new form has been assigned to you."
+            );
+            await sendMail(teamLead.email, "New Form Assigned", html);
+          }
+        } catch (e) {}
+
+        await sendNotification({
+          senderId: session.user.id,
+          senderModel: "Manager",
+          senderName: session.user.name || "Manager",
+          receiverId: teamLead._id,
+          receiverModel: "TeamLead",
+          type: "form_assigned",
+          title: "New Form Assigned",
+          message: `A new form has been assigned to you.`,
+          link: `${process.env.TASK_LINK}/teamlead/submissions/${newSubmission._id}`,
+          referenceId: newSubmission._id,
+          referenceModel: "FormSubmission",
+        });
+      }
+    }
+
+    return NextResponse.json(
+      { message: "Form submitted successfully", submission: newSubmission },
+      { status: 201 }
+    );
+  } catch (error) {
+    return NextResponse.json(
+      { error: error.message, details: error.errors || null },
+      { status: 500 }
+    );
+  }
+}
+
+
 export async function GET(req) {
   try {
     await dbConnect();
@@ -42,96 +183,3 @@ export async function GET(req) {
   }
 }
 
-export async function POST(req) {
-  try {
-    await dbConnect();
-    const session = await getServerSession(authOptions);
-    if (!session || session.user.role !== "Manager") {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-    }
-
-    const contentType = req.headers.get("content-type") || "";
-    let body = {};
-    let uploadedFileUrl = null;
-
-    if (contentType.includes("multipart/form-data")) {
-      const formData = await req.formData();
-
-      body.formId = formData.get("formId");
-      body.adminTaskId = formData.get("adminTaskId");
-      body.submittedBy = formData.get("submittedBy");
-      body.assignedTo = formData.get("assignedTo");
-      body.formData = JSON.parse(formData.get("formData") || "{}");
-
-      const file = formData.get("file");
-      if (file && file.name) {
-        const buffer = Buffer.from(await file.arrayBuffer());
-        const uploadResult = await new Promise((resolve, reject) => {
-          cloudinary.uploader
-            .upload_stream({ folder: "form_uploads" }, (err, result) => {
-              if (err) reject(err);
-              else resolve(result);
-            })
-            .end(buffer);
-        });
-        uploadedFileUrl = uploadResult.secure_url;
-      }
-    } else {
-      body = await req.json();
-    }
-
-    const { formId, adminTaskId, submittedBy, assignedTo, formData } = body;
-    if (uploadedFileUrl) formData.file = uploadedFileUrl;
-
-    const newSubmission = new FormSubmission({
-      formId,
-      adminTask: adminTaskId || null,
-      submittedBy,
-      assignedTo,
-      formData,
-      status: "pending",
-    });
-
-    await newSubmission.save();
-
-    let teamLead = null;
-    if (mongoose.Types.ObjectId.isValid(assignedTo)) {
-      teamLead = await TeamLead.findById(assignedTo);
-    } else {
-      teamLead = await TeamLead.findOne({ email: assignedTo });
-    }
-
-    if (teamLead) {
-      if (teamLead.email) {
-        const html = updatedMailTemplate(
-          teamLead.name || "Team Lead",
-          "New Form Assigned",
-          "Manager",
-          "Pending",
-          "A new form has been assigned to you."
-        );
-        await sendMail(teamLead.email, "New Form Assigned", html);
-      }
-
-      // Send notification
-      await sendNotification({
-        senderId: session.user.id,
-        senderModel: "Manager",
-        senderName: session.user.name || "Manager",
-        receiverId: teamLead._id,
-        receiverModel: "TeamLead",
-        type: "form_assigned",
-        title: "New Form Assigned",
-        message: `A new form "${newSubmission.formId}" has been assigned to you.`,
-        link: `${process.env.TASK_LINK}/teamlead/submissions/${newSubmission._id}`,
-        referenceId: newSubmission._id,
-        referenceModel: "FormSubmission",
-      });
-    }
-
-    return NextResponse.json({ message: "Form submitted successfully", submission: newSubmission }, { status: 201 });
-  } catch (error) {
-    console.error("Form Submission Error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-}

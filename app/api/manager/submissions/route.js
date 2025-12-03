@@ -1,50 +1,58 @@
 import { NextResponse } from "next/server";
 import dbConnect from "@/lib/db";
 import FormSubmission from "@/models/FormSubmission";
-import Form from "@/models/Form";
+import TeamLead from "@/models/TeamLead";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 
-// ✅ GET - Manager ke liye sirf unki department ki submissions fetch karega
 export async function GET(req) {
   try {
     await dbConnect();
 
     const session = await getServerSession(authOptions);
-
     if (!session || session.user.role !== "Manager") {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    // Get the logged-in manager's ID
-    const managerId = session.user.id;
-    
-    console.log("Manager ID:", managerId);
-    console.log("Session user:", session.user);
+    const managerId = session.user.id; // ObjectId
+    console.log("Fetching submissions for manager:", managerId);
 
-    // Fetch submissions where submittedBy matches the manager's ID
-    const submissions = await FormSubmission.find({ 
-      submittedBy: managerId 
+    const submissions = await FormSubmission.find({
+      submittedBy: managerId,
     })
-      .populate("formId")
-      .populate("assignedEmployees.employeeId")
-      .sort({ createdAt: -1 });
-
-    console.log("Found submissions:", submissions.length);
+      .populate({
+        path: "formId",
+        select: "title description fields depId",
+      })
+      .populate({
+        path: "assignedEmployees.employeeId",
+        select: "firstName lastName email department",
+      })
+      .populate({
+        path: "assignedTo",
+        model: TeamLead,
+        select: "firstName lastName email",
+      })
+      .populate({
+        path: "multipleTeamLeadAssigned", // Correct spelling
+        model: TeamLead,
+        select: "firstName lastName email",
+      })
+      .sort({ createdAt: -1 })
+      .lean();
 
     return NextResponse.json(submissions, { status: 200 });
   } catch (error) {
-    console.error("Fetch submissions error:", error);
+    console.error("Error fetching submissions:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
 
-// ✅ PUT - Manager status update karega (Approve/Reject)
+
 export async function PUT(req) {
   try {
     await dbConnect();
     const body = await req.json();
-
     const { submissionId, status, managerComments } = body;
 
     if (!submissionId || !status) {
@@ -55,17 +63,17 @@ export async function PUT(req) {
     }
 
     const session = await getServerSession(authOptions);
-    
+
     if (!session || session.user.role !== "Manager") {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    const managerId = session.user.id;
+    const managerId = session.user.id; // ObjectId
 
-    // Find submission and verify it belongs to this manager
+    // ✔ Correct: filter by ObjectId
     const submission = await FormSubmission.findOne({
       _id: submissionId,
-      submittedBy: managerId
+      submittedBy: managerId,
     });
 
     if (!submission) {
@@ -76,18 +84,37 @@ export async function PUT(req) {
     }
 
     submission.status = status;
-    if (managerComments) {
-      submission.managerComments = managerComments;
-    }
+    if (managerComments) submission.managerComments = managerComments;
 
     await submission.save();
 
+    const updatedSubmission = await FormSubmission.findById(submissionId)
+      .populate({
+        path: "formId",
+        select: "title description fields department",
+      })
+      .populate({
+        path: "assignedEmployees.employeeId",
+        select: "firstName lastName email department",
+      })
+      .populate({
+        path: "assignedTo",
+        model: TeamLead,
+        select: "firstName lastName email",
+      })
+      .populate({
+        path: "multipleTeamLeadAssigned",
+        model: TeamLead,
+        select: "firstName lastName email",
+      })
+      .lean();
+
     return NextResponse.json(
-      { message: "Status updated successfully", submission },
+      { message: "Status updated successfully", submission: updatedSubmission },
       { status: 200 }
     );
   } catch (error) {
-    console.error("Update status error:", error);
+    console.error("Error updating submission:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
