@@ -104,7 +104,7 @@ export default function ManagerSubmissionsPage() {
   });
   const [showPasswords, setShowPasswords] = useState({});
   const [statusFilter, setStatusFilter] = useState("all");
-  const [departmentFilter, setDepartmentFilter] = useState("all");
+  const [depIdFilter, setdepIdFilter] = useState("all");
   const fileInputRefs = useRef({});
 
   useEffect(() => {
@@ -295,15 +295,15 @@ export default function ManagerSubmissionsPage() {
 
   const getTeamLeadFullName = (teamLead) => {
     if (!teamLead) return "Unassigned";
-    
+
     if (teamLead.firstName && teamLead.lastName) {
       return `${teamLead.firstName} ${teamLead.lastName}`;
     }
-    
+
     if (teamLead.name) {
       return teamLead.name;
     }
-    
+
     return teamLead.email || "Unknown Team Lead";
   };
 
@@ -322,24 +322,29 @@ export default function ManagerSubmissionsPage() {
         status: "claimed",
         message: `Claimed by ${getTeamLeadFullName(submission.assignedTo)}`,
         icon: Crown,
-        color: "bg-purple-100 text-purple-800 border-purple-200 hover:bg-purple-200"
+        color:
+          "bg-purple-100 text-purple-800 border-purple-200 hover:bg-purple-200",
       };
     }
-    
-    if (submission.multipleTeamLeadAssigned && submission.multipleTeamLeadAssigned.length > 0) {
+
+    if (
+      submission.multipleTeamLeadAssigned &&
+      submission.multipleTeamLeadAssigned.length > 0
+    ) {
       return {
         status: "available",
         message: `Available for ${submission.multipleTeamLeadAssigned.length} team leads`,
         icon: Users,
-        color: "bg-green-100 text-green-800 border-green-200 hover:bg-green-200"
+        color:
+          "bg-green-100 text-green-800 border-green-200 hover:bg-green-200",
       };
     }
-    
+
     return {
       status: "single",
       message: "Assigned to single team lead",
       icon: User,
-      color: "bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200"
+      color: "bg-blue-100 text-blue-800 border-blue-200 hover:bg-blue-200",
     };
   };
 
@@ -354,7 +359,7 @@ export default function ManagerSubmissionsPage() {
           <div className="flex items-center gap-2">
             <Avatar className="h-6 w-6">
               <AvatarFallback className="text-xs">
-                {value.firstName?.charAt(0) || value.email?.charAt(0) || 'T'}
+                {value.firstName?.charAt(0) || value.email?.charAt(0) || "T"}
               </AvatarFallback>
             </Avatar>
             <div>
@@ -366,12 +371,14 @@ export default function ManagerSubmissionsPage() {
           </div>
         );
       }
-      
+
       return (
         <div className="space-y-2 text-sm">
           {Object.entries(value).map(([key, val]) => (
             <div key={key} className="flex items-start">
-              <span className="font-medium capitalize w-20 text-gray-700">{key}:</span>
+              <span className="font-medium capitalize w-20 text-gray-700">
+                {key}:
+              </span>
               <span className="text-gray-900 flex-1">{val || "N/A"}</span>
             </div>
           ))}
@@ -384,10 +391,15 @@ export default function ManagerSubmissionsPage() {
         return (
           <div className="space-y-2">
             {value.map((teamLead, index) => (
-              <div key={teamLead._id || index} className="flex items-center gap-2 p-2 border rounded-lg">
+              <div
+                key={teamLead._id || index}
+                className="flex items-center gap-2 p-2 border rounded-lg"
+              >
                 <Avatar className="h-8 w-8">
                   <AvatarFallback className="bg-blue-100 text-blue-600 text-xs">
-                    {teamLead.firstName?.charAt(0) || teamLead.email?.charAt(0) || 'T'}
+                    {teamLead.firstName?.charAt(0) ||
+                      teamLead.email?.charAt(0) ||
+                      "T"}
                   </AvatarFallback>
                 </Avatar>
                 <div>
@@ -401,7 +413,7 @@ export default function ManagerSubmissionsPage() {
           </div>
         );
       }
-      
+
       return (
         <div className="flex flex-wrap gap-1">
           {value.map((item, index) => (
@@ -491,22 +503,22 @@ export default function ManagerSubmissionsPage() {
     }
 
     if (employee.email) {
-      return employee.email.split('@')[0];
+      return employee.email.split("@")[0];
     }
 
     return "Unknown Employee";
   };
 
-  const getSubmissionDepartment = (submission) => {
-    if (submission.formId?.department) {
-      return submission.formId.department;
+  const getSubmissiondepId = (submission) => {
+    if (submission.formId?.depId) {
+      return submission.formId.depId;
     }
 
-    if (submission.assignedEmployees?.[0]?.employeeId?.department) {
-      return submission.assignedEmployees[0].employeeId.department;
+    if (submission.assignedEmployees?.[0]?.employeeId?.depId) {
+      return submission.assignedEmployees[0].employeeId.depId;
     }
 
-    return "Unknown Department";
+    return "Unknown depId";
   };
 
   const renderEditFormField = (fieldConfig, fieldName, fieldValue) => {
@@ -620,7 +632,9 @@ export default function ManagerSubmissionsPage() {
               }
               className="rounded border-gray-300 bg-white w-5 h-5 text-blue-600 focus:ring-blue-500"
             />
-            <Label className="text-gray-700 font-medium">{fieldConfig.label}</Label>
+            <Label className="text-gray-700 font-medium">
+              {fieldConfig.label}
+            </Label>
           </div>
         );
       case "radio":
@@ -691,17 +705,17 @@ export default function ManagerSubmissionsPage() {
           <div className="flex items-center gap-2">
             <Building className="w-4 h-4 text-blue-600" />
             <span className="text-sm font-medium text-gray-900">
-              {getSubmissionDepartment(submission)}
+              {getSubmissiondepId(submission)}
             </span>
           </div>
-          
+
           <div className="flex items-center gap-2">
             <StatusIcon className="w-4 h-4" />
             <Badge className={`${claimStatus.color} border text-xs px-2 py-1`}>
               {claimStatus.message}
             </Badge>
           </div>
-          
+
           {isTaskClaimed(submission) && submission.assignedTo && (
             <div className="flex items-center gap-2 bg-purple-50 p-2 rounded-lg border border-purple-200">
               <UserCheck className="w-4 h-4 text-purple-600" />
@@ -715,48 +729,65 @@ export default function ManagerSubmissionsPage() {
               </div>
             </div>
           )}
-          
-          {!isTaskClaimed(submission) && submission.multipleTeamLeadAssigned && submission.multipleTeamLeadAssigned.length > 0 && (
-            <div className="space-y-1">
-              <div className="text-xs text-gray-600 font-medium">Available for:</div>
-              <div className="flex flex-wrap gap-1">
-                {submission.multipleTeamLeadAssigned.slice(0, 3).map((teamLead, idx) => (
-                  <Badge key={teamLead._id || idx} variant="outline" className="text-xs text-gray-700">
-                    {teamLead.firstName?.charAt(0) || teamLead.email?.charAt(0) || 'T'}
-                  </Badge>
-                ))}
-                {submission.multipleTeamLeadAssigned.length > 3 && (
-                  <Badge variant="secondary" className="text-xs text-gray-700">
-                    +{submission.multipleTeamLeadAssigned.length - 3}
-                  </Badge>
-                )}
-              </div>
-            </div>
-          )}
-          
-          {!isTaskClaimed(submission) && submission.assignedTo && (!submission.multipleTeamLeadAssigned || submission.multipleTeamLeadAssigned.length === 0) && (
-            <div className="flex items-center gap-2 bg-blue-50 p-2 rounded-lg border border-blue-200">
-              <User className="w-4 h-4 text-blue-600" />
-              <div className="min-w-0">
-                <div className="text-sm font-medium text-gray-900 truncate">
-                  {getTeamLeadFullName(submission.assignedTo)}
+
+          {!isTaskClaimed(submission) &&
+            submission.multipleTeamLeadAssigned &&
+            submission.multipleTeamLeadAssigned.length > 0 && (
+              <div className="space-y-1">
+                <div className="text-xs text-gray-600 font-medium">
+                  Available for:
                 </div>
-                <div className="text-xs text-gray-500">
-                  Directly assigned
+                <div className="flex flex-wrap gap-1">
+                  {submission.multipleTeamLeadAssigned
+                    .slice(0, 3)
+                    .map((teamLead, idx) => (
+                      <Badge
+                        key={teamLead._id || idx}
+                        variant="outline"
+                        className="text-xs text-gray-700"
+                      >
+                        {teamLead.firstName?.charAt(0) ||
+                          teamLead.email?.charAt(0) ||
+                          "T"}
+                      </Badge>
+                    ))}
+                  {submission.multipleTeamLeadAssigned.length > 3 && (
+                    <Badge
+                      variant="secondary"
+                      className="text-xs text-gray-700"
+                    >
+                      +{submission.multipleTeamLeadAssigned.length - 3}
+                    </Badge>
+                  )}
                 </div>
               </div>
-            </div>
-          )}
-          
-          {submission.assignedEmployees && submission.assignedEmployees.length > 0 && (
-            <div className="flex items-center gap-2 pt-2 border-t">
-              <Users className="w-4 h-4 text-green-600" />
-              <span className="text-sm text-gray-700">
-                {submission.assignedEmployees.length} employee
-                {submission.assignedEmployees.length !== 1 ? 's' : ''}
-              </span>
-            </div>
-          )}
+            )}
+
+          {!isTaskClaimed(submission) &&
+            submission.assignedTo &&
+            (!submission.multipleTeamLeadAssigned ||
+              submission.multipleTeamLeadAssigned.length === 0) && (
+              <div className="flex items-center gap-2 bg-blue-50 p-2 rounded-lg border border-blue-200">
+                <User className="w-4 h-4 text-blue-600" />
+                <div className="min-w-0">
+                  <div className="text-sm font-medium text-gray-900 truncate">
+                    {getTeamLeadFullName(submission.assignedTo)}
+                  </div>
+                  <div className="text-xs text-gray-500">Directly assigned</div>
+                </div>
+              </div>
+            )}
+
+          {submission.assignedEmployees &&
+            submission.assignedEmployees.length > 0 && (
+              <div className="flex items-center gap-2 pt-2 border-t">
+                <Users className="w-4 h-4 text-green-600" />
+                <span className="text-sm text-gray-700">
+                  {submission.assignedEmployees.length} employee
+                  {submission.assignedEmployees.length !== 1 ? "s" : ""}
+                </span>
+              </div>
+            )}
         </div>
       </TableCell>
     );
@@ -799,14 +830,18 @@ export default function ManagerSubmissionsPage() {
               <div className="flex items-center gap-3 mt-3">
                 <Avatar className="h-10 w-10 ring-2 ring-yellow-200">
                   <AvatarFallback className="bg-yellow-100 text-yellow-600 font-semibold">
-                    {submission.assignedTo.firstName?.charAt(0) || submission.assignedTo.email?.charAt(0) || 'T'}
+                    {submission.assignedTo.firstName?.charAt(0) ||
+                      submission.assignedTo.email?.charAt(0) ||
+                      "T"}
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1 min-w-0">
                   <div className="font-semibold text-gray-900 truncate">
                     {getTeamLeadFullName(submission.assignedTo)}
                   </div>
-                  <div className="text-sm text-gray-600 truncate">{submission.assignedTo.email}</div>
+                  <div className="text-sm text-gray-600 truncate">
+                    {submission.assignedTo.email}
+                  </div>
                   <div className="text-xs text-gray-500 mt-1">
                     <Clock className="w-3 h-3 inline mr-1" />
                     Claimed on {formatDate(submission.claimedAt)}
@@ -816,90 +851,116 @@ export default function ManagerSubmissionsPage() {
             </div>
           )}
 
-          {submission.multipleTeamLeadAssigned && submission.multipleTeamLeadAssigned.length > 0 && (
-            <div className="bg-white rounded-lg border p-4 shadow-sm">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <Users className="w-4 h-4 text-green-600" />
-                  <span className="font-medium text-gray-900">
-                    Available for {submission.multipleTeamLeadAssigned.length} Team Leads
-                  </span>
-                </div>
-                <Badge variant="outline" className="text-green-700 border-green-300">
-                  <Zap className="w-3 h-3 mr-1" />
-                  Multiple
-                </Badge>
-              </div>
-              <div className="space-y-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
-                {submission.multipleTeamLeadAssigned.map((teamLead) => (
-                  <div 
-                    key={teamLead._id} 
-                    className={`flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors ${
-                      isTaskClaimed(submission) && submission.assignedTo?._id === teamLead._id 
-                        ? 'border-yellow-300 bg-yellow-50' 
-                        : 'border-gray-200'
-                    }`}
+          {submission.multipleTeamLeadAssigned &&
+            submission.multipleTeamLeadAssigned.length > 0 && (
+              <div className="bg-white rounded-lg border p-4 shadow-sm">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Users className="w-4 h-4 text-green-600" />
+                    <span className="font-medium text-gray-900">
+                      Available for {submission.multipleTeamLeadAssigned.length}{" "}
+                      Team Leads
+                    </span>
+                  </div>
+                  <Badge
+                    variant="outline"
+                    className="text-green-700 border-green-300"
                   >
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <Avatar className="h-8 w-8">
-                        <AvatarFallback className={`text-xs ${
-                          isTaskClaimed(submission) && submission.assignedTo?._id === teamLead._id 
-                            ? 'bg-yellow-100 text-yellow-600' 
-                            : 'bg-green-100 text-green-600'
-                        }`}>
-                          {teamLead.firstName?.charAt(0) || teamLead.email?.charAt(0) || 'T'}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <div className="font-medium text-sm text-gray-900 truncate">
-                          {getTeamLeadFullName(teamLead)}
+                    <Zap className="w-3 h-3 mr-1" />
+                    Multiple
+                  </Badge>
+                </div>
+                <div className="space-y-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
+                  {submission.multipleTeamLeadAssigned.map((teamLead) => (
+                    <div
+                      key={teamLead._id}
+                      className={`flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors ${
+                        isTaskClaimed(submission) &&
+                        submission.assignedTo?._id === teamLead._id
+                          ? "border-yellow-300 bg-yellow-50"
+                          : "border-gray-200"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <Avatar className="h-8 w-8">
+                          <AvatarFallback
+                            className={`text-xs ${
+                              isTaskClaimed(submission) &&
+                              submission.assignedTo?._id === teamLead._id
+                                ? "bg-yellow-100 text-yellow-600"
+                                : "bg-green-100 text-green-600"
+                            }`}
+                          >
+                            {teamLead.firstName?.charAt(0) ||
+                              teamLead.email?.charAt(0) ||
+                              "T"}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-sm text-gray-900 truncate">
+                            {getTeamLeadFullName(teamLead)}
+                          </div>
+                          <div className="text-xs text-gray-500 truncate">
+                            {teamLead.email}
+                          </div>
                         </div>
-                        <div className="text-xs text-gray-500 truncate">{teamLead.email}</div>
                       </div>
+                      {isTaskClaimed(submission) &&
+                        submission.assignedTo?._id === teamLead._id && (
+                          <Badge className="bg-yellow-100 text-yellow-800 text-xs ml-2 whitespace-nowrap">
+                            <Crown className="w-3 h-3 mr-1" />
+                            Claimed
+                          </Badge>
+                        )}
                     </div>
-                    {isTaskClaimed(submission) && submission.assignedTo?._id === teamLead._id && (
-                      <Badge className="bg-yellow-100 text-yellow-800 text-xs ml-2 whitespace-nowrap">
-                        <Crown className="w-3 h-3 mr-1" />
-                        Claimed
-                      </Badge>
-                    )}
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {!isTaskClaimed(submission) && submission.assignedTo && (!submission.multipleTeamLeadAssigned || submission.multipleTeamLeadAssigned.length === 0) && (
-            <div className="bg-white rounded-lg border p-4 shadow-sm">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <User className="w-4 h-4 text-blue-600" />
-                  <span className="font-medium text-gray-900">Directly Assigned To:</span>
-                </div>
-                <Badge variant="outline" className="text-blue-700 border-blue-300">
-                  <Target className="w-3 h-3 mr-1" />
-                  Single
-                </Badge>
-              </div>
-              <div className="flex items-center gap-3">
-                <Avatar className="h-10 w-10 ring-2 ring-blue-200">
-                  <AvatarFallback className="bg-blue-100 text-blue-600 font-semibold">
-                    {submission.assignedTo.firstName?.charAt(0) || submission.assignedTo.email?.charAt(0) || 'T'}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1 min-w-0">
-                  <div className="font-semibold text-gray-900 truncate">
-                    {getTeamLeadFullName(submission.assignedTo)}
+          {!isTaskClaimed(submission) &&
+            submission.assignedTo &&
+            (!submission.multipleTeamLeadAssigned ||
+              submission.multipleTeamLeadAssigned.length === 0) && (
+              <div className="bg-white rounded-lg border p-4 shadow-sm">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <User className="w-4 h-4 text-blue-600" />
+                    <span className="font-medium text-gray-900">
+                      Directly Assigned To:
+                    </span>
                   </div>
-                  <div className="text-sm text-gray-600 truncate">{submission.assignedTo.email}</div>
-                  <div className="text-xs text-gray-500 mt-1">
-                    <UserCheck className="w-3 h-3 inline mr-1" />
-                    Direct assignment
+                  <Badge
+                    variant="outline"
+                    className="text-blue-700 border-blue-300"
+                  >
+                    <Target className="w-3 h-3 mr-1" />
+                    Single
+                  </Badge>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Avatar className="h-10 w-10 ring-2 ring-blue-200">
+                    <AvatarFallback className="bg-blue-100 text-blue-600 font-semibold">
+                      {submission.assignedTo.firstName?.charAt(0) ||
+                        submission.assignedTo.email?.charAt(0) ||
+                        "T"}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-gray-900 truncate">
+                      {getTeamLeadFullName(submission.assignedTo)}
+                    </div>
+                    <div className="text-sm text-gray-600 truncate">
+                      {submission.assignedTo.email}
+                    </div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      <UserCheck className="w-3 h-3 inline mr-1" />
+                      Direct assignment
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
         </div>
       </div>
     );
@@ -910,26 +971,33 @@ export default function ManagerSubmissionsPage() {
       submission.formId?.title
         ?.toLowerCase()
         .includes(searchTerm.toLowerCase()) ||
-      submission.assignedTo?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      submission.assignedTo?.email
+        ?.toLowerCase()
+        .includes(searchTerm.toLowerCase()) ||
       submission.status?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      getSubmissionDepartment(submission)?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (submission.multipleTeamLeadAssigned && submission.multipleTeamLeadAssigned.some(tl => 
-        tl.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        tl.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        tl.lastName?.toLowerCase().includes(searchTerm.toLowerCase())
-      ));
+      getSubmissiondepId(submission)
+        ?.toLowerCase()
+        .includes(searchTerm.toLowerCase()) ||
+      (submission.multipleTeamLeadAssigned &&
+        submission.multipleTeamLeadAssigned.some(
+          (tl) =>
+            tl.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            tl.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            tl.lastName?.toLowerCase().includes(searchTerm.toLowerCase())
+        ));
 
     const matchesStatus =
       statusFilter === "all" || submission.status === statusFilter;
 
-    const matchesDepartment =
-      departmentFilter === "all" ||
-      getSubmissionDepartment(submission) === departmentFilter;
+    const matchesdepId =
+      depIdFilter === "all" || getSubmissiondepId(submission) === depIdFilter;
 
-    return matchesSearch && matchesStatus && matchesDepartment;
+    return matchesSearch && matchesStatus && matchesdepId;
   });
 
-  const departments = [...new Set(submissions.map(sub => getSubmissionDepartment(sub)))].filter(Boolean);
+  const depIds = [
+    ...new Set(submissions.map((sub) => getSubmissiondepId(sub))),
+  ].filter(Boolean);
 
   const formatDate = (dateString) => {
     if (!dateString) return "Not set";
@@ -952,9 +1020,18 @@ export default function ManagerSubmissionsPage() {
   };
 
   const claimStats = {
-    claimed: submissions.filter(s => isTaskClaimed(s)).length,
-    available: submissions.filter(s => s.multipleTeamLeadAssigned && s.multipleTeamLeadAssigned.length > 0 && !isTaskClaimed(s)).length,
-    single: submissions.filter(s => s.assignedTo && (!s.multipleTeamLeadAssigned || s.multipleTeamLeadAssigned.length === 0)).length,
+    claimed: submissions.filter((s) => isTaskClaimed(s)).length,
+    available: submissions.filter(
+      (s) =>
+        s.multipleTeamLeadAssigned &&
+        s.multipleTeamLeadAssigned.length > 0 &&
+        !isTaskClaimed(s)
+    ).length,
+    single: submissions.filter(
+      (s) =>
+        s.assignedTo &&
+        (!s.multipleTeamLeadAssigned || s.multipleTeamLeadAssigned.length === 0)
+    ).length,
   };
 
   if (status === "loading") {
@@ -966,7 +1043,9 @@ export default function ManagerSubmissionsPage() {
             <div className="absolute inset-0 rounded-full border-2 border-blue-200 animate-ping"></div>
           </div>
           <div className="text-center">
-            <h3 className="text-xl font-bold text-gray-900 mb-2">Loading Dashboard</h3>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">
+              Loading Dashboard
+            </h3>
             <p className="text-gray-600">Preparing your submissions...</p>
           </div>
         </div>
@@ -1017,8 +1096,10 @@ export default function ManagerSubmissionsPage() {
               className="border-blue-200 text-blue-700 hover:bg-blue-50 hover:border-blue-300 transition-all duration-200 shadow-sm"
               disabled={fetching}
             >
-              <RefreshCw className={`w-4 h-4 mr-2 ${fetching ? 'animate-spin' : ''}`} />
-              {fetching ? 'Refreshing...' : 'Refresh'}
+              <RefreshCw
+                className={`w-4 h-4 mr-2 ${fetching ? "animate-spin" : ""}`}
+              />
+              {fetching ? "Refreshing..." : "Refresh"}
             </Button>
           </div>
         </div>
@@ -1028,7 +1109,9 @@ export default function ManagerSubmissionsPage() {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <div className="text-2xl font-bold text-gray-900">{statusStats.total}</div>
+                  <div className="text-2xl font-bold text-gray-900">
+                    {statusStats.total}
+                  </div>
                   <div className="text-sm text-gray-600 flex items-center gap-1">
                     <FileText className="w-4 h-4" />
                     Total Submissions
@@ -1040,30 +1123,36 @@ export default function ManagerSubmissionsPage() {
               </div>
             </CardContent>
           </Card>
-          
+
           <Card className="bg-white border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
             <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-purple-600">{claimStats.claimed}</div>
+              <div className="text-2xl font-bold text-purple-600">
+                {claimStats.claimed}
+              </div>
               <div className="text-sm text-gray-600 flex items-center justify-center gap-1">
                 <Crown className="w-4 h-4" />
                 Claimed
               </div>
             </CardContent>
           </Card>
-          
+
           <Card className="bg-white border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
             <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-green-600">{claimStats.available}</div>
+              <div className="text-2xl font-bold text-green-600">
+                {claimStats.available}
+              </div>
               <div className="text-sm text-gray-600 flex items-center justify-center gap-1">
                 <Users className="w-4 h-4" />
                 Available
               </div>
             </CardContent>
           </Card>
-          
+
           <Card className="bg-white border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
             <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-blue-600">{claimStats.single}</div>
+              <div className="text-2xl font-bold text-blue-600">
+                {claimStats.single}
+              </div>
               <div className="text-sm text-gray-600 flex items-center justify-center gap-1">
                 <User className="w-4 h-4" />
                 Single
@@ -1073,7 +1162,9 @@ export default function ManagerSubmissionsPage() {
 
           <Card className="bg-white border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
             <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-green-600">{statusStats.approved}</div>
+              <div className="text-2xl font-bold text-green-600">
+                {statusStats.approved}
+              </div>
               <div className="text-sm text-gray-600 flex items-center justify-center gap-1">
                 <CheckCircle className="w-4 h-4" />
                 Approved
@@ -1082,7 +1173,9 @@ export default function ManagerSubmissionsPage() {
           </Card>
           <Card className="bg-white border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
             <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-blue-600">{statusStats.in_progress}</div>
+              <div className="text-2xl font-bold text-blue-600">
+                {statusStats.in_progress}
+              </div>
               <div className="text-sm text-gray-600 flex items-center justify-center gap-1">
                 <Clock className="w-4 h-4" />
                 In Progress
@@ -1091,7 +1184,9 @@ export default function ManagerSubmissionsPage() {
           </Card>
           <Card className="bg-white border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
             <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-yellow-600">{statusStats.pending}</div>
+              <div className="text-2xl font-bold text-yellow-600">
+                {statusStats.pending}
+              </div>
               <div className="text-sm text-gray-600 flex items-center justify-center gap-1">
                 <AlertCircle className="w-4 h-4" />
                 Pending
@@ -1100,7 +1195,9 @@ export default function ManagerSubmissionsPage() {
           </Card>
           <Card className="bg-white border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
             <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-red-600">{statusStats.rejected}</div>
+              <div className="text-2xl font-bold text-red-600">
+                {statusStats.rejected}
+              </div>
               <div className="text-sm text-gray-600 flex items-center justify-center gap-1">
                 <XCircle className="w-4 h-4" />
                 Rejected
@@ -1118,8 +1215,11 @@ export default function ManagerSubmissionsPage() {
                   Submission Management
                 </CardTitle>
                 <CardDescription className="text-gray-600 text-base">
-                  {filteredSubmissions.length} submission{filteredSubmissions.length !== 1 ? "s" : ""} found • 
-                  <span className="ml-2 text-green-600 font-medium">{claimStats.available} available for claiming</span>
+                  {filteredSubmissions.length} submission
+                  {filteredSubmissions.length !== 1 ? "s" : ""} found •
+                  <span className="ml-2 text-green-600 font-medium">
+                    {claimStats.available} available for claiming
+                  </span>
                 </CardDescription>
               </div>
 
@@ -1149,16 +1249,17 @@ export default function ManagerSubmissionsPage() {
                   </SelectContent>
                 </Select>
 
-                <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
+                <Select value={depIdFilter} onValueChange={setdepIdFilter}>
                   <SelectTrigger className="w-full sm:w-48 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900 bg-white">
                     <Building className="w-4 h-4 mr-2" />
-                    <SelectValue placeholder="Filter department" />
+                    <SelectValue placeholder="Filter depId" />
                   </SelectTrigger>
                   <SelectContent className="bg-white text-black">
-                    <SelectItem value="all">All Departments</SelectItem>
-                    {departments.map((dept) => (
-                      <SelectItem key={dept} value={dept}>
-                        {dept}
+                    <SelectItem value="all">All depIds</SelectItem>
+
+                    {depIds.map((dept) => (
+                      <SelectItem key={dept._id} value={dept._id}>
+                        {dept.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -1240,7 +1341,8 @@ export default function ManagerSubmissionsPage() {
                                 {submission.formId?.title || "Untitled Form"}
                               </div>
                               <div className="text-sm text-gray-600 line-clamp-2">
-                                {submission.formId?.description || "No description provided"}
+                                {submission.formId?.description ||
+                                  "No description provided"}
                               </div>
                               <div className="flex items-center gap-2 mt-2">
                                 <Calendar className="w-3 h-3 text-gray-400" />
@@ -1275,7 +1377,8 @@ export default function ManagerSubmissionsPage() {
                                 )} border flex items-center gap-1 px-2 py-1 text-xs font-medium transition-colors`}
                               >
                                 {getStatusIcon(submission.status2)}
-                                Team Lead: {submission.status2.replace("_", " ")}
+                                Team Lead:{" "}
+                                {submission.status2.replace("_", " ")}
                               </Badge>
                             </div>
                             {submission.assignedEmployees?.map((emp, index) => (
@@ -1290,7 +1393,8 @@ export default function ManagerSubmissionsPage() {
                                   )} border flex items-center gap-1 px-2 py-1 text-xs font-medium transition-colors`}
                                 >
                                   {getStatusIcon(emp.status)}
-                                  {getEmployeeFullName(emp.employeeId)}: {emp.status.replace("_", " ")}
+                                  {getEmployeeFullName(emp.employeeId)}:{" "}
+                                  {emp.status.replace("_", " ")}
                                 </Badge>
                               </div>
                             ))}
@@ -1432,10 +1536,12 @@ export default function ManagerSubmissionsPage() {
                     </div>
                     <div>
                       <CardTitle className="text-white text-2xl">
-                        {selectedSubmission.formId?.title || "Submission Details"}
+                        {selectedSubmission.formId?.title ||
+                          "Submission Details"}
                       </CardTitle>
                       <CardDescription className="text-blue-100">
-                        {getSubmissionDepartment(selectedSubmission)} • {formatDate(selectedSubmission.createdAt)}
+                        {getSubmissiondepId(selectedSubmission)} •{" "}
+                        {formatDate(selectedSubmission.createdAt)}
                       </CardDescription>
                     </div>
                   </div>
@@ -1474,20 +1580,30 @@ export default function ManagerSubmissionsPage() {
                                     Team Lead:
                                   </span>
                                   <span className="text-purple-700 font-semibold">
-                                    {getTeamLeadFullName(selectedSubmission.assignedTo)}
+                                    {getTeamLeadFullName(
+                                      selectedSubmission.assignedTo
+                                    )}
                                   </span>
                                 </div>
                               )}
-                              {selectedSubmission.multipleTeamLeadAssigned && selectedSubmission.multipleTeamLeadAssigned.length > 0 && (
-                                <div className="text-sm text-gray-600">
-                                  {selectedSubmission.multipleTeamLeadAssigned.length} team leads assigned
-                                </div>
-                              )}
+                              {selectedSubmission.multipleTeamLeadAssigned &&
+                                selectedSubmission.multipleTeamLeadAssigned
+                                  .length > 0 && (
+                                  <div className="text-sm text-gray-600">
+                                    {
+                                      selectedSubmission
+                                        .multipleTeamLeadAssigned.length
+                                    }{" "}
+                                    team leads assigned
+                                  </div>
+                                )}
                             </div>
                           </div>
 
                           <div>
-                            <Label className="text-gray-700 font-medium text-sm">Submission Date</Label>
+                            <Label className="text-gray-700 font-medium text-sm">
+                              Submission Date
+                            </Label>
                             <p className="text-gray-900 font-semibold mt-1">
                               {formatDate(selectedSubmission.createdAt)}
                             </p>
@@ -1495,7 +1611,9 @@ export default function ManagerSubmissionsPage() {
 
                           {selectedSubmission.completedAt && (
                             <div>
-                              <Label className="text-gray-700 font-medium text-sm">Completed Date</Label>
+                              <Label className="text-gray-700 font-medium text-sm">
+                                Completed Date
+                              </Label>
                               <p className="text-gray-900 font-semibold mt-1">
                                 {formatDate(selectedSubmission.completedAt)}
                               </p>
@@ -1515,11 +1633,15 @@ export default function ManagerSubmissionsPage() {
                         <div className="flex items-center justify-between p-4 rounded-xl border border-blue-200 bg-blue-50/70 hover:bg-blue-100 transition">
                           <div className="flex items-center gap-3">
                             <User className="w-5 h-5 text-blue-600" />
-                            <span className="text-gray-800 font-medium text-sm">Manager</span>
+                            <span className="text-gray-800 font-medium text-sm">
+                              Manager
+                            </span>
                           </div>
 
                           <Badge
-                            className={`${getStatusVariant(selectedSubmission.status)} border text-sm flex items-center gap-1 px-3 py-1 font-medium`}
+                            className={`${getStatusVariant(
+                              selectedSubmission.status
+                            )} border text-sm flex items-center gap-1 px-3 py-1 font-medium`}
                           >
                             {getStatusIcon(selectedSubmission.status)}
                             {selectedSubmission.status.replace("_", " ")}
@@ -1529,48 +1651,58 @@ export default function ManagerSubmissionsPage() {
                         <div className="flex items-center justify-between p-4 rounded-xl border border-green-200 bg-green-50/70 hover:bg-green-100 transition">
                           <div className="flex items-center gap-3">
                             <User className="w-5 h-5 text-green-600" />
-                            <span className="text-gray-800 font-medium text-sm">Team Lead</span>
+                            <span className="text-gray-800 font-medium text-sm">
+                              Team Lead
+                            </span>
                           </div>
 
                           <Badge
-                            className={`${getStatusVariant(selectedSubmission.status2)} border text-sm flex items-center gap-1 px-3 py-1 font-medium`}
+                            className={`${getStatusVariant(
+                              selectedSubmission.status2
+                            )} border text-sm flex items-center gap-1 px-3 py-1 font-medium`}
                           >
                             {getStatusIcon(selectedSubmission.status2)}
                             {selectedSubmission.status2.replace("_", " ")}
                           </Badge>
                         </div>
 
-                        {selectedSubmission.assignedEmployees?.map((emp, index) => (
-                          <div
-                            key={emp.employeeId?._id || index}
-                            className="flex items-center justify-between p-4 rounded-xl border border-purple-200 bg-purple-50/70 hover:bg-purple-100 transition"
-                          >
-                            <div className="flex items-center gap-3">
-                              <Users className="w-5 h-5 text-purple-600" />
+                        {selectedSubmission.assignedEmployees?.map(
+                          (emp, index) => (
+                            <div
+                              key={emp.employeeId?._id || index}
+                              className="flex items-center justify-between p-4 rounded-xl border border-purple-200 bg-purple-50/70 hover:bg-purple-100 transition"
+                            >
+                              <div className="flex items-center gap-3">
+                                <Users className="w-5 h-5 text-purple-600" />
 
-                              <div className="flex flex-col">
-                                <span className="text-gray-800 font-medium text-sm">Employee</span>
-
-                                <div className="flex items-center gap-2 mt-0.5">
-                                  <span className="text-gray-600 text-xs font-medium">
-                                    {getEmployeeFullName(emp.employeeId)}
+                                <div className="flex flex-col">
+                                  <span className="text-gray-800 font-medium text-sm">
+                                    Employee
                                   </span>
 
-                                  <Badge className="bg-green-700 text-white px-2 py-0.5 rounded-md text-[10px]">
-                                    {emp.email}
-                                  </Badge>
+                                  <div className="flex items-center gap-2 mt-0.5">
+                                    <span className="text-gray-600 text-xs font-medium">
+                                      {getEmployeeFullName(emp.employeeId)}
+                                    </span>
+
+                                    <Badge className="bg-green-700 text-white px-2 py-0.5 rounded-md text-[10px]">
+                                      {emp.email}
+                                    </Badge>
+                                  </div>
                                 </div>
                               </div>
-                            </div>
 
-                            <Badge
-                              className={`${getStatusVariant(emp.status)} border text-sm flex items-center gap-1 px-3 py-1 font-medium`}
-                            >
-                              {getStatusIcon(emp.status)}
-                              {emp.status.replace("_", " ")}
-                            </Badge>
-                          </div>
-                        ))}
+                              <Badge
+                                className={`${getStatusVariant(
+                                  emp.status
+                                )} border text-sm flex items-center gap-1 px-3 py-1 font-medium`}
+                              >
+                                {getStatusIcon(emp.status)}
+                                {emp.status.replace("_", " ")}
+                              </Badge>
+                            </div>
+                          )
+                        )}
                       </div>
                     </div>
 
@@ -1579,7 +1711,9 @@ export default function ManagerSubmissionsPage() {
                     <div className="space-y-4">
                       {selectedSubmission.teamLeadFeedback && (
                         <div className="bg-yellow-50 rounded-2xl p-4 border border-yellow-200">
-                          <Label className="text-gray-700 font-medium text-sm">Team Lead Feedback</Label>
+                          <Label className="text-gray-700 font-medium text-sm">
+                            Team Lead Feedback
+                          </Label>
                           <p className="text-gray-900 mt-2 bg-white p-3 rounded-lg border border-yellow-100">
                             {selectedSubmission.teamLeadFeedback}
                           </p>
@@ -1588,7 +1722,9 @@ export default function ManagerSubmissionsPage() {
 
                       {selectedSubmission.managerComments && (
                         <div className="bg-blue-50 rounded-2xl p-4 border border-blue-200">
-                          <Label className="text-gray-700 font-medium text-sm">Your Comments</Label>
+                          <Label className="text-gray-700 font-medium text-sm">
+                            Your Comments
+                          </Label>
                           <p className="text-gray-900 mt-2 bg-white p-3 rounded-lg border border-blue-100">
                             {selectedSubmission.managerComments}
                           </p>
@@ -1653,8 +1789,8 @@ export default function ManagerSubmissionsPage() {
                             </span>
                           </div>
                           <p className="text-yellow-700 text-sm mt-1">
-                            You can only set status to "In Progress" until the Team
-                            Lead approves this submission.
+                            You can only set status to "In Progress" until the
+                            Team Lead approves this submission.
                           </p>
                         </div>
                       )}
@@ -1705,7 +1841,9 @@ export default function ManagerSubmissionsPage() {
                                     <SelectItem value="in_progress">
                                       In Progress
                                     </SelectItem>
-                                    <SelectItem value="pending">Pending</SelectItem>
+                                    <SelectItem value="pending">
+                                      Pending
+                                    </SelectItem>
                                     <SelectItem value="completed">
                                       Completed
                                     </SelectItem>
@@ -1719,7 +1857,8 @@ export default function ManagerSubmissionsPage() {
                             </Select>
                             {!canManagerUpdateStatus(selectedSubmission) && (
                               <p className="text-xs text-yellow-600">
-                                Only "In Progress" available until Team Lead approves
+                                Only "In Progress" available until Team Lead
+                                approves
                               </p>
                             )}
                           </div>
@@ -1852,7 +1991,9 @@ export default function ManagerSubmissionsPage() {
                                         .replace(/([A-Z])/g, " $1")
                                         .trim()}
                                       {fieldConfig?.required && (
-                                        <span className="text-red-500 ml-1">*</span>
+                                        <span className="text-red-500 ml-1">
+                                          *
+                                        </span>
                                       )}
                                     </Label>
                                   </div>

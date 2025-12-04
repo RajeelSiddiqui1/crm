@@ -67,6 +67,12 @@ const formSubmissionSchema = new mongoose.Schema(
       enum: ["pending", "in_progress", "completed", "approved", "rejected"],
       default: "pending",
     },
+    adminStatus: {
+      type: String,
+      enum: ["pending", "approved", "rejected"],
+      default: "pending",
+    },
+
     teamLeadFeedback: {
       type: String,
       default: "",

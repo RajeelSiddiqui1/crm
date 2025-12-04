@@ -4,6 +4,7 @@ import FormSubmission from "@/models/FormSubmission";
 import TeamLead from "@/models/TeamLead";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import Form from "@/models/Form";
 
 export async function GET(req) {
   try {
@@ -26,7 +27,7 @@ export async function GET(req) {
       })
       .populate({
         path: "assignedEmployees.employeeId",
-        select: "firstName lastName email department",
+        select: "firstName lastName email depId",
       })
       .populate({
         path: "assignedTo",

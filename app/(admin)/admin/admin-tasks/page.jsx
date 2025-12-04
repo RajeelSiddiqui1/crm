@@ -869,10 +869,10 @@ export default function AdminTasksPage() {
                         setFormData({ ...formData, priority: value })
                       }
                     >
-                      <SelectTrigger className="h-12 text-base rounded-xl border-gray-300">
+                      <SelectTrigger className="h-12 text-base rounded-xl bg-white text-gray-900">
                         <SelectValue placeholder="Select priority" />
                       </SelectTrigger>
-                      <SelectContent className="rounded-xl">
+                      <SelectContent className="rounded-xl bg-white text-gray-900">
                         <SelectItem value="low" className="text-base">
                           Low Priority
                         </SelectItem>

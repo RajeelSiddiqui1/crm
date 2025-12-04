@@ -838,7 +838,7 @@ export default function ManagerFormsPage() {
                                                 <option value="">Select a team lead</option>
                                                 {teamLeads.map((tl) => (
                                                     <option key={tl._id} value={tl._id}>
-                                                        {tl.name} - {tl.email}
+                                                      {tl.email}
                                                     </option>
                                                 ))}
                                             </select>
