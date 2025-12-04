@@ -767,10 +767,10 @@ export default function TeamLeadSubmissionsPage() {
                               }
                               disabled={loading}
                             >
-                              <SelectTrigger className="w-28 h-7 text-xs border border-gray-300 bg-white">
+                              <SelectTrigger className="w-28 h-7 text-xs border text-gray-900 border-gray-300 bg-white">
                                 <SelectValue placeholder="Update" />
                               </SelectTrigger>
-                              <SelectContent className="bg-white border border-gray-200 min-w-[120px]">
+                              <SelectContent className="bg-white border border-gray-200 min-w-[120px] text-gray-900 border-gray-300 bg-white">
                                 <SelectItem value="pending" className="text-xs">
                                   Pending
                                 </SelectItem>

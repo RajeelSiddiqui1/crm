@@ -147,7 +147,7 @@ const handleStatusUpdate = async (submissionId, newStatus) => {
 
             <div className="max-w-6xl mx-auto">
                 <div className="flex items-center gap-4 mb-8">
-                    <Link href="/teamlead/dashboard">
+                    <Link href="/teamlead/subtasks">
                         <Button variant="outline" size="icon" className="rounded-full dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800">
                             <ArrowLeft className="w-4 h-4" />
                         </Button>

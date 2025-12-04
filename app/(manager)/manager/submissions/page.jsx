@@ -819,7 +819,7 @@ export default function ManagerSubmissionsPage() {
             <div className="bg-white rounded-lg border p-4 shadow-sm">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
-                  <Crown className="w-4 h-4 text-yellow-600" />
+                  <Crown className="w-4 h-4 text-orange-900" />
                   <span className="font-medium text-gray-900">Claimed By:</span>
                 </div>
                 <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">
