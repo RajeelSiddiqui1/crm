@@ -25,6 +25,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -60,10 +61,16 @@ import {
   Eye,
   X,
   Download,
+  ChevronLeft,
+  ChevronRight,
+  Maximize2,
+  Minimize2,
+  ZoomIn,
+  ZoomOut,
+  RotateCw,
 } from "lucide-react";
 import axios from "axios";
 import Link from "next/link";
-import Image from "next/image";
 
 export default function EmployeeTaskDetailPage() {
   const { data: session, status } = useSession();
@@ -71,6 +78,7 @@ export default function EmployeeTaskDetailPage() {
   const params = useParams();
   const taskId = params.id;
   const fileInputRef = useRef(null);
+  const imageContainerRef = useRef(null);
 
   const [task, setTask] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -78,11 +86,17 @@ export default function EmployeeTaskDetailPage() {
   const [showStatusDialog, setShowStatusDialog] = useState(false);
   const [showAttachmentDialog, setShowAttachmentDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [showFullscreenSlider, setShowFullscreenSlider] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState("");
   const [feedback, setFeedback] = useState("");
   const [selectedFile, setSelectedFile] = useState(null);
   const [filePreview, setFilePreview] = useState(null);
   const [uploadingAttachment, setUploadingAttachment] = useState(false);
+  
+  // Slider states
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [zoomLevel, setZoomLevel] = useState(1);
+  const [rotation, setRotation] = useState(0);
 
   useEffect(() => {
     if (status === "loading") return;
@@ -269,6 +283,19 @@ export default function EmployeeTaskDetailPage() {
     setShowAttachmentDialog(true);
   };
 
+  const openFullscreenSlider = () => {
+    setCurrentImageIndex(0);
+    setZoomLevel(1);
+    setRotation(0);
+    setShowFullscreenSlider(true);
+  };
+
+  const closeFullscreenSlider = () => {
+    setShowFullscreenSlider(false);
+    setZoomLevel(1);
+    setRotation(0);
+  };
+
   const downloadAttachment = () => {
     if (task?.attachmentUrl) {
       const link = document.createElement("a");
@@ -278,6 +305,36 @@ export default function EmployeeTaskDetailPage() {
       link.click();
       document.body.removeChild(link);
     }
+  };
+
+  // Slider functions
+  const nextImage = () => {
+    setCurrentImageIndex(prev => prev + 1);
+    setZoomLevel(1);
+    setRotation(0);
+  };
+
+  const prevImage = () => {
+    setCurrentImageIndex(prev => prev - 1);
+    setZoomLevel(1);
+    setRotation(0);
+  };
+
+  const zoomIn = () => {
+    setZoomLevel(prev => Math.min(prev + 0.25, 3));
+  };
+
+  const zoomOut = () => {
+    setZoomLevel(prev => Math.max(prev - 0.25, 0.5));
+  };
+
+  const rotateImage = () => {
+    setRotation(prev => (prev + 90) % 360);
+  };
+
+  const resetTransform = () => {
+    setZoomLevel(1);
+    setRotation(0);
   };
 
   // Status color functions
@@ -318,6 +375,23 @@ export default function EmployeeTaskDetailPage() {
       minute: "2-digit",
     });
   };
+
+  // Get all images for slider (in this case just one, but structured for multiple)
+  const getImages = () => {
+    if (!task?.attachmentUrl) return [];
+    return [
+      {
+        id: 1,
+        url: task.attachmentUrl,
+        title: "Task Attachment",
+        uploadedBy: task.sharedEmployee?.firstName + " " + task.sharedEmployee?.lastName,
+        date: task.attachmentUpdatedAt
+      }
+    ];
+  };
+
+  const images = getImages();
+  const hasAttachment = task?.attachmentUrl;
 
   if (status === "loading" || loading) {
     return (
@@ -477,8 +551,8 @@ export default function EmployeeTaskDetailPage() {
               </CardContent>
             </Card>
 
-            {/* Attachment Card */}
-            {task.attachmentUrl && (
+            {/* Attachment Card with Slider */}
+            {hasAttachment && (
               <Card className="bg-white border border-gray-200 shadow-sm">
                 <CardHeader className="bg-white border-b border-gray-200 p-4 md:p-6">
                   <CardTitle className="text-lg md:text-xl font-bold text-gray-900 flex items-center justify-between">
@@ -494,6 +568,15 @@ export default function EmployeeTaskDetailPage() {
                         Download
                       </Button>
                       <Button
+                        onClick={openFullscreenSlider}
+                        variant="outline"
+                        size="sm"
+                        className="border-blue-600 text-blue-600 hover:bg-blue-50"
+                      >
+                        <Maximize2 className="w-3 h-3 md:w-4 md:h-4 mr-1" />
+                        Fullscreen
+                      </Button>
+                      <Button
                         onClick={() => setShowDeleteDialog(true)}
                         variant="outline"
                         size="sm"
@@ -507,21 +590,143 @@ export default function EmployeeTaskDetailPage() {
                 </CardHeader>
                 <CardContent className="p-4 md:p-6">
                   <div className="flex flex-col items-center">
-                    <div className="relative w-full max-w-md h-64 md:h-80 border-2 border-gray-300 rounded-lg overflow-hidden">
-                      {/* Fixed: Use regular img tag for Cloudinary images to avoid Next.js Image error */}
-                      <img
-                        src={task.attachmentUrl}
-                        alt="Task Attachment"
-                        className="w-full h-full object-contain"
-                        onError={(e) => {
-                          e.target.onerror = null;
-                          e.target.src = "/placeholder-image.png"; // Fallback image
-                        }}
-                      />
+                    {/* Image Slider Container */}
+                    <div className="relative w-full max-w-3xl mx-auto">
+                      {/* Slider Navigation */}
+                      <div className="absolute inset-0 flex items-center justify-between z-10 px-4">
+                        <Button
+                          onClick={prevImage}
+                          disabled={currentImageIndex === 0}
+                          variant="secondary"
+                          size="icon"
+                          className="h-10 w-10 rounded-full bg-white/80 hover:bg-white shadow-lg"
+                        >
+                          <ChevronLeft className="h-5 w-5" />
+                        </Button>
+                        <Button
+                          onClick={nextImage}
+                          disabled={currentImageIndex === images.length - 1}
+                          variant="secondary"
+                          size="icon"
+                          className="h-10 w-10 rounded-full bg-white/80 hover:bg-white shadow-lg"
+                        >
+                          <ChevronRight className="h-5 w-5" />
+                        </Button>
+                      </div>
+
+                      {/* Image Container */}
+                      <div 
+                        ref={imageContainerRef}
+                        className="relative w-full h-64 md:h-80 lg:h-96 border-2 border-gray-300 rounded-lg overflow-hidden bg-gray-900"
+                      >
+                        {images.map((image, index) => (
+                          <div
+                            key={image.id}
+                            className={`absolute inset-0 transition-all duration-300 ease-in-out ${
+                              index === currentImageIndex
+                                ? "opacity-100 translate-x-0"
+                                : "opacity-0 translate-x-full"
+                            }`}
+                            style={{
+                              transform: `translateX(${(index - currentImageIndex) * 100}%)`,
+                            }}
+                          >
+                            <img
+                              src={image.url}
+                              alt={image.title}
+                              className="w-full h-full object-contain"
+                              style={{
+                                transform: `scale(${zoomLevel}) rotate(${rotation}deg)`,
+                                transition: 'transform 0.3s ease',
+                              }}
+                              onError={(e) => {
+                                e.target.onerror = null;
+                                e.target.src = "/placeholder-image.png";
+                              }}
+                            />
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Slider Controls */}
+                      <div className="flex justify-center items-center mt-4 gap-4">
+                        <div className="flex items-center gap-2">
+                          <Button
+                            onClick={zoomOut}
+                            variant="outline"
+                            size="sm"
+                            className="h-8 w-8 p-0"
+                            disabled={zoomLevel <= 0.5}
+                          >
+                            <ZoomOut className="h-4 w-4" />
+                          </Button>
+                          <span className="text-sm font-medium text-gray-700">
+                            {Math.round(zoomLevel * 100)}%
+                          </span>
+                          <Button
+                            onClick={zoomIn}
+                            variant="outline"
+                            size="sm"
+                            className="h-8 w-8 p-0"
+                            disabled={zoomLevel >= 3}
+                          >
+                            <ZoomIn className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            onClick={rotateImage}
+                            variant="outline"
+                            size="sm"
+                            className="h-8 w-8 p-0"
+                          >
+                            <RotateCw className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            onClick={resetTransform}
+                            variant="outline"
+                            size="sm"
+                            className="h-8 px-2 text-xs"
+                          >
+                            Reset
+                          </Button>
+                        </div>
+                      </div>
+
+                      {/* Slider Dots */}
+                      <div className="flex justify-center mt-4 gap-2">
+                        {images.map((_, index) => (
+                          <button
+                            key={index}
+                            onClick={() => {
+                              setCurrentImageIndex(index);
+                              setZoomLevel(1);
+                              setRotation(0);
+                            }}
+                            className={`h-2 w-2 rounded-full transition-all ${
+                              index === currentImageIndex
+                                ? "bg-blue-600 w-6"
+                                : "bg-gray-300 hover:bg-gray-400"
+                            }`}
+                            aria-label={`Go to image ${index + 1}`}
+                          />
+                        ))}
+                      </div>
+
+                      {/* Image Info */}
+                      <div className="text-center mt-4">
+                        <p className="text-sm font-medium text-gray-900">
+                          {images[currentImageIndex]?.title}
+                        </p>
+                        <p className="text-xs text-gray-600 mt-1">
+                          {images.length} image{images.length !== 1 ? 's' : ''} • 
+                          Uploaded by: {images[currentImageIndex]?.uploadedBy || "You"}
+                        </p>
+                        {images[currentImageIndex]?.date && (
+                          <p className="text-xs text-gray-500 mt-1">
+                            Last updated: {formatDate(images[currentImageIndex].date)}
+                          </p>
+                        )}
+                      </div>
                     </div>
-                    <p className="text-xs text-gray-600 mt-4">
-                      Last updated: {task.attachmentUpdatedAt ? formatDate(task.attachmentUpdatedAt) : "N/A"}
-                    </p>
                   </div>
                 </CardContent>
               </Card>
@@ -667,6 +872,18 @@ export default function EmployeeTaskDetailPage() {
                     {task.attachmentUrl ? "Change Attachment" : "Add Attachment"}
                   </Button>
                   
+                  {hasAttachment && (
+                    <Button
+                      onClick={openFullscreenSlider}
+                      variant="outline"
+                      className="w-full border-purple-600 text-purple-600 hover:bg-purple-50"
+                      size="sm"
+                    >
+                      <Maximize2 className="w-3 h-3 md:w-4 md:h-4 mr-1 md:mr-2" />
+                      View Fullscreen
+                    </Button>
+                  )}
+                  
                   <Link href="/employee/received-tasks">
                     <Button
                       variant="outline"
@@ -806,7 +1023,7 @@ export default function EmployeeTaskDetailPage() {
 
       {/* Attachment Upload Dialog */}
       <Dialog open={showAttachmentDialog} onOpenChange={setShowAttachmentDialog}>
-        <DialogContent className="max-w-md bg-white">
+        <DialogContent className="max-w-md  bg-white">
           <DialogHeader>
             <DialogTitle className="text-lg md:text-xl font-bold text-gray-900">
               {task.attachmentUrl ? "Change Attachment" : "Add Attachment"}
@@ -862,7 +1079,6 @@ export default function EmployeeTaskDetailPage() {
                     </Button>
                   </div>
                   <div className="relative w-full h-48 border border-gray-200 rounded overflow-hidden">
-                    {/* For file preview, we can use Next.js Image since it's a data URL */}
                     <img
                       src={filePreview}
                       alt="Preview"
@@ -884,14 +1100,13 @@ export default function EmployeeTaskDetailPage() {
               )}
             </div>
 
-            <div className="flex justify-end gap-2 md:gap-3 pt-4">
+            <DialogFooter className="pt-4">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => setShowAttachmentDialog(false)}
                 disabled={uploadingAttachment}
                 className="border-gray-700 text-gray-700 hover:bg-gray-700 hover:text-white"
-                size="sm"
               >
                 Cancel
               </Button>
@@ -899,21 +1114,20 @@ export default function EmployeeTaskDetailPage() {
                 onClick={handleAttachmentUpload}
                 className="bg-blue-600 hover:bg-blue-700 text-white"
                 disabled={uploadingAttachment || !selectedFile}
-                size="sm"
               >
                 {uploadingAttachment ? (
                   <>
-                    <Loader2 className="w-3 h-3 md:w-4 md:h-4 mr-1 md:mr-2 animate-spin" />
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                     Uploading...
                   </>
                 ) : (
                   <>
-                    <Paperclip className="w-3 h-3 md:w-4 md:h-4 mr-1 md:mr-2" />
+                    <Paperclip className="w-4 h-4 mr-2" />
                     {task.attachmentUrl ? "Replace Attachment" : "Upload Attachment"}
                   </>
                 )}
               </Button>
-            </div>
+            </DialogFooter>
           </div>
         </DialogContent>
       </Dialog>
@@ -942,6 +1156,181 @@ export default function EmployeeTaskDetailPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Fullscreen Image Slider Modal */}
+      {showFullscreenSlider && (
+        <div className="fixed inset-0 z-50 flex flex-col bg-black">
+          {/* Header */}
+          <div className="flex items-center justify-between p-4 bg-black/80 text-white">
+            <div className="flex items-center gap-4">
+              <Button
+                onClick={closeFullscreenSlider}
+                variant="ghost"
+                size="icon"
+                className="text-white hover:bg-white/20"
+              >
+                <X className="h-6 w-6" />
+              </Button>
+              <div>
+                <h3 className="font-semibold">{images[currentImageIndex]?.title}</h3>
+                <p className="text-sm text-gray-300">
+                  {currentImageIndex + 1} of {images.length}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={downloadAttachment}
+                variant="ghost"
+                size="sm"
+                className="text-white hover:bg-white/20"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Download
+              </Button>
+            </div>
+          </div>
+
+          {/* Main Image Area */}
+          <div className="flex-1 flex items-center justify-center p-4">
+            <div className="relative w-full h-full max-w-7xl mx-auto">
+              {/* Navigation Buttons - Centered */}
+              <div className="absolute inset-0 flex items-center justify-between z-20 px-4">
+                <Button
+                  onClick={prevImage}
+                  disabled={currentImageIndex === 0}
+                  variant="secondary"
+                  size="icon"
+                  className="h-12 w-12 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm"
+                >
+                  <ChevronLeft className="h-6 w-6 text-white" />
+                </Button>
+                <Button
+                  onClick={nextImage}
+                  disabled={currentImageIndex === images.length - 1}
+                  variant="secondary"
+                  size="icon"
+                  className="h-12 w-12 rounded-full bg-white/20 hover:bg-white/30 backdrop-blur-sm"
+                >
+                  <ChevronRight className="h-6 w-6 text-white" />
+                </Button>
+              </div>
+
+              {/* Image Container */}
+              <div className="relative w-full h-full flex items-center justify-center">
+                <img
+                  src={images[currentImageIndex]?.url}
+                  alt={images[currentImageIndex]?.title}
+                  className="max-w-full max-h-full object-contain"
+                  style={{
+                    transform: `scale(${zoomLevel}) rotate(${rotation}deg)`,
+                    transition: 'transform 0.3s ease',
+                  }}
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.src = "/placeholder-image.png";
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Controls Footer */}
+          <div className="p-4 bg-black/80 text-white">
+            <div className="max-w-7xl mx-auto">
+              <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+                {/* Zoom Controls */}
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <Button
+                      onClick={zoomOut}
+                      variant="ghost"
+                      size="icon"
+                      className="text-white hover:bg-white/20"
+                      disabled={zoomLevel <= 0.5}
+                    >
+                      <ZoomOut className="h-5 w-5" />
+                    </Button>
+                    <span className="min-w-[60px] text-center font-medium">
+                      {Math.round(zoomLevel * 100)}%
+                    </span>
+                    <Button
+                      onClick={zoomIn}
+                      variant="ghost"
+                      size="icon"
+                      className="text-white hover:bg-white/20"
+                      disabled={zoomLevel >= 3}
+                    >
+                      <ZoomIn className="h-5 w-5" />
+                    </Button>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <Button
+                      onClick={rotateImage}
+                      variant="ghost"
+                      size="icon"
+                      className="text-white hover:bg-white/20"
+                    >
+                      <RotateCw className="h-5 w-5" />
+                    </Button>
+                    <Button
+                      onClick={resetTransform}
+                      variant="ghost"
+                      size="sm"
+                      className="text-white hover:bg-white/20"
+                    >
+                      Reset
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Image Info */}
+                <div className="text-center md:text-right">
+                  <p className="text-sm">
+                    Uploaded by: {images[currentImageIndex]?.uploadedBy || "You"}
+                  </p>
+                  {images[currentImageIndex]?.date && (
+                    <p className="text-xs text-gray-300">
+                      {formatDate(images[currentImageIndex].date)}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Slider Dots */}
+              <div className="flex justify-center mt-4 gap-2">
+                {images.map((_, index) => (
+                  <button
+                    key={index}
+                    onClick={() => {
+                      setCurrentImageIndex(index);
+                      setZoomLevel(1);
+                      setRotation(0);
+                    }}
+                    className={`h-2 rounded-full transition-all ${
+                      index === currentImageIndex
+                        ? "bg-blue-500 w-6"
+                        : "bg-gray-600 hover:bg-gray-500 w-2"
+                    }`}
+                    aria-label={`Go to image ${index + 1}`}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Keyboard Shortcuts Info */}
+          <div className="absolute bottom-20 left-1/2 transform -translate-x-1/2 bg-black/70 text-white text-xs p-2 rounded-lg backdrop-blur-sm opacity-0 hover:opacity-100 transition-opacity">
+            <div className="flex items-center gap-4">
+              <span>← →: Navigate</span>
+              <span>+ -: Zoom</span>
+              <span>R: Rotate</span>
+              <span>ESC: Close</span>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
