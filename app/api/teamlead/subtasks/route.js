@@ -1,37 +1,34 @@
-    import { NextResponse } from "next/server";
-    import { getServerSession } from "next-auth";
-    import Subtask from "@/models/Subtask";
-    import FormSubmission from "@/models/FormSubmission";
-    import Employee from "@/models/Employee";
-    import { authOptions } from "@/lib/auth";
-    import dbConnect from "@/lib/db";
-    import EmployeeFormSubmission from "@/models/EmployeeFormSubmission";
+import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import Subtask from "@/models/Subtask";
+import FormSubmission from "@/models/FormSubmission";
+import Employee from "@/models/Employee";
+import { authOptions } from "@/lib/auth";
+import dbConnect from "@/lib/db";
+import { sendNotification } from "@/lib/sendNotification";
+import { sendMail } from "@/lib/mail";
+import { createdSubtaskMailTemplate } from "@/helper/emails/teamlead/createdSubtaskMailTemplate";
 
-    // In your API endpoint that fetches submission details
-    export async function GET(req) {
-        try {
-            await dbConnect();
+export async function GET(req) {
+    try {
+        await dbConnect();
+        const subtasks = await Subtask.find({})
+            .populate("submissionId", "title description")
+            .populate({
+                path: "assignedEmployees.employeeId",
+                select: "firstName lastName email"
+            });
 
-            // ✅ Fetch all subtasks and populate relations
-            const subtasks = await Subtask.find({})
-                .populate("submissionId", "title description")
-                .populate({
-                    path: "assignedEmployees.employeeId",
-                    select: "firstName lastName email"
-                });
-
-            return NextResponse.json({ subtasks }, { status: 200 });
-        } catch (error) {
-            console.error("❌ Error fetching subtasks:", error);
-            return NextResponse.json({ error: "Failed to fetch subtasks" }, { status: 500 });
-        }
+        return NextResponse.json({ subtasks }, { status: 200 });
+    } catch (error) {
+        return NextResponse.json({ error: "Failed to fetch subtasks" }, { status: 500 });
     }
+}
 
-   export async function POST(request) {
+export async function POST(request) {
     try {
         const session = await getServerSession(authOptions);
 
-        // 🔐 Authorization check
         if (!session || session.user.role !== "TeamLead") {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
@@ -52,23 +49,19 @@
             lead
         } = body;
 
-        // ✅ Check if FormSubmission exists
-        const submission = await FormSubmission.findById(submissionId);
-        if (!submission) {
-            return NextResponse.json({ error: "FormSubmission not found" }, { status: 404 });
+        // submission optional
+        let submission = null;
+        if (submissionId) {
+            submission = await FormSubmission.findById(submissionId);
         }
 
-        // ✅ Get TeamLead full data from Employee collection
         const teamLead = await Employee.findOne({ email: session.user.email });
-
         if (!teamLead) {
-            return NextResponse.json({ error: "TeamLead not found in Employee collection" }, { status: 404 });
+            return NextResponse.json({ error: "TeamLead not found" }, { status: 404 });
         }
 
-        // 🔥 Extract depId from TeamLead
         const depId = teamLead.depId;
 
-        // ✅ Verify that all assigned employees exist
         const employees = await Employee.find({
             _id: { $in: assignedEmployees.map(emp => emp.employeeId) }
         });
@@ -77,16 +70,14 @@
             return NextResponse.json({ error: "Some employees not found" }, { status: 400 });
         }
 
-        // Lead name
         const leadName = lead || `${teamLead.firstName} ${teamLead.lastName}`;
 
-        // ✅ Create subtask
         const subtask = new Subtask({
             title,
             description,
-            submissionId,
+            submissionId: submission ? submission._id : null,
             teamLeadId: teamLead._id,
-            depId, // <-- MAIN FIX
+            depId,
             assignedEmployees: assignedEmployees.map(emp => ({
                 employeeId: emp.employeeId,
                 email: emp.email,
@@ -102,15 +93,43 @@
 
         await subtask.save();
 
-        // 🔄 Populate before sending back
         const populatedSubtask = await Subtask.findById(subtask._id)
             .populate("submissionId", "title description")
             .populate("assignedEmployees.employeeId", "firstName lastName email");
 
+        // Notifications + Mails (parallel)
+        for (const emp of employees) {
+            sendNotification({
+                senderId: teamLead._id,
+                senderModel: "Employee",
+                senderName: leadName,
+                receiverId: emp._id,
+                receiverModel: "Employee",
+                type: "new_subtask",
+                title: "New Subtask Assigned",
+                message: `You have been assigned a new subtask: "${title}".`,
+                link: `/employee/subtasks/${subtask._id}`,
+                referenceId: subtask._id,
+                referenceModel: "Subtask"
+            });
+
+            if (emp.email) {
+                const html = createdSubtaskMailTemplate(
+                    emp.firstName,
+                    title,
+                    description,
+                    leadName,
+                    startDate,
+                    endDate
+                );
+                sendMail(emp.email, "New Subtask Assigned", html);
+            }
+        }
+
         return NextResponse.json(populatedSubtask, { status: 201 });
 
     } catch (error) {
-        console.error("❌ Error creating subtask:", error);
         return NextResponse.json({ error: "Failed to create subtask" }, { status: 500 });
+        console.log(error   )
     }
 }

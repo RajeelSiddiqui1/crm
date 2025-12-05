@@ -39,7 +39,7 @@ const sharedTaskSchema = new mongoose.Schema(
       ref: "Employee",
     },
 
-     sharedOperationTeamlead: {
+    sharedOperationTeamlead: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "TeamLead",
     },
@@ -68,6 +68,30 @@ const sharedTaskSchema = new mongoose.Schema(
         "re_shedule",
       ],
       default: "pending",
+    },
+    attachmentUrl: {
+      type: String,
+      default: null,
+    },
+
+    attachmentPublicId: {
+      type: String,
+      default: null,
+    },
+
+    attachmentUpdatedAt: {
+      type: Date,
+      default: null,
+    },
+
+    employeeFeedback: {
+      type: String,
+      default: "",
+    },
+
+    feedbackUpdatedAt: {
+      type: Date,
+      default: null,
     },
     VendorStatus: {
       type: String,

@@ -7,14 +7,21 @@ const subtaskSchema = new mongoose.Schema(
     // ✅ FIX: Correct reference name — matches actual model file
     submissionId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "EmployeeFormSubmission",
-      required: true,
+      ref: "FormSubmission",
+      required: false,
     },
+
     teamLeadId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "TeamLead",
+      ref: "Employee",
       required: true,
     },
+
+    depId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Department",
+    },
+
     assignedEmployees: [
       {
         employeeId: {
@@ -46,9 +53,9 @@ const subtaskSchema = new mongoose.Schema(
       enum: ["low", "medium", "high"],
       default: "medium",
     },
-    depId:{
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Departments"
+    depId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Departments",
     },
     attachments: [
       {

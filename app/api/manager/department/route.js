@@ -3,6 +3,7 @@ import Manager from "@/models/Manager";
 import dbConnect from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
+import Department from "@/models/Department";
 
 export async function GET() {
   try {

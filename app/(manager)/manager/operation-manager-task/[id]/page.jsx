@@ -27,6 +27,16 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -59,6 +69,12 @@ import {
   Wallet,
   CreditCard,
   FileSearch,
+  Paperclip,
+  Image as ImageIcon,
+  Trash2,
+  X,
+  Maximize2,
+  Minimize2,
 } from "lucide-react";
 import axios from "axios";
 import Link from "next/link";
@@ -73,6 +89,9 @@ export default function OperationManagerTaskDetailPage() {
   const [loading, setLoading] = useState(true);
   const [teamleads, setTeamleads] = useState([]);
   const [showAssignDialog, setShowAssignDialog] = useState(false);
+  const [showAttachmentDialog, setShowAttachmentDialog] = useState(false);
+  const [showFullscreenImage, setShowFullscreenImage] = useState(false);
+  const [selectedImage, setSelectedImage] = useState(null);
   const [assigning, setAssigning] = useState(false);
 
   const [assignForm, setAssignForm] = useState({
@@ -165,6 +184,31 @@ export default function OperationManagerTaskDetailPage() {
     setShowAssignDialog(true);
   };
 
+  const openAttachmentDialog = () => {
+    setShowAttachmentDialog(true);
+  };
+
+  const openFullscreenImage = (imageUrl) => {
+    setSelectedImage(imageUrl);
+    setShowFullscreenImage(true);
+  };
+
+  const closeFullscreenImage = () => {
+    setSelectedImage(null);
+    setShowFullscreenImage(false);
+  };
+
+  const downloadAttachment = (attachmentUrl, fileName = "attachment") => {
+    if (attachmentUrl) {
+      const link = document.createElement("a");
+      link.href = attachmentUrl;
+      link.download = `${fileName}_${task.originalTaskId}_${new Date().getTime()}`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  };
+
   const getStatusColor = (status) => {
     const colors = {
       signed: "bg-green-100 text-green-800 border-green-200",
@@ -172,6 +216,9 @@ export default function OperationManagerTaskDetailPage() {
       not_avaiable: "bg-red-100 text-red-800 border-red-200",
       not_intrested: "bg-pink-100 text-pink-800 border-pink-200",
       re_shedule: "bg-blue-100 text-blue-800 border-blue-200",
+      completed: "bg-green-100 text-green-800 border-green-200",
+      in_progress: "bg-blue-100 text-blue-800 border-blue-200",
+      cancelled: "bg-red-100 text-red-800 border-red-200",
     };
     return colors[status] || "bg-gray-100 text-gray-800 border-gray-200";
   };
@@ -227,6 +274,9 @@ export default function OperationManagerTaskDetailPage() {
     });
   };
 
+  // Check if task has attachment
+  const hasAttachment = task?.attachmentUrl;
+
   if (status === "loading" || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -268,7 +318,7 @@ export default function OperationManagerTaskDetailPage() {
     <div className="min-h-screen bg-gray-50 p-6">
       <Toaster position="top-right" />
 
-      <div className="max-w-6xl mx-auto">
+      <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
           <div className="flex items-center gap-4">
@@ -291,7 +341,7 @@ export default function OperationManagerTaskDetailPage() {
             </div>
           </div>
 
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-3">
             <Button
               onClick={fetchTaskDetails}
               variant="outline"
@@ -303,6 +353,18 @@ export default function OperationManagerTaskDetailPage() {
               />
               Refresh
             </Button>
+            
+            {hasAttachment && (
+              <Button
+                onClick={openAttachmentDialog}
+                variant="outline"
+                className="border-blue-600 text-blue-600 hover:bg-blue-50"
+              >
+                <Paperclip className="w-4 h-4 mr-2" />
+                View Attachment
+              </Button>
+            )}
+            
             {!task.sharedOperationTeamlead && (
               <Button
                 onClick={openAssignDialog}
@@ -373,6 +435,79 @@ export default function OperationManagerTaskDetailPage() {
                       <p className="text-gray-700 bg-blue-50 p-4 rounded-lg border border-blue-200 mt-1">
                         {task.notes}
                       </p>
+                    </div>
+                  )}
+
+                  {/* Attachment Preview */}
+                  {hasAttachment && (
+                    <div>
+                      <label className="text-sm font-medium text-gray-700 flex items-center gap-2 mb-2">
+                        <Paperclip className="w-4 h-4" />
+                        Employee Attachment
+                      </label>
+                      <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                              <ImageIcon className="w-5 h-5 text-blue-600" />
+                            </div>
+                            <div>
+                              <p className="font-medium text-gray-900">
+                                Image Attachment
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                Uploaded by employee
+                              </p>
+                              {task.attachmentUpdatedAt && (
+                                <p className="text-xs text-gray-400 mt-1">
+                                  Last updated: {formatDate(task.attachmentUpdatedAt)}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              onClick={() => openFullscreenImage(task.attachmentUrl)}
+                              variant="outline"
+                              size="sm"
+                              className="border-blue-600 text-blue-600 hover:bg-blue-50"
+                            >
+                              <Eye className="w-4 h-4 mr-1" />
+                              View
+                            </Button>
+                            <Button
+                              onClick={() => downloadAttachment(task.attachmentUrl, "attachment")}
+                              variant="outline"
+                              size="sm"
+                              className="border-green-600 text-green-600 hover:bg-green-50"
+                            >
+                              <Download className="w-4 h-4 mr-1" />
+                              Download
+                            </Button>
+                          </div>
+                        </div>
+                        {/* Small Preview */}
+                        <div className="mt-4">
+                          <p className="text-sm font-medium text-gray-700 mb-2">Preview:</p>
+                          <div 
+                            className="relative w-full h-48 border-2 border-gray-300 rounded-lg overflow-hidden cursor-pointer"
+                            onClick={() => openFullscreenImage(task.attachmentUrl)}
+                          >
+                            <img
+                              src={task.attachmentUrl}
+                              alt="Task Attachment"
+                              className="w-full h-full object-contain hover:scale-105 transition-transform duration-200"
+                              onError={(e) => {
+                                e.target.onerror = null;
+                                e.target.src = "/placeholder-image.png";
+                              }}
+                            />
+                            <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-10 transition-all duration-200 flex items-center justify-center">
+                              <Maximize2 className="w-8 h-8 text-white opacity-0 hover:opacity-100 transition-opacity duration-200" />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -549,6 +684,21 @@ export default function OperationManagerTaskDetailPage() {
                       {task.MachineStatus}
                     </Badge>
                   </div>
+                  {task.employeeFeedback && (
+                    <div className="mt-4 pt-4 border-t border-gray-200">
+                      <span className="text-sm font-medium text-gray-700 block mb-2">
+                        Employee Feedback
+                      </span>
+                      <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded border border-gray-200">
+                        {task.employeeFeedback}
+                      </p>
+                      {task.feedbackUpdatedAt && (
+                        <p className="text-xs text-gray-400 mt-2">
+                          Feedback updated: {formatDate(task.feedbackUpdatedAt)}
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -577,6 +727,11 @@ export default function OperationManagerTaskDetailPage() {
                       <p className="text-sm text-green-700">
                         {task.sharedOperationTeamlead.email}
                       </p>
+                      {task.sharedOperationTeamlead.depId && (
+                        <p className="text-xs text-green-600 mt-1">
+                          Dept ID: {task.sharedOperationTeamlead.depId}
+                        </p>
+                      )}
                       <Button
                         onClick={openAssignDialog}
                         variant="outline"
@@ -619,6 +774,11 @@ export default function OperationManagerTaskDetailPage() {
                       <p className="text-sm text-blue-700">
                         {task.sharedOperationEmployee.email}
                       </p>
+                      {task.sharedOperationEmployee.depId && (
+                        <p className="text-xs text-blue-600 mt-1">
+                          Dept ID: {task.sharedOperationEmployee.depId}
+                        </p>
+                      )}
                       <p className="text-xs text-gray-500 mt-1">
                         Assigned by TeamLead
                       </p>
@@ -633,6 +793,58 @@ export default function OperationManagerTaskDetailPage() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Attachment Quick View Card */}
+            {hasAttachment && (
+              <Card className="bg-white border border-gray-200 shadow-sm">
+                <CardHeader className="bg-white border-b border-gray-200">
+                  <CardTitle className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                    <Paperclip className="w-4 h-4" />
+                    Attachment
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-4">
+                  <div className="space-y-3">
+                    <div className="relative w-full h-40 border-2 border-gray-300 rounded-lg overflow-hidden">
+                      <img
+                        src={task.attachmentUrl}
+                        alt="Task Attachment"
+                        className="w-full h-full object-contain"
+                        onError={(e) => {
+                          e.target.onerror = null;
+                          e.target.src = "/placeholder-image.png";
+                        }}
+                      />
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <Button
+                        onClick={() => openFullscreenImage(task.attachmentUrl)}
+                        variant="outline"
+                        className="w-full border-blue-600 text-blue-600 hover:bg-blue-50"
+                        size="sm"
+                      >
+                        <Maximize2 className="w-4 h-4 mr-2" />
+                        Fullscreen View
+                      </Button>
+                      <Button
+                        onClick={() => downloadAttachment(task.attachmentUrl, "attachment")}
+                        variant="outline"
+                        className="w-full border-green-600 text-green-600 hover:bg-green-50"
+                        size="sm"
+                      >
+                        <Download className="w-4 h-4 mr-2" />
+                        Download Attachment
+                      </Button>
+                    </div>
+                    {task.attachmentUpdatedAt && (
+                      <p className="text-xs text-gray-500 text-center">
+                        Last updated: {formatDate(task.attachmentUpdatedAt)}
+                      </p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Timeline Card */}
             <Card className="bg-white border border-gray-200 shadow-sm">
@@ -687,6 +899,19 @@ export default function OperationManagerTaskDetailPage() {
                       Assign TeamLead
                     </Button>
                   )}
+                  
+                  {hasAttachment && (
+                    <Button
+                      onClick={openAttachmentDialog}
+                      variant="outline"
+                      className="w-full border-blue-600 text-blue-600 hover:bg-blue-50"
+                      size="sm"
+                    >
+                      <Paperclip className="w-4 h-4 mr-2" />
+                      View Attachment
+                    </Button>
+                  )}
+                  
                   <Button
                     onClick={fetchTaskDetails}
                     variant="outline"
@@ -790,6 +1015,120 @@ export default function OperationManagerTaskDetailPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Attachment View Dialog */}
+      <Dialog open={showAttachmentDialog} onOpenChange={setShowAttachmentDialog}>
+        <DialogContent className="max-w-4xl bg-white">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-gray-900 flex items-center gap-2">
+              <Paperclip className="w-5 h-5" />
+              Task Attachment
+            </DialogTitle>
+          </DialogHeader>
+          <div className="mt-4">
+            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-4">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h4 className="font-semibold text-gray-900">Attachment Information</h4>
+                  <p className="text-sm text-gray-600">
+                    Uploaded by employee: {task.sharedOperationEmployee?.firstName} {task.sharedOperationEmployee?.lastName}
+                  </p>
+                  {task.attachmentUpdatedAt && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      Last updated: {formatDate(task.attachmentUpdatedAt)}
+                    </p>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={() => openFullscreenImage(task.attachmentUrl)}
+                    variant="outline"
+                    className="border-blue-600 text-blue-600 hover:bg-blue-50"
+                  >
+                    <Maximize2 className="w-4 h-4 mr-2" />
+                    Fullscreen
+                  </Button>
+                  <Button
+                    onClick={() => downloadAttachment(task.attachmentUrl, "attachment")}
+                    className="bg-green-600 hover:bg-green-700 text-white"
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Download
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            <div className="relative w-full h-[500px] border-4 border-gray-300 rounded-lg overflow-hidden bg-gray-900">
+              <img
+                src={task.attachmentUrl}
+                alt="Task Attachment"
+                className="w-full h-full object-contain"
+                onError={(e) => {
+                  e.target.onerror = null;
+                  e.target.src = "/placeholder-image.png";
+                }}
+              />
+            </div>
+
+            <div className="flex justify-end gap-3 pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowAttachmentDialog(false)}
+                className="border-gray-700 text-gray-700 hover:bg-gray-700 hover:text-white"
+              >
+                <X className="w-4 h-4 mr-2" />
+                Close
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Fullscreen Image Modal */}
+      {showFullscreenImage && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-90">
+          <div className="relative w-full h-full">
+            <button
+              onClick={closeFullscreenImage}
+              className="absolute top-4 right-4 z-10 bg-white hover:bg-gray-100 text-gray-800 rounded-full p-2 shadow-lg"
+            >
+              <X className="w-6 h-6" />
+            </button>
+            <div className="w-full h-full flex items-center justify-center p-4">
+              <img
+                src={selectedImage}
+                alt="Fullscreen Attachment"
+                className="max-w-full max-h-full object-contain"
+                onError={(e) => {
+                  e.target.onerror = null;
+                  e.target.src = "/placeholder-image.png";
+                }}
+              />
+            </div>
+            <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex gap-2">
+              <Button
+                onClick={() => downloadAttachment(selectedImage, "attachment")}
+                className="bg-green-600 hover:bg-green-700 text-white"
+                size="sm"
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Download
+              </Button>
+              <Button
+                onClick={closeFullscreenImage}
+                variant="outline"
+                className="bg-white hover:bg-gray-100 text-gray-800 border-gray-300"
+                size="sm"
+              >
+                <Minimize2 className="w-4 h-4 mr-2" />
+                Exit Fullscreen
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

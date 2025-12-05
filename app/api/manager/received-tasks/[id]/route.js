@@ -1,9 +1,13 @@
 import SharedTask from "@/models/SharedTask";
-import EmployeeFormSubmission from "@/models/EmployeeFormSubmission"; // <-- YEH LINE ADD KARO!
+import EmployeeFormSubmission from "@/models/EmployeeFormSubmission";
+import Employee from "@/models/Employee";
 import dbConnect from "@/lib/db";
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { sendNotification } from "@/lib/sendNotification";
+import { sendMail } from "@/lib/mail";
+import { sharedTaskAssignTeamLeadMailTemplate } from "@/helper/emails/manager/sharedtask-teamlead";
 
 export async function PATCH(request, context) {
   const { params } = await context; // Next.js 15 fix
@@ -41,11 +45,12 @@ export async function PATCH(request, context) {
       );
     }
 
+    // Assign Team Lead
     existingTask.sharedTeamlead = sharedTo;
     existingTask.status = "pending";
     await existingTask.save();
 
-    // Yahan pe model registered hai toh populate kaam karega
+    // Populate for notifications and email
     const populatedTask = await SharedTask.findById(existingTask._id)
       .populate("sharedManager", "firstName lastName email")
       .populate("sharedTeamlead", "firstName lastName email department depId")
@@ -56,12 +61,54 @@ export async function PATCH(request, context) {
           select: "firstName lastName email department",
         },
       })
-      .lean(); // optional: performance ke liye
+      .lean();
+
+    // Send notification + email to Team Lead
+    const teamLead = populatedTask.sharedTeamlead;
+    const employee = populatedTask.formId.employeeId;
+    const taskLink = `${process.env.NEXTAUTH_URL}/teamlead/shared-tasks/${populatedTask._id}`;
+    const tasks = [];
+
+    if (teamLead?.email) {
+      // Notification
+      tasks.push(
+        sendNotification({
+          senderId: session.user.id,
+          senderModel: "Manager",
+          senderName: session.user.name || "Manager",
+          receiverId: teamLead._id,
+          receiverModel: "Employee",
+          type: "shared_task_assigned",
+          title: "New Task Assigned",
+          message: `Manager assigned you a new shared task for employee ${employee.firstName} ${employee.lastName}.`,
+          link: taskLink,
+          referenceId: populatedTask._id,
+          referenceModel: "SharedTask",
+        })
+      );
+
+      // Email
+      tasks.push(
+        sendMail(
+          teamLead.email,
+          "New Task Assigned by Manager",
+          sharedTaskAssignTeamLeadMailTemplate(
+            `${teamLead.firstName} ${teamLead.lastName}`,
+            `${employee.firstName} ${employee.lastName}`,
+            populatedTask.taskTitle,
+            session.user.name || "Manager",
+            taskLink
+          )
+        )
+      );
+    }
+
+    await Promise.all(tasks);
 
     return NextResponse.json(
       {
         success: true,
-        message: "Teamlead added successfully",
+        message: "Teamlead assigned and notifications sent successfully",
         sharedTask: populatedTask,
       },
       { status: 200 }

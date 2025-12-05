@@ -4,104 +4,130 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import EmployeeFormSubmission from "@/models/EmployeeFormSubmission";
 import mongoose from "mongoose";
 import dbConnect from "@/lib/dbConnect";
+import Employee from "@/models/Employee";
+import Manager from "@/models/Manager"; // import manager model
+import { sendNotification } from "@/lib/sendNotification";
+import { sendMail } from "@/lib/mail";
+import { employeeTaskStatusUpdateMailTemplate } from "@/helper/emails/teamlead/employee-task-status-update";
+import { managerTaskStatusUpdateMailTemplate } from "@/helper/emails/teamlead/employee-task-status-update";
 
-// GET: Fetch employee form submissions for a specific subtask
-export async function GET(request, { params }) {
-    try {
-        const session = await getServerSession(authOptions);
-        
-        // Authentication check
-        if (!session) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
-
-        // Authorization check - only teamlead can access
-        if (session.user.role !== "Teamlead") {
-            return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-        }
-
-        await dbConnect();
-        
-        const { id } = params; // subtaskId
-        
-        if (!mongoose.Types.ObjectId.isValid(id)) {
-            return NextResponse.json({ error: "Invalid subtask ID" }, { status: 400 });
-        }
-
-        // Fetch all form submissions for this subtask
-        const submissions = await EmployeeFormSubmission.find({ subtaskId: id })
-            .populate("formId", "title description")
-            .populate("employeeId", "name email department")
-            .populate("subtaskId", "title description")
-            .sort({ createdAt: -1 });
-
-        return NextResponse.json(submissions, { status: 200 });
-
-    } catch (error) {
-        console.error("Error fetching employee submissions:", error);
-        return NextResponse.json(
-            { error: "Failed to fetch employee submissions" },
-            { status: 500 }
-        );
-    }
-}
-
-// PATCH: Update teamlead status for a submission
+// PATCH: Update teamlead status for a submission and notify employee & manager
 export async function PATCH(request, { params }) {
-    try {
-        const session = await getServerSession(authOptions);
-        
-        // Authentication check
-        if (!session) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
+  try {
+    const session = await getServerSession(authOptions);
 
-        // Authorization check - only teamlead can access
-        if (session.user.role !== "Teamlead") {
-            return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-        }
+    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (session.user.role !== "Teamlead") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-        await dbConnect();
-        
-        const { id } = params; // submissionId
-        const { teamleadstatus, feedback } = await request.json();
+    await dbConnect();
 
-        if (!mongoose.Types.ObjectId.isValid(id)) {
-            return NextResponse.json({ error: "Invalid submission ID" }, { status: 400 });
-        }
+    const { id } = params; // submissionId
+    const { teamleadstatus, feedback } = await request.json();
 
-        // Validate status
-        const validStatuses = ["pending", "in_progress", "completed", "approved", "rejected", "late"];
-        if (!validStatuses.includes(teamleadstatus)) {
-            return NextResponse.json({ error: "Invalid status" }, { status: 400 });
-        }
+    if (!mongoose.Types.ObjectId.isValid(id)) return NextResponse.json({ error: "Invalid submission ID" }, { status: 400 });
 
-        // Update the submission
-        const updatedSubmission = await EmployeeFormSubmission.findByIdAndUpdate(
-            id,
-            { 
-                teamleadstatus,
-                ...(teamleadstatus === "completed" && { completedAt: new Date() })
-            },
-            { new: true }
-        ).populate("formId", "title description")
-         .populate("employeeId", "name email department")
-         .populate("subtaskId", "title description");
+    const validStatuses = ["pending", "in_progress", "completed", "approved", "rejected", "late"];
+    if (!validStatuses.includes(teamleadstatus)) return NextResponse.json({ error: "Invalid status" }, { status: 400 });
 
-        if (!updatedSubmission) {
-            return NextResponse.json({ error: "Submission not found" }, { status: 404 });
-        }
+    // Update the submission
+    const updatedSubmission = await EmployeeFormSubmission.findByIdAndUpdate(
+      id,
+      { 
+        teamleadstatus,
+        ...(teamleadstatus === "completed" && { completedAt: new Date() }),
+        ...(feedback && { feedback })
+      },
+      { new: true }
+    )
+    .populate("formId", "title description")
+    .populate("employeeId", "firstName lastName email department")
+    .populate("subtaskId", "title description")
+    .populate("teamleadId", "firstName lastName email managerId"); // populate managerId
 
-        return NextResponse.json({
-            message: "Status updated successfully",
-            submission: updatedSubmission
-        }, { status: 200 });
+    if (!updatedSubmission) return NextResponse.json({ error: "Submission not found" }, { status: 404 });
 
-    } catch (error) {
-        console.error("Error updating submission status:", error);
-        return NextResponse.json(
-            { error: "Failed to update submission status" },
-            { status: 500 }
+    const teamLead = updatedSubmission.teamleadId;
+    const employee = updatedSubmission.employeeId;
+
+    const submissionLink = `${process.env.NEXTAUTH_URL}/employee/submissions/${updatedSubmission._id}`;
+    const teamLeadName = session.user.name || "Team Lead";
+    const employeeName = `${employee.firstName} ${employee.lastName}`;
+
+    // ✅ Notify Employee
+    const employeeNotification = sendNotification({
+      senderId: session.user.id,
+      senderModel: "Employee",
+      senderName: teamLeadName,
+      receiverId: employee._id,
+      receiverModel: "Employee",
+      type: "submission_status_update",
+      title: "Your Submission Status Updated",
+      message: `Your submission for subtask "${updatedSubmission.subtaskId.title}" has been marked as "${teamleadstatus}" by ${teamLeadName}.`,
+      link: submissionLink,
+      referenceId: updatedSubmission._id,
+      referenceModel: "EmployeeFormSubmission"
+    });
+
+    const employeeEmail = sendMail(
+      employee.email,
+      "Submission Status Updated",
+      employeeTaskStatusUpdateMailTemplate(
+        employeeName,
+        updatedSubmission.subtaskId.title,
+        teamLeadName,
+        teamleadstatus,
+        submissionLink,
+        feedback
+      )
+    );
+
+    // ✅ Notify Manager (if manager exists)
+    let managerNotification = null;
+    let managerEmail = null;
+    if (teamLead.managerId) {
+      const manager = await Manager.findById(teamLead.managerId);
+      if (manager && manager.email) {
+        const managerName = `${manager.firstName} ${manager.lastName}`;
+        managerNotification = sendNotification({
+          senderId: session.user.id,
+          senderModel: "Employee",
+          senderName: teamLeadName,
+          receiverId: manager._id,
+          receiverModel: "Manager",
+          type: "teamlead_submission_status_update",
+          title: "Team Lead Updated a Submission",
+          message: `Team Lead "${teamLeadName}" updated submission for "${employeeName}" on subtask "${updatedSubmission.subtaskId.title}". Status: "${teamleadstatus}".`,
+          link: submissionLink,
+          referenceId: updatedSubmission._id,
+          referenceModel: "EmployeeFormSubmission"
+        });
+
+        managerEmail = sendMail(
+          manager.email,
+          "Team Lead Submission Status Updated",
+          managerTaskStatusUpdateMailTemplate(
+            managerName,
+            employeeName,
+            updatedSubmission.subtaskId.title,
+            teamLeadName,
+            teamleadstatus,
+            submissionLink,
+            feedback
+          )
         );
+      }
     }
+
+    // Run notifications and emails in parallel
+    await Promise.all([employeeNotification, employeeEmail, managerNotification, managerEmail]);
+
+    return NextResponse.json({
+      message: "Status updated and notifications sent to employee & manager successfully",
+      submission: updatedSubmission
+    }, { status: 200 });
+
+  } catch (error) {
+    console.error("Error updating submission status:", error);
+    return NextResponse.json({ error: "Failed to update submission status" }, { status: 500 });
+  }
 }
