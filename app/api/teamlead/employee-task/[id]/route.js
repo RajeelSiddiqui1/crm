@@ -1,15 +1,15 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import EmployeeFormSubmission from "@/models/EmployeeFormSubmission";
 import mongoose from "mongoose";
-import dbConnect from "@/lib/dbConnect";
 import Employee from "@/models/Employee";
 import Manager from "@/models/Manager"; // import manager model
 import { sendNotification } from "@/lib/sendNotification";
 import { sendMail } from "@/lib/mail";
 import { employeeTaskStatusUpdateMailTemplate } from "@/helper/emails/teamlead/employee-task-status-update";
-import { managerTaskStatusUpdateMailTemplate } from "@/helper/emails/teamlead/employee-task-status-update";
+import { authOptions } from "@/lib/auth";
+import dbConnect from "@/lib/db";
+
 
 // PATCH: Update teamlead status for a submission and notify employee & manager
 export async function PATCH(request, { params }) {
