@@ -6,15 +6,20 @@ import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
 import { useSession } from "next-auth/react";
 
-
-
 function LayoutContent({ children }) {
   const { data: session, status } = useSession();
 
   if (status === "loading") {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <p>Loading...</p>
+        <img
+          src="/office/mhsolution.png"
+          alt="Loading..."
+          className="w-24 h-24 animate-spin-slow mb-4"
+        />
+        <p className="text-gray-900 text-lg font-medium">
+          Loading...
+        </p>
       </div>
     );
   }

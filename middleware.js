@@ -5,7 +5,7 @@ export async function middleware(req) {
     const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
     const { pathname } = req.nextUrl;
 
-    const publicPaths = ["/login","/","/managerregister",'office/mhsolution.png']
+    const publicPaths = ["/login","/","/managerregister","/forgot-password",'office/mhsolution.png']
 
     if (token && publicPaths.includes(pathname)) {
         const roleRedirects = {

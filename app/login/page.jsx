@@ -49,19 +49,17 @@ const handleLogin = async (e) => {
 
   // Function to determine if register link should be shown
   const shouldShowRegisterLink = () => {
-    return role === "Admin" || role === "Manager";
+    role === "Manager";
   };
 
   // Function to get register link based on role
   const getRegisterLink = () => {
-    if (role === "Admin") return "/adminregister";
     if (role === "Manager") return "/managerregister";
     return "#";
   };
 
   // Function to get register text based on role
   const getRegisterText = () => {
-    if (role === "Admin") return "Admin Register";
     if (role === "Manager") return "Manager Register";
     return "Register";
   };
