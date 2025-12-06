@@ -19,7 +19,7 @@ export default function Home() {
       role: "Admin",
       description:
         "System administrator with full access and control over all features",
-      href: "/login",
+      href: "/adminlogin",
       icon: UserCog,
       color: "from-red-500 to-rose-600",
       bgColor: "hover:bg-red-50",
@@ -30,7 +30,7 @@ export default function Home() {
       role: "Manager",
       description:
         "Team management, project oversight, and performance tracking",
-      href: "/login",
+      href: "/managerlogin",
       icon: Users,
       color: "from-blue-500 to-blue-600",
       bgColor: "hover:bg-blue-50",
@@ -40,7 +40,7 @@ export default function Home() {
     {
       role: "Team Lead",
       description: "Team leadership, task coordination, and member management",
-      href: "/login",
+      href: "/teamleadlogin",
       icon: UserCheck,
       color: "from-green-500 to-green-600",
       bgColor: "hover:bg-green-50",
@@ -51,7 +51,7 @@ export default function Home() {
       role: "Employee",
       description:
         "Task execution, attendance tracking, and personal dashboard",
-      href: "/login",
+      href: "/employeelogin",
       icon: User,
       color: "from-purple-500 to-purple-600",
       bgColor: "hover:bg-purple-50",
@@ -89,12 +89,12 @@ export default function Home() {
           <div className="flex flex-col md:flex-row justify-between items-center py-6 gap-4 md:gap-0">
             {/* Logo */}
             <div className="flex items-center space-x-4">
-              <div className="w-16 h-16 p-3 bg-gradient-to-r from-blue-600 to-purple-700 rounded-xl shadow-lg">
+              <div className="w-24 h-24 p-2 rounded-xl">
                 <Image
-                  src="/office/mhsolution.png"
+                  src="/office/mhsolution2.png"
                   alt="MH Logo"
-                  width={64}
-                  height={64}
+                  width={100}
+                  height={100}
                   className="object-cover"
                 />
               </div>
@@ -102,12 +102,10 @@ export default function Home() {
 
             {/* Title & Subtitle */}
             <div className="text-center md:text-left">
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
-                MH Enterprises CRM
+              <h1 className="text-5xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
+                MH Circle Solution CRM
               </h1>
-              <p className="text-gray-600 text-sm font-medium">
-                Complete Business Management Solution
-              </p>
+             
             </div>
           </div>
         </div>
@@ -125,7 +123,7 @@ export default function Home() {
           <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6 leading-tight">
             Welcome to{" "}
             <span className="bg-gradient-to-r from-blue-600 to-purple-700 bg-clip-text text-transparent">
-              MH Enterprises CRM
+              MH Circle Solution CRM
             </span>
           </h1>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">

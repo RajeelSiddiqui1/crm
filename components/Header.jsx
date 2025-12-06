@@ -2,7 +2,7 @@
 "use client";
 import { signOut, useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
-import { LogOut, User, Settings, Bell } from "lucide-react";
+import { LogOut, User, Settings, Bell, LogIn, Home, Briefcase, Users, Shield } from "lucide-react";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -14,6 +14,7 @@ import {
 import axios from "axios";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 export default function Header() {
     const { data: session } = useSession();
@@ -40,14 +41,11 @@ export default function Header() {
 
     const handleNotificationClick = async () => {
         try {
-            // Mark all notifications as seen for this user only
             await axios.patch("/api/notifications/seen");
             setCount(0);
-            // Redirect to notifications page
             router.push("/notifications");
         } catch (error) {
             console.error("Error marking notifications as seen:", error);
-            // Still redirect even if marking fails
             router.push("/notifications");
         }
     };
@@ -55,8 +53,6 @@ export default function Header() {
     useEffect(() => {
         if (session?.user) {
             fetchNotifications();
-            
-            // Refresh notifications every 30 seconds
             const interval = setInterval(fetchNotifications, 30000);
             return () => clearInterval(interval);
         }
@@ -98,12 +94,78 @@ export default function Header() {
         return session?.user?.email || session?.user?.userId || "No email/ID";
     };
 
+    // Function to get login link based on user role
+    const getRoleLoginLink = () => {
+        if (!session?.user?.role) return "/login";
+        
+        const roleLinks = {
+            "Admin": "/adminlogin",
+            "Manager": "/managerlogin",
+            "TeamLead": "/teamleadlogin",
+            "Employee": "/employeelogin"
+        };
+        
+        return roleLinks[session.user.role] || "/login";
+    };
+
+    // Function to get role icon
+    const getRoleIcon = () => {
+        if (!session?.user?.role) return <LogIn className="w-4 h-4 mr-2" />;
+        
+        const roleIcons = {
+            "Admin": <Shield className="w-4 h-4 mr-2" />,
+            "Manager": <Users className="w-4 h-4 mr-2" />,
+            "TeamLead": <Briefcase className="w-4 h-4 mr-2" />,
+            "Employee": <User className="w-4 h-4 mr-2" />
+        };
+        
+        return roleIcons[session.user.role] || <LogIn className="w-4 h-4 mr-2" />;
+    };
+
+    // Function to get role-specific home link
+    const getRoleHomeLink = () => {
+        if (!session?.user?.role) return "/";
+        
+        const roleHomeLinks = {
+            "Admin": "/admin/home",
+            "Manager": "/manager/home",
+            "TeamLead": "/teamlead/home",
+            "Employee": "/employee/home"
+        };
+        
+        return roleHomeLinks[session.user.role] || "/";
+    };
+
+    // Function to get role display name with styling
+    const getRoleDisplay = () => {
+        if (!session?.user?.role) return "Guest";
+        
+        const roleColors = {
+            "Admin": "bg-red-900/30 text-red-300 border-red-800",
+            "Manager": "bg-green-900/30 text-green-300 border-green-800",
+            "TeamLead": "bg-purple-900/30 text-purple-300 border-purple-800",
+            "Employee": "bg-amber-900/30 text-amber-300 border-amber-800"
+        };
+        
+        const colorClass = roleColors[session.user.role] || "bg-gray-900 text-gray-300 border-gray-800";
+        
+        return (
+            <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${colorClass}`}>
+                {getRoleIcon()}
+                {session.user.role}
+            </span>
+        );
+    };
+
     return (
         <header className="w-full bg-black text-white shadow-lg px-6 py-4 border-b border-gray-900">
             <div className="flex justify-between items-center">
-                {/* Left Section - Title */}
+                {/* Left Section - Title and Navigation */}
                 <div className="flex items-center gap-4">
                     <h1 className="text-xl font-bold text-white">CRM Dashboard</h1>
+                    
+                    {/* Navigation Links */}
+                
                 </div>
 
                 {/* Right Section - User Info */}
@@ -126,9 +188,7 @@ export default function Header() {
                     {session?.user && (
                         <div className="flex items-center gap-4">
                             {/* Role Display */}
-                            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-900 text-gray-200 border border-gray-800">
-                                {session.user.role}
-                            </span>
+                            {getRoleDisplay()}
 
                             {/* User Dropdown */}
                             <DropdownMenu>
@@ -160,21 +220,29 @@ export default function Header() {
                                             <p className="text-xs text-gray-400">
                                                 {getUserEmailOrId()}
                                             </p>
-                                            <p className="text-xs text-gray-300 font-medium">
-                                                {session.user.role}
-                                            </p>
+                                            <div className="flex items-center">
+                                                {getRoleIcon()}
+                                                <p className="text-xs text-gray-300 font-medium">
+                                                    {session.user.role}
+                                                </p>
+                                            </div>
                                         </div>
                                     </DropdownMenuLabel>
                                     <DropdownMenuSeparator className="bg-gray-800" />
+                                    
+                                    {/* Role-specific Navigation Links */}
                                     <DropdownMenuItem className="cursor-pointer bg-black text-gray-100 hover:bg-gray-900 focus:bg-gray-900">
                                         <User className="mr-2 h-4 w-4" />
-                                        <a href="/profile"><span>Profile</span></a>
+                                        <Link href="/profile" className="w-full">
+                                            <span>Profile</span>
+                                        </Link>
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem className="cursor-pointer bg-black text-gray-100 hover:bg-gray-900 focus:bg-gray-900">
-                                        <Settings className="mr-2 h-4 w-4" />
-                                        <span>Settings</span>
-                                    </DropdownMenuItem>
+                                    
+                                   
+                                   
+                                    
                                     <DropdownMenuSeparator className="bg-gray-800" />
+                                    
                                     <DropdownMenuItem
                                         className="cursor-pointer text-red-500 hover:text-red-400 hover:bg-gray-900 focus:text-red-400"
                                         onClick={handleLogout}
