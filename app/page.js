@@ -103,7 +103,7 @@ export default function Home() {
             {/* Title & Subtitle */}
             <div className="text-center md:text-left">
               <h1 className="text-5xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
-                MH Circle Solution CRM HELLO WORLD
+                MH Circle Solution CRM 
               </h1>
              
             </div>
