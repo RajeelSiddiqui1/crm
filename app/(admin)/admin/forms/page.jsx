@@ -94,7 +94,7 @@ export default function FormBuilderPage() {
         if (status === "loading") return;
 
         if (!session || (session.user.role !== "Admin" && session.user.role !== "Manager")) {
-            router.push("/login");
+            router.push("/adminlogin");
             return;
         }
 

@@ -54,7 +54,7 @@ export default function AdminSubmissionsPage() {
         if (status === "loading") return;
 
         if (!session || session.user.role !== "Admin") {
-            router.push("/login");
+            router.push("/adminlogin");
             return;
         }
 
@@ -73,7 +73,7 @@ export default function AdminSubmissionsPage() {
             console.error("Error fetching submissions:", error);
             if (error.response?.status === 401) {
                 toast.error("Please login again");
-                router.push("/login");
+                router.push("/adminlogin");
             } else {
                 toast.error(error.response?.data?.error || "Failed to fetch submissions");
             }
@@ -105,7 +105,7 @@ export default function AdminSubmissionsPage() {
             console.error("Status update error:", error);
             if (error.response?.status === 401) {
                 toast.error("Please login again");
-                router.push("/login");
+                router.push("/adminlogin");
             } else {
                 toast.error(error.response?.data?.error || "Failed to update status");
             }
