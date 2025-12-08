@@ -23,7 +23,7 @@ export const sendTeamLeadWelcomeEmail = async (email, firstName, userId, passwor
         <p><strong>User ID:</strong> ${userId}</p>
         <p><strong>Password:</strong> ${password}</p>
         <p><strong>Login URL:</strong> 
-          <a href="https://yourdomain.com/login" target="_blank">https://yourdomain.com/login</a>
+          <a href="https://mhcirclesolutions.com//login" target="_blank">https://mhcirclesolutions.com/login</a>
         </p>
       </div>
 
