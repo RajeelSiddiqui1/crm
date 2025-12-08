@@ -10,7 +10,7 @@ const managerSchema = mongoose.Schema(
     phone: { type: String, default: "" },
     address: { type: String, default: "" },
     departments: [{ type: mongoose.Schema.Types.ObjectId, ref: "Department" }],
-    verified: { type: Boolean, default: true },
+    verified: { type: Boolean, default: false },
     otp: { type: String, default: null },
     otpExpiry: { type: Date, default: null },
     lastOtpSentAt: { type: Date, default: null },
