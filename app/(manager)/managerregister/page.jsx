@@ -105,7 +105,7 @@ function RegisterPage() {
 
             if (response.status === 201) {
                 toast.success("Manager registered successfully! Please log in to continue.");
-                router.push("/managerlogin");
+                router.push("/manager-verified");
             } else {
                 toast.warning("Something went wrong during registration.");
             }

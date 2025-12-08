@@ -24,7 +24,7 @@ export function sendVerifyOtpTemplate(name, otp) {
         </p>
 
         <div style="text-align: center; margin-top: 20px;">
-          <a href="${process.env.NEXT_PUBLIC_BASE_URL}/manager-verified" 
+          <a href="https://mh-solutions-crm.vercel.app/manager-verified" 
             style="
               background: #4a6cf7;
               color: white;
