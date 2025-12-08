@@ -1,7 +1,8 @@
+// app/manager-verified/page.js
 "use client";
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { CheckCircle, XCircle, AlertCircle, Mail, ArrowRight, RotateCw, Shield } from "lucide-react";
+import { CheckCircle, XCircle, AlertCircle, Mail, ArrowRight, RotateCw, Shield, Lock, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast, Toaster } from "sonner";
@@ -16,8 +17,12 @@ function ManagerVerifiedContent() {
   const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(60);
-  const [canResend, setCanResend] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(3);
+  const [resendCooldown, setResendCooldown] = useState(5);
+  const [attemptsLeft, setAttemptsLeft] = useState(4);
+  const [isLocked, setIsLocked] = useState(false);
+  const [lockTime, setLockTime] = useState(0);
+  const [fieldsDisabled, setFieldsDisabled] = useState(false); // New state for disabling fields
 
   useEffect(() => {
     const params = {
@@ -32,22 +37,38 @@ function ManagerVerifiedContent() {
       setStatus("success");
     } else if (params.error) {
       setStatus(params.error);
+      if (params.error === "account-locked") {
+        setIsLocked(true);
+        setFieldsDisabled(true);
+      }
     } else {
       setStatus("pending");
     }
 
-    // Timer for resend OTP
-    const timer = setInterval(() => {
+    // Timer for resend OTP (30 seconds)
+    const resendTimer = setInterval(() => {
       setTimeLeft((prev) => {
         if (prev <= 1) {
-          setCanResend(true);
           return 0;
         }
         return prev - 1;
       });
     }, 1000);
 
-    return () => clearInterval(timer);
+    // Timer for cooldown (5 minutes)
+    const cooldownTimer = setInterval(() => {
+      setResendCooldown((prev) => {
+        if (prev <= 1) {
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => {
+      clearInterval(resendTimer);
+      clearInterval(cooldownTimer);
+    };
   }, [searchParams]);
 
   const handleVerify = async (e) => {
@@ -67,18 +88,38 @@ function ManagerVerifiedContent() {
       if (response.data.success) {
         setStatus("success");
         toast.success(response.data.message);
+        setAttemptsLeft(4);
+        setIsLocked(false);
+        setFieldsDisabled(false);
       } else {
-        toast.error(response.data.message);
+        if (response.data.isLocked) {
+          setIsLocked(true);
+          setFieldsDisabled(true); // Disable fields on lock
+          setLockTime(response.data.lockTime || 5);
+          setAttemptsLeft(0);
+          toast.error(response.data.message);
+        } else {
+          setAttemptsLeft(response.data.attemptsLeft || 4);
+          toast.error(`${response.data.message} (${response.data.attemptsLeft || 3} attempts left)`);
+        }
       }
     } catch (error) {
-      toast.error(error.response?.data?.message || "Verification failed");
+      if (error.response?.status === 423) {
+        setIsLocked(true);
+        setFieldsDisabled(true); // Disable fields on lock
+        setLockTime(error.response.data?.lockTime || 5);
+        setAttemptsLeft(0);
+        toast.error(error.response.data?.message || "Account locked");
+      } else {
+        toast.error(error.response?.data?.message || "Verification failed");
+      }
     } finally {
       setLoading(false);
     }
   };
 
   const handleResendOtp = async () => {
-    if (!email || resendLoading || !canResend) return;
+    if (!email || resendLoading || resendCooldown > 0) return;
 
     setResendLoading(true);
     try {
@@ -86,16 +127,145 @@ function ManagerVerifiedContent() {
       
       if (response.data.success) {
         toast.success("New OTP sent to your email");
-        setTimeLeft(60);
-        setCanResend(false);
+        setTimeLeft(30);
+        setResendCooldown(300);
+        setAttemptsLeft(4);
+        setIsLocked(false);
+        setFieldsDisabled(false); // Enable fields again
+        setOtp(""); // Clear previous OTP
+        
+        // Show success message with instructions
+        toast.info("Fields are now enabled. Enter the new OTP.");
       } else {
-        toast.error(response.data.message);
+        if (response.data.cooldown) {
+          toast.error(response.data.message);
+          setResendCooldown(response.data.waitTime || 300);
+        } else if (response.data.isLocked) {
+          setIsLocked(true);
+          setFieldsDisabled(true);
+          toast.error(response.data.message);
+        } else {
+          toast.error(response.data.message);
+        }
       }
     } catch (error) {
-      toast.error("Failed to resend OTP");
+      if (error.response?.status === 429) {
+        setResendCooldown(error.response.data?.waitTime || 300);
+        toast.error(error.response.data?.message || "Please wait before requesting new OTP");
+      } else if (error.response?.status === 423) {
+        setIsLocked(true);
+        setFieldsDisabled(true);
+        toast.error(error.response.data?.message || "Account locked");
+      } else {
+        toast.error("Failed to resend OTP");
+      }
     } finally {
       setResendLoading(false);
     }
+  };
+
+  const renderLockedView = () => {
+    return (
+      <div className="space-y-8">
+        <div className="text-center">
+          <div className="w-20 h-20 bg-gradient-to-r from-red-600 to-orange-500 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg">
+            <Lock className="h-10 w-10 text-white" />
+          </div>
+          <h2 className="text-3xl font-bold text-gray-800">Account Locked</h2>
+          <p className="text-gray-600 mt-2">
+            Too many failed attempts
+          </p>
+        </div>
+
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="flex items-start">
+            <AlertTriangle className="h-5 w-5 text-red-600 mt-0.5 mr-2 flex-shrink-0" />
+            <div>
+              <h3 className="font-semibold text-red-800">Security Lock</h3>
+              <p className="text-sm text-red-700 mt-1">
+                After 4 incorrect OTP attempts, your account has been temporarily locked for security reasons.
+              </p>
+              <p className="text-sm text-red-700 mt-2">
+                Click "Resend OTP" to unlock your account and receive a new verification code.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          {/* Disabled Email Field */}
+          <div>
+            <label className="block text-sm font-medium text-gray-500 mb-2">
+              Email Address
+            </label>
+            <Input
+              type="email"
+              value={email}
+              readOnly
+              className="w-full bg-gray-100 cursor-not-allowed"
+              placeholder="manager@company.com"
+            />
+          </div>
+          
+          {/* Disabled OTP Field */}
+          <div>
+            <label className="block text-sm font-medium text-gray-500 mb-2">
+              OTP Code
+            </label>
+            <div className="relative">
+              <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
+                <Mail className="h-4 w-4 text-gray-400" />
+              </div>
+              <Input
+                type="text"
+                value={otp}
+                readOnly
+                className="pl-10 text-center text-2xl tracking-widest font-mono bg-gray-100 cursor-not-allowed"
+                placeholder="••••••"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Disabled Verify Button */}
+        <Button
+          disabled
+          className="w-full h-12 bg-gray-400 cursor-not-allowed text-white"
+        >
+          <Lock className="mr-2 h-4 w-4" />
+          Account Locked
+        </Button>
+
+        {/* Active Resend Button */}
+        <div className="text-center pt-4 border-t">
+          <p className="text-sm text-gray-600 mb-3">
+            Click below to receive a new OTP and unlock your account
+          </p>
+          <Button
+            onClick={handleResendOtp}
+            disabled={resendLoading || resendCooldown > 0}
+            className="w-full h-12 bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 text-white"
+          >
+            {resendLoading ? (
+              <>
+                <RotateCw className="w-4 h-4 mr-2 animate-spin" />
+                Sending...
+              </>
+            ) : resendCooldown > 0 ? (
+              `Resend OTP in ${Math.floor(resendCooldown / 60)}:${(resendCooldown % 60).toString().padStart(2, '0')}`
+            ) : (
+              <>
+                <Mail className="mr-2 h-4 w-4" />
+                Resend OTP to Unlock
+              </>
+            )}
+          </Button>
+          <p className="text-xs text-gray-500 mt-2">
+            A new OTP will be sent to {email}
+          </p>
+        </div>
+      </div>
+    );
   };
 
   const renderContent = () => {
@@ -118,13 +288,7 @@ function ManagerVerifiedContent() {
                 Go to Manager Login
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
-              <Button
-                variant="outline"
-                onClick={() => router.push('/login')}
-                className="w-full h-12"
-              >
-                Back to Main Login
-              </Button>
+              
             </div>
           </div>
         );
@@ -139,6 +303,9 @@ function ManagerVerifiedContent() {
             <p className="text-gray-600">Please wait while we verify your account.</p>
           </div>
         );
+
+      case "account-locked":
+        return renderLockedView();
 
       case "already-verified":
         return (
@@ -198,6 +365,11 @@ function ManagerVerifiedContent() {
         );
 
       default:
+        // If fields are disabled, show locked view
+        if (fieldsDisabled) {
+          return renderLockedView();
+        }
+
         return (
           <div className="space-y-8">
             <div className="text-center">
@@ -208,6 +380,15 @@ function ManagerVerifiedContent() {
               <p className="text-gray-600 mt-2">
                 Enter the 6-digit OTP sent to <span className="font-semibold">{email || "your email"}</span>
               </p>
+              
+              {/* Attempts counter */}
+              {attemptsLeft < 4 && (
+                <div className="mt-3">
+                  <p className="text-sm font-medium text-amber-600">
+                    {attemptsLeft} attempt{attemptsLeft !== 1 ? 's' : ''} remaining
+                  </p>
+                </div>
+              )}
             </div>
 
             <form onSubmit={handleVerify} className="space-y-6">
@@ -223,6 +404,7 @@ function ManagerVerifiedContent() {
                     className="w-full"
                     placeholder="manager@company.com"
                     required
+                    disabled={fieldsDisabled}
                   />
                 </div>
                 <div>
@@ -241,6 +423,7 @@ function ManagerVerifiedContent() {
                       placeholder="123456"
                       maxLength={6}
                       required
+                      disabled={fieldsDisabled}
                     />
                   </div>
                 </div>
@@ -248,8 +431,8 @@ function ManagerVerifiedContent() {
 
               <Button
                 type="submit"
-                disabled={loading || otp.length !== 6}
-                className="w-full h-12 bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 text-white"
+                disabled={loading || otp.length !== 6 || fieldsDisabled}
+                className="w-full h-12 bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 text-white disabled:opacity-50"
               >
                 {loading ? (
                   <>
@@ -265,26 +448,28 @@ function ManagerVerifiedContent() {
               </Button>
 
               <div className="text-center pt-4 border-t">
-                <p className="text-sm text-gray-600">
-                  Didn't receive OTP?{" "}
-                  <button
-                    type="button"
-                    onClick={handleResendOtp}
-                    disabled={!canResend || resendLoading}
-                    className="text-purple-600 hover:text-purple-700 font-medium disabled:text-gray-400 disabled:cursor-not-allowed"
-                  >
-                    {resendLoading ? (
-                      <>
-                        <RotateCw className="w-3 h-3 mr-1 animate-spin inline" />
-                        Sending...
-                      </>
-                    ) : canResend ? (
-                      "Resend OTP"
-                    ) : (
-                      `Resend in ${timeLeft}s`
-                    )}
-                  </button>
+                <p className="text-sm text-gray-600 mb-1">
+                  Didn't receive OTP?
                 </p>
+                <button
+                  type="button"
+                  onClick={handleResendOtp}
+                  disabled={resendLoading || timeLeft > 0 || resendCooldown > 0}
+                  className="text-purple-600 hover:text-purple-700 font-medium disabled:text-gray-400 disabled:cursor-not-allowed"
+                >
+                  {resendLoading ? (
+                    <>
+                      <RotateCw className="w-3 h-3 mr-1 animate-spin inline" />
+                      Sending...
+                    </>
+                  ) : resendCooldown > 0 ? (
+                    `Resend available in ${Math.floor(resendCooldown / 60)}:${(resendCooldown % 60).toString().padStart(2, '0')}`
+                  ) : timeLeft > 0 ? (
+                    `Resend in ${timeLeft}s`
+                  ) : (
+                    "Resend OTP"
+                  )}
+                </button>
                 <p className="text-xs text-gray-500 mt-2">
                   Check your spam folder if you don't see the email
                 </p>

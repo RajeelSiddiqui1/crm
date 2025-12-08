@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter, useParams } from "next/navigation";
 import { Toaster } from "@/components/ui/sonner";
@@ -12,17 +12,17 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { 
-    FileText, 
-    User, 
-    Calendar, 
-    CheckCircle, 
-    Clock, 
-    XCircle, 
-    AlertCircle, 
-    Eye, 
-    Loader2, 
-    Edit, 
+import {
+    FileText,
+    User,
+    Calendar,
+    CheckCircle,
+    Clock,
+    XCircle,
+    AlertCircle,
+    Eye,
+    Loader2,
+    Edit,
     Trash2,
     EyeOff,
     Star,
@@ -68,13 +68,12 @@ export default function ManagerEditSubmissionPage() {
     const [fetching, setFetching] = useState(true);
     const [showPasswords, setShowPasswords] = useState({});
     const [audioPlaying, setAudioPlaying] = useState(null);
-    const fileInputRefs = useRef({});
 
     useEffect(() => {
         if (status === "loading") return;
 
         if (!session || session.user.role !== "Manager") {
-            router.push("/manager/login");
+            router.push("/login");
             return;
         }
 
@@ -104,17 +103,15 @@ export default function ManagerEditSubmissionPage() {
 
     const fetchAdminTask = async (adminTaskId) => {
         try {
-            const response = await axios.get(`/api/manager/admin-tasks/${adminTaskId}`);
+            const response = await axios.get(`/api/admin/tasks/${adminTaskId}`);
             if (response.status === 200) {
-                setAdminTask(response.data.task);
+                setAdminTask(response.data);
             }
         } catch (error) {
             console.error("Error fetching admin task:", error);
-            // Don't show error toast as admin task might not exist for all submissions
         }
     };
 
-    // Get employee full name with proper fallbacks
     const getEmployeeFullName = (employee) => {
         if (!employee) return "Unknown Employee";
         
@@ -126,7 +123,6 @@ export default function ManagerEditSubmissionPage() {
             return employee.name;
         }
         
-        // Fallback to email username
         if (employee.email) {
             return employee.email.split('@')[0];
         }
@@ -134,7 +130,6 @@ export default function ManagerEditSubmissionPage() {
         return "Unknown Employee";
     };
 
-    // Get employee initials for avatar
     const getEmployeeInitials = (employee) => {
         if (!employee) return "U";
         
@@ -177,20 +172,6 @@ export default function ManagerEditSubmissionPage() {
         }));
     };
 
-    const handleFileUploadClick = (fieldName) => {
-        if (fileInputRefs.current[fieldName]) {
-            fileInputRefs.current[fieldName].click();
-        }
-    };
-
-    const handleFileChange = (fieldName, event) => {
-        const files = event.target.files;
-        if (files && files.length > 0) {
-            handleFieldChange(fieldName, files);
-            toast.success(`File selected: ${files[0].name}`);
-        }
-    };
-
     const playAudio = (audioUrl) => {
         if (audioPlaying) {
             const audio = document.getElementById("admin-task-audio");
@@ -206,15 +187,6 @@ export default function ManagerEditSubmissionPage() {
                 setAudioPlaying(true);
             }
         }
-    };
-
-    const downloadFile = (fileData, fileName = "attachment") => {
-        const link = document.createElement("a");
-        link.href = fileData;
-        link.download = fileName;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
     };
 
     const formatDate = (dateString) => {
@@ -294,152 +266,6 @@ export default function ManagerEditSubmissionPage() {
             creditCard: CreditCard
         };
         return fieldIcons[fieldType] || FileText;
-    };
-
-    const renderEditFormField = (fieldConfig, fieldName, fieldValue) => {
-        if (!fieldConfig) {
-            return (
-                <Input
-                    value={fieldValue || ""}
-                    onChange={(e) => handleFieldChange(fieldName, e.target.value)}
-                    className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 border-gray-300 text-gray-900 bg-white"
-                />
-            );
-        }
-
-        switch (fieldConfig.type) {
-            case "text":
-            case "email":
-            case "number":
-            case "tel":
-            case "url":
-                return (
-                    <Input
-                        type={fieldConfig.type}
-                        value={fieldValue || ""}
-                        onChange={(e) => handleFieldChange(fieldName, e.target.value)}
-                        placeholder={fieldConfig.placeholder || `Enter ${fieldConfig.label.toLowerCase()}`}
-                        className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 border-gray-300 text-gray-900 bg-white"
-                    />
-                );
-            case "password":
-                return (
-                    <div className="relative">
-                        <Input
-                            type={showPasswords[fieldName] ? "text" : "password"}
-                            value={fieldValue || ""}
-                            onChange={(e) => handleFieldChange(fieldName, e.target.value)}
-                            placeholder={fieldConfig.placeholder || `Enter ${fieldConfig.label.toLowerCase()}`}
-                            className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 border-gray-300 text-gray-900 bg-white pr-10"
-                        />
-                        <button
-                            type="button"
-                            onClick={() => togglePasswordVisibility(fieldName)}
-                            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 transition-colors"
-                        >
-                            {showPasswords[fieldName] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                        </button>
-                    </div>
-                );
-            case "textarea":
-                return (
-                    <Textarea
-                        value={fieldValue || ""}
-                        onChange={(e) => handleFieldChange(fieldName, e.target.value)}
-                        placeholder={fieldConfig.placeholder || `Enter ${fieldConfig.label.toLowerCase()}`}
-                        className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 border-gray-300 text-gray-900 bg-white min-h-[100px] resize-vertical"
-                        rows={4}
-                    />
-                );
-            case "select":
-                return (
-                    <Select 
-                        value={fieldValue || ""} 
-                        onValueChange={(value) => handleFieldChange(fieldName, value)}
-                    >
-                        <SelectTrigger className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 border-gray-300 text-gray-900 bg-white">
-                            <SelectValue placeholder={fieldConfig.placeholder || `Select ${fieldConfig.label.toLowerCase()}`} />
-                        </SelectTrigger>
-                        <SelectContent className="bg-white">
-                            {fieldConfig.options?.map((option, index) => (
-                                <SelectItem key={index} value={option}>
-                                    {option}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                );
-            case "date":
-                return (
-                    <Input
-                        type="date"
-                        value={fieldValue || ""}
-                        onChange={(e) => handleFieldChange(fieldName, e.target.value)}
-                        className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 border-gray-300 text-gray-900 bg-white"
-                    />
-                );
-            case "checkbox":
-                return (
-                    <div className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg bg-white hover:border-gray-300 transition-colors">
-                        <input
-                            type="checkbox"
-                            checked={!!fieldValue}
-                            onChange={(e) => handleFieldChange(fieldName, e.target.checked)}
-                            className="rounded border-gray-300 bg-white w-5 h-5 text-blue-600 focus:ring-blue-500 focus:ring-2"
-                        />
-                        <Label className="text-gray-800 font-medium cursor-pointer">{fieldConfig.label}</Label>
-                    </div>
-                );
-            case "radio":
-                return (
-                    <div className="space-y-3">
-                        {fieldConfig.options?.map((option, idx) => (
-                            <div key={idx} className="flex items-center space-x-3 p-2 hover:bg-gray-50 rounded-lg transition-colors">
-                                <input
-                                    type="radio"
-                                    name={fieldName}
-                                    value={option}
-                                    checked={fieldValue === option}
-                                    onChange={(e) => handleFieldChange(fieldName, e.target.value)}
-                                    className="rounded-full border-gray-300 bg-white w-4 h-4 text-blue-600 focus:ring-blue-500 focus:ring-2"
-                                />
-                                <Label className="text-gray-800 font-medium cursor-pointer">{option}</Label>
-                            </div>
-                        ))}
-                    </div>
-                );
-            case "file":
-                return (
-                    <div 
-                        className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center bg-white cursor-pointer hover:border-blue-400 transition-all duration-200 group"
-                        onClick={() => handleFileUploadClick(fieldName)}
-                    >
-                        <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2 group-hover:text-blue-500 transition-colors" />
-                        <p className="text-sm text-gray-600 group-hover:text-gray-700">Click to upload or drag and drop</p>
-                        <p className="text-xs text-gray-500 mt-1">{fieldConfig.accept || "Any file type"}</p>
-                        <Input
-                            ref={el => fileInputRefs.current[fieldName] = el}
-                            type="file"
-                            onChange={(e) => handleFileChange(fieldName, e)}
-                            className="hidden"
-                            accept={fieldConfig.accept}
-                        />
-                        {fieldValue && (
-                            <p className="text-sm text-green-600 mt-2 font-medium">
-                                {fieldValue.name || 'File selected'}
-                            </p>
-                        )}
-                    </div>
-                );
-            default:
-                return (
-                    <Input
-                        value={fieldValue || ""}
-                        onChange={(e) => handleFieldChange(fieldName, e.target.value)}
-                        className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 border-gray-300 text-gray-900 bg-white"
-                    />
-                );
-        }
     };
 
     const handleSubmit = async (e) => {
@@ -525,13 +351,13 @@ export default function ManagerEditSubmissionPage() {
             <Toaster position="top-right" richColors />
 
             <div className="max-w-7xl mx-auto">
-                {/* Enhanced Header */}
+                {/* Header */}
                 <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-8">
                     <div className="flex items-center gap-4">
                         <Button
                             variant="outline"
                             onClick={() => router.push('/manager/submissions')}
-                            className="rounded-xl border-blue-200 bg-white hover:bg-blue-50 text-blue-700 hover:text-blue-800 shadow-sm transition-all duration-200"
+                            className="rounded-xl border-blue-200 bg-white hover:bg-blue-50 text-blue-700 hover:text-blue-800 shadow-sm"
                         >
                             <ArrowLeft className="w-4 h-4 mr-2" />
                             Back to Submissions
@@ -555,7 +381,7 @@ export default function ManagerEditSubmissionPage() {
                         <Button
                             onClick={() => router.push('/manager/dashboard')}
                             variant="outline"
-                            className="border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all duration-200 shadow-sm"
+                            className="border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-300"
                         >
                             <BarChart3 className="w-4 h-4 mr-2" />
                             Dashboard
@@ -563,7 +389,7 @@ export default function ManagerEditSubmissionPage() {
                         <Button
                             onClick={() => router.push(`/group-chat?submissionId=${submissionId}`)}
                             variant="outline"
-                            className="border-purple-200 text-purple-700 hover:bg-purple-50 hover:border-purple-300 transition-all duration-200 shadow-sm"
+                            className="border-purple-200 text-purple-700 hover:bg-purple-50 hover:border-purple-300"
                         >
                             <MessageSquare className="w-4 h-4 mr-2" />
                             Group Chat
@@ -572,14 +398,14 @@ export default function ManagerEditSubmissionPage() {
                 </div>
 
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-                    {/* Left Side - Admin Task Reference & Submission Info */}
+                    {/* Left Side - Admin Task & Submission Info */}
                     <div className="space-y-6">
                         {/* Admin Task Reference */}
                         {adminTask && (
-                            <Card className="border-0 shadow-2xl bg-white rounded-2xl overflow-hidden border border-blue-100 hover:shadow-3xl transition-all duration-300">
+                            <Card className="border-0 shadow-2xl bg-white rounded-2xl overflow-hidden border border-blue-100">
                                 <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50/50 border-b border-blue-100 p-6">
                                     <div className="flex items-center gap-3">
-                                        <div className="w-12 h-12 bg-gradient-to-r from-blue-600 to-indigo-700 rounded-xl flex items-center justify-center shadow-lg">
+                                        <div className="w-12 h-12 bg-gradient-to-r from-blue-600 to-indigo-700 rounded-xl flex items-center justify-center">
                                             <Target className="w-6 h-6 text-white" />
                                         </div>
                                         <div>
@@ -587,14 +413,13 @@ export default function ManagerEditSubmissionPage() {
                                                 Admin Task Reference
                                             </CardTitle>
                                             <CardDescription className="text-gray-700 font-medium">
-                                                Original task details and requirements
+                                                Original task details
                                             </CardDescription>
                                         </div>
                                     </div>
                                 </CardHeader>
                                 <CardContent className="p-6">
                                     <div className="space-y-6">
-                                        {/* Task Basic Info */}
                                         <div className="p-4 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-200">
                                             <h3 className="font-bold text-gray-900 text-lg mb-2">
                                                 {adminTask.title}
@@ -604,9 +429,8 @@ export default function ManagerEditSubmissionPage() {
                                             </p>
                                         </div>
 
-                                        {/* Task Details Grid */}
                                         <div className="grid grid-cols-2 gap-4">
-                                            <div className="space-y-2 p-4 bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                                            <div className="space-y-2 p-4 bg-white rounded-xl border border-gray-200">
                                                 <div className="flex items-center gap-2">
                                                     <Building className="w-4 h-4 text-blue-600" />
                                                     <Label className="text-sm font-semibold text-gray-700">Client</Label>
@@ -615,38 +439,19 @@ export default function ManagerEditSubmissionPage() {
                                                     {adminTask.clientName || "No client specified"}
                                                 </p>
                                             </div>
-                                            <div className="space-y-2 p-4 bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                                            <div className="space-y-2 p-4 bg-white rounded-xl border border-gray-200">
                                                 <div className="flex items-center gap-2">
                                                     <Clock className="w-4 h-4 text-yellow-600" />
                                                     <Label className="text-sm font-semibold text-gray-700">Priority</Label>
                                                 </div>
-                                                <Badge className={`${getPriorityColor(adminTask.priority)} capitalize text-xs font-bold border-0 px-3 py-1`}>
+                                                <Badge className={`${getPriorityColor(adminTask.priority)} capitalize text-xs font-bold`}>
                                                     {adminTask.priority}
-                                                </Badge>
-                                            </div>
-                                            <div className="space-y-2 p-4 bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-                                                <div className="flex items-center gap-2">
-                                                    <Calendar className="w-4 h-4 text-green-600" />
-                                                    <Label className="text-sm font-semibold text-gray-700">Due Date</Label>
-                                                </div>
-                                                <p className="text-gray-900 font-bold text-sm">
-                                                    {formatDate(adminTask.endDate)}
-                                                </p>
-                                            </div>
-                                            <div className="space-y-2 p-4 bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-                                                <div className="flex items-center gap-2">
-                                                    <ClipboardCheck className="w-4 h-4 text-purple-600" />
-                                                    <Label className="text-sm font-semibold text-gray-700">Status</Label>
-                                                </div>
-                                                <Badge className="bg-blue-500/10 text-blue-700 border-0 capitalize text-xs font-bold px-3 py-1">
-                                                    {adminTask.status || 'assigned'}
                                                 </Badge>
                                             </div>
                                         </div>
 
-                                        {/* Audio Instructions */}
                                         {adminTask.audioUrl && (
-                                            <div className="p-4 bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                                            <div className="p-4 bg-white rounded-xl border border-gray-200">
                                                 <Label className="text-sm font-semibold text-gray-700 mb-3 block flex items-center gap-2">
                                                     <Volume2 className="w-4 h-4 text-blue-600" />
                                                     Voice Instructions
@@ -655,10 +460,10 @@ export default function ManagerEditSubmissionPage() {
                                                     <Button
                                                         onClick={() => playAudio(adminTask.audioUrl)}
                                                         variant="outline"
-                                                        className={`rounded-xl border-blue-600 bg-white hover:bg-blue-600 hover:text-white transition-all duration-200 ${
+                                                        className={`rounded-xl border-blue-600 ${
                                                             audioPlaying
-                                                                ? "text-white bg-blue-600 border-blue-600"
-                                                                : "text-blue-700 border-blue-600"
+                                                                ? "text-white bg-blue-600"
+                                                                : "text-blue-700"
                                                         }`}
                                                     >
                                                         {audioPlaying ? (
@@ -677,34 +482,16 @@ export default function ManagerEditSubmissionPage() {
                                                 </div>
                                             </div>
                                         )}
-
-                                        {/* File Attachments */}
-                                        {adminTask.fileAttachments && (
-                                            <div className="p-4 bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
-                                                <Label className="text-sm font-semibold text-gray-700 mb-3 block flex items-center gap-2">
-                                                    <Download className="w-4 h-4 text-green-600" />
-                                                    File Attachments
-                                                </Label>
-                                                <Button
-                                                    onClick={() => downloadFile(adminTask.fileAttachments, `task_${adminTask.title}_attachment`)}
-                                                    variant="outline"
-                                                    className="rounded-xl border-green-600 text-green-700 bg-white hover:bg-green-600 hover:text-white hover:border-green-600 font-medium transition-all duration-200"
-                                                >
-                                                    <Download className="w-4 h-4 mr-2" />
-                                                    Download Reference Files
-                                                </Button>
-                                            </div>
-                                        )}
                                     </div>
                                 </CardContent>
                             </Card>
                         )}
 
-                        {/* Enhanced Submission Information */}
-                        <Card className="border-0 shadow-2xl bg-white rounded-2xl overflow-hidden border border-blue-100 hover:shadow-3xl transition-all duration-300">
+                        {/* Submission Information */}
+                        <Card className="border-0 shadow-2xl bg-white rounded-2xl overflow-hidden border border-blue-100">
                             <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50/50 border-b border-blue-100 p-6">
                                 <div className="flex items-center gap-3">
-                                    <div className="w-12 h-12 bg-gradient-to-r from-green-600 to-emerald-700 rounded-xl flex items-center justify-center shadow-lg">
+                                    <div className="w-12 h-12 bg-gradient-to-r from-green-600 to-emerald-700 rounded-xl flex items-center justify-center">
                                         <Shield className="w-6 h-6 text-white" />
                                     </div>
                                     <div>
@@ -712,33 +499,30 @@ export default function ManagerEditSubmissionPage() {
                                             Submission Information
                                         </CardTitle>
                                         <CardDescription className="text-gray-700 font-medium">
-                                            Team hierarchy and submission timeline
+                                            Team hierarchy and timeline
                                         </CardDescription>
                                     </div>
                                 </div>
                             </CardHeader>
                             <CardContent className="p-6">
                                 <div className="space-y-6">
-                                    {/* Basic Info */}
                                     <div className="grid grid-cols-2 gap-4">
-                                        <div className="space-y-2 p-4 bg-white rounded-xl border border-gray-200 shadow-sm">
+                                        <div className="space-y-2 p-4 bg-white rounded-xl border border-gray-200">
                                             <Label className="text-sm font-semibold text-gray-700">Assigned To</Label>
                                             <p className="text-gray-900 font-bold">{submission.assignedTo}</p>
                                         </div>
-                                        <div className="space-y-2 p-4 bg-white rounded-xl border border-gray-200 shadow-sm">
+                                        <div className="space-y-2 p-4 bg-white rounded-xl border border-gray-200">
                                             <Label className="text-sm font-semibold text-gray-700">Submission Date</Label>
                                             <p className="text-gray-900 font-bold">{formatDate(submission.createdAt)}</p>
                                         </div>
                                     </div>
 
-                                    {/* Status Hierarchy */}
                                     <div className="space-y-4">
                                         <Label className="text-sm font-semibold text-gray-700">Status Hierarchy</Label>
                                         <div className="space-y-3">
-                                            {/* Manager Status */}
                                             <div className="flex items-center justify-between p-4 bg-blue-50 rounded-xl border border-blue-200">
                                                 <div className="flex items-center gap-3">
-                                                    <Avatar className="w-8 h-8 border-2 border-white shadow-md">
+                                                    <Avatar className="w-8 h-8 border-2 border-white">
                                                         <AvatarFallback className="bg-blue-600 text-white text-sm font-bold">
                                                             M
                                                         </AvatarFallback>
@@ -754,10 +538,9 @@ export default function ManagerEditSubmissionPage() {
                                                 </Badge>
                                             </div>
 
-                                            {/* Team Lead Status */}
                                             <div className="flex items-center justify-between p-4 bg-green-50 rounded-xl border border-green-200">
                                                 <div className="flex items-center gap-3">
-                                                    <Avatar className="w-8 h-8 border-2 border-white shadow-md">
+                                                    <Avatar className="w-8 h-8 border-2 border-white">
                                                         <AvatarFallback className="bg-green-600 text-white text-sm font-bold">
                                                             TL
                                                         </AvatarFallback>
@@ -772,60 +555,27 @@ export default function ManagerEditSubmissionPage() {
                                                     {submission.status2.replace('_', ' ')}
                                                 </Badge>
                                             </div>
-
-                                            {/* Assigned Employees */}
-                                            {submission.assignedEmployees?.map((emp, index) => (
-                                                <div key={emp.employeeId?._id || index} className="flex items-center justify-between p-4 bg-purple-50 rounded-xl border border-purple-200">
-                                                    <div className="flex items-center gap-3">
-                                                        <Avatar className="w-8 h-8 border-2 border-white shadow-md">
-                                                            <AvatarFallback className="bg-purple-600 text-white text-sm font-bold">
-                                                                {getEmployeeInitials(emp.employeeId)}
-                                                            </AvatarFallback>
-                                                        </Avatar>
-                                                        <div>
-                                                            <span className="text-gray-700 font-medium">
-                                                                {getEmployeeFullName(emp.employeeId)}
-                                                            </span>
-                                                            <p className="text-gray-500 text-xs">{emp.email}</p>
-                                                        </div>
-                                                    </div>
-                                                    <Badge className={`${getStatusVariant(emp.status)} border flex items-center gap-1 px-3 py-1 font-medium`}>
-                                                        {getStatusIcon(emp.status)}
-                                                        {emp.status.replace('_', ' ')}
-                                                    </Badge>
-                                                </div>
-                                            ))}
                                         </div>
                                     </div>
 
-                                    {/* Additional Information */}
-                                    <div className="space-y-4">
-                                        {submission.completedAt && (
-                                            <div className="p-4 bg-white rounded-xl border border-gray-200 shadow-sm">
-                                                <Label className="text-sm font-semibold text-gray-700">Completed Date</Label>
-                                                <p className="text-gray-900 font-bold">{formatDate(submission.completedAt)}</p>
-                                            </div>
-                                        )}
-
-                                        {submission.teamLeadFeedback && (
-                                            <div className="p-4 bg-yellow-50 rounded-xl border border-yellow-200">
-                                                <Label className="text-sm font-semibold text-gray-700">Team Lead Feedback</Label>
-                                                <p className="text-gray-900 font-medium mt-2 bg-white p-3 rounded-lg border border-yellow-100">
-                                                    {submission.teamLeadFeedback}
-                                                </p>
-                                            </div>
-                                        )}
-                                    </div>
+                                    {submission.teamLeadFeedback && (
+                                        <div className="p-4 bg-yellow-50 rounded-xl border border-yellow-200">
+                                            <Label className="text-sm font-semibold text-gray-700">Team Lead Feedback</Label>
+                                            <p className="text-gray-900 font-medium mt-2 bg-white p-3 rounded-lg border border-yellow-100">
+                                                {submission.teamLeadFeedback}
+                                            </p>
+                                        </div>
+                                    )}
                                 </div>
                             </CardContent>
                         </Card>
                     </div>
 
-                    {/* Right Side - Enhanced Edit Form */}
-                    <Card className="border-0 shadow-2xl bg-white rounded-2xl overflow-hidden border border-blue-100 hover:shadow-3xl transition-all duration-300">
+                    {/* Right Side - Edit Form */}
+                    <Card className="border-0 shadow-2xl bg-white rounded-2xl overflow-hidden border border-blue-100">
                         <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50/50 border-b border-blue-100 p-6">
                             <div className="flex items-center gap-3">
-                                <div className="w-12 h-12 bg-gradient-to-r from-indigo-600 to-purple-700 rounded-xl flex items-center justify-center shadow-lg">
+                                <div className="w-12 h-12 bg-gradient-to-r from-indigo-600 to-purple-700 rounded-xl flex items-center justify-center">
                                     <Edit className="w-6 h-6 text-white" />
                                 </div>
                                 <div>
@@ -833,7 +583,7 @@ export default function ManagerEditSubmissionPage() {
                                         Edit Form Data
                                     </CardTitle>
                                     <CardDescription className="text-gray-700 font-medium">
-                                        Update submission details and provide feedback
+                                        Update submission details
                                     </CardDescription>
                                 </div>
                             </div>
@@ -847,13 +597,13 @@ export default function ManagerEditSubmissionPage() {
                                         Form Data
                                     </h3>
 
-                                    <div className="space-y-4 max-h-[500px] overflow-y-auto p-4 border border-gray-200 rounded-xl bg-gray-50/50 custom-scrollbar">
+                                    <div className="space-y-4 max-h-[500px] overflow-y-auto p-4 border border-gray-200 rounded-xl bg-gray-50/50">
                                         {submission.formData && Object.entries(submission.formData).map(([fieldName, fieldValue]) => {
                                             const fieldConfig = submission.formId?.fields?.find(f => f.name === fieldName);
                                             const IconComponent = fieldConfig ? getFieldIcon(fieldConfig.type) : FileText;
                                             
                                             return (
-                                                <div key={fieldName} className="space-y-3 p-4 border border-gray-200 rounded-xl bg-white hover:border-gray-300 transition-colors duration-200">
+                                                <div key={fieldName} className="space-y-3 p-4 border border-gray-200 rounded-xl bg-white">
                                                     <div className="flex items-center gap-3 mb-3">
                                                         <div className="p-2 rounded-lg bg-blue-100 text-blue-600">
                                                             <IconComponent className="w-4 h-4" />
@@ -863,9 +613,36 @@ export default function ManagerEditSubmissionPage() {
                                                             {fieldConfig?.required && <span className="text-red-500 ml-1">*</span>}
                                                         </Label>
                                                     </div>
-                                                    {renderEditFormField(fieldConfig, fieldName, fieldValue)}
-                                                    {fieldConfig?.placeholder && (
-                                                        <p className="text-xs text-gray-500 mt-2">{fieldConfig.placeholder}</p>
+                                                    
+                                                    {fieldConfig?.type === "password" ? (
+                                                        <div className="relative">
+                                                            <Input
+                                                                type={showPasswords[fieldName] ? "text" : "password"}
+                                                                value={fieldValue || ""}
+                                                                onChange={(e) => handleFieldChange(fieldName, e.target.value)}
+                                                                className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 border-gray-300 text-gray-900 bg-white pr-10"
+                                                            />
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => togglePasswordVisibility(fieldName)}
+                                                                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                                                            >
+                                                                {showPasswords[fieldName] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                                            </button>
+                                                        </div>
+                                                    ) : fieldConfig?.type === "textarea" ? (
+                                                        <Textarea
+                                                            value={fieldValue || ""}
+                                                            onChange={(e) => handleFieldChange(fieldName, e.target.value)}
+                                                            className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 border-gray-300 text-gray-900 bg-white min-h-[100px]"
+                                                            rows={4}
+                                                        />
+                                                    ) : (
+                                                        <Input
+                                                            value={fieldValue || ""}
+                                                            onChange={(e) => handleFieldChange(fieldName, e.target.value)}
+                                                            className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 border-gray-300 text-gray-900 bg-white"
+                                                        />
                                                     )}
                                                 </div>
                                             );
@@ -888,8 +665,8 @@ export default function ManagerEditSubmissionPage() {
                                             <Textarea
                                                 value={submission.managerComments || ""}
                                                 onChange={(e) => handleManagerCommentsChange(e.target.value)}
-                                                placeholder="Add your comments, feedback, or approval notes for the team..."
-                                                className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 border-gray-300 text-gray-900 bg-white min-h-[120px] resize-vertical"
+                                                placeholder="Add your comments, feedback, or approval notes..."
+                                                className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 border-gray-300 text-gray-900 bg-white min-h-[120px]"
                                                 rows={6}
                                             />
                                         </div>
@@ -900,7 +677,7 @@ export default function ManagerEditSubmissionPage() {
                                     <Button
                                         type="submit"
                                         disabled={loading}
-                                        className="bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white px-8 py-2.5 shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-600/30 transition-all duration-300 transform hover:scale-105 disabled:transform-none disabled:hover:scale-100 disabled:opacity-50 flex-1 font-bold"
+                                        className="bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white px-8 py-2.5 flex-1 font-bold"
                                     >
                                         <Save className="w-4 h-4 mr-2" />
                                         {loading ? (
@@ -916,7 +693,7 @@ export default function ManagerEditSubmissionPage() {
                                         type="button"
                                         variant="outline"
                                         onClick={handleDelete}
-                                        className="border-red-600 text-red-700 bg-white hover:bg-red-600 hover:text-white px-6 py-2.5 transition-all duration-200 shadow-sm font-medium hover:scale-105"
+                                        className="border-red-600 text-red-700 bg-white hover:bg-red-600 hover:text-white px-6 py-2.5"
                                     >
                                         <Trash2 className="w-4 h-4 mr-2" />
                                         Delete
@@ -927,24 +704,6 @@ export default function ManagerEditSubmissionPage() {
                     </Card>
                 </div>
             </div>
-
-            {/* Custom Scrollbar Styles */}
-            <style jsx>{`
-                .custom-scrollbar::-webkit-scrollbar {
-                    width: 6px;
-                }
-                .custom-scrollbar::-webkit-scrollbar-track {
-                    background: #f1f5f9;
-                    border-radius: 10px;
-                }
-                .custom-scrollbar::-webkit-scrollbar-thumb {
-                    background: #cbd5e1;
-                    border-radius: 10px;
-                }
-                .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-                    background: #94a3b8;
-                }
-            `}</style>
         </div>
     );
 }

@@ -1,3 +1,4 @@
+// app/api/auth/manager-verify/route.js
 import { NextResponse } from "next/server";
 import dbConnect from "@/lib/db";
 import Manager from "@/models/Manager";
@@ -31,6 +32,21 @@ export async function POST(req) {
       );
     }
 
+    // Check if OTP is locked
+    if (manager.otpLockedUntil && new Date() < manager.otpLockedUntil) {
+      const lockTime = Math.ceil((manager.otpLockedUntil - new Date()) / 1000 / 60);
+      return NextResponse.json(
+        { 
+          success: false, 
+          message: `Too many failed attempts. Account locked for ${lockTime} minutes`,
+          isLocked: true,
+          lockTime: lockTime,
+          fieldsDisabled: true // New field to indicate fields should be disabled
+        },
+        { status: 423 }
+      );
+    }
+
     if (!manager.otp || !manager.otpExpiry) {
       return NextResponse.json(
         { success: false, message: "OTP expired or invalid" },
@@ -38,24 +54,59 @@ export async function POST(req) {
       );
     }
 
-    if (manager.otp !== otp) {
-      return NextResponse.json(
-        { success: false, message: "Invalid OTP" },
-        { status: 400 }
-      );
-    }
-
+    // Check OTP expiry
     if (new Date() > manager.otpExpiry) {
+      // Reset attempts if OTP is expired
+      manager.otpAttempts = 0;
+      await manager.save();
+      
       return NextResponse.json(
         { success: false, message: "OTP has expired" },
         { status: 400 }
       );
     }
 
-    // Update manager as verified and clear OTP
+    // Verify OTP
+    if (manager.otp !== otp) {
+      // Increment failed attempts
+      manager.otpAttempts = (manager.otpAttempts || 0) + 1;
+      
+      // Lock account after 4 failed attempts
+      if (manager.otpAttempts >= 4) {
+        manager.otpLockedUntil = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes lock
+        await manager.save();
+        
+        return NextResponse.json(
+          { 
+            success: false, 
+            message: "Too many failed attempts. Account locked for 5 minutes",
+            isLocked: true,
+            lockTime: 5,
+            attemptsLeft: 0,
+            fieldsDisabled: true // Disable fields
+          },
+          { status: 423 }
+        );
+      }
+      
+      await manager.save();
+      
+      return NextResponse.json(
+        { 
+          success: false, 
+          message: "Invalid OTP",
+          attemptsLeft: 4 - manager.otpAttempts
+        },
+        { status: 400 }
+      );
+    }
+
+    // Successful verification - reset everything
     manager.verified = true;
     manager.otp = null;
     manager.otpExpiry = null;
+    manager.otpAttempts = 0;
+    manager.otpLockedUntil = null;
     await manager.save();
 
     return NextResponse.json({
@@ -70,6 +121,8 @@ export async function POST(req) {
     );
   }
 }
+
+// Update the GET endpoint similarly...
 
 // GET endpoint for direct verification via link
 export async function GET(req) {
@@ -93,7 +146,22 @@ export async function GET(req) {
       return NextResponse.redirect(new URL('/manager-verified?error=already-verified', req.url));
     }
 
+    // Check lock for GET requests too
+    if (manager.otpLockedUntil && new Date() < manager.otpLockedUntil) {
+      return NextResponse.redirect(new URL('/manager-verified?error=account-locked', req.url));
+    }
+
     if (!manager.otp || manager.otp !== otp) {
+      // Increment attempts for GET requests too
+      manager.otpAttempts = (manager.otpAttempts || 0) + 1;
+      
+      if (manager.otpAttempts >= 4) {
+        manager.otpLockedUntil = new Date(Date.now() + 5 * 60 * 1000);
+        await manager.save();
+        return NextResponse.redirect(new URL('/manager-verified?error=account-locked', req.url));
+      }
+      
+      await manager.save();
       return NextResponse.redirect(new URL('/manager-verified?error=invalid-otp', req.url));
     }
 
@@ -104,6 +172,8 @@ export async function GET(req) {
     manager.verified = true;
     manager.otp = null;
     manager.otpExpiry = null;
+    manager.otpAttempts = 0;
+    manager.otpLockedUntil = null;
     await manager.save();
 
     return NextResponse.redirect(new URL('/manager-verified?success=true', req.url));

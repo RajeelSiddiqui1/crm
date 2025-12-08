@@ -1,14 +1,19 @@
 import { NextResponse } from "next/server";
 import dbConnect from "@/lib/db";
 import FormSubmission from "@/models/FormSubmission";
-import TeamLead from "@/models/TeamLead";
+import cloudinary from "@/lib/cloudinary";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import { sendMail } from "@/lib/mail";
 import { editedMailTemplate } from "@/helper/emails/manager/editedMailTemplate";
 import { deletedMailTemplate } from "@/helper/emails/manager/deletedMailTemplate";
-import cloudinary from "@/lib/cloudinary";
+import { statusUpdateMailTemplate } from "@/helper/emails/manager/statusUpdateMailTemplate";
 import { sendNotification } from "@/lib/sendNotification";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+
+
+
+
+
 
 function getPublicIdFromUrl(url) {
   try {
@@ -21,6 +26,8 @@ function getPublicIdFromUrl(url) {
     return null;
   }
 }
+
+
 
 export async function GET(req, { params }) {
   try {
@@ -37,28 +44,38 @@ export async function GET(req, { params }) {
 export async function PUT(req, { params }) {
   try {
     await dbConnect();
+    const session = await getServerSession(authOptions);
     const { id } = params;
+
     const contentType = req.headers.get("content-type") || "";
+
     let body = {};
     let newFileUrl = null;
-    const submission = await FormSubmission.findById(id).populate("formId");
-    if (!submission) return NextResponse.json({ error: "Submission not found" }, { status: 404 });
 
+    const submission = await FormSubmission.findById(id)
+      .populate("formId")
+      .populate("multipleTeamLeadAssigned")
+      .populate("assignedEmployees.employeeId");
 
+    if (!submission) {
+      return NextResponse.json({ error: "Submission not found" }, { status: 404 });
+    }
 
     if (contentType.includes("multipart/form-data")) {
       const formData = await req.formData();
       body.formData = JSON.parse(formData.get("formData") || "{}");
       body.managerComments = formData.get("managerComments") || "";
       const file = formData.get("file");
+
       if (file && file.name) {
         const arrayBuffer = await file.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
-        const oldUrl = submission.formData?.file;
-        if (oldUrl) {
-          const publicId = getPublicIdFromUrl(oldUrl);
+
+        if (submission.formData?.file) {
+          const publicId = getPublicIdFromUrl(submission.formData.file);
           if (publicId) await cloudinary.uploader.destroy(publicId);
         }
+
         const uploadResponse = await new Promise((resolve, reject) => {
           cloudinary.uploader
             .upload_stream({ folder: "form_uploads" }, (error, result) => {
@@ -67,6 +84,7 @@ export async function PUT(req, { params }) {
             })
             .end(buffer);
         });
+
         newFileUrl = uploadResponse.secure_url;
       }
     } else {
@@ -74,41 +92,71 @@ export async function PUT(req, { params }) {
     }
 
     const { formData, managerComments } = body;
-    if (formData) for (const [key, value] of Object.entries(formData)) submission.formData.set(key, value);
-    if (newFileUrl) submission.formData.file = newFileUrl;
-    if (managerComments !== undefined) submission.managerComments = managerComments;
-    submission.updatedAt = new Date();
-    await submission.save();
 
-    let teamLead;
-    if (submission.assignedTo?.match(/^[0-9a-fA-F]{24}$/)) teamLead = await TeamLead.findById(submission.assignedTo);
-    else {
-      const email = submission.assignedTo.replace(/^-/, "").trim();
-      teamLead = await TeamLead.findOne({ email });
-    }
-
-    const session = await getServerSession(authOptions);
-
-    if (teamLead?.email) {
-      const html = editedMailTemplate(teamLead.name || "Team Lead", submission.formId?.title || "Form", "Manager");
-      await sendMail(teamLead.email, "Form Edited", html);
-      await sendNotification({
-        senderId: session?.user?.id,
-        senderModel: "Manager",
-        senderName: session?.user?.name || "Manager",
-        receiverId: teamLead._id,
-        receiverModel: "TeamLead",
-        type: "submission_edited",
-        title: "Submission Edited",
-        message: `The form "${submission.formId?.title}" has been edited by Manager.`,
-        link: `${process.env.TASK_LINK}/teamlead/submissions/${submission._id}`,
-        referenceId: submission._id,
-        referenceModel: "FormSubmission",
+    if (formData) {
+      Object.entries(formData).forEach(([key, value]) => {
+        submission.formData.set(key, value);
       });
     }
 
+    if (newFileUrl) submission.formData.file = newFileUrl;
+    if (managerComments !== undefined) submission.managerComments = managerComments;
 
-    return NextResponse.json({ message: "Submission updated successfully", submission }, { status: 200 });
+    submission.updatedAt = new Date();
+    await submission.save();
+
+    const teamLeads = submission.multipleTeamLeadAssigned;
+    const employees = submission.assignedEmployees;
+
+    const mailTL = teamLeads.map((tl) =>
+      sendMail(
+        tl.email,
+        "Submission Updated",
+        editedMailTemplate(tl.name, submission.formId?.title, session.user.name)
+      )
+    );
+
+    const notiTL = teamLeads.map((tl) =>
+      sendNotification({
+        senderId: session.user.id,
+        senderModel: "Manager",
+        senderName: session.user.name,
+        receiverId: tl._id,
+        receiverModel: "TeamLead",
+        type: "submission_edited",
+        title: "Submission Updated",
+        message: `${submission.formId.title} edited`,
+        referenceId: submission._id,
+        referenceModel: "FormSubmission"
+      })
+    );
+
+    const mailEmp = employees.map((emp) =>
+      sendMail(
+        emp.email,
+        "Submission Updated",
+        editedMailTemplate(emp.employeeId.firstName, submission.formId.title, session.user.name)
+      )
+    );
+
+    const notiEmp = employees.map((emp) =>
+      sendNotification({
+        senderId: session.user.id,
+        senderModel: "Manager",
+        senderName: session.user.name,
+        receiverId: emp.employeeId._id,
+        receiverModel: "Employee",
+        type: "submission_edited",
+        title: "Submission Updated",
+        message: `${submission.formId.title} updated`,
+        referenceId: submission._id,
+        referenceModel: "FormSubmission"
+      })
+    );
+
+    await Promise.all([...mailTL, ...notiTL, ...mailEmp, ...notiEmp]);
+
+    return NextResponse.json({ message: "Updated", submission }, { status: 200 });
   } catch (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
@@ -117,48 +165,148 @@ export async function PUT(req, { params }) {
 export async function DELETE(req, { params }) {
   try {
     await dbConnect();
+    const session = await getServerSession(authOptions);
     const { id } = params;
-    const submission = await FormSubmission.findById(id).populate("formId");
-    if (!submission) return NextResponse.json({ error: "Submission not found" }, { status: 404 });
 
-    const fileUrl = submission.formData?.file;
-    if (fileUrl) {
-      const publicId = getPublicIdFromUrl(fileUrl);
+    const submission = await FormSubmission.findById(id)
+      .populate("formId")
+      .populate("multipleTeamLeadAssigned")
+      .populate("assignedEmployees.employeeId");
+
+    if (!submission) {
+      return NextResponse.json({ error: "Submission not found" }, { status: 404 });
+    }
+
+    if (submission.formData?.file) {
+      const publicId = getPublicIdFromUrl(submission.formData.file);
       if (publicId) await cloudinary.uploader.destroy(publicId);
     }
 
-    await FormSubmission.findByIdAndDelete(id);
+    await submission.deleteOne();
 
-    let teamLead;
-    if (submission.assignedTo?.match(/^[0-9a-fA-F]{24}$/)) teamLead = await TeamLead.findById(submission.assignedTo);
-    else {
-      const email = submission.assignedTo.replace(/^-/, "").trim();
-      teamLead = await TeamLead.findOne({ email });
-    }
+    const teamLeads = submission.multipleTeamLeadAssigned;
+    const employees = submission.assignedEmployees;
 
+    const mailTL = teamLeads.map((tl) =>
+      sendMail(
+        tl.email,
+        "Submission Deleted",
+        deletedMailTemplate(tl.name, submission.formId.title, session.user.name)
+      )
+    );
 
-        const session = await getServerSession(authOptions);
+    const mailEmp = employees.map((emp) =>
+      sendMail(
+        emp.email,
+        "Submission Deleted",
+        deletedMailTemplate(emp.employeeId.firstName, submission.formId.title, session.user.name)
+      )
+    );
 
-    if (teamLead?.email) {
-      const html = deletedMailTemplate(teamLead.name || "Team Lead", submission.formId?.title || "Form", "Manager");
-      await sendMail(teamLead.email, "Form Deleted", html);
-      await sendNotification({
-        senderId: session?.user?.id,
+    const notiTL = teamLeads.map((tl) =>
+      sendNotification({
+        senderId: session.user.id,
         senderModel: "Manager",
-        senderName: session?.user?.name || "Manager",
-        receiverId: teamLead._id,
+        senderName: session.user.name,
+        receiverId: tl._id,
         receiverModel: "TeamLead",
         type: "submission_deleted",
         title: "Submission Deleted",
-        message: `The form "${submission.formId?.title}" has been deleted by Manager.`,
-        link: `${process.env.TASK_LINK}/teamlead/submissions`,
-        referenceId: submission._id,
-        referenceModel: "FormSubmission",
-      });
+        message: `${submission.formId.title} deleted`,
+      })
+    );
 
-    }
-      return NextResponse.json({ message: "Submission deleted successfully" }, { status: 200 });
-    } catch (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
+    const notiEmp = employees.map((emp) =>
+      sendNotification({
+        senderId: session.user.id,
+        senderModel: "Manager",
+        senderName: session.user.name,
+        receiverId: emp.employeeId._id,
+        receiverModel: "Employee",
+        type: "submission_deleted",
+        title: "Submission Deleted",
+        message: `${submission.formId.title} deleted`,
+      })
+    );
+
+    await Promise.all([...mailTL, ...mailEmp, ...notiTL, ...notiEmp]);
+
+    return NextResponse.json({ message: "Deleted" }, { status: 200 });
+  } catch (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
+}
+
+export async function PATCH(req, { params }) {
+  try {
+    await dbConnect();
+    const session = await getServerSession(authOptions);
+
+    const { id } = params;
+    const { status } = await req.json();
+
+    const submission = await FormSubmission.findById(id)
+      .populate("formId")
+      .populate("multipleTeamLeadAssigned")
+      .populate("assignedEmployees.employeeId");
+
+    if (!submission) {
+      return NextResponse.json({ error: "Submission not found" }, { status: 404 });
+    }
+
+    const oldStatus = submission.status;
+    submission.status = status;
+    await submission.save();
+
+    const teamLeads = submission.multipleTeamLeadAssigned;
+    const employees = submission.assignedEmployees;
+
+    const mailTL = teamLeads.map((tl) =>
+      sendMail(
+        tl.email,
+        "Status Updated",
+        statusUpdateMailTemplate(tl.name, submission.formId.title, oldStatus, status)
+      )
+    );
+
+    const notiTL = teamLeads.map((tl) =>
+      sendNotification({
+        senderId: session.user.id,
+        senderModel: "Manager",
+        senderName: session.user.name,
+        receiverId: tl._id,
+        receiverModel: "TeamLead",
+        type: "status_updated",
+        title: "Status Updated",
+        message: `${submission.formId.title} status changed`,
+      })
+    );
+
+    const mailEmp = employees.map((emp) =>
+      sendMail(
+        emp.email,
+        "Status Updated",
+        statusUpdateMailTemplate(emp.employeeId.firstName, submission.formId.title, oldStatus, status)
+      )
+    );
+
+    const notiEmp = employees.map((emp) =>
+      sendNotification({
+        senderId: session.user.id,
+        senderModel: "Manager",
+        senderName: session.user.name,
+        receiverId: emp.employeeId._id,
+        receiverModel: "Employee",
+        type: "status_updated",
+        title: "Status Updated",
+        message: `${submission.formId.title} status updated`,
+      })
+    );
+
+    await Promise.all([...mailTL, ...notiTL, ...mailEmp, ...notiEmp]);
+
+    return NextResponse.json({ message: "Status Updated", submission }, { status: 200 });
+  } catch (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
