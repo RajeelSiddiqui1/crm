@@ -131,17 +131,7 @@ export default function ManagerLoginPage() {
             </div>
 
             {/* Back to main login */}
-            <div className="text-center pt-4 border-t">
-              <p className="text-sm text-gray-600">
-                Not a Manager?{" "}
-                <Link 
-                  href="/login" 
-                  className="text-blue-600 hover:text-blue-700 font-medium"
-                >
-                  Go to Main Login
-                </Link>
-              </p>
-            </div>
+            
           </form>
         </div>
       </div>
