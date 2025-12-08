@@ -117,7 +117,17 @@ export default function AdminLoginPage() {
               </span>
             </button>
 
-         
+         <div className="text-center pt-4 border-t">
+                       <p className="text-sm text-gray-600">
+                         forget password?{" "}
+                         <Link 
+                           href="/forgot-password" 
+                           className="text-blue-600 hover:text-blue-700 font-medium"
+                         >
+                          click here
+                         </Link>
+                       </p>
+                     </div>
           </form>
         </div>
       </div>
