@@ -11,45 +11,43 @@ function LayoutContent({ children }) {
 
   if (status === "loading") {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-screen flex-col">
+        {/* Loader favicon */}
         <img
-          src="/office/mhsolution.png"
+          src="/office/mhsolution.png"     // <-- favicon as loader icon
           alt="Loading..."
-          className="w-24 h-24 animate-spin-slow mb-4"
+          className="w-20 h-20 animate-spin-slow mb-4"
         />
-        <p className="text-gray-900 text-lg font-medium">
-          Loading...
-        </p>
+        <p className="text-gray-900 text-lg font-medium">Loading...</p>
       </div>
     );
   }
 
-  // ✅ Agar session hai → Sidebar + Header show
   if (session) {
     return (
       <div className="flex min-h-screen">
-        {/* Sidebar */}
         <Sidebar />
 
         <div className="flex-1 flex flex-col">
-          {/* Header */}
           <Header />
-
-          {/* Main content */}
           <main className="p-6 flex-1 overflow-y-auto">{children}</main>
         </div>
       </div>
     );
   }
 
-  // ❌ Agar session nahi hai → sirf children show (login/register pages)
   return <main className="min-h-screen">{children}</main>;
 }
 
 export default function RootLayout({ children }) {
   return (
-    <html>
-      <body className="font-sans ">
+    <html lang="en">
+      {/* ⬇️ Here you set favicon manually (works inside use client) */}
+      <head>
+        <link rel="icon" href="/favicon.ico" className="bg-white" sizes="any" />
+      </head>
+
+      <body className="font-sans">
         <ThemeProvider>
           <AuthProvider>
             <LayoutContent>{children}</LayoutContent>
