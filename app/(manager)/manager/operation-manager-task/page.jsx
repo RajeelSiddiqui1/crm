@@ -72,7 +72,7 @@ export default function OperationManagerTaskPage() {
     if (status === "loading") return;
 
     if (!session || session.user.role !== "Manager") {
-      router.push("/login");
+      router.push("/managerlogin");
       return;
     }
 

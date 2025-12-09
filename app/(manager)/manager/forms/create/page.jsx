@@ -34,17 +34,22 @@ import {
     Download,
     Volume2,
     ArrowLeft,
-    Plus,
     Clock,
+    CalendarClock,
+    CalendarDays,
     Building,
     User,
     Loader2,
     ChevronRight,
     Check,
     Search,
-    Filter,
     Zap,
-    AlertCircle
+    AlertCircle,
+    Type,
+    TextQuote,
+    List,
+    MapPin,
+    CreditCard
 } from "lucide-react";
 import axios from "axios";
 
@@ -74,10 +79,36 @@ export default function ManagerCreateFormPage() {
     const [dynamicFormData, setDynamicFormData] = useState({});
     const [audioPlaying, setAudioPlaying] = useState(null);
 
+    // Field icons mapping
+    const getFieldIcon = (fieldType) => {
+        const fieldIcons = {
+            text: Type,
+            email: Mail,
+            number: Hash,
+            tel: Phone,
+            url: Link,
+            password: Lock,
+            date: CalendarDays,
+            time: Clock,
+            datetime: CalendarClock,
+            select: List,
+            textarea: TextQuote,
+            checkbox: CheckSquare,
+            radio: Radio,
+            range: SlidersHorizontal,
+            file: Upload,
+            rating: Star,
+            toggle: ToggleLeft,
+            address: MapPin,
+            creditCard: CreditCard
+        };
+        return fieldIcons[fieldType] || Type;
+    };
+
     useEffect(() => {
         if (status === "loading") return;
         if (!session || session.user.role !== "Manager") {
-            router.push("/manager/login");
+            router.push("/managerlogin");
             return;
         }
         fetchForms();
@@ -136,6 +167,15 @@ export default function ManagerCreateFormPage() {
                     break;
                 case 'file':
                     initialData[field.name] = null;
+                    break;
+                case 'date':
+                    initialData[field.name] = field.defaultDate || '';
+                    break;
+                case 'time':
+                    initialData[field.name] = field.defaultTime || '';
+                    break;
+                case 'datetime':
+                    initialData[field.name] = field.defaultDateTime || '';
                     break;
                 default:
                     initialData[field.name] = "";
@@ -324,38 +364,95 @@ export default function ManagerCreateFormPage() {
     const renderFormField = (field) => {
         const fieldValue = dynamicFormData[field.name] || "";
         const isDragOver = dragOver[field.name] || false;
+        const IconComponent = getFieldIcon(field.type);
 
         switch (field.type) {
             case "text":
+                return (
+                    <div className="relative group">
+                        <IconComponent className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-blue-500 transition-colors" />
+                        <Input
+                            type="text"
+                            value={fieldValue}
+                            onChange={(e) => handleDynamicFieldChange(field.name, e.target.value)}
+                            placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}`}
+                            className="pl-10 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white border-gray-300"
+                            required={field.required}
+                        />
+                    </div>
+                );
             case "email":
+                return (
+                    <div className="relative group">
+                        <IconComponent className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-green-500 transition-colors" />
+                        <Input
+                            type="email"
+                            value={fieldValue}
+                            onChange={(e) => handleDynamicFieldChange(field.name, e.target.value)}
+                            placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}`}
+                            className="pl-10 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white border-gray-300"
+                            required={field.required}
+                        />
+                    </div>
+                );
             case "number":
+                return (
+                    <div className="relative group">
+                        <IconComponent className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-purple-500 transition-colors" />
+                        <Input
+                            type="number"
+                            value={fieldValue}
+                            onChange={(e) => handleDynamicFieldChange(field.name, e.target.value)}
+                            placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}`}
+                            className="pl-10 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white border-gray-300"
+                            required={field.required}
+                        />
+                    </div>
+                );
             case "tel":
+                return (
+                    <div className="relative group">
+                        <IconComponent className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-teal-500 transition-colors" />
+                        <Input
+                            type="tel"
+                            value={fieldValue}
+                            onChange={(e) => handleDynamicFieldChange(field.name, e.target.value)}
+                            placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}`}
+                            className="pl-10 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white border-gray-300"
+                            required={field.required}
+                        />
+                    </div>
+                );
             case "url":
                 return (
-                    <Input
-                        type={field.type}
-                        value={fieldValue}
-                        onChange={(e) => handleDynamicFieldChange(field.name, e.target.value)}
-                        placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}`}
-                        className="focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white border-gray-300"
-                        required={field.required}
-                    />
+                    <div className="relative group">
+                        <IconComponent className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-blue-500 transition-colors" />
+                        <Input
+                            type="url"
+                            value={fieldValue}
+                            onChange={(e) => handleDynamicFieldChange(field.name, e.target.value)}
+                            placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}`}
+                            className="pl-10 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white border-gray-300"
+                            required={field.required}
+                        />
+                    </div>
                 );
             case "password":
                 return (
-                    <div className="relative">
+                    <div className="relative group">
+                        <IconComponent className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-red-500 transition-colors" />
                         <Input
                             type={showPasswords[field.name] ? "text" : "password"}
                             value={fieldValue}
                             onChange={(e) => handleDynamicFieldChange(field.name, e.target.value)}
                             placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}`}
-                            className="pr-10 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white border-gray-300"
+                            className="pl-10 pr-10 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white border-gray-300"
                             required={field.required}
                         />
                         <button
                             type="button"
                             onClick={() => togglePasswordVisibility(field.name)}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-900"
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-900 transition-colors"
                         >
                             {showPasswords[field.name] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                         </button>
@@ -363,38 +460,83 @@ export default function ManagerCreateFormPage() {
                 );
             case "textarea":
                 return (
-                    <Textarea
-                        value={fieldValue}
-                        onChange={(e) => handleDynamicFieldChange(field.name, e.target.value)}
-                        placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}`}
-                        className="focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white border-gray-300"
-                        required={field.required}
-                        rows={4}
-                    />
+                    <div className="relative group">
+                        <IconComponent className="absolute left-3 top-3 w-4 h-4 text-gray-500 group-focus-within:text-indigo-500 transition-colors" />
+                        <Textarea
+                            value={fieldValue}
+                            onChange={(e) => handleDynamicFieldChange(field.name, e.target.value)}
+                            placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}`}
+                            className="pl-10 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white border-gray-300"
+                            required={field.required}
+                            rows={4}
+                        />
+                    </div>
                 );
             case "select":
                 return (
-                    <select
-                        value={fieldValue}
-                        onChange={(e) => handleDynamicFieldChange(field.name, e.target.value)}
-                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900"
-                        required={field.required}
-                    >
-                        <option value="" className="text-gray-500">Select {field.label.toLowerCase()}</option>
-                        {field.options?.map((option, index) => (
-                            <option key={index} value={option} className="text-gray-900">{option}</option>
-                        ))}
-                    </select>
+                    <div className="relative group">
+                        <IconComponent className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-pink-500 transition-colors" />
+                        <select
+                            value={fieldValue}
+                            onChange={(e) => handleDynamicFieldChange(field.name, e.target.value)}
+                            className="w-full p-3 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900 appearance-none"
+                            required={field.required}
+                        >
+                            <option value="" className="text-gray-500">Select {field.label.toLowerCase()}</option>
+                            {field.options?.map((option, index) => (
+                                <option key={index} value={option} className="text-gray-900">{option}</option>
+                            ))}
+                        </select>
+                        <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                            <ChevronRight className="w-4 h-4 text-gray-400 rotate-90" />
+                        </div>
+                    </div>
                 );
             case "date":
                 return (
-                    <Input
-                        type="date"
-                        value={fieldValue}
-                        onChange={(e) => handleDynamicFieldChange(field.name, e.target.value)}
-                        className="focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white border-gray-300"
-                        required={field.required}
-                    />
+                    <div className="relative group">
+                        <IconComponent className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-orange-500 transition-colors" />
+                        <Input
+                            type="date"
+                            value={fieldValue}
+                            onChange={(e) => handleDynamicFieldChange(field.name, e.target.value)}
+                            className="pl-10 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white border-gray-300"
+                            required={field.required}
+                            min={field.minDate}
+                            max={field.maxDate}
+                        />
+                    </div>
+                );
+            case "time":
+                return (
+                    <div className="relative group">
+                        <IconComponent className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-amber-500 transition-colors" />
+                        <Input
+                            type="time"
+                            value={fieldValue}
+                            onChange={(e) => handleDynamicFieldChange(field.name, e.target.value)}
+                            className="pl-10 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white border-gray-300"
+                            required={field.required}
+                            step={field.step || 900}
+                            min={field.minTime}
+                            max={field.maxTime}
+                        />
+                    </div>
+                );
+            case "datetime":
+                return (
+                    <div className="relative group">
+                        <IconComponent className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-violet-500 transition-colors" />
+                        <Input
+                            type="datetime-local"
+                            value={fieldValue}
+                            onChange={(e) => handleDynamicFieldChange(field.name, e.target.value)}
+                            className="pl-10 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white border-gray-300"
+                            required={field.required}
+                            min={field.minDateTime}
+                            max={field.maxDateTime}
+                        />
+                    </div>
                 );
             case "checkbox":
                 return (
@@ -404,12 +546,15 @@ export default function ManagerCreateFormPage() {
                                 type="checkbox"
                                 checked={fieldValue}
                                 onChange={(e) => handleDynamicFieldChange(field.name, e.target.checked)}
-                                className="peer h-5 w-5 cursor-pointer appearance-none rounded border-2 border-gray-300 bg-white checked:border-blue-500 checked:bg-blue-500 focus:ring-2 focus:ring-blue-500"
+                                className="peer h-5 w-5 cursor-pointer appearance-none rounded border-2 border-gray-300 bg-white checked:border-green-500 checked:bg-green-500 focus:ring-2 focus:ring-green-500"
                                 required={field.required}
                             />
                             <Check className="absolute left-1/2 top-1/2 h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 text-white opacity-0 peer-checked:opacity-100 pointer-events-none" />
                         </div>
-                        <Label className="font-medium text-gray-900 cursor-pointer">{field.label}</Label>
+                        <Label className="font-medium text-gray-900 cursor-pointer flex items-center gap-2">
+                            <IconComponent className="w-4 h-4 text-green-500" />
+                            {field.label}
+                        </Label>
                     </div>
                 );
             case "radio":
@@ -424,7 +569,7 @@ export default function ManagerCreateFormPage() {
                                         value={option}
                                         checked={fieldValue === option}
                                         onChange={(e) => handleDynamicFieldChange(field.name, e.target.value)}
-                                        className="peer h-5 w-5 cursor-pointer appearance-none rounded-full border-2 border-gray-300 bg-white checked:border-blue-500 checked:bg-blue-500 focus:ring-2 focus:ring-blue-500"
+                                        className="peer h-5 w-5 cursor-pointer appearance-none rounded-full border-2 border-gray-300 bg-white checked:border-purple-500 checked:bg-purple-500 focus:ring-2 focus:ring-purple-500"
                                         required={field.required}
                                     />
                                     <div className="absolute left-1/2 top-1/2 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white opacity-0 peer-checked:opacity-100 pointer-events-none" />
@@ -437,19 +582,22 @@ export default function ManagerCreateFormPage() {
             case "range":
                 return (
                     <div className="space-y-2">
-                        <input
-                            type="range"
-                            min={field.min || 0}
-                            max={field.max || 100}
-                            step={field.step || 1}
-                            value={fieldValue}
-                            onChange={(e) => handleDynamicFieldChange(field.name, parseInt(e.target.value))}
-                            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-500"
-                            required={field.required}
-                        />
-                        <div className="flex justify-between text-sm text-gray-700">
+                        <div className="relative group">
+                            <IconComponent className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-orange-500 transition-colors" />
+                            <input
+                                type="range"
+                                min={field.min || 0}
+                                max={field.max || 100}
+                                step={field.step || 1}
+                                value={fieldValue}
+                                onChange={(e) => handleDynamicFieldChange(field.name, parseInt(e.target.value))}
+                                className="w-full pl-10 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-orange-500"
+                                required={field.required}
+                            />
+                        </div>
+                        <div className="flex justify-between text-sm text-gray-700 px-2">
                             <span className="font-medium">{field.min || 0}</span>
-                            <span className="font-bold text-gray-900">{fieldValue}</span>
+                            <span className="font-bold text-gray-900 bg-gray-100 px-2 py-0.5 rounded">{fieldValue}</span>
                             <span className="font-medium">{field.max || 100}</span>
                         </div>
                     </div>
@@ -473,10 +621,10 @@ export default function ManagerCreateFormPage() {
                             onDragOver={(e) => handleDragOver(e, field.name)}
                             onDragLeave={(e) => handleDragLeave(e, field.name)}
                             onDrop={(e) => handleDrop(e, field.name)}
-                            className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-all duration-200 ${isDragOver ? 'border-blue-500 bg-blue-50 scale-105' : 'border-gray-300 hover:border-blue-400 hover:bg-blue-50'}`}
+                            className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-all duration-200 group ${isDragOver ? 'border-blue-500 bg-blue-50 scale-105' : 'border-gray-300 hover:border-blue-400 hover:bg-blue-50'}`}
                         >
-                            <Upload className={`w-8 h-8 mx-auto mb-2 ${isDragOver ? 'text-blue-500' : 'text-gray-600'}`} />
-                            <p className={`text-sm font-semibold ${isDragOver ? 'text-blue-700' : 'text-gray-800'}`}>
+                            <IconComponent className={`w-8 h-8 mx-auto mb-2 ${isDragOver ? 'text-blue-500' : 'text-gray-600 group-hover:text-blue-500 transition-colors'}`} />
+                            <p className={`text-sm font-semibold ${isDragOver ? 'text-blue-700' : 'text-gray-800 group-hover:text-blue-700 transition-colors'}`}>
                                 {isDragOver ? 'Drop files here' : 'Click to upload or drag and drop'}
                             </p>
                             <p className="text-xs text-gray-600 mt-1">
@@ -485,10 +633,11 @@ export default function ManagerCreateFormPage() {
                         </div>
                         {fileCount > 0 && (
                             <div className="space-y-2">
-                                <p className="text-sm text-gray-800 font-semibold">
+                                <p className="text-sm text-gray-800 font-semibold flex items-center gap-2">
+                                    <IconComponent className="w-4 h-4" />
                                     Selected {fileCount} file{fileCount !== 1 ? 's' : ''}:
                                 </p>
-                                <div className="space-y-1 max-h-32 overflow-y-auto">
+                                <div className="space-y-1 max-h-32 overflow-y-auto pr-1">
                                     {Array.from(files).map((file, index) => (
                                         <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded border border-gray-200">
                                             <div className="flex items-center space-x-2">
@@ -506,9 +655,9 @@ export default function ManagerCreateFormPage() {
                                     variant="outline" 
                                     size="sm" 
                                     onClick={() => handleFileInputClick(field.name)} 
-                                    className="text-xs border-blue-500 text-blue-700 hover:bg-blue-50"
+                                    className="text-xs border-blue-500 text-blue-700 hover:bg-blue-50 transition-colors"
                                 >
-                                    <Upload className="w-3 h-3 mr-1" />
+                                    <IconComponent className="w-3 h-3 mr-1" />
                                     Change Files
                                 </Button>
                             </div>
@@ -517,7 +666,8 @@ export default function ManagerCreateFormPage() {
                 );
             case "rating":
                 return (
-                    <div className="flex space-x-1">
+                    <div className="flex space-x-1 items-center">
+                        <IconComponent className="w-5 h-5 text-gray-400 mr-3" />
                         {Array.from({ length: field.maxRating || 5 }, (_, i) => (
                             <button
                                 key={i}
@@ -530,11 +680,15 @@ export default function ManagerCreateFormPage() {
                                 />
                             </button>
                         ))}
+                        <span className="ml-3 text-sm font-medium text-gray-700 bg-gray-100 px-2 py-1 rounded">
+                            {fieldValue}/5
+                        </span>
                     </div>
                 );
             case "toggle":
                 return (
                     <div className="flex items-center space-x-3">
+                        <IconComponent className="w-4 h-4 text-gray-400" />
                         <button
                             type="button"
                             onClick={() => handleDynamicFieldChange(field.name, !fieldValue)}
@@ -542,19 +696,122 @@ export default function ManagerCreateFormPage() {
                         >
                             <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow transition duration-200 ease-in-out ${fieldValue ? 'translate-x-5' : 'translate-x-0'}`} />
                         </button>
-                        <Label className="font-medium text-gray-900">{fieldValue ? 'Enabled' : 'Disabled'}</Label>
+                        <Label className="font-medium text-gray-900">
+                            {fieldValue ? (
+                                <span className="text-green-600 font-semibold">Enabled</span>
+                            ) : (
+                                <span className="text-gray-600">Disabled</span>
+                            )}
+                        </Label>
+                    </div>
+                );
+            case "address":
+                return (
+                    <div className="space-y-3">
+                        <div className="relative group">
+                            <IconComponent className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-red-500 transition-colors" />
+                            <Input
+                                type="text"
+                                value={fieldValue?.street || ""}
+                                onChange={(e) => handleDynamicFieldChange(field.name, {...fieldValue, street: e.target.value})}
+                                placeholder="Street address"
+                                className="pl-10 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white border-gray-300"
+                                required={field.required}
+                            />
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                            <Input
+                                type="text"
+                                value={fieldValue?.city || ""}
+                                onChange={(e) => handleDynamicFieldChange(field.name, {...fieldValue, city: e.target.value})}
+                                placeholder="City"
+                                className="focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white border-gray-300"
+                                required={field.required}
+                            />
+                            <Input
+                                type="text"
+                                value={fieldValue?.state || ""}
+                                onChange={(e) => handleDynamicFieldChange(field.name, {...fieldValue, state: e.target.value})}
+                                placeholder="State"
+                                className="focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white border-gray-300"
+                                required={field.required}
+                            />
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                            <Input
+                                type="text"
+                                value={fieldValue?.zip || ""}
+                                onChange={(e) => handleDynamicFieldChange(field.name, {...fieldValue, zip: e.target.value})}
+                                placeholder="ZIP code"
+                                className="focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white border-gray-300"
+                                required={field.required}
+                            />
+                            <Input
+                                type="text"
+                                value={fieldValue?.country || ""}
+                                onChange={(e) => handleDynamicFieldChange(field.name, {...fieldValue, country: e.target.value})}
+                                placeholder="Country"
+                                className="focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white border-gray-300"
+                                required={field.required}
+                            />
+                        </div>
+                    </div>
+                );
+            case "creditCard":
+                return (
+                    <div className="space-y-3">
+                        <div className="relative group">
+                            <IconComponent className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-indigo-500 transition-colors" />
+                            <Input
+                                type="text"
+                                value={fieldValue?.cardNumber || ""}
+                                onChange={(e) => handleDynamicFieldChange(field.name, {...fieldValue, cardNumber: e.target.value})}
+                                placeholder="Card number"
+                                className="pl-10 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white border-gray-300"
+                                required={field.required}
+                            />
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                            <Input
+                                type="text"
+                                value={fieldValue?.expiry || ""}
+                                onChange={(e) => handleDynamicFieldChange(field.name, {...fieldValue, expiry: e.target.value})}
+                                placeholder="MM/YY"
+                                className="focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white border-gray-300"
+                                required={field.required}
+                            />
+                            <Input
+                                type="text"
+                                value={fieldValue?.cvv || ""}
+                                onChange={(e) => handleDynamicFieldChange(field.name, {...fieldValue, cvv: e.target.value})}
+                                placeholder="CVC"
+                                className="focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white border-gray-300"
+                                required={field.required}
+                            />
+                        </div>
+                        <Input
+                            type="text"
+                            value={fieldValue?.nameOnCard || ""}
+                            onChange={(e) => handleDynamicFieldChange(field.name, {...fieldValue, nameOnCard: e.target.value})}
+                            placeholder="Cardholder name"
+                            className="focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white border-gray-300"
+                            required={field.required}
+                        />
                     </div>
                 );
             default:
                 return (
-                    <Input
-                        type="text"
-                        value={fieldValue}
-                        onChange={(e) => handleDynamicFieldChange(field.name, e.target.value)}
-                        placeholder={`Enter ${field.label.toLowerCase()}`}
-                        className="focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white border-gray-300"
-                        required={field.required}
-                    />
+                    <div className="relative group">
+                        <Type className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-blue-500 transition-colors" />
+                        <Input
+                            type="text"
+                            value={fieldValue}
+                            onChange={(e) => handleDynamicFieldChange(field.name, e.target.value)}
+                            placeholder={`Enter ${field.label.toLowerCase()}`}
+                            className="pl-10 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white border-gray-300"
+                            required={field.required}
+                        />
+                    </div>
                 );
         }
     };
@@ -571,12 +828,12 @@ export default function ManagerCreateFormPage() {
 
         return (
             <div
-                className={`p-4 border-2 rounded-xl cursor-pointer transition-all duration-200 flex items-center justify-between ${isSelected ? 'border-blue-500 bg-blue-50 shadow-sm' : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50/50'}`}
+                className={`p-4 border-2 rounded-xl cursor-pointer transition-all duration-200 flex items-center justify-between group ${isSelected ? 'border-blue-500 bg-blue-50 shadow-sm' : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50/50'}`}
                 onClick={handleClick}
             >
                 <div className="flex items-center gap-3 flex-1">
-                    <Avatar className="h-10 w-10 border-2 border-white shadow-sm">
-                        <AvatarFallback className={`font-medium ${isSelected ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-700'}`}>
+                    <Avatar className="h-10 w-10 border-2 border-white shadow-sm group-hover:scale-105 transition-transform">
+                        <AvatarFallback className={`font-medium ${isSelected ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white' : 'bg-gradient-to-br from-gray-100 to-gray-200 text-gray-700'}`}>
                             {tl.name?.charAt(0)?.toUpperCase() || tl.email?.charAt(0)?.toUpperCase() || 'U'}
                         </AvatarFallback>
                     </Avatar>
@@ -587,10 +844,16 @@ export default function ManagerCreateFormPage() {
                         <div className="text-sm text-gray-700 truncate">
                             {tl.email}
                         </div>
+                        {tl.departmentName && (
+                            <div className="text-xs text-gray-600 flex items-center gap-1 mt-1">
+                                <Building className="w-3 h-3" />
+                                {tl.departmentName}
+                            </div>
+                        )}
                     </div>
                 </div>
                 <div 
-                    className={`ml-3 h-6 w-6 rounded border-2 flex items-center justify-center transition-colors ${isSelected ? 'bg-blue-500 border-blue-500' : 'border-gray-300'}`}
+                    className={`ml-3 h-6 w-6 rounded border-2 flex items-center justify-center transition-colors ${isSelected ? 'bg-gradient-to-br from-blue-500 to-blue-600 border-blue-500' : 'border-gray-300 group-hover:border-blue-300'}`}
                     onClick={handleClick}
                 >
                     {isSelected && (
@@ -635,7 +898,7 @@ export default function ManagerCreateFormPage() {
                         <Button
                             variant="ghost"
                             onClick={() => router.push('/manager/admin-tasks')}
-                            className="flex items-center gap-2 text-gray-700 hover:text-gray-900 hover:bg-gray-100"
+                            className="flex items-center gap-2 text-gray-700 hover:text-gray-900 hover:bg-gray-100 transition-colors rounded-lg"
                         >
                             <ArrowLeft className="h-4 w-4" />
                             <span className="font-medium">Back to Tasks</span>
@@ -646,16 +909,16 @@ export default function ManagerCreateFormPage() {
                     
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                         <div>
-                            <h1 className="text-3xl sm:text-4xl font-bold text-gray-900">
+                            <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 bg-gradient-to-r from-blue-600 to-indigo-700 bg-clip-text text-transparent">
                                 Create Form Submission
                             </h1>
-                            <p className="text-gray-700 mt-2 max-w-2xl">
+                            <p className="text-gray-700 mt-2 max-w-2xl text-lg">
                                 Fill out a form based on the admin task and assign it to your team leads
                             </p>
                         </div>
                         
                         {selectedForm && (
-                            <Badge className="px-4 py-2 bg-blue-100 text-blue-800 border border-blue-200 hover:bg-blue-200 font-medium">
+                            <Badge className="px-4 py-2 bg-gradient-to-r from-blue-100 to-indigo-100 text-blue-800 border border-blue-200 hover:bg-gradient-to-r hover:from-blue-200 hover:to-indigo-200 transition-colors font-medium rounded-lg shadow-sm">
                                 <FileText className="h-3.5 w-3.5 mr-1.5" />
                                 {selectedForm.title}
                             </Badge>
@@ -666,25 +929,25 @@ export default function ManagerCreateFormPage() {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     {/* Left Column - Task Details */}
                     <div className="space-y-6">
-                        <Card className="border border-gray-200 shadow-lg rounded-2xl overflow-hidden bg-white">
-                            <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-200">
+                        <Card className="border border-gray-200 shadow-xl rounded-2xl overflow-hidden bg-gradient-to-br from-white to-blue-50/30 backdrop-blur-sm">
+                            <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white">
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-3">
-                                        <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-sm">
-                                            <FileText className="h-5 w-5 text-white" />
+                                        <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-white/20 to-white/10 backdrop-blur-sm flex items-center justify-center shadow-lg">
+                                            <FileText className="h-6 w-6 text-white" />
                                         </div>
                                         <div>
-                                            <CardTitle className="text-gray-900">Task Details</CardTitle>
-                                            <CardDescription className="text-gray-700">
+                                            <CardTitle className="text-white">Task Details</CardTitle>
+                                            <CardDescription className="text-blue-100">
                                                 Reference information for this submission
                                             </CardDescription>
                                         </div>
                                     </div>
                                     {adminTask && (
-                                        <Badge className={`${getPriorityColor(adminTask.priority)} px-3 py-1`}>
+                                        <Badge className={`${getPriorityColor(adminTask.priority)} px-3 py-1.5 backdrop-blur-sm`}>
                                             <div className="flex items-center gap-1.5">
                                                 {getPriorityIcon(adminTask.priority)}
-                                                <span>Task #{taskId?.slice(-6)}</span>
+                                                <span className="font-semibold">Task #{taskId?.slice(-6)}</span>
                                             </div>
                                         </Badge>
                                     )}
@@ -694,13 +957,13 @@ export default function ManagerCreateFormPage() {
                                 {adminTask ? (
                                     <div className="space-y-6">
                                         {/* Task Overview */}
-                                        <div className="p-4 bg-gradient-to-r from-gray-50 to-blue-50/50 rounded-xl border border-gray-200">
+                                        <div className="p-5 bg-gradient-to-r from-white to-blue-50 rounded-xl border border-blue-100 shadow-sm">
                                             <div className="flex items-start justify-between">
                                                 <div className="flex-1">
-                                                    <h3 className="font-bold text-gray-900 text-lg mb-2">
+                                                    <h3 className="font-bold text-gray-900 text-xl mb-3">
                                                         {adminTask.title}
                                                     </h3>
-                                                    <p className="text-gray-800 text-sm leading-relaxed">
+                                                    <p className="text-gray-800 text-sm leading-relaxed bg-blue-50/50 p-3 rounded-lg">
                                                         {adminTask.description}
                                                     </p>
                                                 </div>
@@ -709,42 +972,42 @@ export default function ManagerCreateFormPage() {
 
                                         {/* Details Grid */}
                                         <div className="grid grid-cols-2 gap-4">
-                                            <div className="space-y-2">
+                                            <div className="space-y-2 p-3 bg-white rounded-lg border border-gray-200">
                                                 <div className="flex items-center gap-2 text-sm text-gray-700">
                                                     <Building className="h-4 w-4" />
                                                     <span className="font-medium">Client</span>
                                                 </div>
-                                                <p className="font-semibold text-gray-900">
+                                                <p className="font-semibold text-gray-900 text-lg">
                                                     {adminTask.clientName || "Not specified"}
                                                 </p>
                                             </div>
                                             
-                                            <div className="space-y-2">
+                                            <div className="space-y-2 p-3 bg-white rounded-lg border border-gray-200">
                                                 <div className="flex items-center gap-2 text-sm text-gray-700">
                                                     <Calendar className="h-4 w-4" />
                                                     <span className="font-medium">Due Date</span>
                                                 </div>
-                                                <p className="font-semibold text-gray-900">
+                                                <p className="font-semibold text-gray-900 text-lg">
                                                     {formatDate(adminTask.endDate)}
                                                 </p>
                                             </div>
                                             
-                                            <div className="space-y-2">
+                                            <div className="space-y-2 p-3 bg-white rounded-lg border border-gray-200">
                                                 <div className="flex items-center gap-2 text-sm text-gray-700">
                                                     <User className="h-4 w-4" />
                                                     <span className="font-medium">Status</span>
                                                 </div>
-                                                <Badge className="bg-blue-100 text-blue-800 border-blue-200 font-medium">
+                                                <Badge className="bg-gradient-to-r from-blue-500 to-blue-600 text-white border-0 font-medium">
                                                     {adminTask.status || 'Assigned'}
                                                 </Badge>
                                             </div>
                                             
-                                            <div className="space-y-2">
+                                            <div className="space-y-2 p-3 bg-white rounded-lg border border-gray-200">
                                                 <div className="flex items-center gap-2 text-sm text-gray-700">
                                                     <Clock className="h-4 w-4" />
                                                     <span className="font-medium">Created</span>
                                                 </div>
-                                                <p className="font-semibold text-gray-900">
+                                                <p className="font-semibold text-gray-900 text-lg">
                                                     {formatDate(adminTask.createdAt)}
                                                 </p>
                                             </div>
@@ -753,35 +1016,35 @@ export default function ManagerCreateFormPage() {
                                         {/* Media Attachments */}
                                         {(adminTask.audioUrl || adminTask.fileAttachments) && (
                                             <div className="space-y-4">
-                                                <h4 className="font-semibold text-gray-900 text-sm">Attachments</h4>
+                                                <h4 className="font-semibold text-gray-900 text-lg">Attachments</h4>
                                                 
                                                 {adminTask.audioUrl && (
-                                                    <div className="p-3 bg-white rounded-lg border border-gray-200">
+                                                    <div className="p-4 bg-white rounded-xl border border-gray-200 shadow-sm">
                                                         <div className="flex items-center justify-between">
                                                             <div className="flex items-center gap-3">
-                                                                <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-                                                                    <Volume2 className="h-5 w-5 text-white" />
+                                                                <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-md">
+                                                                    <Volume2 className="h-6 w-6 text-white" />
                                                                 </div>
                                                                 <div>
-                                                                    <p className="font-medium text-gray-900 text-sm">Voice Instructions</p>
-                                                                    <p className="text-xs text-gray-700">Audio recording</p>
+                                                                    <p className="font-semibold text-gray-900">Voice Instructions</p>
+                                                                    <p className="text-sm text-gray-700">Audio recording</p>
                                                                 </div>
                                                             </div>
                                                             <Button
                                                                 onClick={() => playAudio(adminTask.audioUrl)}
-                                                                variant="outline"
+                                                                variant={audioPlaying ? "secondary" : "outline"}
                                                                 size="sm"
-                                                                className={`gap-2 font-medium ${audioPlaying ? 'bg-purple-50 text-purple-800 border-purple-300' : 'border-gray-300 text-gray-700'}`}
+                                                                className={`gap-2 font-semibold ${audioPlaying ? 'bg-purple-100 text-purple-800 border-purple-300 hover:bg-purple-200' : 'border-purple-300 text-purple-700 hover:bg-purple-50'}`}
                                                             >
                                                                 {audioPlaying ? (
                                                                     <>
-                                                                        <Pause className="h-3.5 w-3.5" />
+                                                                        <Pause className="h-4 w-4" />
                                                                         Pause
                                                                     </>
                                                                 ) : (
                                                                     <>
-                                                                        <Play className="h-3.5 w-3.5" />
-                                                                        Play
+                                                                        <Play className="h-4 w-4" />
+                                                                        Play Audio
                                                                     </>
                                                                 )}
                                                             </Button>
@@ -796,24 +1059,24 @@ export default function ManagerCreateFormPage() {
                                                 )}
                                                 
                                                 {adminTask.fileAttachments && (
-                                                    <div className="p-3 bg-white rounded-lg border border-gray-200">
+                                                    <div className="p-4 bg-white rounded-xl border border-gray-200 shadow-sm">
                                                         <div className="flex items-center justify-between">
                                                             <div className="flex items-center gap-3">
-                                                                <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center">
-                                                                    <Download className="h-5 w-5 text-white" />
+                                                                <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center shadow-md">
+                                                                    <Download className="h-6 w-6 text-white" />
                                                                 </div>
                                                                 <div>
-                                                                    <p className="font-medium text-gray-900 text-sm">File Attachment</p>
-                                                                    <p className="text-xs text-gray-700">Supporting document</p>
+                                                                    <p className="font-semibold text-gray-900">File Attachment</p>
+                                                                    <p className="text-sm text-gray-700">Supporting document</p>
                                                                 </div>
                                                             </div>
                                                             <Button
                                                                 onClick={() => downloadFile(adminTask.fileAttachments, `task_${adminTask.title}_attachment`)}
                                                                 variant="outline"
                                                                 size="sm"
-                                                                className="gap-2 border-green-300 text-green-800 hover:bg-green-50 font-medium"
+                                                                className="gap-2 border-green-300 text-green-800 hover:bg-green-50 font-semibold"
                                                             >
-                                                                <Download className="h-3.5 w-3.5" />
+                                                                <Download className="h-4 w-4" />
                                                                 Download
                                                             </Button>
                                                         </div>
@@ -823,10 +1086,10 @@ export default function ManagerCreateFormPage() {
                                         )}
                                     </div>
                                 ) : (
-                                    <div className="text-center py-8">
-                                        <FileText className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                                        <p className="text-gray-700">No task details available</p>
-                                        <p className="text-sm text-gray-600 mt-1">Task ID: {taskId || 'Not specified'}</p>
+                                    <div className="text-center py-12">
+                                        <FileText className="h-16 w-16 mx-auto mb-6 text-gray-400" />
+                                        <p className="text-gray-700 text-lg">No task details available</p>
+                                        <p className="text-sm text-gray-600 mt-2">Task ID: {taskId || 'Not specified'}</p>
                                     </div>
                                 )}
                             </CardContent>
@@ -834,21 +1097,21 @@ export default function ManagerCreateFormPage() {
 
                         {/* Forms List - Only shown when no form is selected */}
                         {!selectedForm && (
-                            <Card className="border border-gray-200 shadow-lg rounded-2xl overflow-hidden bg-white">
-                                <CardHeader className="bg-gradient-to-r from-gray-50 to-blue-50/50 border-b border-gray-200">
+                            <Card className="border border-gray-200 shadow-xl rounded-2xl overflow-hidden bg-gradient-to-br from-white to-blue-50/30 backdrop-blur-sm">
+                                <CardHeader className="bg-gradient-to-r from-gray-800 to-gray-900 text-white">
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-3">
-                                            <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center shadow-sm">
-                                                <FileText className="h-5 w-5 text-white" />
+                                            <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-white/20 to-white/10 backdrop-blur-sm flex items-center justify-center shadow-lg">
+                                                <FileText className="h-6 w-6 text-white" />
                                             </div>
                                             <div>
-                                                <CardTitle className="text-gray-900">Available Forms</CardTitle>
-                                                <CardDescription className="text-gray-700">
+                                                <CardTitle className="text-white">Available Forms</CardTitle>
+                                                <CardDescription className="text-gray-300">
                                                     {forms.length} form{forms.length !== 1 ? 's' : ''} found in your department
                                                 </CardDescription>
                                             </div>
                                         </div>
-                                        <Badge className="bg-gray-100 text-gray-800 border-gray-300 font-medium">
+                                        <Badge className="bg-white/20 text-white border-white/30 backdrop-blur-sm font-semibold">
                                             Select One
                                         </Badge>
                                     </div>
@@ -863,54 +1126,58 @@ export default function ManagerCreateFormPage() {
                                                 placeholder="Search forms by title or description..."
                                                 value={searchQuery}
                                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                                className="pl-10 text-gray-900 bg-white border-gray-300"
+                                                className="pl-10 text-gray-900 bg-white border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
                                             />
                                         </div>
                                     </div>
 
-                                    <div className="space-y-4">
+                                    <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
                                         {filteredForms.map((form, index) => (
                                             <div
                                                 key={form._id}
                                                 className="group relative"
                                             >
                                                 <Card 
-                                                    className="border border-gray-200 hover:border-blue-400 hover:shadow-md transition-all duration-200 cursor-pointer bg-white overflow-hidden"
+                                                    className="border border-gray-200 hover:border-blue-400 hover:shadow-lg transition-all duration-300 cursor-pointer bg-gradient-to-r from-white to-blue-50/30 overflow-hidden"
                                                     onClick={() => handleFormSelect(form)}
                                                 >
-                                                    <CardContent className="p-4">
+                                                    <CardContent className="p-5">
                                                         <div className="flex items-start justify-between">
                                                             <div className="flex-1">
-                                                                <div className="flex items-center gap-3 mb-3">
-                                                                    <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
-                                                                        <FileText className="h-5 w-5 text-white" />
+                                                                <div className="flex items-center gap-3 mb-4">
+                                                                    <div className="h-14 w-14 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center group-hover:scale-110 transition-transform duration-300 shadow-md">
+                                                                        <FileText className="h-7 w-7 text-white" />
                                                                     </div>
                                                                     <div className="flex-1 min-w-0">
-                                                                        <div className="flex items-center gap-2 mb-1">
-                                                                            <h4 className="font-bold text-gray-900 truncate">
+                                                                        <div className="flex items-center gap-2 mb-2">
+                                                                            <h4 className="font-bold text-gray-900 text-lg truncate">
                                                                                 {form.title}
                                                                             </h4>
-                                                                            <Badge className="bg-gray-100 text-gray-800 border-gray-300 text-xs font-medium">
+                                                                            <Badge className="bg-gradient-to-r from-blue-100 to-indigo-100 text-blue-800 border-blue-200 text-xs font-semibold">
                                                                                 {form.fields.length} fields
                                                                             </Badge>
                                                                         </div>
-                                                                        <p className="text-sm text-gray-700 line-clamp-2 mb-2">
+                                                                        <p className="text-sm text-gray-700 line-clamp-2 mb-3">
                                                                             {form.description}
                                                                         </p>
                                                                         <div className="flex flex-wrap gap-1.5">
-                                                                            {form.fields.slice(0, 3).map((field, idx) => (
-                                                                                <Badge 
-                                                                                    key={idx} 
-                                                                                    variant="outline" 
-                                                                                    className="text-xs bg-gray-50 text-gray-800 border-gray-300 font-medium"
-                                                                                >
-                                                                                    {field.label}
-                                                                                </Badge>
-                                                                            ))}
+                                                                            {form.fields.slice(0, 3).map((field, idx) => {
+                                                                                const FieldIcon = getFieldIcon(field.type);
+                                                                                return (
+                                                                                    <Badge 
+                                                                                        key={idx} 
+                                                                                        variant="outline" 
+                                                                                        className="text-xs bg-white/50 text-gray-800 border-gray-300 font-medium flex items-center gap-1"
+                                                                                    >
+                                                                                        <FieldIcon className="w-3 h-3" />
+                                                                                        {field.label}
+                                                                                    </Badge>
+                                                                                );
+                                                                            })}
                                                                             {form.fields.length > 3 && (
                                                                                 <Badge 
                                                                                     variant="outline" 
-                                                                                    className="text-xs bg-gray-50 text-gray-800 border-gray-300 font-medium"
+                                                                                    className="text-xs bg-white/50 text-gray-800 border-gray-300 font-medium"
                                                                                 >
                                                                                     +{form.fields.length - 3} more
                                                                                 </Badge>
@@ -918,14 +1185,14 @@ export default function ManagerCreateFormPage() {
                                                                         </div>
                                                                     </div>
                                                                 </div>
-                                                                <div className="flex items-center justify-between text-sm">
+                                                                <div className="flex items-center justify-between text-sm pt-3 border-t border-gray-200">
                                                                     <div className="flex items-center gap-1.5 text-gray-700">
                                                                         <Calendar className="h-3.5 w-3.5" />
                                                                         Created {formatDate(form.createdAt)}
                                                                     </div>
-                                                                    <div className="flex items-center gap-1.5 text-blue-700 group-hover:gap-2 transition-all duration-200 font-medium">
+                                                                    <div className="flex items-center gap-1.5 text-blue-700 group-hover:gap-2 transition-all duration-300 font-semibold">
                                                                         <span>Select Form</span>
-                                                                        <ChevronRight className="h-3.5 w-3.5" />
+                                                                        <ChevronRight className="h-3.5 w-3.5 group-hover:translate-x-1 transition-transform" />
                                                                     </div>
                                                                 </div>
                                                             </div>
@@ -936,10 +1203,10 @@ export default function ManagerCreateFormPage() {
                                         ))}
                                         
                                         {filteredForms.length === 0 && (
-                                            <div className="text-center py-8">
-                                                <FileText className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                                                <p className="text-gray-700">No forms found</p>
-                                                <p className="text-sm text-gray-600 mt-1">
+                                            <div className="text-center py-12">
+                                                <FileText className="h-16 w-16 mx-auto mb-6 text-gray-400" />
+                                                <p className="text-gray-700 text-lg">No forms found</p>
+                                                <p className="text-sm text-gray-600 mt-2">
                                                     {searchQuery ? "Try a different search term" : "Contact your administrator to create forms"}
                                                 </p>
                                             </div>
@@ -955,16 +1222,16 @@ export default function ManagerCreateFormPage() {
                         {/* Selected Form */}
                         {selectedForm ? (
                             <>
-                                <Card className="border border-gray-200 shadow-lg rounded-2xl overflow-hidden bg-white">
-                                    <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-200">
+                                <Card className="border border-gray-200 shadow-xl rounded-2xl overflow-hidden bg-gradient-to-br from-white to-indigo-50/30 backdrop-blur-sm">
+                                    <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white">
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-3">
-                                                <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-sm">
-                                                    <Send className="h-5 w-5 text-white" />
+                                                <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-white/20 to-white/10 backdrop-blur-sm flex items-center justify-center shadow-lg">
+                                                    <Send className="h-6 w-6 text-white" />
                                                 </div>
                                                 <div>
-                                                    <CardTitle className="text-gray-900">Form Submission</CardTitle>
-                                                    <CardDescription className="text-gray-700">
+                                                    <CardTitle className="text-white">Form Submission</CardTitle>
+                                                    <CardDescription className="text-blue-100">
                                                         Fill out the form and assign to team leads
                                                     </CardDescription>
                                                 </div>
@@ -974,7 +1241,7 @@ export default function ManagerCreateFormPage() {
                                                 variant="outline"
                                                 onClick={() => setSelectedForm(null)}
                                                 size="sm"
-                                                className="border-gray-300 text-gray-700 hover:bg-gray-50 font-medium"
+                                                className="bg-white/10 text-white hover:bg-white/20 border-white/30 backdrop-blur-sm font-medium"
                                             >
                                                 Change Form
                                             </Button>
@@ -983,64 +1250,68 @@ export default function ManagerCreateFormPage() {
                                     <CardContent className="p-6">
                                         <form onSubmit={handleSubmit} className="space-y-6">
                                             {/* Form Header */}
-                                            <div className="p-4 bg-gradient-to-r from-gray-50 to-blue-50/50 rounded-xl border border-gray-200">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
-                                                        <FileText className="h-6 w-6 text-white" />
+                                            <div className="p-5 bg-gradient-to-r from-white to-blue-50 rounded-xl border border-blue-100 shadow-sm">
+                                                <div className="flex items-center gap-4">
+                                                    <div className="h-14 w-14 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-md">
+                                                        <FileText className="h-7 w-7 text-white" />
                                                     </div>
                                                     <div>
-                                                        <h3 className="font-bold text-gray-900 text-lg">{selectedForm.title}</h3>
-                                                        <p className="text-gray-700 text-sm mt-1">{selectedForm.description}</p>
+                                                        <h3 className="font-bold text-gray-900 text-xl">{selectedForm.title}</h3>
+                                                        <p className="text-gray-700 text-sm mt-2">{selectedForm.description}</p>
                                                     </div>
                                                 </div>
                                             </div>
 
                                             {/* Form Fields */}
                                             <div className="space-y-6 max-h-[400px] overflow-y-auto pr-2">
-                                                {selectedForm.fields.map((field, index) => (
-                                                    <div key={field.name} className="space-y-3">
-                                                        <div className="flex items-center justify-between">
-                                                            <Label className="text-gray-900 font-semibold text-sm">
-                                                                {field.label} {field.required && <span className="text-red-500 ml-1">*</span>}
-                                                            </Label>
-                                                            {field.placeholder && (
-                                                                <span className="text-xs text-gray-700 italic">
-                                                                    {field.placeholder}
-                                                                </span>
-                                                            )}
+                                                {selectedForm.fields.map((field, index) => {
+                                                    const IconComponent = getFieldIcon(field.type);
+                                                    return (
+                                                        <div key={field.name} className="space-y-3">
+                                                            <div className="flex items-center justify-between">
+                                                                <Label className="text-gray-900 font-semibold text-base flex items-center gap-2">
+                                                                    <IconComponent className="w-4 h-4" />
+                                                                    {field.label} {field.required && <span className="text-red-500 ml-1">*</span>}
+                                                                </Label>
+                                                                {field.placeholder && (
+                                                                    <span className="text-xs text-gray-700 italic">
+                                                                        {field.placeholder}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <div className="p-4 border border-gray-200 rounded-xl bg-white shadow-sm hover:shadow-lg transition-shadow duration-300">
+                                                                {renderFormField(field)}
+                                                            </div>
                                                         </div>
-                                                        <div className="p-4 border border-gray-200 rounded-xl bg-white shadow-sm hover:shadow transition-shadow duration-200">
-                                                            {renderFormField(field)}
-                                                        </div>
-                                                    </div>
-                                                ))}
+                                                    );
+                                                })}
                                             </div>
 
                                             {/* Assignment Section */}
                                             <div className="space-y-6 pt-4 border-t border-gray-200">
                                                 <div>
-                                                    <Label className="text-gray-900 font-semibold text-sm mb-3 block">
+                                                    <Label className="text-gray-900 font-semibold text-lg mb-4 block">
                                                         Assignment Configuration
                                                     </Label>
                                                     
                                                     {/* Assignment Type Selection */}
                                                     <div className="grid grid-cols-2 gap-4 mb-6">
                                                         <div
-                                                            className={`p-4 border-2 rounded-xl cursor-pointer transition-all duration-200 ${formData.assignmentType === 'single' ? 'border-blue-500 bg-blue-50 shadow-sm' : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50/50'}`}
+                                                            className={`p-5 border-2 rounded-xl cursor-pointer transition-all duration-300 ${formData.assignmentType === 'single' ? 'border-blue-500 bg-blue-50 shadow-lg' : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50/50 hover:shadow-md'}`}
                                                             onClick={() => handleAssignmentTypeChange('single')}
                                                         >
                                                             <div className="flex items-center gap-3">
-                                                                <div className={`h-5 w-5 rounded-full border-2 flex items-center justify-center transition-colors ${formData.assignmentType === 'single' ? 'border-blue-500 bg-blue-500' : 'border-gray-300'}`}>
+                                                                <div className={`h-6 w-6 rounded-full border-2 flex items-center justify-center transition-colors ${formData.assignmentType === 'single' ? 'border-blue-500 bg-blue-500' : 'border-gray-300'}`}>
                                                                     {formData.assignmentType === 'single' && (
-                                                                        <div className="h-2 w-2 rounded-full bg-white"></div>
+                                                                        <div className="h-2.5 w-2.5 rounded-full bg-white"></div>
                                                                     )}
                                                                 </div>
                                                                 <div className="flex-1">
                                                                     <div className="flex items-center gap-2 mb-1">
-                                                                        <User className="h-4 w-4 text-gray-700" />
-                                                                        <span className="font-semibold text-gray-900">Single Assignment</span>
+                                                                        <User className="h-5 w-5 text-gray-700" />
+                                                                        <span className="font-bold text-gray-900 text-lg">Single Assignment</span>
                                                                     </div>
-                                                                    <p className="text-xs text-gray-700">
+                                                                    <p className="text-sm text-gray-700">
                                                                         Assign this form to one team lead
                                                                     </p>
                                                                 </div>
@@ -1048,21 +1319,21 @@ export default function ManagerCreateFormPage() {
                                                         </div>
                                                         
                                                         <div
-                                                            className={`p-4 border-2 rounded-xl cursor-pointer transition-all duration-200 ${formData.assignmentType === 'multiple' ? 'border-blue-500 bg-blue-50 shadow-sm' : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50/50'}`}
+                                                            className={`p-5 border-2 rounded-xl cursor-pointer transition-all duration-300 ${formData.assignmentType === 'multiple' ? 'border-blue-500 bg-blue-50 shadow-lg' : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50/50 hover:shadow-md'}`}
                                                             onClick={() => handleAssignmentTypeChange('multiple')}
                                                         >
                                                             <div className="flex items-center gap-3">
-                                                                <div className={`h-5 w-5 rounded-full border-2 flex items-center justify-center transition-colors ${formData.assignmentType === 'multiple' ? 'border-blue-500 bg-blue-500' : 'border-gray-300'}`}>
+                                                                <div className={`h-6 w-6 rounded-full border-2 flex items-center justify-center transition-colors ${formData.assignmentType === 'multiple' ? 'border-blue-500 bg-blue-500' : 'border-gray-300'}`}>
                                                                     {formData.assignmentType === 'multiple' && (
-                                                                        <div className="h-2 w-2 rounded-full bg-white"></div>
+                                                                        <div className="h-2.5 w-2.5 rounded-full bg-white"></div>
                                                                     )}
                                                                 </div>
                                                                 <div className="flex-1">
                                                                     <div className="flex items-center gap-2 mb-1">
-                                                                        <Users className="h-4 w-4 text-gray-700" />
-                                                                        <span className="font-semibold text-gray-900">Multiple Assignment</span>
+                                                                        <Users className="h-5 w-5 text-gray-700" />
+                                                                        <span className="font-bold text-gray-900 text-lg">Multiple Assignment</span>
                                                                     </div>
-                                                                    <p className="text-xs text-gray-700">
+                                                                    <p className="text-sm text-gray-700">
                                                                         Assign this form to multiple team leads
                                                                     </p>
                                                                 </div>
@@ -1074,13 +1345,13 @@ export default function ManagerCreateFormPage() {
                                                     <div className="space-y-4">
                                                         {formData.assignmentType === 'single' ? (
                                                             <div className="space-y-3">
-                                                                <Label className="text-gray-900 font-semibold text-sm">
+                                                                <Label className="text-gray-900 font-semibold text-base">
                                                                     Select Team Lead <span className="text-red-500">*</span>
                                                                 </Label>
                                                                 <select
                                                                     value={formData.assignedTo}
                                                                     onChange={(e) => setFormData({ ...formData, assignedTo: e.target.value })}
-                                                                    className="w-full p-3.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900 appearance-none font-medium"
+                                                                    className="w-full p-4 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-gray-900 appearance-none font-semibold"
                                                                     required
                                                                 >
                                                                     <option value="" className="text-gray-700">Choose a team lead...</option>
@@ -1093,17 +1364,17 @@ export default function ManagerCreateFormPage() {
                                                                         );
                                                                     })}
                                                                 </select>
-                                                                <p className="text-xs text-gray-700">
+                                                                <p className="text-sm text-gray-700">
                                                                     This form will be assigned to the selected team lead only.
                                                                 </p>
                                                             </div>
                                                         ) : (
                                                             <div className="space-y-4">
                                                                 <div className="flex items-center justify-between">
-                                                                    <Label className="text-gray-900 font-semibold text-sm">
+                                                                    <Label className="text-gray-900 font-semibold text-base">
                                                                         Select Team Leads <span className="text-red-500">*</span>
                                                                     </Label>
-                                                                    <Badge className="bg-blue-100 text-blue-800 border-blue-200 font-medium">
+                                                                    <Badge className="bg-gradient-to-r from-blue-500 to-blue-600 text-white border-0 font-semibold">
                                                                         {formData.multipleTeamLeadAssigned.length} selected
                                                                     </Badge>
                                                                 </div>
@@ -1114,14 +1385,14 @@ export default function ManagerCreateFormPage() {
                                                                             <TeamLeadItem key={tl._id || tl.id} tl={tl} />
                                                                         ))
                                                                     ) : (
-                                                                        <div className="text-center py-4 text-gray-700">
-                                                                            <Users className="h-8 w-8 mx-auto mb-2 text-gray-400" />
-                                                                            <p className="font-medium">No team leads available</p>
+                                                                        <div className="text-center py-8 text-gray-700">
+                                                                            <Users className="h-12 w-12 mx-auto mb-3 text-gray-400" />
+                                                                            <p className="font-bold text-lg">No team leads available</p>
                                                                         </div>
                                                                     )}
                                                                 </div>
                                                                 
-                                                                <p className="text-xs text-gray-700">
+                                                                <p className="text-sm text-gray-700">
                                                                     Select one or more team leads to assign this form. Each selected lead will receive the form.
                                                                 </p>
                                                             </div>
@@ -1132,20 +1403,20 @@ export default function ManagerCreateFormPage() {
 
                                             {/* Submit Button */}
                                             <div className="pt-6 border-t border-gray-200">
-                                                <div className="flex flex-col sm:flex-row gap-3">
+                                                <div className="flex flex-col sm:flex-row gap-4">
                                                     <Button
                                                         type="submit"
                                                         disabled={loading}
-                                                        className="flex-1 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-600/30 transition-all duration-300 py-3 px-6 font-semibold"
+                                                        className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white shadow-xl shadow-blue-500/25 hover:shadow-2xl hover:shadow-blue-600/30 transition-all duration-300 py-4 px-8 font-bold text-lg rounded-xl"
                                                     >
                                                         {loading ? (
                                                             <>
-                                                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                                                <Loader2 className="h-5 w-5 mr-3 animate-spin" />
                                                                 Processing Submission...
                                                             </>
                                                         ) : (
                                                             <>
-                                                                <Send className="h-4 w-4 mr-2" />
+                                                                <Send className="h-5 w-5 mr-3" />
                                                                 {formData.assignmentType === 'multiple' 
                                                                     ? `Assign to ${formData.multipleTeamLeadAssigned.length} Team Lead${formData.multipleTeamLeadAssigned.length !== 1 ? 's' : ''}` 
                                                                     : 'Submit Form'
@@ -1158,13 +1429,13 @@ export default function ManagerCreateFormPage() {
                                                         type="button"
                                                         variant="outline"
                                                         onClick={() => router.push('/manager/admin-tasks')}
-                                                        className="border-gray-300 text-gray-700 hover:bg-gray-50 py-3 px-6 font-medium"
+                                                        className="border-gray-300 text-gray-700 hover:bg-gray-50 py-4 px-8 font-semibold text-lg rounded-xl"
                                                     >
                                                         Cancel
                                                     </Button>
                                                 </div>
                                                 
-                                                <p className="text-xs text-gray-700 mt-3 text-center">
+                                                <p className="text-xs text-gray-700 mt-4 text-center">
                                                     By submitting, you confirm that all information is accurate and complete.
                                                 </p>
                                             </div>
@@ -1174,31 +1445,31 @@ export default function ManagerCreateFormPage() {
                             </>
                         ) : (
                             /* Placeholder when no form is selected */
-                            <Card className="border border-gray-200 shadow-lg rounded-2xl overflow-hidden bg-white">
-                                <CardHeader className="bg-gradient-to-r from-gray-50 to-blue-50/50 border-b border-gray-200">
+                            <Card className="border border-gray-200 shadow-xl rounded-2xl overflow-hidden bg-gradient-to-br from-white to-blue-50/30 backdrop-blur-sm">
+                                <CardHeader className="bg-gradient-to-r from-gray-800 to-gray-900 text-white">
                                     <div className="flex items-center gap-3">
-                                        <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center shadow-sm">
-                                            <FileText className="h-5 w-5 text-white" />
+                                        <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-white/20 to-white/10 backdrop-blur-sm flex items-center justify-center shadow-lg">
+                                            <FileText className="h-6 w-6 text-white" />
                                         </div>
                                         <div>
-                                            <CardTitle className="text-gray-900">Form Selection Required</CardTitle>
-                                            <CardDescription className="text-gray-700">
+                                            <CardTitle className="text-white">Form Selection Required</CardTitle>
+                                            <CardDescription className="text-gray-300">
                                                 Select a form from the list to begin submission
                                             </CardDescription>
                                         </div>
                                     </div>
                                 </CardHeader>
                                 <CardContent className="p-6">
-                                    <div className="text-center py-8">
-                                        <div className="h-16 w-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center">
-                                            <FileText className="h-8 w-8 text-blue-500" />
+                                    <div className="text-center py-12">
+                                        <div className="h-20 w-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center shadow-lg">
+                                            <FileText className="h-10 w-10 text-blue-500" />
                                         </div>
-                                        <h3 className="text-lg font-semibold text-gray-900 mb-2">No Form Selected</h3>
-                                        <p className="text-gray-700 mb-6 max-w-md mx-auto">
+                                        <h3 className="text-2xl font-bold text-gray-900 mb-3">No Form Selected</h3>
+                                        <p className="text-gray-700 mb-8 max-w-md mx-auto text-lg">
                                             Choose a form from the list on the left to fill out and submit for this task.
                                         </p>
-                                        <div className="flex items-center justify-center gap-2 text-sm text-gray-700 font-medium">
-                                            <ArrowLeft className="h-4 w-4" />
+                                        <div className="flex items-center justify-center gap-3 text-gray-700 font-semibold text-lg">
+                                            <ArrowLeft className="h-5 w-5" />
                                             <span>Select a form from the list</span>
                                         </div>
                                     </div>

@@ -37,6 +37,7 @@ export async function POST(req) {
       priority: priority || "low",
       endDate: endDate ? new Date(endDate) : null,
       managers: Array.isArray(managersId) ? managersId : [managersId],
+      submittedBy: session.user.id,
     });
 
     await newAdminTask.save();
@@ -80,7 +81,7 @@ export async function GET() {
       );
     }
 
-    const tasks = await AdminTask.find()
+    const tasks = await AdminTask.find({submittedBy: session.user.id})
       .populate({
         path: "managers",
         select: "firstName lastName email departments",

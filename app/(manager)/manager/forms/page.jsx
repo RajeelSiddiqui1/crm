@@ -41,8 +41,12 @@ import {
     Lock,
     Hash,
     List,
-    UserPlus,
-    UserCheck
+    Clock,
+    CalendarClock,
+    CalendarDays,
+    Type,
+    TextQuote,
+    GripVertical
 } from "lucide-react";
 import axios from "axios";
 
@@ -128,6 +132,15 @@ export default function ManagerFormsPage() {
                     break;
                 case 'file':
                     initialData[field.name] = null;
+                    break;
+                case 'date':
+                    initialData[field.name] = field.defaultDate || '';
+                    break;
+                case 'time':
+                    initialData[field.name] = field.defaultTime || '';
+                    break;
+                case 'datetime':
+                    initialData[field.name] = field.defaultDateTime || '';
                     break;
                 default:
                     initialData[field.name] = "";
@@ -285,19 +298,74 @@ export default function ManagerFormsPage() {
 
         switch (field.type) {
             case "text":
+                return (
+                    <div className="relative">
+                        <Input
+                            type="text"
+                            value={fieldValue}
+                            onChange={(e) => handleDynamicFieldChange(field.name, e.target.value)}
+                            placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}`}
+                            className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900 pl-10"
+                            required={field.required}
+                        />
+                        <Type className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    </div>
+                );
             case "email":
+                return (
+                    <div className="relative">
+                        <Input
+                            type="email"
+                            value={fieldValue}
+                            onChange={(e) => handleDynamicFieldChange(field.name, e.target.value)}
+                            placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}`}
+                            className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900 pl-10"
+                            required={field.required}
+                        />
+                        <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    </div>
+                );
             case "number":
+                return (
+                    <div className="relative">
+                        <Input
+                            type="number"
+                            value={fieldValue}
+                            onChange={(e) => handleDynamicFieldChange(field.name, e.target.value)}
+                            placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}`}
+                            className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900 pl-10"
+                            required={field.required}
+                        />
+                        <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    </div>
+                );
             case "tel":
+                return (
+                    <div className="relative">
+                        <Input
+                            type="tel"
+                            value={fieldValue}
+                            onChange={(e) => handleDynamicFieldChange(field.name, e.target.value)}
+                            placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}`}
+                            className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900 pl-10"
+                            required={field.required}
+                        />
+                        <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    </div>
+                );
             case "url":
                 return (
-                    <Input
-                        type={field.type}
-                        value={fieldValue}
-                        onChange={(e) => handleDynamicFieldChange(field.name, e.target.value)}
-                        placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}`}
-                        className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900"
-                        required={field.required}
-                    />
+                    <div className="relative">
+                        <Input
+                            type="url"
+                            value={fieldValue}
+                            onChange={(e) => handleDynamicFieldChange(field.name, e.target.value)}
+                            placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}`}
+                            className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900 pl-10"
+                            required={field.required}
+                        />
+                        <Link className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    </div>
                 );
             case "password":
                 return (
@@ -307,9 +375,10 @@ export default function ManagerFormsPage() {
                             value={fieldValue}
                             onChange={(e) => handleDynamicFieldChange(field.name, e.target.value)}
                             placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}`}
-                            className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900 pr-10"
+                            className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900 pl-10 pr-10"
                             required={field.required}
                         />
+                        <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                         <button
                             type="button"
                             onClick={() => togglePasswordVisibility(field.name)}
@@ -321,42 +390,84 @@ export default function ManagerFormsPage() {
                 );
             case "textarea":
                 return (
-                    <Textarea
-                        value={fieldValue}
-                        onChange={(e) => handleDynamicFieldChange(field.name, e.target.value)}
-                        placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}`}
-                        className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900"
-                        required={field.required}
-                        rows={4}
-                    />
+                    <div className="relative">
+                        <Textarea
+                            value={fieldValue}
+                            onChange={(e) => handleDynamicFieldChange(field.name, e.target.value)}
+                            placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}`}
+                            className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900 pl-10"
+                            required={field.required}
+                            rows={4}
+                        />
+                        <TextQuote className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
+                    </div>
                 );
             case "select":
                 return (
-                    <Select
-                        value={fieldValue}
-                        onValueChange={(value) => handleDynamicFieldChange(field.name, value)}
-                    >
-                        <SelectTrigger className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900">
-                            <SelectValue placeholder={field.placeholder || `Select ${field.label.toLowerCase()}`} />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {field.options?.map((option, index) => (
-                                <SelectItem key={index} value={option}>
-                                    {option}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
+                    <div className="relative">
+                        <Select
+                            value={fieldValue}
+                            onValueChange={(value) => handleDynamicFieldChange(field.name, value)}
+                        >
+                            <SelectTrigger className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900 pl-10">
+                                <SelectValue placeholder={field.placeholder || `Select ${field.label.toLowerCase()}`} />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {field.options?.map((option, index) => (
+                                    <SelectItem key={index} value={option}>
+                                        {option}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        <List className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    </div>
                 );
             case "date":
                 return (
-                    <Input
-                        type="date"
-                        value={fieldValue}
-                        onChange={(e) => handleDynamicFieldChange(field.name, e.target.value)}
-                        className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900"
-                        required={field.required}
-                    />
+                    <div className="relative">
+                        <Input
+                            type="date"
+                            value={fieldValue}
+                            onChange={(e) => handleDynamicFieldChange(field.name, e.target.value)}
+                            className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900 pl-10"
+                            required={field.required}
+                            min={field.minDate}
+                            max={field.maxDate}
+                        />
+                        <CalendarDays className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    </div>
+                );
+            case "time":
+                return (
+                    <div className="relative">
+                        <Input
+                            type="time"
+                            value={fieldValue}
+                            onChange={(e) => handleDynamicFieldChange(field.name, e.target.value)}
+                            className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900 pl-10"
+                            required={field.required}
+                            step={field.step || 900}
+                            min={field.minTime}
+                            max={field.maxTime}
+                        />
+                        <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    </div>
+                );
+            case "datetime":
+                return (
+                    <div className="relative">
+                        <Input
+                            type="datetime-local"
+                            value={fieldValue}
+                            onChange={(e) => handleDynamicFieldChange(field.name, e.target.value)}
+                            className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900 pl-10"
+                            required={field.required}
+                            min={field.minDateTime}
+                            max={field.maxDateTime}
+                        />
+                        <CalendarClock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    </div>
                 );
             case "checkbox":
                 return (
@@ -393,16 +504,19 @@ export default function ManagerFormsPage() {
             case "range":
                 return (
                     <div className="space-y-2">
-                        <input
-                            type="range"
-                            min={field.min || 0}
-                            max={field.max || 100}
-                            step={field.step || 1}
-                            value={fieldValue}
-                            onChange={(e) => handleDynamicFieldChange(field.name, parseInt(e.target.value))}
-                            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
-                            required={field.required}
-                        />
+                        <div className="relative">
+                            <input
+                                type="range"
+                                min={field.min || 0}
+                                max={field.max || 100}
+                                step={field.step || 1}
+                                value={fieldValue}
+                                onChange={(e) => handleDynamicFieldChange(field.name, parseInt(e.target.value))}
+                                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider pl-10"
+                                required={field.required}
+                            />
+                            <SlidersHorizontal className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        </div>
                         <div className="flex justify-between text-xs text-gray-500">
                             <span>{field.min || 0}</span>
                             <span className="font-medium">{fieldValue}</span>
@@ -484,7 +598,8 @@ export default function ManagerFormsPage() {
                 );
             case "rating":
                 return (
-                    <div className="flex space-x-1">
+                    <div className="flex space-x-1 items-center">
+                        <Star className="w-4 h-4 text-gray-400 mr-2" />
                         {Array.from({ length: field.maxRating || 5 }, (_, i) => (
                             <button
                                 key={i}
@@ -505,6 +620,7 @@ export default function ManagerFormsPage() {
             case "toggle":
                 return (
                     <div className="flex items-center space-x-2">
+                        <ToggleLeft className="w-4 h-4 text-gray-400" />
                         <button
                             type="button"
                             onClick={() => handleDynamicFieldChange(field.name, !fieldValue)}
@@ -519,39 +635,140 @@ export default function ManagerFormsPage() {
                         <Label className="text-gray-700">{fieldValue ? 'On' : 'Off'}</Label>
                     </div>
                 );
+            case "address":
+                return (
+                    <div className="space-y-3">
+                        <div className="relative">
+                            <Input
+                                type="text"
+                                value={fieldValue?.street || ""}
+                                onChange={(e) => handleDynamicFieldChange(field.name, {...fieldValue, street: e.target.value})}
+                                placeholder="Street address"
+                                className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900 pl-10"
+                                required={field.required}
+                            />
+                            <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                            <Input
+                                type="text"
+                                value={fieldValue?.city || ""}
+                                onChange={(e) => handleDynamicFieldChange(field.name, {...fieldValue, city: e.target.value})}
+                                placeholder="City"
+                                className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900"
+                                required={field.required}
+                            />
+                            <Input
+                                type="text"
+                                value={fieldValue?.state || ""}
+                                onChange={(e) => handleDynamicFieldChange(field.name, {...fieldValue, state: e.target.value})}
+                                placeholder="State"
+                                className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900"
+                                required={field.required}
+                            />
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                            <Input
+                                type="text"
+                                value={fieldValue?.zip || ""}
+                                onChange={(e) => handleDynamicFieldChange(field.name, {...fieldValue, zip: e.target.value})}
+                                placeholder="ZIP code"
+                                className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900"
+                                required={field.required}
+                            />
+                            <Input
+                                type="text"
+                                value={fieldValue?.country || ""}
+                                onChange={(e) => handleDynamicFieldChange(field.name, {...fieldValue, country: e.target.value})}
+                                placeholder="Country"
+                                className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900"
+                                required={field.required}
+                            />
+                        </div>
+                    </div>
+                );
+            case "creditCard":
+                return (
+                    <div className="space-y-3">
+                        <div className="relative">
+                            <Input
+                                type="text"
+                                value={fieldValue?.cardNumber || ""}
+                                onChange={(e) => handleDynamicFieldChange(field.name, {...fieldValue, cardNumber: e.target.value})}
+                                placeholder="Card number"
+                                className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900 pl-10"
+                                required={field.required}
+                            />
+                            <CreditCard className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                            <Input
+                                type="text"
+                                value={fieldValue?.expiry || ""}
+                                onChange={(e) => handleDynamicFieldChange(field.name, {...fieldValue, expiry: e.target.value})}
+                                placeholder="MM/YY"
+                                className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900"
+                                required={field.required}
+                            />
+                            <Input
+                                type="text"
+                                value={fieldValue?.cvv || ""}
+                                onChange={(e) => handleDynamicFieldChange(field.name, {...fieldValue, cvv: e.target.value})}
+                                placeholder="CVC"
+                                className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900"
+                                required={field.required}
+                            />
+                        </div>
+                        <Input
+                            type="text"
+                            value={fieldValue?.nameOnCard || ""}
+                            onChange={(e) => handleDynamicFieldChange(field.name, {...fieldValue, nameOnCard: e.target.value})}
+                            placeholder="Cardholder name"
+                            className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900"
+                            required={field.required}
+                        />
+                    </div>
+                );
             default:
                 return (
-                    <Input
-                        type="text"
-                        value={fieldValue}
-                        onChange={(e) => handleDynamicFieldChange(field.name, e.target.value)}
-                        placeholder={`Enter ${field.label.toLowerCase()}`}
-                        className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900"
-                        required={field.required}
-                    />
+                    <div className="relative">
+                        <Input
+                            type="text"
+                            value={fieldValue}
+                            onChange={(e) => handleDynamicFieldChange(field.name, e.target.value)}
+                            placeholder={`Enter ${field.label.toLowerCase()}`}
+                            className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900 pl-10"
+                            required={field.required}
+                        />
+                        <Type className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    </div>
                 );
         }
     };
 
     const getFieldIcon = (fieldType) => {
         const fieldIcons = {
-            text: FileText,
+            text: Type,
             email: Mail,
             number: Hash,
             tel: Phone,
             url: Link,
             password: Lock,
-            date: Calendar,
+            date: CalendarDays,
+            time: Clock,
+            datetime: CalendarClock,
             select: List,
-            textarea: FileText,
+            textarea: TextQuote,
             checkbox: CheckSquare,
             radio: Radio,
             range: SlidersHorizontal,
             file: Upload,
             rating: Star,
             toggle: ToggleLeft,
+            address: MapPin,
+            creditCard: CreditCard
         };
-        return fieldIcons[fieldType] || FileText;
+        return fieldIcons[fieldType] || Type;
     };
 
     const filteredForms = forms.filter(form =>
@@ -746,11 +963,15 @@ export default function ManagerFormsPage() {
                                     <h3 className="text-lg font-semibold text-gray-900">Form Details</h3>
                                     {selectedForm.fields.map((field, index) => (
                                         <div key={field.name} className="space-y-3 p-4 border border-gray-200 rounded-lg bg-white/50">
-                                            <Label htmlFor={field.name} className="text-gray-800 font-semibold">
+                                            <Label htmlFor={field.name} className="text-gray-800 font-semibold flex items-center gap-2">
+                                                {getFieldIcon(field.type) && React.createElement(getFieldIcon(field.type), { className: "w-4 h-4" })}
                                                 {field.label} {field.required && <span className="text-red-500">*</span>}
                                             </Label>
+                                            {field.description && (
+                                                <p className="text-sm text-gray-600 mb-2">{field.description}</p>
+                                            )}
                                             {renderFormField(field)}
-                                            {field.placeholder && (
+                                            {field.placeholder && !field.description && (
                                                 <p className="text-xs text-gray-500 mt-1">{field.placeholder}</p>
                                             )}
                                         </div>

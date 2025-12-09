@@ -1,28 +1,49 @@
 "use client";
-import { useState, useEffect } from "react";
-import { 
-  Plus, 
-  Edit2, 
-  Trash2, 
-  Search, 
+import { useState, useEffect, use } from "react";
+import {
+  Plus,
+  Edit2,
+  Trash2,
+  Search,
   Building2,
   Image as ImageIcon,
   Loader2,
   Download,
   RefreshCw,
-  Filter
+  Filter,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import axios from "axios";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 
 export default function DepartmentsPage() {
+  const { data: session, status } = useSession();
+
+  const router = useRouter();
+
+  useEffect(() => {
+    if (status === "loading") return;
+
+    if (!session || session.user.role !== "Admin") {
+      router.push("/adminlogin");
+      return;
+    }
+  },[session, router,status]);
+
   const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -31,7 +52,7 @@ export default function DepartmentsPage() {
   const [formData, setFormData] = useState({
     name: "",
     description: "",
-    logoBase64: ""
+    logoBase64: "",
   });
   const [submitting, setSubmitting] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -40,13 +61,17 @@ export default function DepartmentsPage() {
   const fetchDepartments = async () => {
     try {
       const response = await axios.get("/api/admin/department");
-      
+
       // Check if response.data is array or object with departments property
       if (Array.isArray(response.data)) {
         setDepartments(response.data);
       } else if (response.data && Array.isArray(response.data.departments)) {
         setDepartments(response.data.departments);
-      } else if (response.data && response.data.success && Array.isArray(response.data.data)) {
+      } else if (
+        response.data &&
+        response.data.success &&
+        Array.isArray(response.data.data)
+      ) {
         setDepartments(response.data.data);
       } else {
         console.error("Unexpected API response structure:", response.data);
@@ -65,13 +90,13 @@ export default function DepartmentsPage() {
   useEffect(() => {
     fetchDepartments();
     checkMobile();
-    
+
     const handleResize = () => {
       checkMobile();
     };
-    
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
   const checkMobile = () => {
@@ -86,12 +111,12 @@ export default function DepartmentsPage() {
         toast.error("Image size should be less than 5MB");
         return;
       }
-      
+
       const reader = new FileReader();
       reader.onloadend = () => {
-        setFormData(prev => ({
+        setFormData((prev) => ({
           ...prev,
-          logoBase64: reader.result
+          logoBase64: reader.result,
         }));
       };
       reader.readAsDataURL(file);
@@ -111,7 +136,7 @@ export default function DepartmentsPage() {
       setFormData({
         name: dept.name,
         description: dept.description || "",
-        logoBase64: dept.logoUrl || ""
+        logoBase64: dept.logoUrl || "",
       });
     } else {
       resetForm();
@@ -147,7 +172,7 @@ export default function DepartmentsPage() {
       const payload = {
         name: formData.name.trim(),
         description: formData.description.trim() || "",
-        logoBase64: formData.logoBase64
+        logoBase64: formData.logoBase64,
       };
 
       if (editingDept) {
@@ -164,7 +189,8 @@ export default function DepartmentsPage() {
       closeModal();
     } catch (error) {
       console.error("Error saving department:", error);
-      const errorMessage = error.response?.data?.message || "Error saving department";
+      const errorMessage =
+        error.response?.data?.message || "Error saving department";
       toast.error(errorMessage);
     } finally {
       setSubmitting(false);
@@ -173,7 +199,8 @@ export default function DepartmentsPage() {
 
   // Handle delete with axios
   const handleDelete = async (id, name) => {
-    if (!confirm(`Are you sure you want to delete "${name}" department?`)) return;
+    if (!confirm(`Are you sure you want to delete "${name}" department?`))
+      return;
 
     try {
       await axios.delete(`/api/admin/department/${id}`);
@@ -181,7 +208,8 @@ export default function DepartmentsPage() {
       await fetchDepartments();
     } catch (error) {
       console.error("Error deleting department:", error);
-      const errorMessage = error.response?.data?.message || "Error deleting department";
+      const errorMessage =
+        error.response?.data?.message || "Error deleting department";
       toast.error(errorMessage);
     }
   };
@@ -189,16 +217,16 @@ export default function DepartmentsPage() {
   // Export to CSV
   const exportToCSV = () => {
     const headers = ["Name", "Description", "Created Date", "Employees Count"];
-    const csvData = filteredDepartments.map(dept => [
+    const csvData = filteredDepartments.map((dept) => [
       dept.name,
       dept.description || "No description",
-      dept.createdAt ? new Date(dept.createdAt).toLocaleDateString() : 'N/A',
-      dept.employeeCount || "0"
+      dept.createdAt ? new Date(dept.createdAt).toLocaleDateString() : "N/A",
+      dept.employeeCount || "0",
     ]);
 
     const csvContent = [
       headers.join(","),
-      ...csvData.map(row => row.map(field => `"${field}"`).join(","))
+      ...csvData.map((row) => row.map((field) => `"${field}"`).join(",")),
     ].join("\n");
 
     const blob = new Blob([csvContent], { type: "text/csv" });
@@ -208,15 +236,17 @@ export default function DepartmentsPage() {
     a.download = "departments_export.csv";
     a.click();
     window.URL.revokeObjectURL(url);
-    
+
     toast.success("Departments data exported successfully");
   };
 
   // Filter departments based on search - SAFE VERSION
-  const filteredDepartments = Array.isArray(departments) 
-    ? departments.filter(dept =>
-        dept?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (dept?.description && dept.description.toLowerCase().includes(searchTerm.toLowerCase()))
+  const filteredDepartments = Array.isArray(departments)
+    ? departments.filter(
+        (dept) =>
+          dept?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (dept?.description &&
+            dept.description.toLowerCase().includes(searchTerm.toLowerCase()))
       )
     : [];
 
@@ -234,7 +264,7 @@ export default function DepartmentsPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50 p-3 sm:p-4 md:p-6">
       <Toaster position="top-right" />
-      
+
       <div className="max-w-7xl mx-auto">
         {/* Header Section */}
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6 md:mb-8">
@@ -267,8 +297,8 @@ export default function DepartmentsPage() {
               <span className="hidden sm:inline">Refresh</span>
               <span className="sm:hidden">Refresh</span>
             </Button>
-            <Button 
-              onClick={() => openModal()} 
+            <Button
+              onClick={() => openModal()}
               className="bg-gradient-to-r from-green-600 to-blue-700 hover:from-green-700 hover:to-blue-800 text-white shadow-lg transition-all duration-300 transform hover:scale-105 text-xs sm:text-sm"
               size={isMobile ? "sm" : "default"}
             >
@@ -302,7 +332,7 @@ export default function DepartmentsPage() {
                 onClick={() => setSearchTerm("")}
                 variant="outline"
                 size={isMobile ? "sm" : "default"}
-                className="whitespace-nowrap"
+                className="whitespace-nowrap bg-white text-gray-700 hover:bg-gray-50 text-xs sm:text-sm"
               >
                 Clear
               </Button>
@@ -319,7 +349,8 @@ export default function DepartmentsPage() {
                   All Departments
                 </CardTitle>
                 <CardDescription className="text-gray-600 text-sm md:text-base">
-                  {departments.length} department{departments.length !== 1 ? 's' : ''} in your organization
+                  {departments.length} department
+                  {departments.length !== 1 ? "s" : ""} in your organization
                 </CardDescription>
               </div>
               <div className="text-sm text-gray-500">
@@ -334,17 +365,18 @@ export default function DepartmentsPage() {
                   <Building2 className="w-16 h-16 md:w-20 md:h-20 mx-auto" />
                 </div>
                 <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-2 md:mb-3">
-                  {departments.length === 0 ? "No departments found" : "No matches found"}
+                  {departments.length === 0
+                    ? "No departments found"
+                    : "No matches found"}
                 </h3>
                 <p className="text-gray-600 text-sm md:text-lg max-w-md mx-auto">
-                  {departments.length === 0 
+                  {departments.length === 0
                     ? "Get started by creating your first department."
-                    : "Try adjusting your search terms to find what you're looking for."
-                  }
+                    : "Try adjusting your search terms to find what you're looking for."}
                 </p>
                 {departments.length === 0 && (
-                  <Button 
-                    onClick={() => openModal()} 
+                  <Button
+                    onClick={() => openModal()}
                     className="mt-4 bg-gradient-to-r from-green-600 to-blue-700 hover:from-green-700 hover:to-blue-800"
                   >
                     <Plus className="h-4 w-4 mr-2" />
@@ -355,8 +387,8 @@ export default function DepartmentsPage() {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-6">
                 {filteredDepartments.map((dept) => (
-                  <Card 
-                    key={dept._id} 
+                  <Card
+                    key={dept._id}
                     className="border border-gray-200 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 group cursor-pointer bg-white/80 backdrop-blur-sm"
                   >
                     <CardHeader className="pb-3">
@@ -377,8 +409,13 @@ export default function DepartmentsPage() {
                             <CardTitle className="text-lg text-gray-900 group-hover:text-green-700 transition-colors duration-200">
                               {dept.name}
                             </CardTitle>
-                            <Badge variant="secondary" className="mt-1 bg-green-100 text-green-800 border-green-200">
-                              {dept.createdAt ? new Date(dept.createdAt).toLocaleDateString() : 'N/A'}
+                            <Badge
+                              variant="secondary"
+                              className="mt-1 bg-green-100 text-green-800 border-green-200"
+                            >
+                              {dept.createdAt
+                                ? new Date(dept.createdAt).toLocaleDateString()
+                                : "N/A"}
                             </Badge>
                           </div>
                         </div>
@@ -394,7 +431,7 @@ export default function DepartmentsPage() {
                           >
                             <Edit2 className="h-4 w-4" />
                           </Button>
-                          <Button
+                          {/* <Button
                             variant="ghost"
                             size="sm"
                             onClick={(e) => {
@@ -404,7 +441,7 @@ export default function DepartmentsPage() {
                             className="h-8 w-8 p-0 text-red-600 hover:text-red-800 hover:bg-red-50"
                           >
                             <Trash2 className="h-4 w-4" />
-                          </Button>
+                          </Button> */}
                         </div>
                       </div>
                     </CardHeader>
@@ -417,7 +454,10 @@ export default function DepartmentsPage() {
                           <Building2 className="w-3 h-3" />
                           <span>{dept.employeeCount || 0} employees</span>
                         </div>
-                        <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-xs">
+                        <Badge
+                          variant="outline"
+                          className="bg-blue-50 text-blue-700 border-blue-200 text-xs"
+                        >
                           Active
                         </Badge>
                       </div>
@@ -438,7 +478,7 @@ export default function DepartmentsPage() {
               <h2 className="text-xl font-bold bg-gradient-to-r from-green-600 to-blue-700 bg-clip-text text-transparent mb-4">
                 {editingDept ? "Edit Department" : "Create New Department"}
               </h2>
-              
+
               <form onSubmit={handleSubmit} className="space-y-4">
                 {/* Logo Upload */}
                 <div>
@@ -478,7 +518,9 @@ export default function DepartmentsPage() {
                     id="name"
                     type="text"
                     value={formData.name}
-                    onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                    onChange={(e) =>
+                      setFormData((prev) => ({ ...prev, name: e.target.value }))
+                    }
                     placeholder="Enter department name"
                     required
                     className="focus:border-green-500 focus:ring-2 focus:ring-green-200"
@@ -487,13 +529,23 @@ export default function DepartmentsPage() {
 
                 {/* Description Field */}
                 <LabelInputContainer>
-                  <Label htmlFor="description" className="text-gray-700 font-medium">
-                    Description {formData.description && `(${formData.description.length}/10)`}
+                  <Label
+                    htmlFor="description"
+                    className="text-gray-700 font-medium"
+                  >
+                    Description{" "}
+                    {formData.description &&
+                      `(${formData.description.length}/10)`}
                   </Label>
                   <textarea
                     id="description"
                     value={formData.description}
-                    onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        description: e.target.value,
+                      }))
+                    }
                     placeholder="Enter department description (minimum 10 characters)"
                     rows={3}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-200 focus:border-green-500 bg-white text-gray-900 resize-none"
@@ -518,7 +570,11 @@ export default function DepartmentsPage() {
                   </Button>
                   <Button
                     type="submit"
-                    disabled={submitting || !formData.name.trim() || (formData.description && formData.description.length < 10)}
+                    disabled={
+                      submitting ||
+                      !formData.name.trim() ||
+                      (formData.description && formData.description.length < 10)
+                    }
                     className="bg-gradient-to-r from-green-600 to-blue-700 hover:from-green-700 hover:to-blue-800 text-white shadow-lg transition-all duration-300 transform hover:scale-105 disabled:opacity-70 disabled:cursor-not-allowed disabled:transform-none"
                   >
                     {submitting ? (
@@ -526,7 +582,11 @@ export default function DepartmentsPage() {
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                         {editingDept ? "Updating..." : "Creating..."}
                       </>
-                    ) : editingDept ? "Update Department" : "Create Department"}
+                    ) : editingDept ? (
+                      "Update Department"
+                    ) : (
+                      "Create Department"
+                    )}
                   </Button>
                 </div>
               </form>

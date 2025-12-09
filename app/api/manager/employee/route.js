@@ -46,6 +46,8 @@ export async function POST(req) {
       if (!existing) isUnique = true;
     }
 
+    normalizedEmail = email.toLowerCase();
+
     const hashPassword = await bcrypt.hash(password, 12);
 
     const idx = Math.floor(Math.random() * 100) + 1;
@@ -55,7 +57,7 @@ export async function POST(req) {
       userId,
       firstName,
       lastName,
-      email,
+      email:normalizedEmail,
       password: hashPassword,
       profilePic: avatarUrl,
       depId,

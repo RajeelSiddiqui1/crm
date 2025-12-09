@@ -66,7 +66,7 @@ export default function ManagerAdminTasksPage() {
     if (status === "loading") return;
 
     if (!session || session.user.role !== "Manager") {
-      router.push("/manager/login");
+      router.push("/managerlogin");
       return;
     }
 
@@ -841,7 +841,7 @@ export default function ManagerAdminTasksPage() {
                     }}
                     className="rounded-full hover:bg-gray-100"
                   >
-                    <X className="w-5 h-5" />
+                    <X className="w-5 h-5 text-gray-900" />
                   </Button>
                 </div>
               </div>

@@ -29,10 +29,7 @@ export function sendEmployeeTaskAssignmentMail({ name, formTitle, assignedBy, ta
           <p><strong>Status:</strong> Pending</p>
         </div>
 
-        <div style="text-align: center; margin: 30px 0;">
-          <a href="${process.env.TASK_LINK}/employee/tasks/${taskId}" class="button">View Task</a>
-        </div>
-
+       
         <p>Please start working on the task and update the status once completed.</p>
 
         <p>Best regards,<br>The Task Management Team</p>

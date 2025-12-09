@@ -32,9 +32,7 @@ export function taskClaimedMailTemplate(managerName, teamLeadName, taskTitle, cl
           
           <p>The team lead will now start working on this task and assign it to their employees. You can track the progress from your dashboard.</p>
           
-          <div style="text-align: center; margin: 30px 0;">
-            <a href="${process.env.TASK_LINK}/manager/submissions" class="button">View Task Progress</a>
-          </div>
+         
           
           <p><strong>Next Steps:</strong></p>
           <ol>

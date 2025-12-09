@@ -111,7 +111,7 @@ export default function ManagerSubmissionsPage() {
     if (status === "loading") return;
 
     if (!session || session.user.role !== "Manager") {
-      router.push("/login");
+      router.push("/managerlogin");
       return;
     }
 
@@ -508,19 +508,39 @@ export default function ManagerSubmissionsPage() {
 
     return "Unknown Employee";
   };
+  // Updated function to get department info
+  const getSubmissionDepartment = (submission) => {
+    // Check if depId is populated with department object
+    if (submission.formId?.depId?.name) {
+      return {
+        id: submission.formId.depId._id,
+        name: submission.formId.depId.name,
+        fullObject: submission.formId.depId,
+      };
+    }
 
-  const getSubmissiondepId = (submission) => {
+    // If depId is just an ObjectId string
     if (submission.formId?.depId) {
-      return submission.formId.depId;
+      return {
+        id: submission.formId.depId.toString(),
+        name: submission.formId.depId.toString(),
+        fullObject: null,
+      };
     }
 
-    if (submission.assignedEmployees?.[0]?.employeeId?.depId) {
-      return submission.assignedEmployees[0].employeeId.depId;
-    }
-
-    return "Unknown depId";
+    // Fallback
+    return {
+      id: "unknown",
+      name: "Unknown Department",
+      fullObject: null,
+    };
   };
 
+  // For backward compatibility
+  const getSubmissiondepId = (submission) => {
+    const dept = getSubmissionDepartment(submission);
+    return dept.name;
+  };
   const renderEditFormField = (fieldConfig, fieldName, fieldValue) => {
     if (!fieldConfig) {
       return (
@@ -698,15 +718,13 @@ export default function ManagerSubmissionsPage() {
   const renderTeamInformationCell = (submission) => {
     const claimStatus = getClaimStatus(submission);
     const StatusIcon = claimStatus.icon;
+    const dept = getSubmissionDepartment(submission);
 
     return (
       <TableCell className="py-5">
         <div className="space-y-3">
           <div className="flex items-center gap-2">
-            <Building className="w-4 h-4 text-blue-600" />
-            <span className="text-sm font-medium text-gray-900">
-              {getSubmissiondepId(submission)}
-            </span>
+           
           </div>
 
           <div className="flex items-center gap-2">
@@ -975,8 +993,8 @@ export default function ManagerSubmissionsPage() {
         ?.toLowerCase()
         .includes(searchTerm.toLowerCase()) ||
       submission.status?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      getSubmissiondepId(submission)
-        ?.toLowerCase()
+      getSubmissionDepartment(submission)
+        .name.toLowerCase()
         .includes(searchTerm.toLowerCase()) ||
       (submission.multipleTeamLeadAssigned &&
         submission.multipleTeamLeadAssigned.some(
@@ -990,13 +1008,20 @@ export default function ManagerSubmissionsPage() {
       statusFilter === "all" || submission.status === statusFilter;
 
     const matchesdepId =
-      depIdFilter === "all" || getSubmissiondepId(submission) === depIdFilter;
+      depIdFilter === "all" ||
+      getSubmissionDepartment(submission).name === depIdFilter;
 
     return matchesSearch && matchesStatus && matchesdepId;
   });
 
+  // Update the depIds extraction
   const depIds = [
-    ...new Set(submissions.map((sub) => getSubmissiondepId(sub))),
+    ...new Set(
+      submissions.map((sub) => {
+        const dept = getSubmissionDepartment(sub);
+        return dept.name;
+      })
+    ),
   ].filter(Boolean);
 
   const formatDate = (dateString) => {
@@ -1255,11 +1280,10 @@ export default function ManagerSubmissionsPage() {
                     <SelectValue placeholder="Filter depId" />
                   </SelectTrigger>
                   <SelectContent className="bg-white text-black">
-                    <SelectItem value="all">All depIds</SelectItem>
-
-                    {depIds.map((dept) => (
-                      <SelectItem key={dept._id} value={dept._id}>
-                        {dept.name}
+                    <SelectItem value="all">All Departments</SelectItem>
+                    {depIds.map((deptName) => (
+                      <SelectItem key={deptName} value={deptName}>
+                        {deptName}
                       </SelectItem>
                     ))}
                   </SelectContent>

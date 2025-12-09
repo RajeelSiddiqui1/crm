@@ -28,9 +28,7 @@ export function sendTaskStatusUpdateMail({ name, formTitle, status, updatedBy })
           <p><strong>New Status:</strong> ${status}</p>
         </div>
 
-        <div style="text-align: center; margin: 30px 0;">
-          <a href="${process.env.TASK_LINK}/employee/tasks" class="button">View Task</a>
-        </div>
+        
 
         <p>Please check the task and continue accordingly.</p>
 

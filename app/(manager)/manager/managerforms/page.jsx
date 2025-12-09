@@ -26,6 +26,8 @@ import {
     Mail as EmailIcon,
     Hash,
     CalendarDays,
+    Clock,
+    CalendarClock,
     List,
     TextQuote,
     Trash2,
@@ -70,6 +72,7 @@ export default function FormBuilderPage() {
     const [selectedField, setSelectedField] = useState(null);
     const [editingForm, setEditingForm] = useState(null);
 
+    // Updated field types with time and datetime
     const fieldTypes = [
         { type: 'text', label: 'Text Input', icon: TextCursor, color: 'blue' },
         { type: 'email', label: 'Email Input', icon: EmailIcon, color: 'green' },
@@ -78,6 +81,8 @@ export default function FormBuilderPage() {
         { type: 'url', label: 'URL Input', icon: Link, color: 'blue' },
         { type: 'password', label: 'Password', icon: Lock, color: 'red' },
         { type: 'date', label: 'Date Picker', icon: CalendarDays, color: 'orange' },
+        { type: 'time', label: 'Time Picker', icon: Clock, color: 'amber' },
+        { type: 'datetime', label: 'Date & Time', icon: CalendarClock, color: 'violet' },
         { type: 'select', label: 'Dropdown', icon: List, color: 'pink' },
         { type: 'textarea', label: 'Text Area', icon: TextQuote, color: 'indigo' },
         { type: 'checkbox', label: 'Checkbox', icon: CheckSquare, color: 'green' },
@@ -94,7 +99,7 @@ export default function FormBuilderPage() {
         if (status === "loading") return;
 
         if (!session || (session.user.role !== "Admin" && session.user.role !== "Manager")) {
-            router.push("/login");
+            router.push("/managerlogin");
             return;
         }
 
@@ -169,7 +174,7 @@ export default function FormBuilderPage() {
                 break;
             case 'rating':
                 newField.maxRating = 5;
-                newfield.defaultRating = 0;
+                newField.defaultRating = 0;
                 break;
             case 'file':
                 newField.multiple = false;
@@ -179,7 +184,23 @@ export default function FormBuilderPage() {
                 newField.checked = false;
                 break;
             case 'toggle':
-                newfield.checked = false;
+                newField.checked = false;
+                break;
+            case 'date':
+                newField.minDate = '';
+                newField.maxDate = '';
+                newField.defaultDate = '';
+                break;
+            case 'time':
+                newField.minTime = '';
+                newField.maxTime = '';
+                newField.defaultTime = '';
+                newField.step = 900; // 15 minutes default
+                break;
+            case 'datetime':
+                newField.minDateTime = '';
+                newField.maxDateTime = '';
+                newField.defaultDateTime = '';
                 break;
             default:
                 break;
@@ -381,10 +402,10 @@ export default function FormBuilderPage() {
 
     if (status === "loading") {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-white">
-                <div className="flex items-center gap-2">
+            <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-blue-50">
+                <div className="flex items-center gap-3 bg-white p-6 rounded-xl shadow-sm">
                     <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
-                    <span className="text-gray-600">Loading...</span>
+                    <span className="text-gray-700 font-medium">Loading Dashboard...</span>
                 </div>
             </div>
         );
@@ -395,23 +416,23 @@ export default function FormBuilderPage() {
     }
 
     return (
-        <div className="min-h-screen bg-gray-50 p-6">
+        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 p-4 md:p-6">
             <Toaster position="top-right" />
 
             {/* Form Preview Modal */}
-            {/* Form Preview Modal */}
             {activeForm && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-                    <Card className="w-full max-w-2xl max-h-[90vh] overflow-hidden bg-white">
-                        <CardHeader className="bg-white border-b">
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+                    <Card className="w-full max-w-2xl max-h-[90vh] overflow-hidden bg-white shadow-2xl border-0 rounded-2xl">
+                        <CardHeader className="bg-gradient-to-r from-blue-600 to-blue-700 text-white">
                             <div className="flex justify-between items-center">
                                 <div>
-                                    <CardTitle className="text-gray-900">{activeForm.title}</CardTitle>
-                                    <CardDescription className="text-gray-600">
+                                    <CardTitle className="text-white text-2xl">{activeForm.title}</CardTitle>
+                                    <CardDescription className="text-blue-100 mt-2">
                                         {activeForm.description}
                                     </CardDescription>
                                     {activeForm.depId && (
-                                        <Badge variant="outline" className="mt-2 bg-blue-50 text-blue-700 border-blue-200">
+                                        <Badge className="mt-3 bg-white/20 text-white border-0">
+                                            <Building className="w-3 h-3 mr-1" />
                                             Department: {getDepartmentName(activeForm.depId)}
                                         </Badge>
                                     )}
@@ -420,30 +441,29 @@ export default function FormBuilderPage() {
                                     variant="ghost"
                                     size="icon"
                                     onClick={closePreview}
-                                    className="h-8 w-8 text-gray-500 hover:bg-gray-100"
+                                    className="h-9 w-9 text-white hover:bg-white/20 rounded-full"
                                 >
-                                    <X className="w-4 h-4" />
+                                    <X className="w-5 h-5" />
                                 </Button>
                             </div>
                         </CardHeader>
-                        <CardContent className="p-6 overflow-y-auto bg-white">
-                            <div className="space-y-4">
+                        <CardContent className="p-6 overflow-y-auto">
+                            <div className="space-y-6">
                                 {activeForm.fields.map((field, index) => (
-                                    <div key={index} className="space-y-2">
-                                        <Label className="flex items-center gap-2 text-gray-700">
+                                    <div key={index} className="space-y-3 p-4 rounded-xl bg-gray-50/50 border border-gray-200">
+                                        <Label className="flex items-center gap-2 text-gray-800 font-medium">
                                             {field.label}
                                             {field.required && <span className="text-red-500">*</span>}
                                         </Label>
-                                        {/* FIXED: Use PreviewFieldComponent instead of renderPreviewField */}
                                         <PreviewFieldComponent field={field} />
                                     </div>
                                 ))}
                             </div>
-                            <div className="flex gap-3 mt-6 pt-6 border-t">
-                                <Button className="flex-1 bg-blue-600 hover:bg-blue-700 text-white">
+                            <div className="flex gap-3 mt-8 pt-6 border-t">
+                                <Button className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg">
                                     Submit Form
                                 </Button>
-                                <Button variant="outline" onClick={closePreview}>
+                                <Button variant="outline" onClick={closePreview} className="border-gray-300">
                                     Close
                                 </Button>
                             </div>
@@ -456,119 +476,140 @@ export default function FormBuilderPage() {
                 {/* Header Section */}
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
                     <div className="text-center sm:text-left">
-                        <h1 className="text-3xl font-bold text-gray-900">
-                            Form Builder
+                        <h1 className="text-3xl md:text-4xl font-bold text-gray-900 bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
+                            Dynamic Form Builder
                         </h1>
-                        <p className="text-gray-600 mt-2">
-                            Create and manage dynamic forms with drag & drop
+                        <p className="text-gray-600 mt-2 max-w-2xl">
+                            Create, customize and manage dynamic forms with drag & drop interface and real-time preview
                         </p>
                     </div>
                     <Button
                         onClick={() => setShowFormBuilder(!showFormBuilder)}
-                        className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
+                        className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-200"
                         size="lg"
                     >
                         <Plus className="w-5 h-5 mr-2" />
-                        Create Form
+                        {showFormBuilder ? 'Close Builder' : 'Create New Form'}
                     </Button>
                 </div>
 
                 {/* Form Builder */}
                 {showFormBuilder && (
-                    <Card className="mb-8 border border-gray-200 shadow-sm bg-white">
-                        <CardHeader className="bg-white border-b">
+                    <Card className="mb-8 border-0 shadow-xl rounded-2xl overflow-hidden bg-white">
+                        <CardHeader className="bg-gradient-to-r from-gray-50 to-white border-b">
                             <div className="flex justify-between items-center">
                                 <div>
-                                    <CardTitle className="text-gray-900">
-                                        {editingForm ? 'Edit Form' : 'Create New Form'}
+                                    <CardTitle className="text-2xl text-gray-900">
+                                        {editingForm ? '✏️ Edit Form' : '🚀 Create New Form'}
                                     </CardTitle>
-                                    <CardDescription className="text-gray-600">
-                                        Drag and drop fields to build your form
+                                    <CardDescription className="text-gray-600 mt-2">
+                                        Drag and drop fields to build your form • Real-time preview
                                     </CardDescription>
                                 </div>
                                 <Button
                                     variant="ghost"
                                     size="icon"
                                     onClick={resetFormBuilder}
-                                    className="h-8 w-8 text-gray-500 hover:bg-gray-100"
+                                    className="h-9 w-9 text-gray-500 hover:bg-gray-100 rounded-full"
                                 >
-                                    <X className="w-4 h-4" />
+                                    <X className="w-5 h-5" />
                                 </Button>
                             </div>
                         </CardHeader>
-                        <CardContent className="pt-6 bg-white">
+                        <CardContent className="pt-6">
                             {/* Form Header */}
-                            <div className="space-y-6 mb-8">
-                                <div className="space-y-2">
-                                    <Label className="text-gray-700 font-medium">
-                                        Form Title *
-                                    </Label>
-                                    <Input
-                                        value={formTitle}
-                                        onChange={(e) => setFormTitle(e.target.value)}
-                                        placeholder="Enter form title"
-                                        className="focus:border-blue-500 bg-white"
-                                        required
-                                    />
+                            <div className="space-y-6 mb-8 p-4 rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="space-y-2">
+                                        <Label className="text-gray-700 font-medium flex items-center gap-2">
+                                            <TextCursor className="w-4 h-4" /> Form Title *
+                                        </Label>
+                                        <Input
+                                            value={formTitle}
+                                            onChange={(e) => setFormTitle(e.target.value)}
+                                            placeholder="Enter form title (e.g., Employee Registration)"
+                                            className="focus:border-blue-500 bg-white shadow-sm h-11"
+                                            required
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label className="text-gray-700 font-medium flex items-center gap-2">
+                                            <Building className="w-4 h-4" /> Select Department *
+                                        </Label>
+                                        <select
+                                            value={selectedDepartment}
+                                            onChange={(e) => setSelectedDepartment(e.target.value)}
+                                            className="w-full p-3 border border-gray-300 rounded-lg bg-white text-gray-700 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 shadow-sm h-11"
+                                            required
+                                        >
+                                            <option value="">Select a Department</option>
+                                            {safeDepartments.map((dept) => (
+                                                <option key={dept._id} value={dept._id}>
+                                                    {dept.name}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        {fetchingDepartments && (
+                                            <p className="text-sm text-gray-500 flex items-center gap-1">
+                                                <Loader2 className="w-3 h-3 animate-spin" /> Loading departments...
+                                            </p>
+                                        )}
+                                        {safeDepartments.length === 0 && !fetchingDepartments && (
+                                            <p className="text-sm text-red-500">No departments found. Please create departments first.</p>
+                                        )}
+                                    </div>
                                 </div>
                                 <div className="space-y-2">
-                                    <Label className="text-gray-700 font-medium">
-                                        Description
+                                    <Label className="text-gray-700 font-medium flex items-center gap-2">
+                                        <TextQuote className="w-4 h-4" /> Description
                                     </Label>
-                                    <Input
+                                    <textarea
                                         value={formDescription}
                                         onChange={(e) => setFormDescription(e.target.value)}
-                                        placeholder="Enter form description"
-                                        className="focus:border-blue-500 bg-white"
+                                        placeholder="Enter form description (optional)"
+                                        className="w-full p-3 border border-gray-300 rounded-lg bg-white text-gray-700 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 shadow-sm min-h-[80px]"
+                                        rows="2"
                                     />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label className="text-gray-700 font-medium">
-                                        Select Department *
-                                    </Label>
-                                    <select
-                                        value={selectedDepartment}
-                                        onChange={(e) => setSelectedDepartment(e.target.value)}
-                                        className="w-full p-2 border border-gray-300 rounded-lg bg-white text-gray-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                                        required
-                                    >
-                                        <option value="">Select a Department</option>
-                                        {safeDepartments.map((dept) => (
-                                            <option key={dept._id} value={dept._id}>
-                                                {dept.name}
-                                            </option>
-                                        ))}
-                                    </select>
-                                    {fetchingDepartments && (
-                                        <p className="text-sm text-gray-500">Loading departments...</p>
-                                    )}
-                                    {safeDepartments.length === 0 && !fetchingDepartments && (
-                                        <p className="text-sm text-red-500">No departments found. Please create departments first.</p>
-                                    )}
                                 </div>
                             </div>
 
                             {/* Builder Layout */}
-                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 min-h-[500px]">
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 min-h-[600px]">
                                 {/* Fields Palette */}
-                                <Card className="border border-gray-200 shadow-sm bg-white">
-                                    <CardHeader className="pb-4 bg-white">
-                                        <CardTitle className="text-lg text-gray-900">Field Types</CardTitle>
+                                <Card className="border-0 shadow-lg rounded-xl bg-white">
+                                    <CardHeader className="pb-4 bg-gradient-to-r from-gray-50 to-white border-b">
+                                        <CardTitle className="text-lg text-gray-900 flex items-center gap-2">
+                                            <GripVertical className="w-5 h-5" /> Field Types
+                                        </CardTitle>
                                         <CardDescription className="text-gray-600">Click to add fields</CardDescription>
                                     </CardHeader>
-                                    <CardContent className="space-y-3 bg-white max-h-[500px] overflow-y-auto">
+                                    <CardContent className="space-y-2 p-3 bg-white max-h-[600px] overflow-y-auto">
                                         {fieldTypes.map((fieldType) => {
                                             const IconComponent = fieldType.icon;
+                                            const colorMap = {
+                                                blue: 'bg-blue-100 text-blue-600',
+                                                green: 'bg-green-100 text-green-600',
+                                                purple: 'bg-purple-100 text-purple-600',
+                                                teal: 'bg-teal-100 text-teal-600',
+                                                red: 'bg-red-100 text-red-600',
+                                                orange: 'bg-orange-100 text-orange-600',
+                                                amber: 'bg-amber-100 text-amber-600',
+                                                violet: 'bg-violet-100 text-violet-600',
+                                                pink: 'bg-pink-100 text-pink-600',
+                                                indigo: 'bg-indigo-100 text-indigo-600',
+                                                cyan: 'bg-cyan-100 text-cyan-600',
+                                                yellow: 'bg-yellow-100 text-yellow-600'
+                                            };
                                             return (
                                                 <div
                                                     key={fieldType.type}
-                                                    className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg cursor-pointer hover:border-blue-300 hover:bg-blue-50 transition-colors bg-white"
+                                                    className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg cursor-pointer hover:border-blue-300 hover:bg-blue-50/50 transition-all duration-200 bg-white hover:shadow-sm group"
                                                     onClick={() => addField(fieldType.type)}
                                                 >
-                                                    <div className={`p-2 rounded-lg bg-${fieldType.color}-100 text-${fieldType.color}-600`}>
+                                                    <div className={`p-2 rounded-lg ${colorMap[fieldType.color] || 'bg-gray-100 text-gray-600'}`}>
                                                         <IconComponent className="w-4 h-4" />
                                                     </div>
-                                                    <span className="font-medium text-gray-700">
+                                                    <span className="font-medium text-gray-700 group-hover:text-blue-700">
                                                         {fieldType.label}
                                                     </span>
                                                 </div>
@@ -578,15 +619,26 @@ export default function FormBuilderPage() {
                                 </Card>
 
                                 {/* Form Canvas */}
-                                <Card className="border border-gray-200 shadow-sm lg:col-span-2 bg-white">
-                                    <CardHeader className="pb-4 bg-white">
-                                        <CardTitle className="text-lg text-gray-900">Form Canvas</CardTitle>
-                                        <CardDescription className="text-gray-600">
-                                            {fields.length} field{fields.length !== 1 ? 's' : ''} added
-                                        </CardDescription>
+                                <Card className="border-0 shadow-lg rounded-xl lg:col-span-2 bg-white">
+                                    <CardHeader className="pb-4 bg-gradient-to-r from-gray-50 to-white border-b">
+                                        <div className="flex justify-between items-center">
+                                            <div>
+                                                <CardTitle className="text-lg text-gray-900 flex items-center gap-2">
+                                                    <TextCursor className="w-5 h-5" /> Form Canvas
+                                                </CardTitle>
+                                                <CardDescription className="text-gray-600">
+                                                    {fields.length} field{fields.length !== 1 ? 's' : ''} added • Drag to reorder
+                                                </CardDescription>
+                                            </div>
+                                            {fields.length > 0 && (
+                                                <Badge className="bg-blue-100 text-blue-700">
+                                                    Preview Mode
+                                                </Badge>
+                                            )}
+                                        </div>
                                     </CardHeader>
-                                    <CardContent className="bg-white">
-                                        <div className="space-y-4 min-h-[400px]">
+                                    <CardContent className="p-4">
+                                        <div className="space-y-4 min-h-[500px] p-2">
                                             {fields.map((field, index) => (
                                                 <FormFieldItem
                                                     key={field.id}
@@ -600,14 +652,20 @@ export default function FormBuilderPage() {
                                             ))}
 
                                             {fields.length === 0 && (
-                                                <div className="text-center py-16 border-2 border-dashed border-gray-300 rounded-lg bg-white">
-                                                    <TextCursor className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                                                    <h3 className="text-lg font-semibold text-gray-500 mb-2">
-                                                        No fields added yet
+                                                <div className="text-center py-20 border-2 border-dashed border-gray-300 rounded-2xl bg-gradient-to-br from-gray-50 to-blue-50/30">
+                                                    <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-blue-100 flex items-center justify-center">
+                                                        <TextCursor className="w-10 h-10 text-blue-400" />
+                                                    </div>
+                                                    <h3 className="text-xl font-semibold text-gray-700 mb-3">
+                                                        Your canvas is empty
                                                     </h3>
-                                                    <p className="text-gray-400">
-                                                        Click on field types to add them to your form
+                                                    <p className="text-gray-500 max-w-md mx-auto mb-6">
+                                                        Start building your form by adding fields from the palette on the left
                                                     </p>
+                                                    <div className="flex items-center justify-center gap-2 text-sm text-gray-400">
+                                                        <span className="px-3 py-1 bg-white rounded-full border">Click to add</span>
+                                                        <span className="px-3 py-1 bg-white rounded-full border">Drag & drop</span>
+                                                    </div>
                                                 </div>
                                             )}
                                         </div>
@@ -617,139 +675,305 @@ export default function FormBuilderPage() {
 
                             {/* Field Properties */}
                             {selectedField && (
-                                <Card className="mt-6 border border-gray-200 shadow-sm bg-white">
-                                    <CardHeader className="bg-white">
-                                        <CardTitle className="text-lg text-gray-900">Field Properties</CardTitle>
-                                        <CardDescription className="text-gray-600">
-                                            Configure {selectedField.label} field
-                                        </CardDescription>
+                                <Card className="mt-6 border-0 shadow-lg rounded-xl bg-white animate-in slide-in-from-bottom-5 duration-300">
+                                    <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 border-b">
+                                        <div className="flex justify-between items-center">
+                                            <div>
+                                                <CardTitle className="text-lg text-gray-900 flex items-center gap-2">
+                                                    ⚙️ Field Properties
+                                                </CardTitle>
+                                                <CardDescription className="text-gray-600">
+                                                    Configure <span className="font-semibold text-blue-600">{selectedField.label}</span> field
+                                                </CardDescription>
+                                            </div>
+                                            <Badge className={`${selectedField.required ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'}`}>
+                                                {selectedField.required ? 'Required' : 'Optional'}
+                                            </Badge>
+                                        </div>
                                     </CardHeader>
-                                    <CardContent className="bg-white">
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                            <div className="space-y-4">
+                                    <CardContent className="p-6">
+                                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                                            <div className="space-y-6">
                                                 <div className="space-y-2">
-                                                    <Label className="text-gray-700">Field Label</Label>
+                                                    <Label className="text-gray-700 font-medium flex items-center gap-2">
+                                                        <TextCursor className="w-4 h-4" /> Field Label
+                                                    </Label>
                                                     <Input
                                                         value={selectedField.label}
                                                         onChange={(e) => updateField(selectedField.id, { label: e.target.value })}
                                                         placeholder="Enter field label"
-                                                        className="bg-white"
+                                                        className="bg-white border-gray-300 focus:border-blue-500 h-11"
                                                     />
                                                 </div>
                                                 <div className="space-y-2">
-                                                    <Label className="text-gray-700">Field Name</Label>
+                                                    <Label className="text-gray-700 font-medium flex items-center gap-2">
+                                                        <Hash className="w-4 h-4" /> Field Name
+                                                    </Label>
                                                     <Input
                                                         value={selectedField.name}
                                                         onChange={(e) => updateField(selectedField.id, { name: e.target.value })}
-                                                        placeholder="Enter field name"
-                                                        className="bg-white"
+                                                        placeholder="Enter field name (no spaces)"
+                                                        className="bg-white border-gray-300 focus:border-blue-500 h-11 font-mono"
                                                     />
                                                 </div>
                                                 <div className="space-y-2">
-                                                    <Label className="text-gray-700">Placeholder</Label>
+                                                    <Label className="text-gray-700 font-medium flex items-center gap-2">
+                                                        <TextQuote className="w-4 h-4" /> Placeholder Text
+                                                    </Label>
                                                     <Input
                                                         value={selectedField.placeholder || ''}
                                                         onChange={(e) => updateField(selectedField.id, { placeholder: e.target.value })}
                                                         placeholder="Enter placeholder text"
-                                                        className="bg-white"
+                                                        className="bg-white border-gray-300 focus:border-blue-500 h-11"
                                                     />
                                                 </div>
-                                                <div className="flex items-center space-x-2">
+                                                <div className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg bg-gray-50">
                                                     <input
                                                         type="checkbox"
                                                         id="required"
                                                         checked={selectedField.required}
                                                         onChange={(e) => updateField(selectedField.id, { required: e.target.checked })}
-                                                        className="rounded border-gray-300"
+                                                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 h-5 w-5"
                                                     />
-                                                    <Label htmlFor="required" className="text-gray-700">Required Field</Label>
+                                                    <div>
+                                                        <Label htmlFor="required" className="text-gray-700 font-medium cursor-pointer">
+                                                            Required Field
+                                                        </Label>
+                                                        <p className="text-sm text-gray-500">User must fill this field</p>
+                                                    </div>
                                                 </div>
                                             </div>
-                                            <div className="space-y-4">
+                                            <div className="space-y-6">
                                                 {/* Type-specific properties */}
                                                 {(selectedField.type === 'select' || selectedField.type === 'radio') && (
                                                     <div className="space-y-2">
-                                                        <Label className="text-gray-700">Options (comma separated)</Label>
-                                                        <Input
-                                                            value={selectedField.options?.join(', ') || ''}
-                                                            onChange={(e) => updateField(selectedField.id, {
-                                                                options: e.target.value.split(',').map(opt => opt.trim())
-                                                            })}
-                                                            placeholder="Option 1, Option 2, Option 3"
-                                                            className="bg-white"
-                                                        />
+                                                        <Label className="text-gray-700 font-medium flex items-center gap-2">
+                                                            <List className="w-4 h-4" /> Options
+                                                        </Label>
+                                                        <div className="space-y-2">
+                                                            <textarea
+                                                                value={selectedField.options?.join('\n') || ''}
+                                                                onChange={(e) => updateField(selectedField.id, {
+                                                                    options: e.target.value.split('\n').filter(opt => opt.trim())
+                                                                })}
+                                                                placeholder="Enter each option on a new line"
+                                                                className="w-full p-3 border border-gray-300 rounded-lg bg-white text-gray-700 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 min-h-[120px] font-mono"
+                                                            />
+                                                            <p className="text-sm text-gray-500">One option per line</p>
+                                                        </div>
                                                     </div>
                                                 )}
 
                                                 {selectedField.type === 'range' && (
-                                                    <div className="grid grid-cols-3 gap-3">
-                                                        <div className="space-y-2">
-                                                            <Label className="text-gray-700">Min</Label>
-                                                            <Input
-                                                                type="number"
-                                                                value={selectedField.min || 0}
-                                                                onChange={(e) => updateField(selectedField.id, { min: parseInt(e.target.value) })}
-                                                                className="bg-white"
-                                                            />
-                                                        </div>
-                                                        <div className="space-y-2">
-                                                            <Label className="text-gray-700">Max</Label>
-                                                            <Input
-                                                                type="number"
-                                                                value={selectedField.max || 100}
-                                                                onChange={(e) => updateField(selectedField.id, { max: parseInt(e.target.value) })}
-                                                                className="bg-white"
-                                                            />
-                                                        </div>
-                                                        <div className="space-y-2">
-                                                            <Label className="text-gray-700">Step</Label>
-                                                            <Input
-                                                                type="number"
-                                                                value={selectedField.step || 1}
-                                                                onChange={(e) => updateField(selectedField.id, { step: parseInt(e.target.value) })}
-                                                                className="bg-white"
-                                                            />
+                                                    <div className="space-y-4 p-4 border border-gray-200 rounded-lg bg-gray-50">
+                                                        <Label className="text-gray-700 font-medium">Range Settings</Label>
+                                                        <div className="grid grid-cols-3 gap-3">
+                                                            <div className="space-y-2">
+                                                                <Label className="text-xs text-gray-600">Min</Label>
+                                                                <Input
+                                                                    type="number"
+                                                                    value={selectedField.min || 0}
+                                                                    onChange={(e) => updateField(selectedField.id, { min: parseInt(e.target.value) })}
+                                                                    className="bg-white h-9"
+                                                                />
+                                                            </div>
+                                                            <div className="space-y-2">
+                                                                <Label className="text-xs text-gray-600">Max</Label>
+                                                                <Input
+                                                                    type="number"
+                                                                    value={selectedField.max || 100}
+                                                                    onChange={(e) => updateField(selectedField.id, { max: parseInt(e.target.value) })}
+                                                                    className="bg-white h-9"
+                                                                />
+                                                            </div>
+                                                            <div className="space-y-2">
+                                                                <Label className="text-xs text-gray-600">Step</Label>
+                                                                <Input
+                                                                    type="number"
+                                                                    value={selectedField.step || 1}
+                                                                    onChange={(e) => updateField(selectedField.id, { step: parseInt(e.target.value) })}
+                                                                    className="bg-white h-9"
+                                                                />
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 )}
 
                                                 {selectedField.type === 'file' && (
-                                                    <div className="space-y-4">
-                                                        <div className="flex items-center space-x-2">
+                                                    <div className="space-y-4 p-4 border border-gray-200 rounded-lg bg-gray-50">
+                                                        <div className="flex items-center space-x-3">
                                                             <input
                                                                 type="checkbox"
                                                                 id="multiple"
                                                                 checked={selectedField.multiple || false}
                                                                 onChange={(e) => updateField(selectedField.id, { multiple: e.target.checked })}
-                                                                className="rounded border-gray-300"
+                                                                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                                                             />
-                                                            <Label htmlFor="multiple" className="text-gray-700">Allow Multiple Files</Label>
+                                                            <Label htmlFor="multiple" className="text-gray-700 font-medium">
+                                                                Allow Multiple Files
+                                                            </Label>
                                                         </div>
                                                         <div className="space-y-2">
                                                             <Label className="text-gray-700">Accepted File Types</Label>
-                                                            <Input
+                                                            <select
                                                                 value={selectedField.accept || '*/*'}
                                                                 onChange={(e) => updateField(selectedField.id, { accept: e.target.value })}
-                                                                placeholder=".jpg,.png,.pdf or image/*, application/pdf"
-                                                                className="bg-white"
-                                                            />
+                                                                className="w-full p-2 border border-gray-300 rounded-lg bg-white text-gray-700"
+                                                            >
+                                                                <option value="*/*">All Files</option>
+                                                                <option value="image/*">Images Only</option>
+                                                                <option value=".pdf,.doc,.docx">Documents</option>
+                                                                <option value=".jpg,.jpeg,.png,.gif">Images (JPG, PNG, GIF)</option>
+                                                            </select>
                                                         </div>
                                                     </div>
                                                 )}
 
                                                 {selectedField.type === 'rating' && (
-                                                    <div className="space-y-2">
-                                                        <Label className="text-gray-700">Maximum Rating</Label>
-                                                        <Input
-                                                            type="number"
-                                                            value={selectedField.maxRating || 5}
-                                                            onChange={(e) => updateField(selectedField.id, { maxRating: parseInt(e.target.value) })}
-                                                            min="1"
-                                                            max="10"
-                                                            className="bg-white"
-                                                        />
+                                                    <div className="space-y-2 p-4 border border-gray-200 rounded-lg bg-gray-50">
+                                                        <Label className="text-gray-700 font-medium">Rating Settings</Label>
+                                                        <div className="flex items-center gap-4">
+                                                            <div className="flex-1">
+                                                                <Label className="text-sm text-gray-600">Max Stars</Label>
+                                                                <Input
+                                                                    type="number"
+                                                                    value={selectedField.maxRating || 5}
+                                                                    onChange={(e) => updateField(selectedField.id, { maxRating: parseInt(e.target.value) })}
+                                                                    min="1"
+                                                                    max="10"
+                                                                    className="bg-white h-9"
+                                                                />
+                                                            </div>
+                                                            <div className="flex-1">
+                                                                <Label className="text-sm text-gray-600">Default</Label>
+                                                                <Input
+                                                                    type="number"
+                                                                    value={selectedField.defaultRating || 0}
+                                                                    onChange={(e) => updateField(selectedField.id, { defaultRating: parseInt(e.target.value) })}
+                                                                    min="0"
+                                                                    max={selectedField.maxRating || 5}
+                                                                    className="bg-white h-9"
+                                                                />
+                                                            </div>
+                                                        </div>
                                                     </div>
                                                 )}
+
+                                                {/* Date, Time, and Datetime properties */}
+                                                {selectedField.type === 'date' && (
+                                                    <div className="space-y-4 p-4 border border-gray-200 rounded-lg bg-gray-50">
+                                                        <Label className="text-gray-700 font-medium">Date Settings</Label>
+                                                        <div className="grid grid-cols-2 gap-3">
+                                                            <div className="space-y-2">
+                                                                <Label className="text-xs text-gray-600">Min Date</Label>
+                                                                <Input
+                                                                    type="date"
+                                                                    value={selectedField.minDate || ''}
+                                                                    onChange={(e) => updateField(selectedField.id, { minDate: e.target.value })}
+                                                                    className="bg-white h-9"
+                                                                />
+                                                            </div>
+                                                            <div className="space-y-2">
+                                                                <Label className="text-xs text-gray-600">Max Date</Label>
+                                                                <Input
+                                                                    type="date"
+                                                                    value={selectedField.maxDate || ''}
+                                                                    onChange={(e) => updateField(selectedField.id, { maxDate: e.target.value })}
+                                                                    className="bg-white h-9"
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <Label className="text-xs text-gray-600">Default Date</Label>
+                                                            <Input
+                                                                type="date"
+                                                                value={selectedField.defaultDate || ''}
+                                                                onChange={(e) => updateField(selectedField.id, { defaultDate: e.target.value })}
+                                                                className="bg-white h-9"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {selectedField.type === 'time' && (
+                                                    <div className="space-y-4 p-4 border border-gray-200 rounded-lg bg-gray-50">
+                                                        <Label className="text-gray-700 font-medium">Time Settings</Label>
+                                                        <div className="grid grid-cols-2 gap-3">
+                                                            <div className="space-y-2">
+                                                                <Label className="text-xs text-gray-600">Min Time</Label>
+                                                                <Input
+                                                                    type="time"
+                                                                    value={selectedField.minTime || ''}
+                                                                    onChange={(e) => updateField(selectedField.id, { minTime: e.target.value })}
+                                                                    className="bg-white h-9"
+                                                                />
+                                                            </div>
+                                                            <div className="space-y-2">
+                                                                <Label className="text-xs text-gray-600">Max Time</Label>
+                                                                <Input
+                                                                    type="time"
+                                                                    value={selectedField.maxTime || ''}
+                                                                    onChange={(e) => updateField(selectedField.id, { maxTime: e.target.value })}
+                                                                    className="bg-white h-9"
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <Label className="text-xs text-gray-600">Time Step (minutes)</Label>
+                                                            <select
+                                                                value={selectedField.step || 900}
+                                                                onChange={(e) => updateField(selectedField.id, { step: parseInt(e.target.value) })}
+                                                                className="w-full p-2 border border-gray-300 rounded-lg bg-white text-gray-700 h-9"
+                                                            >
+                                                                <option value="60">1 minute</option>
+                                                                <option value="300">5 minutes</option>
+                                                                <option value="600">10 minutes</option>
+                                                                <option value="900">15 minutes</option>
+                                                                <option value="1800">30 minutes</option>
+                                                                <option value="3600">1 hour</option>
+                                                            </select>
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {selectedField.type === 'datetime' && (
+                                                    <div className="space-y-4 p-4 border border-gray-200 rounded-lg bg-gray-50">
+                                                        <Label className="text-gray-700 font-medium">Date & Time Settings</Label>
+                                                        <div className="grid grid-cols-2 gap-3">
+                                                            <div className="space-y-2">
+                                                                <Label className="text-xs text-gray-600">Min Date/Time</Label>
+                                                                <Input
+                                                                    type="datetime-local"
+                                                                    value={selectedField.minDateTime || ''}
+                                                                    onChange={(e) => updateField(selectedField.id, { minDateTime: e.target.value })}
+                                                                    className="bg-white h-9"
+                                                                />
+                                                            </div>
+                                                            <div className="space-y-2">
+                                                                <Label className="text-xs text-gray-600">Max Date/Time</Label>
+                                                                <Input
+                                                                    type="datetime-local"
+                                                                    value={selectedField.maxDateTime || ''}
+                                                                    onChange={(e) => updateField(selectedField.id, { maxDateTime: e.target.value })}
+                                                                    className="bg-white h-9"
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {/* Show field type badge */}
+                                                <div className="p-3 border border-gray-200 rounded-lg bg-gradient-to-r from-blue-50 to-indigo-50">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className={`p-2 rounded-lg bg-blue-100 text-blue-600`}>
+                                                            {React.createElement(getFieldIcon(selectedField.type), { className: "w-4 h-4" })}
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-sm font-medium text-gray-700">Field Type</p>
+                                                            <p className="text-lg font-bold text-gray-900">{selectedField.type.toUpperCase()}</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
                                             </div>
                                         </div>
                                     </CardContent>
@@ -761,21 +985,24 @@ export default function FormBuilderPage() {
                                 <Button
                                     onClick={handleSaveForm}
                                     disabled={loading || !formTitle.trim() || !selectedDepartment || fields.length === 0}
-                                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                                    className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl transition-all duration-200 flex-1 py-6 text-lg font-medium"
                                 >
                                     {loading ? (
                                         <>
-                                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                            {editingForm ? 'Updating...' : 'Saving...'}
+                                            <Loader2 className="w-5 h-5 mr-3 animate-spin" />
+                                            {editingForm ? 'Updating Form...' : 'Saving Form...'}
                                         </>
                                     ) : (
-                                        editingForm ? 'Update Form' : 'Save Form'
+                                        <>
+                                            <CheckSquare className="w-5 h-5 mr-2" />
+                                            {editingForm ? 'Update Form' : 'Save Form'}
+                                        </>
                                     )}
                                 </Button>
                                 <Button
                                     variant="outline"
                                     onClick={resetFormBuilder}
-                                    className="border-gray-300 text-gray-700 hover:bg-gray-50"
+                                    className="border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400 py-6 text-lg"
                                 >
                                     Cancel
                                 </Button>
@@ -785,134 +1012,144 @@ export default function FormBuilderPage() {
                 )}
 
                 {/* Forms List */}
-                <Card className="shadow-sm border border-gray-200 overflow-hidden bg-white">
-                    <CardHeader className="bg-white border-b">
+                <Card className="shadow-xl border-0 rounded-2xl overflow-hidden bg-white">
+                    <CardHeader className="bg-gradient-to-r from-gray-50 to-white border-b">
                         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                             <div>
-                                <CardTitle className="text-xl font-bold text-gray-900">
-                                    Your Forms
+                                <CardTitle className="text-2xl font-bold text-gray-900 flex items-center gap-3">
+                                    <FileText className="w-7 h-7 text-blue-600" /> Your Forms
                                 </CardTitle>
-                                <CardDescription className="text-gray-600">
-                                    {forms.length} form{forms.length !== 1 ? 's' : ''} created
+                                <CardDescription className="text-gray-600 mt-2">
+                                    {forms.length} form{forms.length !== 1 ? 's' : ''} created • Search and manage all forms
                                 </CardDescription>
                             </div>
-                            <div className="relative w-full sm:w-80">
-                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                            <div className="relative w-full sm:w-96">
+                                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                                 <Input
-                                    placeholder="Search forms..."
-                                    className="pl-10 bg-white border-gray-300"
+                                    placeholder="Search forms by title or description..."
+                                    className="pl-12 bg-white border-gray-300 rounded-full h-12 shadow-sm focus:border-blue-500"
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                 />
                             </div>
                         </div>
                     </CardHeader>
-                    <CardContent className="p-0 bg-white">
+                    <CardContent className="p-0">
                         {fetching ? (
-                            <div className="flex justify-center items-center py-16 bg-white">
-                                <div className="flex items-center gap-2 text-gray-600">
-                                    <Loader2 className="w-5 h-5 animate-spin" />
-                                    <span>Loading forms...</span>
+                            <div className="flex justify-center items-center py-24">
+                                <div className="flex items-center gap-3 text-gray-600">
+                                    <Loader2 className="w-6 h-6 animate-spin" />
+                                    <span className="text-lg">Loading your forms...</span>
                                 </div>
                             </div>
                         ) : filteredForms.length === 0 ? (
-                            <div className="text-center py-16 bg-white">
-                                <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                                <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                                    {forms.length === 0 ? "No forms yet" : "No matches found"}
+                            <div className="text-center py-24">
+                                <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center">
+                                    <FileText className="w-12 h-12 text-blue-400" />
+                                </div>
+                                <h3 className="text-2xl font-bold text-gray-900 mb-3">
+                                    {forms.length === 0 ? "No forms created yet" : "No matches found"}
                                 </h3>
-                                <p className="text-gray-600 max-w-md mx-auto mb-6">
+                                <p className="text-gray-600 max-w-md mx-auto mb-8 text-lg">
                                     {forms.length === 0
-                                        ? "Get started by creating your first dynamic form."
-                                        : "Try adjusting your search terms."
+                                        ? "Start building your first form to collect data efficiently."
+                                        : "Try adjusting your search terms or create a new form."
                                     }
                                 </p>
                                 {forms.length === 0 && (
                                     <Button
                                         onClick={() => setShowFormBuilder(true)}
-                                        className="bg-blue-600 hover:bg-blue-700 text-white"
+                                        className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg px-8 py-6 text-lg"
                                     >
-                                        <Plus className="w-4 h-4 mr-2" />
-                                        Create First Form
+                                        <Plus className="w-6 h-6 mr-3" />
+                                        Create Your First Form
                                     </Button>
                                 )}
                             </div>
                         ) : (
-                            <div className="overflow-x-auto bg-white">
+                            <div className="overflow-x-auto">
                                 <Table>
-                                    <TableHeader className="bg-gray-50">
-                                        <TableRow>
-                                            <TableHead className="w-12 font-semibold text-gray-900 text-center">#</TableHead>
-                                            <TableHead className="font-semibold text-gray-900">Form Details</TableHead>
-                                            <TableHead className="font-semibold text-gray-900">Department</TableHead>
-                                            <TableHead className="font-semibold text-gray-900">Fields</TableHead>
-                                            <TableHead className="font-semibold text-gray-900">Created</TableHead>
-                                            <TableHead className="font-semibold text-gray-900 text-center">Actions</TableHead>
+                                    <TableHeader className="bg-gradient-to-r from-gray-50 to-white">
+                                        <TableRow className="border-b border-gray-200">
+                                            <TableHead className="w-16 font-bold text-gray-900 text-center">#</TableHead>
+                                            <TableHead className="font-bold text-gray-900">Form Details</TableHead>
+                                            <TableHead className="font-bold text-gray-900">Department</TableHead>
+                                            <TableHead className="font-bold text-gray-900">Fields</TableHead>
+                                            <TableHead className="font-bold text-gray-900">Created</TableHead>
+                                            <TableHead className="font-bold text-gray-900 text-center">Actions</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
                                         {filteredForms.map((form, index) => (
-                                            <TableRow key={form._id} className="hover:bg-gray-50/50 border-b border-gray-100">
-                                                <TableCell className="text-center text-sm text-gray-500 font-medium">
-                                                    {index + 1}
+                                            <TableRow key={form._id} className="hover:bg-gray-50/50 border-b border-gray-100 group">
+                                                <TableCell className="text-center">
+                                                    <div className="w-10 h-10 mx-auto rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center text-blue-700 font-bold">
+                                                        {index + 1}
+                                                    </div>
                                                 </TableCell>
                                                 <TableCell>
-                                                    <div className="flex items-center gap-3">
-                                                        <Avatar className="border border-gray-200 h-10 w-10">
-                                                            <AvatarFallback className="bg-blue-100 text-blue-600 text-sm">
+                                                    <div className="flex items-center gap-4">
+                                                        <Avatar className="border-2 border-white shadow-md h-14 w-14">
+                                                            <AvatarFallback className="bg-gradient-to-br from-blue-500 to-blue-700 text-white text-lg font-bold">
                                                                 {form.title?.[0]?.toUpperCase()}
                                                             </AvatarFallback>
                                                         </Avatar>
                                                         <div>
-                                                            <div className="font-semibold text-gray-900">
+                                                            <div className="font-bold text-gray-900 text-lg group-hover:text-blue-700">
                                                                 {form.title}
                                                             </div>
-                                                            <div className="text-sm text-gray-500 line-clamp-1">
-                                                                {form.description || "No description"}
+                                                            <div className="text-gray-500 mt-1 line-clamp-1">
+                                                                {form.description || "No description provided"}
                                                             </div>
                                                         </div>
                                                     </div>
                                                 </TableCell>
                                                 <TableCell>
-                                                    <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                                                    <Badge className="bg-gradient-to-r from-blue-100 to-indigo-100 text-blue-700 border-0 px-3 py-1.5">
+                                                        <Building className="w-3 h-3 mr-2" />
                                                         {getDepartmentName(form.depId)}
                                                     </Badge>
                                                 </TableCell>
                                                 <TableCell>
-                                                    <div className="flex flex-wrap gap-1">
-                                                        {form.fields.slice(0, 3).map((field, idx) => {
+                                                    <div className="flex flex-wrap gap-1.5">
+                                                        {form.fields.slice(0, 4).map((field, idx) => {
                                                             const IconComponent = getFieldIcon(field.type);
                                                             return (
                                                                 <Badge
                                                                     key={idx}
                                                                     variant="outline"
-                                                                    className="text-xs bg-gray-50 text-gray-700 border-gray-200"
+                                                                    className="text-xs bg-white text-gray-700 border-gray-200 shadow-sm"
                                                                 >
                                                                     <IconComponent className="w-3 h-3 mr-1" />
                                                                     {field.type}
                                                                 </Badge>
                                                             );
                                                         })}
-                                                        {form.fields.length > 3 && (
-                                                            <Badge variant="outline" className="text-xs bg-gray-50 text-gray-700 border-gray-200">
-                                                                +{form.fields.length - 3} more
+                                                        {form.fields.length > 4 && (
+                                                            <Badge className="text-xs bg-gray-100 text-gray-600">
+                                                                +{form.fields.length - 4} more
                                                             </Badge>
                                                         )}
                                                     </div>
                                                 </TableCell>
                                                 <TableCell>
-                                                    <div className="flex items-center gap-2 text-gray-600">
-                                                        <Calendar className="w-4 h-4" />
-                                                        <span className="text-sm">{formatDate(form.createdAt)}</span>
+                                                    <div className="flex items-center gap-3 text-gray-600">
+                                                        <Calendar className="w-5 h-5 text-blue-500" />
+                                                        <div>
+                                                            <div className="font-medium">{formatDate(form.createdAt)}</div>
+                                                            <div className="text-sm text-gray-400">
+                                                                {new Date(form.createdAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                                                            </div>
+                                                        </div>
                                                     </div>
                                                 </TableCell>
                                                 <TableCell>
-                                                    <div className="flex items-center justify-center gap-1">
+                                                    <div className="flex items-center justify-center gap-2">
                                                         <Button
                                                             variant="ghost"
                                                             size="sm"
                                                             onClick={() => previewForm(form)}
-                                                            className="h-8 w-8 text-gray-600 hover:text-blue-600 hover:bg-blue-50"
+                                                            className="h-10 w-10 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-full"
                                                             title="Preview"
                                                         >
                                                             <Eye className="w-4 h-4" />
@@ -921,7 +1158,7 @@ export default function FormBuilderPage() {
                                                             variant="ghost"
                                                             size="sm"
                                                             onClick={() => editForm(form)}
-                                                            className="h-8 w-8 text-gray-600 hover:text-green-600 hover:bg-green-50"
+                                                            className="h-10 w-10 text-gray-600 hover:text-green-600 hover:bg-green-50 rounded-full"
                                                             title="Edit"
                                                         >
                                                             <Edit className="w-4 h-4" />
@@ -930,7 +1167,7 @@ export default function FormBuilderPage() {
                                                             variant="ghost"
                                                             size="sm"
                                                             onClick={() => duplicateForm(form)}
-                                                            className="h-8 w-8 text-gray-600 hover:text-purple-600 hover:bg-purple-50"
+                                                            className="h-10 w-10 text-gray-600 hover:text-purple-600 hover:bg-purple-50 rounded-full"
                                                             title="Duplicate"
                                                         >
                                                             <Copy className="w-4 h-4" />
@@ -939,7 +1176,7 @@ export default function FormBuilderPage() {
                                                             variant="ghost"
                                                             size="sm"
                                                             onClick={() => deleteForm(form._id)}
-                                                            className="h-8 w-8 text-gray-600 hover:text-red-600 hover:bg-red-50"
+                                                            className="h-10 w-10 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-full"
                                                             title="Delete"
                                                         >
                                                             <Trash2 className="w-4 h-4" />
@@ -966,27 +1203,46 @@ function FormFieldItem({ field, isSelected, onSelect, onUpdate, onRemove, index 
     const renderFieldInput = () => {
         switch (field.type) {
             case 'text':
-                return <Input type="text" placeholder={field.placeholder || field.label} disabled className="bg-gray-50" />;
+                return <Input type="text" placeholder={field.placeholder || field.label} disabled className="bg-gray-50/50 border-gray-200" />;
             case 'email':
-                return <Input type="email" placeholder={field.placeholder || field.label} disabled className="bg-gray-50" />;
+                return <Input type="email" placeholder={field.placeholder || field.label} disabled className="bg-gray-50/50 border-gray-200" />;
             case 'number':
-                return <Input type="number" placeholder={field.placeholder || field.label} disabled className="bg-gray-50" />;
+                return <Input type="number" placeholder={field.placeholder || field.label} disabled className="bg-gray-50/50 border-gray-200" />;
             case 'tel':
-                return <Input type="tel" placeholder={field.placeholder || field.label} disabled className="bg-gray-50" />;
+                return <Input type="tel" placeholder={field.placeholder || field.label} disabled className="bg-gray-50/50 border-gray-200" />;
             case 'url':
-                return <Input type="url" placeholder={field.placeholder || field.label} disabled className="bg-gray-50" />;
+                return <Input type="url" placeholder={field.placeholder || field.label} disabled className="bg-gray-50/50 border-gray-200" />;
             case 'password':
                 return (
                     <div className="relative">
-                        <Input type="password" placeholder={field.placeholder || field.label} disabled className="bg-gray-50 pr-10" />
+                        <Input type="password" placeholder={field.placeholder || field.label} disabled className="bg-gray-50/50 border-gray-200 pr-10" />
                         <EyeOff className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                     </div>
                 );
             case 'date':
-                return <Input type="date" disabled className="bg-gray-50" />;
+                return (
+                    <div className="relative">
+                        <Input type="date" disabled className="bg-gray-50/50 border-gray-200" />
+                        <CalendarDays className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    </div>
+                );
+            case 'time':
+                return (
+                    <div className="relative">
+                        <Input type="time" disabled className="bg-gray-50/50 border-gray-200" />
+                        <Clock className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    </div>
+                );
+            case 'datetime':
+                return (
+                    <div className="relative">
+                        <Input type="datetime-local" disabled className="bg-gray-50/50 border-gray-200" />
+                        <CalendarClock className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    </div>
+                );
             case 'select':
                 return (
-                    <select disabled className="w-full p-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-700">
+                    <select disabled className="w-full p-2.5 border border-gray-200 rounded-lg bg-gray-50/50 text-gray-700">
                         <option value="">Select an option</option>
                         {field.options?.map((option, idx) => (
                             <option key={idx} value={option}>{option}</option>
@@ -998,29 +1254,29 @@ function FormFieldItem({ field, isSelected, onSelect, onUpdate, onRemove, index 
                     placeholder={field.placeholder || field.label}
                     disabled
                     rows="3"
-                    className="w-full p-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-700"
+                    className="w-full p-2.5 border border-gray-200 rounded-lg bg-gray-50/50 text-gray-700"
                 />;
             case 'checkbox':
                 return (
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center space-x-3">
                         <input
                             type="checkbox"
                             disabled
-                            className="rounded border-gray-300 bg-gray-100"
+                            className="rounded border-gray-300 bg-gray-100 h-5 w-5"
                         />
-                        <Label className="text-gray-700">{field.label}</Label>
+                        <Label className="text-gray-700 font-medium">{field.label}</Label>
                     </div>
                 );
             case 'radio':
                 return (
-                    <div className="space-y-2">
+                    <div className="space-y-2.5">
                         {field.options?.map((option, idx) => (
-                            <div key={idx} className="flex items-center space-x-2">
+                            <div key={idx} className="flex items-center space-x-3">
                                 <input
                                     type="radio"
                                     name={field.name}
                                     disabled
-                                    className="rounded-full border-gray-300 bg-gray-100"
+                                    className="rounded-full border-gray-300 bg-gray-100 h-5 w-5"
                                 />
                                 <Label className="text-gray-700">{option}</Label>
                             </div>
@@ -1029,7 +1285,7 @@ function FormFieldItem({ field, isSelected, onSelect, onUpdate, onRemove, index 
                 );
             case 'range':
                 return (
-                    <div className="space-y-2">
+                    <div className="space-y-3">
                         <input
                             type="range"
                             min={field.min || 0}
@@ -1037,20 +1293,23 @@ function FormFieldItem({ field, isSelected, onSelect, onUpdate, onRemove, index 
                             step={field.step || 1}
                             defaultValue={field.defaultValue || 50}
                             disabled
-                            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
                         />
-                        <div className="flex justify-between text-xs text-gray-500">
+                        <div className="flex justify-between text-sm text-gray-600">
                             <span>{field.min || 0}</span>
+                            <span className="font-medium">Value: {field.defaultValue || 50}</span>
                             <span>{field.max || 100}</span>
                         </div>
                     </div>
                 );
             case 'file':
                 return (
-                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center bg-gray-50">
-                        <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                        <p className="text-sm text-gray-600">Click to upload or drag and drop</p>
-                        <p className="text-xs text-gray-500 mt-1">
+                    <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center bg-gray-50/30">
+                        <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-blue-100 flex items-center justify-center">
+                            <Upload className="w-6 h-6 text-blue-500" />
+                        </div>
+                        <p className="text-sm font-medium text-gray-700">Click to upload or drag and drop</p>
+                        <p className="text-xs text-gray-500 mt-2">
                             {field.multiple ? 'Multiple files allowed' : 'Single file only'} • {field.accept || 'Any file type'}
                         </p>
                     </div>
@@ -1061,7 +1320,7 @@ function FormFieldItem({ field, isSelected, onSelect, onUpdate, onRemove, index 
                         {Array.from({ length: field.maxRating || 5 }, (_, i) => (
                             <Star
                                 key={i}
-                                className={`w-6 h-6 ${i < (field.defaultRating || 0)
+                                className={`w-7 h-7 ${i < (field.defaultRating || 0)
                                         ? 'text-yellow-400 fill-yellow-400'
                                         : 'text-gray-300'
                                     }`}
@@ -1071,67 +1330,74 @@ function FormFieldItem({ field, isSelected, onSelect, onUpdate, onRemove, index 
                 );
             case 'toggle':
                 return (
-                    <div className="flex items-center space-x-2">
-                        <div className={`relative inline-block w-12 h-6 rounded-full ${field.checked ? 'bg-blue-600' : 'bg-gray-300'
+                    <div className="flex items-center space-x-4">
+                        <div className={`relative inline-block w-14 h-7 rounded-full ${field.checked ? 'bg-blue-500' : 'bg-gray-300'
                             }`}>
-                            <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${field.checked ? 'transform translate-x-7' : 'transform translate-x-1'
+                            <div className={`absolute top-1 w-5 h-5 bg-white rounded-full transition-transform ${field.checked ? 'transform translate-x-8' : 'transform translate-x-1'
                                 }`} />
                         </div>
-                        <Label className="text-gray-700">{field.checked ? 'On' : 'Off'}</Label>
+                        <Label className="text-gray-700 font-medium">{field.checked ? 'Enabled' : 'Disabled'}</Label>
                     </div>
                 );
             case 'address':
                 return (
-                    <div className="space-y-2">
-                        <Input type="text" placeholder="Street address" disabled className="bg-gray-50" />
-                        <div className="grid grid-cols-2 gap-2">
-                            <Input type="text" placeholder="City" disabled className="bg-gray-50" />
-                            <Input type="text" placeholder="State" disabled className="bg-gray-50" />
+                    <div className="space-y-3">
+                        <Input type="text" placeholder="Street address" disabled className="bg-gray-50/50 border-gray-200" />
+                        <div className="grid grid-cols-2 gap-3">
+                            <Input type="text" placeholder="City" disabled className="bg-gray-50/50 border-gray-200" />
+                            <Input type="text" placeholder="State" disabled className="bg-gray-50/50 border-gray-200" />
                         </div>
-                        <div className="grid grid-cols-2 gap-2">
-                            <Input type="text" placeholder="ZIP code" disabled className="bg-gray-50" />
-                            <Input type="text" placeholder="Country" disabled className="bg-gray-50" />
+                        <div className="grid grid-cols-2 gap-3">
+                            <Input type="text" placeholder="ZIP code" disabled className="bg-gray-50/50 border-gray-200" />
+                            <Input type="text" placeholder="Country" disabled className="bg-gray-50/50 border-gray-200" />
                         </div>
                     </div>
                 );
             case 'creditCard':
                 return (
-                    <div className="space-y-2">
-                        <Input type="text" placeholder="Card number" disabled className="bg-gray-50" />
-                        <div className="grid grid-cols-2 gap-2">
-                            <Input type="text" placeholder="MM/YY" disabled className="bg-gray-50" />
-                            <Input type="text" placeholder="CVC" disabled className="bg-gray-50" />
+                    <div className="space-y-3">
+                        <div className="relative">
+                            <Input type="text" placeholder="Card number" disabled className="bg-gray-50/50 border-gray-200 pl-12" />
+                            <CreditCard className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                         </div>
-                        <Input type="text" placeholder="Cardholder name" disabled className="bg-gray-50" />
+                        <div className="grid grid-cols-2 gap-3">
+                            <Input type="text" placeholder="MM/YY" disabled className="bg-gray-50/50 border-gray-200" />
+                            <Input type="text" placeholder="CVC" disabled className="bg-gray-50/50 border-gray-200" />
+                        </div>
+                        <Input type="text" placeholder="Cardholder name" disabled className="bg-gray-50/50 border-gray-200" />
                     </div>
                 );
             default:
-                return <Input type="text" placeholder={field.placeholder || field.label} disabled className="bg-gray-50" />;
+                return <Input type="text" placeholder={field.placeholder || field.label} disabled className="bg-gray-50/50 border-gray-200" />;
         }
     };
 
     return (
         <div
-            className={`p-4 border rounded-lg cursor-pointer transition-all ${isSelected
-                    ? 'border-blue-500 bg-blue-50 shadow-sm'
-                    : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm'
+            className={`p-5 border-2 rounded-xl cursor-pointer transition-all duration-300 ${isSelected
+                    ? 'border-blue-400 bg-gradient-to-r from-blue-50/50 to-indigo-50/50 shadow-lg'
+                    : 'border-gray-200 bg-white hover:border-blue-200 hover:shadow-md'
                 }`}
             onClick={onSelect}
         >
-            <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-3">
-                    <div className="flex items-center gap-2">
-                        <GripVertical className="w-4 h-4 text-gray-400" />
-                        <div className="p-2 rounded-lg bg-gray-100 text-gray-600">
-                            <IconComponent className="w-4 h-4" />
+            <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center">
+                            <span className="text-sm font-bold text-blue-700">{index + 1}</span>
+                        </div>
+                        <div className="p-2.5 rounded-lg bg-gradient-to-br from-blue-100 to-indigo-100 text-blue-600">
+                            <IconComponent className="w-5 h-5" />
                         </div>
                     </div>
                     <div>
-                        <div className="font-medium text-gray-800">
+                        <div className="font-bold text-gray-800 text-lg flex items-center gap-2">
                             {field.label}
-                            {field.required && <span className="text-red-500 ml-1">*</span>}
+                            {field.required && (
+                                <Badge className="bg-red-100 text-red-600 border-0 text-xs px-2 py-0.5">Required</Badge>
+                            )}
                         </div>
-                        <div className="text-sm text-gray-500">{field.name}</div>
+                        <div className="text-sm text-gray-500 font-mono mt-1">{field.name}</div>
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -1142,9 +1408,9 @@ function FormFieldItem({ field, isSelected, onSelect, onUpdate, onRemove, index 
                             e.stopPropagation();
                             onRemove();
                         }}
-                        className="h-8 w-8 text-gray-400 hover:text-red-600 hover:bg-red-50"
+                        className="h-9 w-9 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full"
                     >
-                        <Trash2 className="w-3 h-3" />
+                        <Trash2 className="w-4 h-4" />
                     </Button>
                 </div>
             </div>
@@ -1153,46 +1419,65 @@ function FormFieldItem({ field, isSelected, onSelect, onUpdate, onRemove, index 
     );
 }
 
-// Helper function to render preview fields
-// Replace the renderPreviewField function with this PreviewFieldComponent
+// Preview Field Component
 function PreviewFieldComponent({ field }) {
     const [showPassword, setShowPassword] = useState(false);
     const [rating, setRating] = useState(field.defaultRating || 0);
     const [isChecked, setIsChecked] = useState(field.checked || false);
+    const [isToggleOn, setIsToggleOn] = useState(field.checked || false);
 
     switch (field.type) {
         case 'text':
-            return <Input type="text" placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}`} className="bg-white" />;
+            return <Input type="text" placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}`} className="bg-white border-gray-300 h-11" />;
         case 'email':
-            return <Input type="email" placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}`} className="bg-white" />;
+            return <Input type="email" placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}`} className="bg-white border-gray-300 h-11" />;
         case 'number':
-            return <Input type="number" placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}`} className="bg-white" />;
+            return <Input type="number" placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}`} className="bg-white border-gray-300 h-11" />;
         case 'tel':
-            return <Input type="tel" placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}`} className="bg-white" />;
+            return <Input type="tel" placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}`} className="bg-white border-gray-300 h-11" />;
         case 'url':
-            return <Input type="url" placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}`} className="bg-white" />;
+            return <Input type="url" placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}`} className="bg-white border-gray-300 h-11" />;
         case 'password':
             return (
                 <div className="relative">
                     <Input
                         type={showPassword ? "text" : "password"}
                         placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}`}
-                        className="bg-white pr-10"
+                        className="bg-white border-gray-300 h-11 pr-10"
                     />
                     <button
                         type="button"
                         onClick={() => setShowPassword(!showPassword)}
                         className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
                     >
-                        {showPassword ? <EyeOff className="w-4 h-4" /> : <EyeOn className="w-4 h-4" />}
+                        {showPassword ? <EyeOff className="w-5 h-5" /> : <EyeOn className="w-5 h-5" />}
                     </button>
                 </div>
             );
         case 'date':
-            return <Input type="date" className="bg-white" />;
+            return (
+                <div className="relative">
+                    <Input type="date" className="bg-white border-gray-300 h-11" />
+                    <CalendarDays className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                </div>
+            );
+        case 'time':
+            return (
+                <div className="relative">
+                    <Input type="time" className="bg-white border-gray-300 h-11" step={field.step || 900} />
+                    <Clock className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                </div>
+            );
+        case 'datetime':
+            return (
+                <div className="relative">
+                    <Input type="datetime-local" className="bg-white border-gray-300 h-11" />
+                    <CalendarClock className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                </div>
+            );
         case 'select':
             return (
-                <select className="w-full p-2 border border-gray-300 rounded-lg bg-white text-gray-700">
+                <select className="w-full p-3 border border-gray-300 rounded-lg bg-white text-gray-700 h-11">
                     <option value="">Select an option</option>
                     {field.options?.map((option, idx) => (
                         <option key={idx} value={option}>{option}</option>
@@ -1203,29 +1488,29 @@ function PreviewFieldComponent({ field }) {
             return <textarea
                 placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}`}
                 rows="3"
-                className="w-full p-2 border border-gray-300 rounded-lg bg-white text-gray-700"
+                className="w-full p-3 border border-gray-300 rounded-lg bg-white text-gray-700"
             />;
         case 'checkbox':
             return (
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-3">
                     <input
                         type="checkbox"
                         checked={isChecked}
                         onChange={(e) => setIsChecked(e.target.checked)}
-                        className="rounded border-gray-300 bg-white"
+                        className="rounded border-gray-300 bg-white h-5 w-5 text-blue-600"
                     />
-                    <Label className="text-gray-700">{field.label}</Label>
+                    <Label className="text-gray-700 font-medium">{field.label}</Label>
                 </div>
             );
         case 'radio':
             return (
-                <div className="space-y-2">
+                <div className="space-y-2.5">
                     {field.options?.map((option, idx) => (
-                        <div key={idx} className="flex items-center space-x-2">
+                        <div key={idx} className="flex items-center space-x-3">
                             <input
                                 type="radio"
                                 name={field.name}
-                                className="rounded-full border-gray-300 bg-white"
+                                className="rounded-full border-gray-300 bg-white h-5 w-5 text-blue-600"
                             />
                             <Label className="text-gray-700">{option}</Label>
                         </div>
@@ -1234,7 +1519,7 @@ function PreviewFieldComponent({ field }) {
             );
         case 'range':
             return (
-                <div className="space-y-2">
+                <div className="space-y-3">
                     <input
                         type="range"
                         min={field.min || 0}
@@ -1243,18 +1528,21 @@ function PreviewFieldComponent({ field }) {
                         defaultValue={field.defaultValue || 50}
                         className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
                     />
-                    <div className="flex justify-between text-xs text-gray-500">
+                    <div className="flex justify-between text-sm text-gray-600">
                         <span>{field.min || 0}</span>
+                        <span className="font-medium">Value: {field.defaultValue || 50}</span>
                         <span>{field.max || 100}</span>
                     </div>
                 </div>
             );
         case 'file':
             return (
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center bg-white cursor-pointer hover:border-gray-400 transition-colors">
-                    <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                    <p className="text-sm text-gray-600">Click to upload or drag and drop</p>
-                    <p className="text-xs text-gray-500 mt-1">
+                <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center bg-white cursor-pointer hover:border-gray-400 transition-colors">
+                    <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-blue-100 flex items-center justify-center">
+                        <Upload className="w-6 h-6 text-blue-500" />
+                    </div>
+                    <p className="text-sm font-medium text-gray-700">Click to upload or drag and drop</p>
+                    <p className="text-xs text-gray-500 mt-2">
                         {field.multiple ? 'Multiple files allowed' : 'Single file only'} • {field.accept || 'Any file type'}
                     </p>
                 </div>
@@ -1267,12 +1555,12 @@ function PreviewFieldComponent({ field }) {
                             key={i}
                             type="button"
                             onClick={() => setRating(i + 1)}
-                            className="focus:outline-none"
+                            className="focus:outline-none transform hover:scale-110 transition-transform"
                         >
                             <Star
-                                className={`w-6 h-6 transition-colors ${i < rating
+                                className={`w-8 h-8 transition-colors ${i < rating
                                         ? 'text-yellow-400 fill-yellow-400'
-                                        : 'text-gray-300 hover:text-yellow-200'
+                                        : 'text-gray-300 hover:text-yellow-300'
                                     }`}
                             />
                         </button>
@@ -1281,48 +1569,51 @@ function PreviewFieldComponent({ field }) {
             );
         case 'toggle':
             return (
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-4">
                     <button
                         type="button"
-                        onClick={() => setIsChecked(!isChecked)}
-                        className={`relative inline-flex h-6 w-12 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${isChecked ? 'bg-blue-600' : 'bg-gray-300'
+                        onClick={() => setIsToggleOn(!isToggleOn)}
+                        className={`relative inline-flex h-7 w-14 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${isToggleOn ? 'bg-blue-600' : 'bg-gray-300'
                             }`}
                     >
                         <span
-                            className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow transition duration-200 ease-in-out ${isChecked ? 'translate-x-6' : 'translate-x-0'
+                            className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow transition duration-200 ease-in-out ${isToggleOn ? 'translate-x-7' : 'translate-x-0'
                                 }`}
                         />
                     </button>
-                    <Label className="text-gray-700">{isChecked ? 'On' : 'Off'}</Label>
+                    <Label className="text-gray-700 font-medium">{isToggleOn ? 'Enabled' : 'Disabled'}</Label>
                 </div>
             );
         case 'address':
             return (
-                <div className="space-y-2">
-                    <Input type="text" placeholder="Street address" className="bg-white" />
-                    <div className="grid grid-cols-2 gap-2">
-                        <Input type="text" placeholder="City" className="bg-white" />
-                        <Input type="text" placeholder="State" className="bg-white" />
+                <div className="space-y-3">
+                    <Input type="text" placeholder="Street address" className="bg-white border-gray-300 h-11" />
+                    <div className="grid grid-cols-2 gap-3">
+                        <Input type="text" placeholder="City" className="bg-white border-gray-300 h-11" />
+                        <Input type="text" placeholder="State" className="bg-white border-gray-300 h-11" />
                     </div>
-                    <div className="grid grid-cols-2 gap-2">
-                        <Input type="text" placeholder="ZIP code" className="bg-white" />
-                        <Input type="text" placeholder="Country" className="bg-white" />
+                    <div className="grid grid-cols-2 gap-3">
+                        <Input type="text" placeholder="ZIP code" className="bg-white border-gray-300 h-11" />
+                        <Input type="text" placeholder="Country" className="bg-white border-gray-300 h-11" />
                     </div>
                 </div>
             );
         case 'creditCard':
             return (
-                <div className="space-y-2">
-                    <Input type="text" placeholder="Card number" className="bg-white" />
-                    <div className="grid grid-cols-2 gap-2">
-                        <Input type="text" placeholder="MM/YY" className="bg-white" />
-                        <Input type="text" placeholder="CVC" className="bg-white" />
+                <div className="space-y-3">
+                    <div className="relative">
+                        <Input type="text" placeholder="Card number" className="bg-white border-gray-300 h-11 pl-12" />
+                        <CreditCard className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                     </div>
-                    <Input type="text" placeholder="Cardholder name" className="bg-white" />
+                    <div className="grid grid-cols-2 gap-3">
+                        <Input type="text" placeholder="MM/YY" className="bg-white border-gray-300 h-11" />
+                        <Input type="text" placeholder="CVC" className="bg-white border-gray-300 h-11" />
+                    </div>
+                    <Input type="text" placeholder="Cardholder name" className="bg-white border-gray-300 h-11" />
                 </div>
             );
         default:
-            return <Input type="text" placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}`} className="bg-white" />;
+            return <Input type="text" placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}`} className="bg-white border-gray-300 h-11" />;
     }
 }
 
@@ -1336,6 +1627,8 @@ function getFieldIcon(fieldType) {
         url: Link,
         password: Lock,
         date: CalendarDays,
+        time: Clock,
+        datetime: CalendarClock,
         select: List,
         textarea: TextQuote,
         checkbox: CheckSquare,
@@ -1359,6 +1652,8 @@ function getFieldColor(fieldType) {
         url: 'blue',
         password: 'red',
         date: 'orange',
+        time: 'amber',
+        datetime: 'violet',
         select: 'pink',
         textarea: 'indigo',
         checkbox: 'green',

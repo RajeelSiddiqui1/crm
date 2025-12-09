@@ -17,8 +17,8 @@ function ManagerVerifiedContent() {
   const [otp, setOtp] = useState("");
   const [loading, setLoading] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(3);
-  const [resendCooldown, setResendCooldown] = useState(5);
+  const [timeLeft, setTimeLeft] = useState(60);
+  const [resendCooldown, setResendCooldown] = useState(20);
   const [attemptsLeft, setAttemptsLeft] = useState(4);
   const [isLocked, setIsLocked] = useState(false);
   const [lockTime, setLockTime] = useState(0);

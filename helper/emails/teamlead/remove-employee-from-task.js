@@ -22,18 +22,7 @@ export function sendEmployeeRemovedFromTaskMail({ name, formTitle, removedBy, ta
           If you think this was a mistake, please contact your Team Lead.
         </p>
 
-        <div style="text-align: center; margin-top: 20px;">
-          <a href="${process.env.NEXT_PUBLIC_BASE_URL}/employee/tasks/${taskId}" 
-            style="
-              background: #ff4a4a;
-              color: white;
-              padding: 12px 25px;
-              border-radius: 6px;
-              text-decoration: none;
-              font-size: 14px;">
-            View Task
-          </a>
-        </div>
+       
 
         <p style="margin-top: 25px; font-size: 12px; color: #777; text-align:center;">
           This is an automated notification. No reply is needed.

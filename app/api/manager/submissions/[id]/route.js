@@ -10,11 +10,6 @@ import { deletedMailTemplate } from "@/helper/emails/manager/deletedMailTemplate
 import { statusUpdateMailTemplate } from "@/helper/emails/manager/statusUpdateMailTemplate";
 import { sendNotification } from "@/lib/sendNotification";
 
-
-
-
-
-
 function getPublicIdFromUrl(url) {
   try {
     const parts = url.split("/");
@@ -27,14 +22,24 @@ function getPublicIdFromUrl(url) {
   }
 }
 
-
-
 export async function GET(req, { params }) {
   try {
     await dbConnect();
     const { id } = params;
-    const submission = await FormSubmission.findById(id).populate("formId");
-    if (!submission) return NextResponse.json({ error: "Submission not found" }, { status: 404 });
+
+    const submission = await FormSubmission.findById(id)
+      .populate("formId", "title description fields depId")
+      .populate("assignedTo", "firstName lastName email")
+      .populate("multipleTeamLeadAssigned", "firstName lastName email")
+      .populate("assignedEmployees.employeeId", "firstName lastName email");
+
+    if (!submission) {
+      return NextResponse.json(
+        { error: "Submission not found" },
+        { status: 404 }
+      );
+    }
+
     return NextResponse.json(submission, { status: 200 });
   } catch (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -51,6 +56,7 @@ export async function PUT(req, { params }) {
 
     let body = {};
     let newFileUrl = null;
+    let assignedTeamLeadId = null;
 
     const submission = await FormSubmission.findById(id)
       .populate("formId")
@@ -58,13 +64,17 @@ export async function PUT(req, { params }) {
       .populate("assignedEmployees.employeeId");
 
     if (!submission) {
-      return NextResponse.json({ error: "Submission not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Submission not found" },
+        { status: 404 }
+      );
     }
 
     if (contentType.includes("multipart/form-data")) {
       const formData = await req.formData();
       body.formData = JSON.parse(formData.get("formData") || "{}");
       body.managerComments = formData.get("managerComments") || "";
+      assignedTeamLeadId = formData.get("assignedTeamLeadId");
       const file = formData.get("file");
 
       if (file && file.name) {
@@ -89,9 +99,32 @@ export async function PUT(req, { params }) {
       }
     } else {
       body = await req.json();
+      assignedTeamLeadId = body.assignedTeamLeadId;
     }
 
     const { formData, managerComments } = body;
+
+    // Update team lead if provided
+    if (assignedTeamLeadId && assignedTeamLeadId !== submission.assignedTo?.toString()) {
+      // Remove old team lead from multipleTeamLeadAssigned if they exist
+      if (submission.assignedTo) {
+        submission.multipleTeamLeadAssigned = submission.multipleTeamLeadAssigned.filter(
+          tl => tl._id.toString() !== submission.assignedTo.toString()
+        );
+      }
+
+      // Add new team lead
+      submission.assignedTo = assignedTeamLeadId;
+      
+      // Add to multipleTeamLeadAssigned if not already present
+      const isAlreadyAssigned = submission.multipleTeamLeadAssigned.some(
+        tl => tl._id.toString() === assignedTeamLeadId
+      );
+      
+      if (!isAlreadyAssigned) {
+        submission.multipleTeamLeadAssigned.push(assignedTeamLeadId);
+      }
+    }
 
     if (formData) {
       Object.entries(formData).forEach(([key, value]) => {
@@ -100,11 +133,13 @@ export async function PUT(req, { params }) {
     }
 
     if (newFileUrl) submission.formData.file = newFileUrl;
-    if (managerComments !== undefined) submission.managerComments = managerComments;
+    if (managerComments !== undefined)
+      submission.managerComments = managerComments;
 
     submission.updatedAt = new Date();
     await submission.save();
 
+    // Send notifications
     const teamLeads = submission.multipleTeamLeadAssigned;
     const employees = submission.assignedEmployees;
 
@@ -127,7 +162,7 @@ export async function PUT(req, { params }) {
         title: "Submission Updated",
         message: `${submission.formId.title} edited`,
         referenceId: submission._id,
-        referenceModel: "FormSubmission"
+        referenceModel: "FormSubmission",
       })
     );
 
@@ -135,7 +170,11 @@ export async function PUT(req, { params }) {
       sendMail(
         emp.email,
         "Submission Updated",
-        editedMailTemplate(emp.employeeId.firstName, submission.formId.title, session.user.name)
+        editedMailTemplate(
+          emp.employeeId.firstName,
+          submission.formId.title,
+          session.user.name
+        )
       )
     );
 
@@ -150,13 +189,16 @@ export async function PUT(req, { params }) {
         title: "Submission Updated",
         message: `${submission.formId.title} updated`,
         referenceId: submission._id,
-        referenceModel: "FormSubmission"
+        referenceModel: "FormSubmission",
       })
     );
 
     await Promise.all([...mailTL, ...notiTL, ...mailEmp, ...notiEmp]);
 
-    return NextResponse.json({ message: "Updated", submission }, { status: 200 });
+    return NextResponse.json(
+      { message: "Updated", submission },
+      { status: 200 }
+    );
   } catch (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
@@ -174,7 +216,10 @@ export async function DELETE(req, { params }) {
       .populate("assignedEmployees.employeeId");
 
     if (!submission) {
-      return NextResponse.json({ error: "Submission not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Submission not found" },
+        { status: 404 }
+      );
     }
 
     if (submission.formData?.file) {
@@ -199,7 +244,11 @@ export async function DELETE(req, { params }) {
       sendMail(
         emp.email,
         "Submission Deleted",
-        deletedMailTemplate(emp.employeeId.firstName, submission.formId.title, session.user.name)
+        deletedMailTemplate(
+          emp.employeeId.firstName,
+          submission.formId.title,
+          session.user.name
+        )
       )
     );
 
@@ -251,7 +300,10 @@ export async function PATCH(req, { params }) {
       .populate("assignedEmployees.employeeId");
 
     if (!submission) {
-      return NextResponse.json({ error: "Submission not found" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Submission not found" },
+        { status: 404 }
+      );
     }
 
     const oldStatus = submission.status;
@@ -265,7 +317,12 @@ export async function PATCH(req, { params }) {
       sendMail(
         tl.email,
         "Status Updated",
-        statusUpdateMailTemplate(tl.name, submission.formId.title, oldStatus, status)
+        statusUpdateMailTemplate(
+          tl.name,
+          submission.formId.title,
+          oldStatus,
+          status
+        )
       )
     );
 
@@ -286,7 +343,12 @@ export async function PATCH(req, { params }) {
       sendMail(
         emp.email,
         "Status Updated",
-        statusUpdateMailTemplate(emp.employeeId.firstName, submission.formId.title, oldStatus, status)
+        statusUpdateMailTemplate(
+          emp.employeeId.firstName,
+          submission.formId.title,
+          oldStatus,
+          status
+        )
       )
     );
 
@@ -305,7 +367,10 @@ export async function PATCH(req, { params }) {
 
     await Promise.all([...mailTL, ...notiTL, ...mailEmp, ...notiEmp]);
 
-    return NextResponse.json({ message: "Status Updated", submission }, { status: 200 });
+    return NextResponse.json(
+      { message: "Status Updated", submission },
+      { status: 200 }
+    );
   } catch (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

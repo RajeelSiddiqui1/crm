@@ -32,7 +32,7 @@ export const sendEmployeeTaskAssignmentMail = ({ name, formTitle, assignedBy, ta
 
                 <p>Please log in to your account to view the complete task details and start working on it.</p>
                 
-                <a href="${process.env.NEXTAUTH_URL}/employeehome" class="button">View Task</a>
+               
                 
                 <p>If you have any questions, please contact your team lead.</p>
             </div>

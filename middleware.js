@@ -6,13 +6,13 @@ export async function middleware(req) {
   const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
   const { pathname } = req.nextUrl;
 
-  // Public paths
+  // Public paths anyone can access
   const publicPaths = ["/", "/manager-verified", "/forgot-password", "/reset-password"];
 
-  // Role-based login pages
+  // Login pages
   const authPages = ["/adminlogin", "/managerlogin", "/teamleadlogin", "/employeelogin", "/managerregister"];
 
-  // Role home pages
+  // Role-based home pages
   const roleHomePages = {
     Admin: "/admin/home",
     Manager: "/manager/home",
@@ -25,17 +25,9 @@ export async function middleware(req) {
     return NextResponse.redirect(new URL(roleHomePages[token.role] || "/", req.url));
   }
 
-  // 2️⃣ Not logged-in user trying to access private pages → redirect to role login
-  if (!token && ![...publicPaths, ...authPages].some(path => pathname.startsWith(path))) {
-    const roleFromPath = pathname.split("/")[1].toLowerCase(); // e.g., "admin", "manager"
-    const roleLoginPages = {
-      admin: "/adminlogin",
-      manager: "/managerlogin",
-      teamlead: "/teamleadlogin",
-      employee: "/employeelogin",
-    };
-    const loginPage = roleLoginPages[roleFromPath] || "/"; // default to "/" if role unknown
-    return NextResponse.redirect(new URL(loginPage, req.url));
+  // 2️⃣ Not logged-in user trying to access any page other than public → redirect to public path
+  if (!token && !publicPaths.some(path => pathname.startsWith(path))) {
+    return NextResponse.redirect(new URL("/", req.url));
   }
 
   // 3️⃣ Role-based access control for private routes
@@ -52,12 +44,13 @@ export async function middleware(req) {
     }
   }
 
-  // Allow everything else
+  // 4️⃣ Allow public pages or authorized access
   return NextResponse.next();
 }
 
 export const config = {
   matcher: [
+    // Exclude API routes, next.js static files, images, favicon
     "/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|jpeg|gif|svg|ico|webp)$).*)",
   ],
 };

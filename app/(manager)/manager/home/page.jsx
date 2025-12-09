@@ -12,7 +12,7 @@ export default function AdminDashboard() {
     if (status === "loading") return;
     
     if (!session || session.user.role !== "Manager") {
-      router.push("/login");
+      router.push("/managerlogin");
     }
   }, [session, status, router]);
 

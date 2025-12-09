@@ -54,7 +54,7 @@ export default function CreateSubtaskPage() {
         if (status === "loading") return;
 
         if (!session || session.user.role !== "TeamLead") {
-            router.push("/login");
+            router.push("/teamleadlogin");
             return;
         }
 

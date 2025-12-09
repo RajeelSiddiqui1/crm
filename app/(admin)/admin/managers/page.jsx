@@ -28,7 +28,7 @@ export default function AdminManagersPage() {
     if (status === "loading") return;
     
     if (!session || session.user.role !== "Admin") {
-      router.push("/admin/login");
+      router.push("/adminlogin");
       return;
     }
 

@@ -34,8 +34,8 @@ export function updatedSubtaskMailTemplate(
         border-radius: 8px; padding: 15px; margin: 20px 0;
       }
       .button { 
-        display: inline-block; background: #1d4ed8; 
-        color: white; padding: 12px 24px; 
+        display: inline-block; background: white; 
+        color: balck; padding: 12px 24px;
         text-decoration: none; border-radius: 6px; 
         font-weight: bold; 
       }
@@ -74,11 +74,7 @@ export function updatedSubtaskMailTemplate(
 
         <p>Please review the updated details in your dashboard.</p>
 
-        <div style="text-align: center; margin: 30px 0;">
-          <a href="${link}" class="button">
-            View Updated Subtask
-          </a>
-        </div>
+       
 
         <p>Best regards,<br>The Task Management Team</p>
       </div>
@@ -158,11 +154,6 @@ export function deletedSubtaskMailTemplate(
         <p>This subtask is no longer available in your task list.</p>
         <p>If you believe this is a mistake, please contact your team lead.</p>
 
-        <div style="text-align: center; margin: 30px 0;">
-          <a href="${link}" class="button">
-            View Your Tasks
-          </a>
-        </div>
 
         <p>Best regards,<br>The Task Management Team</p>
       </div>

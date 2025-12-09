@@ -44,7 +44,7 @@ export default function EmployeeTask() {
         if (status === "loading") return;
 
         if (!session || session.user.role !== "Employee") {
-            router.push("/login");
+            router.push("/employeelogin");
             return;
         }
 

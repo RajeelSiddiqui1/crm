@@ -46,7 +46,7 @@ export async function POST(request) {
             startTime,
             endTime,
             priority,
-            lead
+            leadsRequired, // <-- lead number aa raha hai idhar se
         } = body;
 
         // submission optional
@@ -70,7 +70,11 @@ export async function POST(request) {
             return NextResponse.json({ error: "Some employees not found" }, { status: 400 });
         }
 
-        const leadName = lead || `${teamLead.firstName} ${teamLead.lastName}`;
+        // Lead name for emails/notifications
+        const leadName = `${teamLead.firstName} ${teamLead.lastName}`;
+
+        // FIX: lead number ko string form me save karna
+        const leadValue = leadsRequired ? leadsRequired.toString() : "1";
 
         const subtask = new Subtask({
             title,
@@ -81,14 +85,17 @@ export async function POST(request) {
             assignedEmployees: assignedEmployees.map(emp => ({
                 employeeId: emp.employeeId,
                 email: emp.email,
-                status: "pending"
+                status: "pending",
+                leadsCompleted: 0,
+                leadsAssigned: emp.leadsAssigned || 0
             })),
             startDate,
             endDate,
             startTime,
             endTime,
             priority: priority || "medium",
-            lead: leadName
+            lead: leadValue, // <-- FINAL FIX HERE
+            teamLeadName: leadName, // keep for frontend display
         });
 
         await subtask.save();
@@ -129,7 +136,7 @@ export async function POST(request) {
         return NextResponse.json(populatedSubtask, { status: 201 });
 
     } catch (error) {
+        console.log("POST Subtask Error:", error);
         return NextResponse.json({ error: "Failed to create subtask" }, { status: 500 });
-        console.log(error   )
     }
 }

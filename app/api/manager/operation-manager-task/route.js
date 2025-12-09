@@ -5,7 +5,7 @@ import { authOptions } from "@/lib/auth";
 
 import SharedTask from "@/models/SharedTask";
 import Manager from "@/models/Manager";
-import EmployeeFormSubmission from "@/models/EmployeeFormSubmission"; // ✅ already imported
+import EmployeeFormSubmission from "@/models/EmployeeFormSubmission";
 
 export async function GET(request) {
     try {
@@ -23,13 +23,15 @@ export async function GET(request) {
             return NextResponse.json({ success: false, message: "Manager not found" }, { status: 404 });
         }
 
-        const hasOperationDepartment = currentManager.departments?.includes("68f13ed5c36e254ff62a6eba");
+        // ✅ Check for Operation department by ID or string
+        const hasOperationDepartment = currentManager.departments?.some(dep => 
+            dep === "68f13ed5c36e254ff62a6eba" || dep.toLowerCase() === "operation"
+        );
 
         if (!hasOperationDepartment) {
             return NextResponse.json({ success: false, message: "Access denied. Operation department required." }, { status: 403 });
         }
 
-        // Debug ke liye
         console.log("Fetching signed tasks for operation manager:", session.user.id);
 
         const sharedTasks = await SharedTask.find({ 
@@ -44,7 +46,7 @@ export async function GET(request) {
         .populate("formId")
         .sort({ createdAt: -1 });
 
-        console.log("Found tasks:", sharedTasks.length); // Debug
+        console.log("Found tasks:", sharedTasks.length);
 
         return NextResponse.json({ 
             success: true, 

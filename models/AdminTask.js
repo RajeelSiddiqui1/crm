@@ -1,9 +1,11 @@
-import mongoose, { Schema, model, models, mongo } from "mongoose";
+// models/AdminTask.js
+import mongoose, { Schema, model, models } from "mongoose";
 
 const adminTaskSchema = Schema(
   {
     title: {
       type: String,
+      required: true,
     },
     clientName: {
       type: String,
@@ -15,20 +17,19 @@ const adminTaskSchema = Schema(
     },
     audioUrl: {
       type: String,
-      required: true,
-      required:false
+      required: false, // Fixed: removed duplicate required
     },
-     priority: {
+    priority: {
       type: String,
       enum: ["low", "medium", "high"],
       default: "low",
-      required:false
+      required: false,
     },
     endDate: {
       type: Date,
       required: false,
     },
-    sharedBYManager:{
+    sharedBYManager: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Manager",
       required: false,
@@ -39,9 +40,27 @@ const adminTaskSchema = Schema(
         ref: "Manager",
       },
     ],
+    submittedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Admin",
+      required: false,
+    },
+    isLate: {
+      type: Boolean,
+      default: false,
+    },
+    status: {
+      type: String,
+      enum: ["pending", "in-progress", "completed", "overdue"],
+      default: "pending",
+    },
+    completedAt: {
+      type: Date,
+      required: false,
+    }
   },
   {
-    timestamp: true,
+    timestamps: true, // Fixed: changed from timestamp to timestamps
   }
 );
 

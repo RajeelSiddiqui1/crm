@@ -51,7 +51,7 @@ export default function ViewSubtaskPage() {
         if (status === "loading") return;
 
         if (!session || session.user.role !== "TeamLead") {
-            router.push("/login");
+            router.push("/teamleadlogin");
             return;
         }
 
@@ -219,7 +219,7 @@ export default function ViewSubtaskPage() {
                     
                     <div className="flex flex-wrap gap-3">
                         <Button
-                            onClick={() => router.push(`/teamlead/subtasks/edit/${subtaskId}`)}
+                            onClick={() => router.push(`/teamlead/subtask-employee/${subtaskId}`)}
                             className="border-slate-300 text-slate-800 hover:bg-slate-50 hover:text-slate-900 hover:border-slate-400 font-medium shadow-sm"
                         >
                             <Edit className="w-4 h-4 mr-2" />

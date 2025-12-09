@@ -19,7 +19,7 @@ export const sharedTaskMailTemplate = (
       <p><strong>Priority:</strong> ${priority}</p>
       ${notes ? `<p><strong>Notes:</strong> ${notes}</p>` : ""}
       <p>You can view the task and take action by clicking the link below:</p>
-      <a href="${taskLink}" style="color: #1a73e8;">View Task</a>
+     
       <p>Best regards,<br/>${senderName}</p>
     </div>
   `;

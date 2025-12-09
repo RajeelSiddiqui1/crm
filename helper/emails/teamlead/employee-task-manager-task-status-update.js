@@ -40,9 +40,7 @@ export function managerTaskStatusUpdateMailTemplate(
           <p><strong>Feedback:</strong> ${feedback}</p>
         </div>
 
-        <div style="text-align: center; margin: 30px 0;">
-          <a href="${taskLink}" class="button">View Submission</a>
-        </div>
+      
 
         <p>Best regards,<br>The Task Management Team</p>
       </div>

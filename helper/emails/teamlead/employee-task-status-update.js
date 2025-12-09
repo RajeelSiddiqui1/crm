@@ -40,9 +40,7 @@ export function employeeTaskStatusUpdateMailTemplate(
           <p><strong>Feedback:</strong> ${feedback}</p>
         </div>
 
-        <div style="text-align: center; margin: 30px 0;">
-          <a href="${taskLink}" class="button">View Submission</a>
-        </div>
+        
 
         <p>Please check the feedback and take any necessary action.</p>
 

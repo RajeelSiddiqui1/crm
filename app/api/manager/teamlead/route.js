@@ -29,6 +29,8 @@ export async function POST(req) {
       return NextResponse.json({ message: "Team Lead already exists" }, { status: 409 });
     }
 
+    const normalizedEmail = email.toLowerCase();
+
     let userId;
     let isUnique = false;
     while (!isUnique) {
@@ -45,14 +47,17 @@ export async function POST(req) {
       userId,
       firstName,
       lastName,
-      email,
+      email:normalizedEmail,
       password: hashPassword,
       profilePic: randomAvatar,
       managerId,
       depId,
     });
 
-    await sendTeamLeadWelcomeEmail(email, firstName, userId, password);
+        const dept = await Department.findById(depId).select("name");
+    
+
+    await sendTeamLeadWelcomeEmail(email, firstName, userId, password,dept?.name || "Not Assigned");
 
     return NextResponse.json(
       { message: "Team Lead created successfully", userId, data: newLead },

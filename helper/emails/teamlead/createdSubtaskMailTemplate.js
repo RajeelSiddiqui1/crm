@@ -73,11 +73,7 @@ export function createdSubtaskMailTemplate(
 
         <p>You can view and manage this subtask directly in your dashboard.</p>
 
-        <div style="text-align: center; margin: 30px 0;">
-          <a href="${link}" class="button">
-            View Subtask
-          </a>
-        </div>
+       
 
         <p>Best regards,<br>The Task Management Team</p>
       </div>

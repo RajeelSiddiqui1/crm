@@ -6,7 +6,7 @@ export const sharedTaskAssignEmployeeMailTemplate = (
   taskTitle,
   teamLeadName,
   managerName,
-  taskLink
+  
 ) => {
   return `
     <div style="font-family: Arial, sans-serif; line-height: 1.5;">
@@ -15,7 +15,7 @@ export const sharedTaskAssignEmployeeMailTemplate = (
       <p>You have been assigned a new task: <strong>${taskTitle}</strong>.</p>
       <p>Assigned by Team Lead: ${teamLeadName}</p>
       <p>Shared by Manager: ${managerName}</p>
-      <p>View the task here: <a href="${taskLink}">${taskLink}</a></p>
+      <p>View the task here: <a href="${process.env.NEXT_PUBLIC_DOMAIN}">${process.env.NEXT_PUBLIC_DOMAIN}</a></p>
       <p>Best regards,<br/>Task Management System</p>
     </div>
   `;
