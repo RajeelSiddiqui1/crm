@@ -45,6 +45,8 @@ export default function RootLayout({ children }) {
       {/* ⬇️ Here you set favicon manually (works inside use client) */}
       <head>
         <link rel="icon" href="/favicon.ico" className="bg-white" sizes="any" />
+          <title>MH Cricle Solution</title>
+
       </head>
 
       <body className="font-sans">
