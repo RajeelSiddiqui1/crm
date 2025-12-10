@@ -12,7 +12,10 @@ export async function GET(request) {
         const session = await getServerSession(authOptions);
 
         if (!session || session.user.role !== "Manager") {
-            return NextResponse.json({ success: false, message: "Unauthorized access" }, { status: 401 });
+            return NextResponse.json(
+                { success: false, message: "Unauthorized access" },
+                { status: 401 }
+            );
         }
 
         await dbConnect();
@@ -20,41 +23,50 @@ export async function GET(request) {
         const currentManager = await Manager.findById(session.user.id);
 
         if (!currentManager) {
-            return NextResponse.json({ success: false, message: "Manager not found" }, { status: 404 });
+            return NextResponse.json(
+                { success: false, message: "Manager not found" },
+                { status: 404 }
+            );
         }
 
-        // ✅ Check for Operation department by ID or string
-        const hasOperationDepartment = currentManager.departments?.some(dep => 
-            dep === "68f13ed5c36e254ff62a6eba" || dep.toLowerCase() === "operation"
+        const hasOperationDepartment = currentManager.departments?.includes(
+            "6939a9e4a191bbc83a449cd6"
         );
 
         if (!hasOperationDepartment) {
-            return NextResponse.json({ success: false, message: "Access denied. Operation department required." }, { status: 403 });
+            return NextResponse.json(
+                { success: false, message: "Access denied. Operation department required." },
+                { status: 403 }
+            );
         }
 
-        console.log("Fetching signed tasks for operation manager:", session.user.id);
-
-        const sharedTasks = await SharedTask.find({ 
-            status: "signed"
+        const sharedTasks = await SharedTask.find({
+            status: "signed",
         })
-        .populate("sharedManager", "firstName lastName email")
-        .populate("sharedBy", "firstName lastName email")
-        .populate("sharedTeamlead", "firstName lastName email")
-        .populate("sharedEmployee", "firstName lastName email")
-        .populate("sharedOperationTeamlead", "firstName lastName email")
-        .populate("sharedOperationEmployee", "firstName lastName email")
-        .populate("formId")
-        .sort({ createdAt: -1 });
+            .populate("sharedManager", "firstName lastName email")
+            .populate("sharedBy", "firstName lastName email")
+            .populate("sharedTeamlead", "firstName lastName email")
+            .populate("sharedEmployee", "firstName lastName email")
+            .populate("sharedOperationTeamlead", "firstName lastName email")
+            .populate("sharedOperationEmployee", "firstName lastName email")
+            .populate("formId")
+            .sort({ createdAt: -1 });
 
-        console.log("Found tasks:", sharedTasks.length);
-
-        return NextResponse.json({ 
-            success: true, 
-            sharedTasks 
-        }, { status: 200 });
-
+        return NextResponse.json(
+            {
+                success: true,
+                sharedTasks,
+            },
+            { status: 200 }
+        );
     } catch (error) {
-        console.error("Operation Manager Task Error:", error);
-        return NextResponse.json({ success: false, message: "Internal server error", error: error.message }, { status: 500 });
+        return NextResponse.json(
+            {
+                success: false,
+                message: "Internal server error",
+                error: error.message,
+            },
+            { status: 500 }
+        );
     }
 }

@@ -34,12 +34,7 @@ export function createdSubtaskMailTemplate(
 
       <p>You can view and manage this subtask directly in your dashboard.</p>
 
-      <div style="text-align:center; margin-top:20px;">
-        <a href="${link}" style="background:#059669; color:white; padding:12px 25px; text-decoration:none; border-radius:6px; font-weight:bold;">
-          View Subtask
-        </a>
-      </div>
-
+     
       <p style="margin-top:25px; font-size:12px; color:#777; text-align:center;">
         This is an automated notification. Please do not reply.
       </p>

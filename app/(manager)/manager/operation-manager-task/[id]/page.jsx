@@ -123,7 +123,7 @@ export default function OperationManagerTaskDetailPage() {
       console.error("Error fetching task details:", error);
       if (error.response?.status === 403) {
         toast.error("Access denied. Operation department required.");
-        router.push("/manager/dashboard");
+        router.push("/managerlogin");
       } else if (error.response?.status === 404) {
         toast.error("Task not found");
         router.push("/manager/operation-manager-task");

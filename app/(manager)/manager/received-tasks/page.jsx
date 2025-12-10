@@ -111,7 +111,8 @@ export default function ManagerReceivedTasksPage() {
   const fetchTeamleads = async () => {
     try {
       const response = await axios.get("/api/manager/teamlead");
-      const teamleadsData = response.data.teamLeads || response.data.teamleads || [];
+      const teamleadsData =
+        response.data.teamLeads || response.data.teamleads || [];
       setTeamleads(teamleadsData);
 
       if (teamleadsData.length === 0) {
@@ -157,7 +158,8 @@ export default function ManagerReceivedTasksPage() {
       }
     } catch (error) {
       console.error("Error adding teamlead to task:", error);
-      const errorMessage = error.response?.data?.message || "Failed to add teamlead";
+      const errorMessage =
+        error.response?.data?.message || "Failed to add teamlead";
       toast.error(errorMessage);
     } finally {
       setSharing(false);
@@ -235,11 +237,16 @@ export default function ManagerReceivedTasksPage() {
   };
 
   // Filter tasks based on search
-  const filteredTasks = receivedTasks.filter(task =>
-    task.taskTitle?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    task.originalTaskId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    task.sharedTeamlead?.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    task.sharedTeamlead?.lastName?.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredTasks = receivedTasks.filter(
+    (task) =>
+      task.taskTitle?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      task.originalTaskId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      task.sharedTeamlead?.firstName
+        ?.toLowerCase()
+        .includes(searchTerm.toLowerCase()) ||
+      task.sharedTeamlead?.lastName
+        ?.toLowerCase()
+        .includes(searchTerm.toLowerCase())
   );
 
   if (status === "loading" || loading) {
@@ -258,8 +265,12 @@ export default function ManagerReceivedTasksPage() {
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
           <AlertCircle className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-gray-800 mb-2">Access Denied</h2>
-          <p className="text-gray-600">You need to be logged in as Manager to access this page.</p>
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">
+            Access Denied
+          </h2>
+          <p className="text-gray-600">
+            You need to be logged in as Manager to access this page.
+          </p>
         </div>
       </div>
     );
@@ -274,13 +285,21 @@ export default function ManagerReceivedTasksPage() {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
           <div className="flex items-center gap-4">
             <Link href="/manager/dashboard">
-              <Button variant="outline" size="icon" className="rounded-full border-gray-300 hover:bg-gray-100 text-gray-700">
+              <Button
+                variant="outline"
+                size="icon"
+                className="rounded-full border-gray-300 hover:bg-gray-100 text-gray-700"
+              >
                 <ArrowLeft className="w-4 h-4" />
               </Button>
             </Link>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Received Shared Tasks</h1>
-              <p className="text-gray-700 mt-2">Tasks shared with you by other managers and teamleads</p>
+              <h1 className="text-3xl font-bold text-gray-900">
+                Received Shared Tasks
+              </h1>
+              <p className="text-gray-700 mt-2">
+                Tasks shared with you by other managers and teamleads
+              </p>
             </div>
           </div>
 
@@ -294,7 +313,9 @@ export default function ManagerReceivedTasksPage() {
               className="border-gray-300 text-gray-700 hover:bg-gray-100"
               disabled={loading}
             >
-              <RefreshCw className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`} />
+              <RefreshCw
+                className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`}
+              />
               Refresh
             </Button>
           </div>
@@ -306,8 +327,12 @@ export default function ManagerReceivedTasksPage() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-700">Total Received</p>
-                  <p className="text-2xl font-bold text-gray-900">{receivedTasks.length}</p>
+                  <p className="text-sm font-medium text-gray-700">
+                    Total Received
+                  </p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {receivedTasks.length}
+                  </p>
                 </div>
                 <Download className="w-8 h-8 text-blue-600" />
               </div>
@@ -318,9 +343,11 @@ export default function ManagerReceivedTasksPage() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-700">With Teamlead</p>
+                  <p className="text-sm font-medium text-gray-700">
+                    With Teamlead
+                  </p>
                   <p className="text-2xl font-bold text-purple-600">
-                    {receivedTasks.filter(t => t.sharedTeamlead).length}
+                    {receivedTasks.filter((t) => t.sharedTeamlead).length}
                   </p>
                 </div>
                 <Users className="w-8 h-8 text-purple-600" />
@@ -332,9 +359,11 @@ export default function ManagerReceivedTasksPage() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-700">Pending Tasks</p>
+                  <p className="text-sm font-medium text-gray-700">
+                    Pending Tasks
+                  </p>
                   <p className="text-2xl font-bold text-yellow-600">
-                    {receivedTasks.filter(t => t.status === 'pending').length}
+                    {receivedTasks.filter((t) => t.status === "pending").length}
                   </p>
                 </div>
                 <Clock className="w-8 h-8 text-yellow-600" />
@@ -346,8 +375,12 @@ export default function ManagerReceivedTasksPage() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-700">Available Teamleads</p>
-                  <p className="text-2xl font-bold text-green-600">{teamleads.length}</p>
+                  <p className="text-sm font-medium text-gray-700">
+                    Available Teamleads
+                  </p>
+                  <p className="text-2xl font-bold text-green-600">
+                    {teamleads.length}
+                  </p>
                 </div>
                 <Users className="w-8 h-8 text-green-600" />
               </div>
@@ -376,7 +409,11 @@ export default function ManagerReceivedTasksPage() {
                     variant={viewMode === "table" ? "default" : "ghost"}
                     size="sm"
                     onClick={() => setViewMode("table")}
-                    className={`${viewMode === "table" ? "bg-gray-800 text-white shadow-sm hover:bg-gray-900" : "text-gray-700"}`}
+                    className={`${
+                      viewMode === "table"
+                        ? "bg-gray-800 text-white shadow-sm hover:bg-gray-900"
+                        : "text-gray-700"
+                    }`}
                   >
                     Table View
                   </Button>
@@ -384,7 +421,11 @@ export default function ManagerReceivedTasksPage() {
                     variant={viewMode === "card" ? "default" : "ghost"}
                     size="sm"
                     onClick={() => setViewMode("card")}
-                    className={`${viewMode === "card" ? "bg-gray-800 text-white shadow-sm hover:bg-gray-900" : "text-gray-700"}`}
+                    className={`${
+                      viewMode === "card"
+                        ? "bg-gray-800 text-white shadow-sm hover:bg-gray-900"
+                        : "text-gray-700"
+                    }`}
                   >
                     Card View
                   </Button>
@@ -399,16 +440,25 @@ export default function ManagerReceivedTasksPage() {
           <CardHeader className="bg-white border-b border-gray-200">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <div>
-                <CardTitle className="text-xl font-bold text-gray-900">Received Tasks</CardTitle>
+                <CardTitle className="text-xl font-bold text-gray-900">
+                  Received Tasks
+                </CardTitle>
                 <CardDescription className="text-gray-700">
                   {filteredTasks.length} of {receivedTasks.length} tasks
                 </CardDescription>
               </div>
               <div className="flex items-center gap-2">
-                <Badge variant="outline" className="bg-gray-100 text-gray-800 border-gray-300">
-                  {receivedTasks.length} task{receivedTasks.length !== 1 ? "s" : ""}
+                <Badge
+                  variant="outline"
+                  className="bg-gray-100 text-gray-800 border-gray-300"
+                >
+                  {receivedTasks.length} task
+                  {receivedTasks.length !== 1 ? "s" : ""}
                 </Badge>
-                <Badge variant="outline" className="bg-purple-100 text-purple-800 border-purple-300">
+                <Badge
+                  variant="outline"
+                  className="bg-purple-100 text-purple-800 border-purple-300"
+                >
                   {teamleads.length} teamlead{teamleads.length !== 1 ? "s" : ""}
                 </Badge>
               </div>
@@ -418,9 +468,13 @@ export default function ManagerReceivedTasksPage() {
             {filteredTasks.length === 0 ? (
               <div className="text-center py-12">
                 <Download className="w-16 h-16 mx-auto text-gray-400 mb-4" />
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">No Tasks Found</h3>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  No Tasks Found
+                </h3>
                 <p className="text-gray-700 max-w-md mx-auto">
-                  {searchTerm ? "No tasks match your search criteria." : "No tasks have been shared with you yet."}
+                  {searchTerm
+                    ? "No tasks match your search criteria."
+                    : "No tasks have been shared with you yet."}
                 </p>
               </div>
             ) : viewMode === "table" ? (
@@ -429,54 +483,91 @@ export default function ManagerReceivedTasksPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="text-gray-900 font-semibold">Task Title</TableHead>
-                      <TableHead className="text-gray-900 font-semibold">Task ID</TableHead>
-                      <TableHead className="text-gray-900 font-semibold">Assigned Teamlead</TableHead>
-                      <TableHead className="text-gray-900 font-semibold">Status</TableHead>
-                      <TableHead className="text-gray-900 font-semibold">Vendor Status</TableHead>
-                      <TableHead className="text-gray-900 font-semibold">Machine Status</TableHead>
-                      <TableHead className="text-gray-900 font-semibold">Priority</TableHead>
-                      <TableHead className="text-gray-900 font-semibold">Due Date</TableHead>
-                      <TableHead className="text-gray-900 font-semibold">Actions</TableHead>
+                      <TableHead className="text-gray-900 font-semibold">
+                        Task Title
+                      </TableHead>
+                      
+                      <TableHead className="text-gray-900 font-semibold">
+                        Assigned Teamlead
+                      </TableHead>
+                      <TableHead className="text-gray-900 font-semibold">
+                        Status
+                      </TableHead>
+                      <TableHead className="text-gray-900 font-semibold">
+                        Vendor Status
+                      </TableHead>
+                      <TableHead className="text-gray-900 font-semibold">
+                        Machine Status
+                      </TableHead>
+                      <TableHead className="text-gray-900 font-semibold">
+                        Priority
+                      </TableHead>
+                      <TableHead className="text-gray-900 font-semibold">
+                        Due Date
+                      </TableHead>
+                      <TableHead className="text-gray-900 font-semibold">
+                        Actions
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredTasks.map((task) => (
                       <TableRow key={task._id} className="hover:bg-gray-50">
-                        <TableCell className="font-medium text-gray-900">{task.taskTitle}</TableCell>
-                        <TableCell className="text-sm text-gray-700">{task.originalTaskId}</TableCell>
+                        <TableCell className="font-medium text-gray-900">
+                          {task.taskTitle}
+                        </TableCell>
+                       
                         <TableCell>
                           {task.sharedTeamlead ? (
                             <div className="flex items-center gap-2">
                               <User className="w-4 h-4 text-gray-600" />
-                              <span className="text-gray-900">{task.sharedTeamlead.firstName} {task.sharedTeamlead.lastName}</span>
+                              <span className="text-gray-900">
+                                {task.sharedTeamlead.firstName}{" "}
+                                {task.sharedTeamlead.lastName}
+                              </span>
                             </div>
                           ) : (
                             <span className="text-gray-500">Not assigned</span>
                           )}
                         </TableCell>
                         <TableCell>
-                          <Badge className={`${getStatusColor(task.status)} border`}>
-                            {task.status.replace('_', ' ')}
+                          <Badge
+                            className={`${getStatusColor(task.status)} border`}
+                          >
+                            {task.status.replace("_", " ")}
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <Badge className={`${getVendorStatusColor(task.VendorStatus)} border`}>
+                          <Badge
+                            className={`${getVendorStatusColor(
+                              task.VendorStatus
+                            )} border`}
+                          >
                             {task.VendorStatus}
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <Badge className={`${getMachineStatusColor(task.MachineStatus)} border`}>
+                          <Badge
+                            className={`${getMachineStatusColor(
+                              task.MachineStatus
+                            )} border`}
+                          >
                             {task.MachineStatus}
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <Badge className={`${getPriorityColor(task.priority)} border`}>
+                          <Badge
+                            className={`${getPriorityColor(
+                              task.priority
+                            )} border`}
+                          >
                             {task.priority}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-gray-900">
-                          {task.dueDate ? formatSimpleDate(task.dueDate) : "Not set"}
+                          {task.dueDate
+                            ? formatSimpleDate(task.dueDate)
+                            : "Not set"}
                         </TableCell>
                         <TableCell>
                           <div className="flex gap-2">
@@ -488,17 +579,18 @@ export default function ManagerReceivedTasksPage() {
                               className="border-gray-700 text-gray-700 hover:bg-gray-700 hover:text-white"
                             >
                               <Share2 className="w-4 h-4 mr-1" />
-                              {task.sharedTeamlead ? 'Change' : 'Assign'}
+                              {task.sharedTeamlead ? "Change" : "Assign"}
                             </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => toggleTaskExpansion(task._id)}
-                              className="border-gray-700 text-gray-700 hover:bg-gray-700 hover:text-white"
-                            >
-                              <Eye className="w-4 h-4 mr-1" />
-                              Details
-                            </Button>
+                            <Link href={`/manager/received-tasks/${task._id}`}>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="border-blue-700 text-blue-700 hover:bg-blue-700 hover:text-white"
+                              >
+                                <Eye className="w-4 h-4 mr-2" />
+                                Full Details
+                              </Button>
+                            </Link>
                           </div>
                         </TableCell>
                       </TableRow>
@@ -510,20 +602,33 @@ export default function ManagerReceivedTasksPage() {
               // Card View
               <div className="space-y-4">
                 {filteredTasks.map((task) => (
-                  <div key={task._id} className="border border-gray-200 rounded-lg bg-white hover:shadow-md transition-all duration-200">
+                  <div
+                    key={task._id}
+                    className="border border-gray-200 rounded-lg bg-white hover:shadow-md transition-all duration-200"
+                  >
                     <div className="p-6">
                       <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
                         <div className="flex-1">
                           <div className="flex items-start justify-between mb-3">
                             <div className="flex-1">
-                              <h3 className="text-lg font-semibold text-gray-900 mb-1">{task.taskTitle}</h3>
-                              <p className="text-sm text-gray-700 mb-2">Original Task ID: {task.originalTaskId}</p>
+                              <h3 className="text-lg font-semibold text-gray-900 mb-1">
+                                {task.taskTitle}
+                              </h3>
+                              <p className="text-sm text-gray-700 mb-2">
+                                Original Task ID: {task.originalTaskId}
+                              </p>
                               {task.taskDescription && (
-                                <p className="text-gray-800 mb-3">{task.taskDescription}</p>
+                                <p className="text-gray-800 mb-3">
+                                  {task.taskDescription}
+                                </p>
                               )}
                             </div>
                             <div className="flex items-center gap-2 flex-shrink-0">
-                              <Badge className={`${getPriorityColor(task.priority)} border flex items-center gap-1 px-3 py-1 font-medium`}>
+                              <Badge
+                                className={`${getPriorityColor(
+                                  task.priority
+                                )} border flex items-center gap-1 px-3 py-1 font-medium`}
+                              >
                                 <Flag className="w-3 h-3" />
                                 {task.priority}
                               </Badge>
@@ -532,27 +637,49 @@ export default function ManagerReceivedTasksPage() {
 
                           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-3">
                             <div>
-                              <p className="text-sm font-medium text-gray-700">Status</p>
-                              <Badge className={`${getStatusColor(task.status)} border mt-1`}>
-                                {task.status.replace('_', ' ')}
+                              <p className="text-sm font-medium text-gray-700">
+                                Status
+                              </p>
+                              <Badge
+                                className={`${getStatusColor(
+                                  task.status
+                                )} border mt-1`}
+                              >
+                                {task.status.replace("_", " ")}
                               </Badge>
                             </div>
                             <div>
-                              <p className="text-sm font-medium text-gray-700">Vendor Status</p>
-                              <Badge className={`${getVendorStatusColor(task.VendorStatus)} border mt-1`}>
+                              <p className="text-sm font-medium text-gray-700">
+                                Vendor Status
+                              </p>
+                              <Badge
+                                className={`${getVendorStatusColor(
+                                  task.VendorStatus
+                                )} border mt-1`}
+                              >
                                 {task.VendorStatus}
                               </Badge>
                             </div>
                             <div>
-                              <p className="text-sm font-medium text-gray-700">Machine Status</p>
-                              <Badge className={`${getMachineStatusColor(task.MachineStatus)} border mt-1`}>
+                              <p className="text-sm font-medium text-gray-700">
+                                Machine Status
+                              </p>
+                              <Badge
+                                className={`${getMachineStatusColor(
+                                  task.MachineStatus
+                                )} border mt-1`}
+                              >
                                 {task.MachineStatus}
                               </Badge>
                             </div>
                             <div>
-                              <p className="text-sm font-medium text-gray-700">Due Date</p>
+                              <p className="text-sm font-medium text-gray-700">
+                                Due Date
+                              </p>
                               <p className="text-sm text-gray-900 mt-1">
-                                {task.dueDate ? formatSimpleDate(task.dueDate) : "Not set"}
+                                {task.dueDate
+                                  ? formatSimpleDate(task.dueDate)
+                                  : "Not set"}
                               </p>
                             </div>
                           </div>
@@ -561,7 +688,8 @@ export default function ManagerReceivedTasksPage() {
                             <span className="flex items-center gap-2">
                               <User className="w-4 h-4" />
                               <span className="font-medium text-gray-900">
-                                From: {task.sharedManager?.firstName} {task.sharedManager?.lastName}
+                                From: {task.sharedManager?.firstName}{" "}
+                                {task.sharedManager?.lastName}
                               </span>
                             </span>
 
@@ -569,7 +697,8 @@ export default function ManagerReceivedTasksPage() {
                               <span className="flex items-center gap-2 bg-purple-100 text-purple-800 px-3 py-1 rounded-full border border-purple-300">
                                 <Users className="w-4 h-4" />
                                 <span className="font-medium">
-                                  Teamlead: {task.sharedTeamlead.firstName} {task.sharedTeamlead.lastName}
+                                  Teamlead: {task.sharedTeamlead.firstName}{" "}
+                                  {task.sharedTeamlead.lastName}
                                 </span>
                               </span>
                             )}
@@ -595,7 +724,9 @@ export default function ManagerReceivedTasksPage() {
                             disabled={teamleads.length === 0}
                           >
                             <Share2 className="w-4 h-4 mr-2" />
-                            {task.sharedTeamlead ? "Change Teamlead" : "Assign Teamlead"}
+                            {task.sharedTeamlead
+                              ? "Change Teamlead"
+                              : "Assign Teamlead"}
                           </Button>
 
                           <Button
@@ -624,21 +755,34 @@ export default function ManagerReceivedTasksPage() {
                       <div className="border-t border-gray-200 p-6 bg-gray-50">
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                           <div>
-                            <h4 className="text-lg font-semibold text-gray-900 mb-4">Task Details</h4>
+                            <h4 className="text-lg font-semibold text-gray-900 mb-4">
+                              Task Details
+                            </h4>
                             <div className="space-y-3">
                               <div>
-                                <p className="text-sm font-medium text-gray-700">Created</p>
-                                <p className="text-gray-900">{formatDate(task.createdAt)}</p>
+                                <p className="text-sm font-medium text-gray-700">
+                                  Created
+                                </p>
+                                <p className="text-gray-900">
+                                  {formatDate(task.createdAt)}
+                                </p>
                               </div>
                               <div>
-                                <p className="text-sm font-medium text-gray-700">Last Updated</p>
-                                <p className="text-gray-900">{formatDate(task.updatedAt)}</p>
+                                <p className="text-sm font-medium text-gray-700">
+                                  Last Updated
+                                </p>
+                                <p className="text-gray-900">
+                                  {formatDate(task.updatedAt)}
+                                </p>
                               </div>
                               {task.sharedEmployee && (
                                 <div>
-                                  <p className="text-sm font-medium text-gray-700">Shared Employee</p>
+                                  <p className="text-sm font-medium text-gray-700">
+                                    Shared Employee
+                                  </p>
                                   <p className="text-gray-900">
-                                    {task.sharedEmployee.firstName} {task.sharedEmployee.lastName}
+                                    {task.sharedEmployee.firstName}{" "}
+                                    {task.sharedEmployee.lastName}
                                   </p>
                                 </div>
                               )}
@@ -646,20 +790,32 @@ export default function ManagerReceivedTasksPage() {
                           </div>
 
                           <div>
-                            <h4 className="text-lg font-semibold text-gray-900 mb-4">Form Data</h4>
-                            {task.formId?.formData && Object.keys(task.formId.formData).length > 0 ? (
+                            <h4 className="text-lg font-semibold text-gray-900 mb-4">
+                              Form Data
+                            </h4>
+                            {task.formId?.formData &&
+                            Object.keys(task.formId.formData).length > 0 ? (
                               <div className="space-y-2 max-h-60 overflow-y-auto">
-                                {Object.entries(task.formId.formData).map(([key, value]) => (
-                                  <div key={key} className="bg-white p-3 rounded-lg border border-gray-200">
-                                    <label className="text-sm font-medium text-gray-700 capitalize mb-1 block">
-                                      {key.replace(/([A-Z])/g, " $1").trim()}
-                                    </label>
-                                    <p className="text-gray-900">
-                                      {Array.isArray(value) ? value.join(", ") : 
-                                       value === null || value === undefined ? "Not provided" : String(value)}
-                                    </p>
-                                  </div>
-                                ))}
+                                {Object.entries(task.formId.formData).map(
+                                  ([key, value]) => (
+                                    <div
+                                      key={key}
+                                      className="bg-white p-3 rounded-lg border border-gray-200"
+                                    >
+                                      <label className="text-sm font-medium text-gray-700 capitalize mb-1 block">
+                                        {key.replace(/([A-Z])/g, " $1").trim()}
+                                      </label>
+                                      <p className="text-gray-900">
+                                        {Array.isArray(value)
+                                          ? value.join(", ")
+                                          : value === null ||
+                                            value === undefined
+                                          ? "Not provided"
+                                          : String(value)}
+                                      </p>
+                                    </div>
+                                  )
+                                )}
                               </div>
                             ) : (
                               <div className="text-center py-4 text-gray-500">
@@ -684,7 +840,9 @@ export default function ManagerReceivedTasksPage() {
         <DialogContent className="max-w-md bg-white">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold text-gray-900">
-              {selectedTask?.sharedTeamlead ? "Change Teamlead" : "Assign Teamlead to Task"}
+              {selectedTask?.sharedTeamlead
+                ? "Change Teamlead"
+                : "Assign Teamlead to Task"}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 mt-4">
@@ -698,16 +856,22 @@ export default function ManagerReceivedTasksPage() {
               </p>
               {selectedTask?.sharedTeamlead && (
                 <p className="text-blue-900">
-                  <strong>Current Teamlead:</strong> {selectedTask.sharedTeamlead.firstName} {selectedTask.sharedTeamlead.lastName}
+                  <strong>Current Teamlead:</strong>{" "}
+                  {selectedTask.sharedTeamlead.firstName}{" "}
+                  {selectedTask.sharedTeamlead.lastName}
                 </p>
               )}
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-900">Select Teamlead *</label>
+              <label className="text-sm font-medium text-gray-900">
+                Select Teamlead *
+              </label>
               <Select
                 value={shareForm.sharedTo}
-                onValueChange={(value) => setShareForm({ ...shareForm, sharedTo: value })}
+                onValueChange={(value) =>
+                  setShareForm({ ...shareForm, sharedTo: value })
+                }
               >
                 <SelectTrigger className="bg-white border-gray-300 text-gray-900">
                   <SelectValue placeholder="Select teamlead" />
@@ -718,15 +882,22 @@ export default function ManagerReceivedTasksPage() {
                       <SelectItem key={teamlead._id} value={teamlead._id}>
                         <div className="flex items-center gap-2">
                           <User className="w-4 h-4 text-gray-600" />
-                          <span className="text-gray-900">{teamlead.firstName} {teamlead.lastName}</span>
-                          <Badge variant="outline" className="ml-2 text-xs text-gray-600">
+                          <span className="text-gray-900">
+                            {teamlead.firstName} {teamlead.lastName}
+                          </span>
+                          <Badge
+                            variant="outline"
+                            className="ml-2 text-xs text-gray-600"
+                          >
                             {teamlead.depId?.name || "No Department"}
                           </Badge>
                         </div>
                       </SelectItem>
                     ))
                   ) : (
-                    <SelectItem value="none" disabled>No teamleads available</SelectItem>
+                    <SelectItem value="none" disabled>
+                      No teamleads available
+                    </SelectItem>
                   )}
                 </SelectContent>
               </Select>
@@ -745,17 +916,23 @@ export default function ManagerReceivedTasksPage() {
               <Button
                 onClick={handleShareWithTeamlead}
                 className="bg-gray-800 hover:bg-gray-900 text-white"
-                disabled={sharing || !shareForm.sharedTo || teamleads.length === 0}
+                disabled={
+                  sharing || !shareForm.sharedTo || teamleads.length === 0
+                }
               >
                 {sharing ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    {selectedTask?.sharedTeamlead ? "Updating..." : "Assigning..."}
+                    {selectedTask?.sharedTeamlead
+                      ? "Updating..."
+                      : "Assigning..."}
                   </>
                 ) : (
                   <>
                     <Share2 className="w-4 h-4 mr-2" />
-                    {selectedTask?.sharedTeamlead ? "Change Teamlead" : "Assign Teamlead"}
+                    {selectedTask?.sharedTeamlead
+                      ? "Change Teamlead"
+                      : "Assign Teamlead"}
                   </>
                 )}
               </Button>

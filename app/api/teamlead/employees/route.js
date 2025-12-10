@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import dbConnect from "@/lib/db";
 import Employee from "@/models/Employee";
+import TeamLead from "@/models/TeamLead";
 import { authOptions } from "@/lib/auth";
 
 export async function GET(req) {
@@ -25,22 +26,23 @@ export async function GET(req) {
 
     await dbConnect();
 
-    // Debugging: Check depId from session
-    console.log("TeamLead depId:", session.user.depId);
+    const teamLead = await TeamLead.findById(session.user.id).select("managerId");
 
-    // Ensure type-safe matching
-    const employees = await Employee.find({ 
-      depId: String(session.user.depId) // convert to string to match DB
-    }).select("_id userId firstName lastName email position department");
-
-    if (!employees || employees.length === 0) {
+    if (!teamLead || !teamLead.managerId) {
       return NextResponse.json(
-        { success: true, message: "No employees found in your department", employees: [] },
-        { status: 200 }
+        { success: false, error: "TeamLead Manager ID not found" },
+        { status: 404 }
       );
     }
 
-    return NextResponse.json({ success: true, employees }, { status: 200 });
+    const employees = await Employee.find({
+      managerId: String(teamLead.managerId)
+    }).select("_id userId firstName lastName email position department managerId");
+
+    return NextResponse.json(
+      { success: true, employees },
+      { status: 200 }
+    );
   } catch (error) {
     console.error("Fetch employees error:", error);
     return NextResponse.json(

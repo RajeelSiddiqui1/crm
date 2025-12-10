@@ -121,3 +121,55 @@ export async function PATCH(request, context) {
     );
   }
 }
+
+
+
+export async function GET(request, context) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session || session.user.role !== "Manager") {
+      return NextResponse.json(
+        { success: false, message: "Unauthorized access" },
+        { status: 401 }
+      );
+    }
+
+    await dbConnect();
+
+    // Next.js 15 fix: params is a property of context, no need to await context
+    const { params } = context;
+    const { id } = params;
+
+    const task = await SharedTask.findOne({
+      _id: id,
+      sharedManager: session.user.id,
+    })
+      .populate({
+        path: "formId",
+        populate: {
+          path: "employeeId",
+          select: "firstName lastName email department phoneNumber address",
+        },
+      })
+      .populate("sharedManager", "firstName lastName email department")
+      .populate("sharedTeamlead", "firstName lastName email department depId")
+      .populate("sharedEmployee", "firstName lastName email")
+      .populate("sharedBy", "firstName lastName email")
+      .lean();
+
+    if (!task) {
+      return NextResponse.json(
+        { success: false, message: "Task not found or you don't have permission" },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({ success: true, task }, { status: 200 });
+  } catch (error) {
+    console.error("GET /api/manager/received-tasks/[id] error:", error);
+    return NextResponse.json(
+      { success: false, message: "Internal server error", error: error.message },
+      { status: 500 }
+    );
+  }
+}

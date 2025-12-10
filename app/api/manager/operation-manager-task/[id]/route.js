@@ -24,7 +24,7 @@ export async function PATCH(request, { params }) {
         }
 
         // Check if manager has the specific department
-        const hasOperationDepartment = currentManager.departments?.includes("68f13ed5c36e254ff62a6eba");
+        const hasOperationDepartment = currentManager.departments?.includes("6939a9e4a191bbc83a449cd6");
         
         if (!hasOperationDepartment) {
             return NextResponse.json({ success: false, message: "Access denied. Operation department required." }, { status: 403 });
@@ -91,7 +91,7 @@ export async function GET(request, { params }) {
         }
 
         // Check if manager has the specific department
-        const hasOperationDepartment = currentManager.departments?.includes("68f13ed5c36e254ff62a6eba");
+        const hasOperationDepartment = currentManager.departments?.includes("6939a9e4a191bbc83a449cd6");
         
         if (!hasOperationDepartment) {
             return NextResponse.json({ success: false, message: "Access denied. Operation department required." }, { status: 403 });
