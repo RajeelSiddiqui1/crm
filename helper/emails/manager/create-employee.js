@@ -1,41 +1,44 @@
 import { sendMail } from "@/lib/mail";
 
-export const sendEmployeeWelcomeEmail = async (email, firstName, userId, password, departmentName) => {
+export const sendEmployeeWelcomeEmail = async (email, firstName,lastName, userId, password, departmentName) => {
   const subject = "🎉 Welcome to MH Circle Solutions - Your Team Lead Account";
 
   const html = `
-  <div style="font-family: Arial, sans-serif; background-color: #f9f9f9; padding: 30px;">
-    <div style="max-width: 600px; margin: auto; background: #ffffff; border-radius: 10px; padding: 25px; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
-      <h2 style="color: #d63384; text-align:center;">Welcome Aboard, ${firstName}! 💼</h2>
-      <p style="font-size: 16px; color: #333;">
-        Congratulations! You’ve been successfully added as a <strong>Employee</strong> at <strong>MH Circle Solutions</strong>.
-      </p>
+    <div style="font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5;">
+      <div style="max-width: 480px; margin: auto; background: #ffffff; padding: 25px; border-radius: 10px;">
+        
+        <h2 style="text-align: center; color: #333;">Welcome Aboard, <b>${firstName} ${lastName}</b>! 💼</h2>
+        
+        <p>Congratulations! You’ve been successfully added as a <b>Employee</b> at <b>MH Circle Solutions</b>.</p>
+        
+        <p><b>Department:</b> ${departmentName}</p>
+        
+        <p>You can now log in using the details below:</p>
 
-      <p style="font-size: 16px; color: #333;">
-        <strong>Department:</strong> ${departmentName}
-      </p>
+        <div style="
+          background: #f0f0f0; 
+          padding: 15px; 
+          border-radius: 8px; 
+          margin: 20px 0;">
+          <p><b>User ID:</b> ${userId}</p>
+          <p><b>Password:</b> ${password}</p>
+          <p><b>Login URL:</b> 
+            <a href="https://mhcirclesolutions.com/login" style="color:#4a6cf7;" target="_blank">
+              https://mhcirclesolutions.com/login
+            </a>
+          </p>
+        </div>
 
-      <p style="font-size: 16px; color: #333;">
-        You can now log in using the details below:
-      </p>
-
-      <div style="background: #f2f2f2; padding: 15px; border-radius: 8px; margin: 15px 0;">
-        <p><strong>User ID:</strong> ${userId}</p>
-        <p><strong>Password:</strong> ${password}</p>
-        <p><strong>Login URL:</strong> 
-          <a href="https://mhcirclesolutions.com/login" target="_blank">https://mhcirclesolutions.com//login</a>
+        <p style="text-align:center;">
+          Please make sure to change your password after your first login for security reasons.
         </p>
+
+        <p style="margin-top: 25px; font-size: 12px; color: #777; text-align:center;">
+          — The MH Circle Solutions Team
+        </p>
+
       </div>
-
-      <p style="font-size: 15px; color: #555;">
-        Please make sure to change your password after your first login for security reasons.
-      </p>
-
-      <p style="text-align:center; color: #888; font-size: 14px; margin-top: 30px;">
-        — The MH Circle Solutions Team
-      </p>
     </div>
-  </div>
   `;
 
   await sendMail(email, subject, html);

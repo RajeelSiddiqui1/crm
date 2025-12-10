@@ -2,7 +2,7 @@ import bcrypt from "bcrypt";
 import { NextResponse } from "next/server";
 import Employee from "@/models/Employee";
 import Department from "@/models/Department";
-import  dbConnect  from "@/lib/db";
+import dbConnect from "@/lib/db";
 import { sendEmployeeWelcomeEmail } from "@/helper/emails/manager/create-employee";
 import { authOptions } from "@/lib/auth";
 import { getServerSession } from "next-auth";
@@ -19,9 +19,9 @@ export async function POST(req) {
 
     const managerId = session.user.userId || session.user.id;
 
-    const { firstName, lastName, email, password, depId } = await req.json();
+    const { firstName, lastName, email, depId } = await req.json();
 
-    if (!firstName || !lastName || !email || !password || !depId) {
+    if (!firstName || !lastName || !email || !depId) {
       return NextResponse.json(
         { message: "All fields are required" },
         { status: 400 }
@@ -46,7 +46,9 @@ export async function POST(req) {
       if (!existing) isUnique = true;
     }
 
-    normalizedEmail = email.toLowerCase();
+    const normalizedEmail = email.toLowerCase();
+
+    const password = Math.floor(100000 + Math.random() * 900000).toString();
 
     const hashPassword = await bcrypt.hash(password, 12);
 
@@ -57,7 +59,7 @@ export async function POST(req) {
       userId,
       firstName,
       lastName,
-      email:normalizedEmail,
+      email: normalizedEmail,
       password: hashPassword,
       profilePic: avatarUrl,
       depId,
@@ -70,7 +72,14 @@ export async function POST(req) {
     const dept = await Department.findById(depId).select("name");
 
     // ✅ Send Email
-    await sendEmployeeWelcomeEmail(email, firstName, userId, password, dept?.name || "Not Assigned");
+    await sendEmployeeWelcomeEmail(
+      email,
+      firstName,
+      lastName,
+      userId,
+      password,
+      dept?.name || "Not Assigned"
+    );
 
     return NextResponse.json(
       { message: "Employee created successfully" },
@@ -97,9 +106,9 @@ export async function GET(req) {
 
     const managerId = session.user.userId || session.user.id;
 
-    const employees = await Employee.find({ managerId }).select(
-      "userId firstName lastName email profilePic createdAt"
-    ).populate("depId", "name desc");
+    const employees = await Employee.find({ managerId })
+      .select("userId firstName lastName email profilePic createdAt")
+      .populate("depId", "name desc");
 
     return NextResponse.json(
       { message: "Employees fetched successfully", employees },

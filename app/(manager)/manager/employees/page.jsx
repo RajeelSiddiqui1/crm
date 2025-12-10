@@ -80,8 +80,8 @@ export default function EmployeePage() {
     firstName: "",
     lastName: "",
     email: "",
-    password: "",
-    confirmPassword: "",
+    // password: "",
+    // confirmPassword: "",
     depId: "",
   });
 
@@ -175,8 +175,8 @@ export default function EmployeePage() {
           firstName: "",
           lastName: "",
           email: "",
-          password: "",
-          confirmPassword: "",
+          // password: "",
+          // confirmPassword: "",
           depId: "",
         });
         setShowForm(false);
@@ -194,8 +194,8 @@ export default function EmployeePage() {
       firstName: "",
       lastName: "",
       email: "",
-      password: "",
-      confirmPassword: "",
+      // password: "",
+      // confirmPassword: "",
       depId: "",
     });
     setShowForm(false);
@@ -393,7 +393,7 @@ export default function EmployeePage() {
                     required
                   />
                 </div>
-
+{/* 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                   <div className="space-y-2 sm:space-y-3">
                     <Label
@@ -438,7 +438,7 @@ export default function EmployeePage() {
                       minLength={6}
                     />
                   </div>
-                </div>
+                </div> */}
 
                 <div className="space-y-2 sm:space-y-3">
                   <Label

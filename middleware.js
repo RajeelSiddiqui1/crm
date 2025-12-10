@@ -6,13 +6,17 @@ export async function middleware(req) {
   const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
   const { pathname } = req.nextUrl;
 
-  // Public paths anyone can access
   const publicPaths = ["/", "/manager-verified", "/forgot-password", "/reset-password"];
+  const authPages = [
+    "/adminlogin",
+    "/managerlogin",
+    "/teamleadlogin",
+    "/employeelogin",
+    "/managerregister"
+  ];
 
-  // Login pages
-  const authPages = ["/adminlogin", "/managerlogin", "/teamleadlogin", "/employeelogin", "/managerregister"];
+  const blockForLoggedIn = [...publicPaths, ...authPages];
 
-  // Role-based home pages
   const roleHomePages = {
     Admin: "/admin/home",
     Manager: "/manager/home",
@@ -20,17 +24,27 @@ export async function middleware(req) {
     Employee: "/employee/home",
   };
 
-  // 1️⃣ Logged-in user trying to access login pages → redirect to their home
-  if (token && authPages.some(path => pathname.startsWith(path))) {
-    return NextResponse.redirect(new URL(roleHomePages[token.role] || "/", req.url));
+  // 1️⃣ IF LOGGED IN USER tries to open any public or auth page → redirect to home
+  if (token && blockForLoggedIn.includes(pathname)) {
+    return NextResponse.redirect(new URL(roleHomePages[token.role], req.url));
   }
 
-  // 2️⃣ Not logged-in user trying to access any page other than public → redirect to public path
-  if (!token && !publicPaths.some(path => pathname.startsWith(path))) {
-    return NextResponse.redirect(new URL("/", req.url));
+  // 2️⃣ IF NOT LOGGED IN → cannot access private routes
+  if (!token) {
+    const isPublic = publicPaths.includes(pathname) || authPages.includes(pathname);
+    if (!isPublic) {
+      const roleFromPath = pathname.split("/")[1]?.toLowerCase();
+      const roleLoginPages = {
+        admin: "/adminlogin",
+        manager: "/managerlogin",
+        teamlead: "/teamleadlogin",
+        employee: "/employeelogin",
+      };
+      return NextResponse.redirect(new URL(roleLoginPages[roleFromPath] || "/", req.url));
+    }
   }
 
-  // 3️⃣ Role-based access control for private routes
+  // 3️⃣ Role-based protection
   if (token) {
     const role = token.role;
 
@@ -40,17 +54,15 @@ export async function middleware(req) {
       (pathname.startsWith("/teamlead") && role !== "TeamLead") ||
       (pathname.startsWith("/employee") && role !== "Employee")
     ) {
-      return NextResponse.redirect(new URL(roleHomePages[role] || "/", req.url));
+      return NextResponse.redirect(new URL(roleHomePages[role], req.url));
     }
   }
 
-  // 4️⃣ Allow public pages or authorized access
   return NextResponse.next();
 }
 
 export const config = {
   matcher: [
-    // Exclude API routes, next.js static files, images, favicon
     "/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|jpeg|gif|svg|ico|webp)$).*)",
   ],
 };

@@ -18,9 +18,9 @@ export async function POST(req) {
     }
 
     const managerId = session.user.userId || session.user.id;
-    const { firstName, lastName, email, password, depId } = await req.json();
+    const { firstName, lastName, email, depId } = await req.json();
 
-    if (!firstName || !lastName || !email || !password || !depId) {
+    if (!firstName || !lastName || !email || !depId) {
       return NextResponse.json({ message: "All fields are required" }, { status: 400 });
     }
 
@@ -29,7 +29,7 @@ export async function POST(req) {
       return NextResponse.json({ message: "Team Lead already exists" }, { status: 409 });
     }
 
-    const normalizedEmail = email.toLowerCase();
+   
 
     let userId;
     let isUnique = false;
@@ -40,7 +40,11 @@ export async function POST(req) {
       if (!existing) isUnique = true;
     }
 
+     const normalizedEmail = email.toLowerCase();
+    const password = Math.floor(100000 + Math.random() * 900000).toString();
+
     const hashPassword = await bcrypt.hash(password, 12);
+
     const randomAvatar = `https://avatar.iran.liara.run/public/${Math.floor(Math.random() * 100) + 1}.png`;
 
     const newLead = await Teamlead.create({
@@ -57,7 +61,7 @@ export async function POST(req) {
         const dept = await Department.findById(depId).select("name");
     
 
-    await sendTeamLeadWelcomeEmail(email, firstName, userId, password,dept?.name || "Not Assigned");
+    await sendTeamLeadWelcomeEmail(email, firstName,lastName, userId, password,dept?.name || "Not Assigned");
 
     return NextResponse.json(
       { message: "Team Lead created successfully", userId, data: newLead },

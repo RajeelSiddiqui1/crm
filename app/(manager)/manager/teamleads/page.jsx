@@ -318,7 +318,7 @@ export default function TeamLeadPage() {
                   />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                   <div className="space-y-2 sm:space-y-3">
                     <Label htmlFor="password" className="text-gray-700 font-semibold text-xs sm:text-sm uppercase tracking-wide">
                       Password *
@@ -349,7 +349,7 @@ export default function TeamLeadPage() {
                       minLength={6}
                     />
                   </div>
-                </div>
+                </div> */}
 
                 <div className="space-y-2 sm:space-y-3">
                   <Label htmlFor="depId" className="text-gray-700 font-semibold text-xs sm:text-sm uppercase tracking-wide">
