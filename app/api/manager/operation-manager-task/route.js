@@ -30,7 +30,7 @@ export async function GET(request) {
         }
 
         const hasOperationDepartment = currentManager.departments?.includes(
-            "6939a9e4a191bbc83a449cd6"
+            "693989dac89f81400916f048"
         );
 
         if (!hasOperationDepartment) {
