@@ -1,83 +1,24 @@
-// helper/emails/teamlead/shared-employee/index.js
-
-// Employee mail template
 export const sharedTaskAssignEmployeeMailTemplate = (
   employeeName,
   taskTitle,
   teamLeadName,
-  managerName,
-  
+  managerName
 ) => {
   return `
-    <div style="font-family: Arial, sans-serif; line-height: 1.5;">
-      <h2>New Task Assigned</h2>
-      <p>Hi ${employeeName},</p>
+  <div style="font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5;">
+    <div style="max-width: 480px; margin: auto; background: #ffffff; padding: 25px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
+      <h2 style="text-align:center; color:#3b82f6;">📝 New Task Assigned</h2>
+
+      <p>Hi <b>${employeeName}</b>,</p>
       <p>You have been assigned a new task: <strong>${taskTitle}</strong>.</p>
-      <p>Assigned by Team Lead: ${teamLeadName}</p>
-      <p>Shared by Manager: ${managerName}</p>
-      <p>View the task here: <a href="${process.env.NEXT_PUBLIC_DOMAIN}">${process.env.NEXT_PUBLIC_DOMAIN}</a></p>
-      <p>Best regards,<br/>Task Management System</p>
+      <p>Assigned by Team Lead: <b>${teamLeadName}</b></p>
+      <p>Shared by Manager: <b>${managerName}</b></p>
+
+
+      <p style="margin-top:25px; font-size:12px; color:#777; text-align:center;">
+        This is an automated notification. Please do not reply.
+      </p>
     </div>
+  </div>
   `;
 };
-
-// Employee notification object
-export const sharedTaskAssignEmployeeNotification = (
-  employeeId,
-  teamLeadName,
-  taskTitle,
-  taskLink,
-  taskId
-) => ({
-  senderId: null,
-  senderModel: "TeamLead",
-  senderName: teamLeadName,
-  receiverId: employeeId,
-  receiverModel: "Employee",
-  type: "task_assigned_by_teamlead",
-  title: "New Task Assigned",
-  message: `You have been assigned a new task "${taskTitle}" by Team Lead ${teamLeadName}.`,
-  link: taskLink,
-  referenceId: taskId,
-  referenceModel: "SharedTask",
-});
-
-// Shared Manager mail template
-export const sharedTaskAssignManagerMailTemplate = (
-  managerName,
-  employeeName,
-  taskTitle,
-  teamLeadName,
-  taskLink
-) => {
-  return `
-    <div style="font-family: Arial, sans-serif; line-height: 1.5;">
-      <h2>Employee Assigned to Shared Task</h2>
-      <p>Hi ${managerName},</p>
-      <p>Team Lead ${teamLeadName} has assigned <strong>${employeeName}</strong> to the shared task: <strong>${taskTitle}</strong>.</p>
-      <p>View the task here: <a href="${taskLink}">${taskLink}</a></p>
-      <p>Best regards,<br/>Task Management System</p>
-    </div>
-  `;
-};
-
-// Shared Manager notification object
-export const sharedTaskAssignManagerNotification = (
-  managerId,
-  employeeName,
-  taskTitle,
-  taskLink,
-  taskId
-) => ({
-  senderId: null,
-  senderModel: "TeamLead",
-  senderName: "TeamLead",
-  receiverId: managerId,
-  receiverModel: "Manager",
-  type: "employee_assigned_to_shared_task",
-  title: "Employee Assigned to Shared Task",
-  message: `Employee ${employeeName} has been assigned to the shared task "${taskTitle}".`,
-  link: taskLink,
-  referenceId: taskId,
-  referenceModel: "SharedTask",
-});

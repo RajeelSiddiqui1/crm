@@ -3,13 +3,18 @@ import Manager from "@/models/Manager";
 import Department from "@/models/Department";
 import dbConnect from "@/lib/db";
 
-export  async function GET() {
+export async function GET() {
   try {
     await dbConnect();
 
     const managers = await Manager.find()
-      .populate("departments", "name description")
+      .populate({
+        path: 'departments',
+        select: 'name description'
+      })
       .lean();
+
+    console.log("Managers with departments:", JSON.stringify(managers, null, 2));
 
     return NextResponse.json(
       {

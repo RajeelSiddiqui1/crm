@@ -1,10 +1,10 @@
-export function sendTaskStatusUpdateMail({ name, formTitle, status, updatedBy }) {
+export function sendTaskStatusUpdateMail({ name, formTitle, status, updatedBy, taskLink }) {
   return `
   <!DOCTYPE html>
   <html>
   <head>
     <style>
-      body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+      body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; background: #f9fafb; }
       .container { max-width: 600px; margin: 0 auto; padding: 20px; }
       .header { background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
       .content { background: white; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 10px 10px; }
@@ -20,7 +20,7 @@ export function sendTaskStatusUpdateMail({ name, formTitle, status, updatedBy })
       </div>
       <div class="content">
         <h2>Hello ${name},</h2>
-        <p>The status of your task has been updated by ${updatedBy}.</p>
+        <p>The status of your task has been updated by <strong>${updatedBy}</strong>.</p>
 
         <div class="info-box">
           <h3>📋 Task Details</h3>
@@ -28,9 +28,9 @@ export function sendTaskStatusUpdateMail({ name, formTitle, status, updatedBy })
           <p><strong>New Status:</strong> ${status}</p>
         </div>
 
-        
-
         <p>Please check the task and continue accordingly.</p>
+
+        ${taskLink ? `<a href="${taskLink}" class="button">View Task</a>` : ''}
 
         <p>Best regards,<br>The Task Management Team</p>
       </div>

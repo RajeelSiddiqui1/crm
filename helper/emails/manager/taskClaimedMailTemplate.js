@@ -1,57 +1,44 @@
 export function taskClaimedMailTemplate(managerName, teamLeadName, taskTitle, claimDate) {
   return `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <style>
-        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-        .header { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
-        .content { background: white; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 10px 10px; }
-        .info-box { background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 20px; margin: 20px 0; }
-        .button { display: inline-block; background: #10b981; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; }
-        .footer { text-align: center; margin-top: 30px; color: #6b7280; font-size: 14px; }
-      </style>
-    </head>
-    <body>
-      <div class="container">
-        <div class="header">
+    <div style="font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5;">
+      <div style="max-width: 600px; margin: auto; background: #ffffff; border-radius: 10px; overflow: hidden;">
+        
+        <div style="background: #10b981; color: white; padding: 30px; text-align: center;">
           <h1>🎯 Task Claimed Successfully</h1>
         </div>
-        <div class="content">
+        
+        <div style="padding: 30px;">
           <h2>Hello ${managerName},</h2>
-          <p>We're pleased to inform you that one of your submitted tasks has been claimed by a team lead.</p>
+          <p>One of your submitted tasks has been claimed by <b>${teamLeadName}</b>.</p>
           
-          <div class="info-box">
+          <div style="
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;">
             <h3>📋 Task Details</h3>
-            <p><strong>Task Title:</strong> ${taskTitle}</p>
-            <p><strong>Claimed By:</strong> ${teamLeadName}</p>
-            <p><strong>Claim Date:</strong> ${claimDate}</p>
-            <p><strong>New Status:</strong> In Progress</p>
+            <p><b>Task Title:</b> ${taskTitle}</p>
+            <p><b>Claimed By:</b> ${teamLeadName}</p>
+            <p><b>Claim Date:</b> ${claimDate}</p>
+            <p><b>New Status:</b> In Progress</p>
           </div>
           
-          <p>The team lead will now start working on this task and assign it to their employees. You can track the progress from your dashboard.</p>
+          <p>The team lead will start working on this task and assign it to their employees. Track progress from your dashboard.</p>
           
-         
-          
-          <p><strong>Next Steps:</strong></p>
+          <h4>Next Steps:</h4>
           <ol>
             <li>Team lead will assign tasks to employees</li>
-            <li>Employees will complete their assigned work</li>
-            <li>Team lead will submit completed tasks for your review</li>
-            <li>You can approve or request changes</li>
+            <li>Employees complete their tasks</li>
+            <li>Team lead submits completed tasks for your review</li>
+            <li>You approve or request changes</li>
           </ol>
-          
-          <p>If you have any questions, please contact the team lead directly or use the platform's messaging system.</p>
-          
-          <p>Best regards,<br>The Task Management Team</p>
-        </div>
-        <div class="footer">
-          <p>© ${new Date().getFullYear()} Task Management System. All rights reserved.</p>
-          <p>This is an automated notification. Please do not reply to this email.</p>
+
+          <p style="margin-top: 20px; font-size: 12px; color: #777;">
+            This is an automated notification. Please do not reply to this email.
+          </p>
         </div>
       </div>
-    </body>
-    </html>
+    </div>
   `;
 }

@@ -1,45 +1,29 @@
+// helper/emails/employee/task-assignment.js
 export function sendEmployeeTaskAssignmentMail({ name, formTitle, assignedBy, taskId }) {
   return `
-  <!DOCTYPE html>
-  <html>
-  <head>
-    <style>
-      body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-      .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-      .header { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
-      .content { background: white; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 10px 10px; }
-      .info-box { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 20px; margin: 20px 0; }
-      .button { display: inline-block; background: #3b82f6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; }
-      .footer { text-align: center; margin-top: 30px; color: #6b7280; font-size: 14px; }
-    </style>
-  </head>
-  <body>
-    <div class="container">
-      <div class="header">
-        <h1>📌 New Task Assigned</h1>
-      </div>
-      <div class="content">
-        <h2>Hello ${name},</h2>
-        <p>A new task has been assigned to you by ${assignedBy}.</p>
+  <div style="font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5;">
+    <div style="max-width: 480px; margin: auto; background: #ffffff; padding: 25px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05);">
+      
+      <h2 style="text-align: center; color: #333;">📌 New Task Assigned</h2>
+      
+      <p>Hi <b>${name}</b>,</p>
+      <p>You have been assigned a new task by <b>${assignedBy}</b>.</p>
 
-        <div class="info-box">
-          <h3>📋 Task Details</h3>
-          <p><strong>Task Title:</strong> ${formTitle}</p>
-          <p><strong>Assigned By:</strong> ${assignedBy}</p>
-          <p><strong>Status:</strong> Pending</p>
-        </div>
-
-       
-        <p>Please start working on the task and update the status once completed.</p>
-
-        <p>Best regards,<br>The Task Management Team</p>
+      <div style="margin: 20px 0; padding: 15px; background: #eff6ff; border-left: 4px solid #3b82f6; border-radius: 8px;">
+        <p><strong>Task Title:</strong> ${formTitle}</p>
+        <p><strong>Assigned By:</strong> ${assignedBy}</p>
+        <p><strong>Task ID:</strong> ${taskId}</p>
+        <p><strong>Assigned Date:</strong> ${new Date().toLocaleDateString()}</p>
       </div>
-      <div class="footer">
-        <p>© ${new Date().getFullYear()} Task Management System. All rights reserved.</p>
-        <p>This is an automated notification. Please do not reply to this email.</p>
-      </div>
+
+      <p>Please log in to your account to start working on this task.</p>
+
+    
+
+      <p style="margin-top: 25px; font-size: 12px; color: #777; text-align:center;">
+        This is an automated notification. Please do not reply.
+      </p>
     </div>
-  </body>
-  </html>
+  </div>
   `;
 }

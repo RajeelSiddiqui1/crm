@@ -1,140 +1,153 @@
-import { getServerSession } from "next-auth/next";
-import dbConnect from "@/lib/db";
+// app/api/auth/profile/route.js
+import { NextResponse } from "next/server";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
 import Admin from "@/models/Admin";
 import Manager from "@/models/Manager";
 import TeamLead from "@/models/TeamLead";
 import Employee from "@/models/Employee";
-import { authOptions } from "@/lib/auth";
+import Department from "@/models/Department";
+import dbConnect from "@/lib/db";
 
-const roleModelMap = {
-  Admin: Admin,
-  Manager: Manager,
-  TeamLead: TeamLead,
-  Employee: Employee
-};
-
-export async function GET(request) {
+// GET: User profile data fetch based on role
+export async function GET() {
   try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session) {
-      return new Response(JSON.stringify({ message: "Unauthorized" }), {
-        status: 401,
-      });
-    }
-
     await dbConnect();
-
-    const Model = roleModelMap[session.user.role];
-    if (!Model) {
-      return new Response(JSON.stringify({ message: "Invalid role" }), {
-        status: 400,
-      });
-    }
-
-    const user = await Model.findById(session.user.id).select("-password -otp -otpExpiry");
     
-    if (!user) {
-      return new Response(JSON.stringify({ message: "User not found" }), {
-        status: 404,
-      });
+    // Get session
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user) {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    return new Response(JSON.stringify({ 
-      user: {
-        ...user.toObject(),
-        role: session.user.role
-      }
-    }), {
-      status: 200,
-    });
+    const { id, role } = session.user;
+    let userData;
+
+    // Role ke hisaab se model select karo
+    switch (role) {
+      case "Admin":
+        userData = await Admin.findById(id).select("-password -otp -otpExpiry");
+        break;
+      case "Manager":
+        userData = await Manager.findById(id).select("-password -otp -otpExpiry");
+        // Agar departments hain to populate karo
+        if (userData && userData.departments && userData.departments.length > 0) {
+          await userData.populate("departments");
+        }
+        break;
+      case "TeamLead":
+        userData = await TeamLead.findById(id).select("-password -otp -otpExpiry");
+        if (userData && userData.depId) {
+          await userData.populate("depId");
+        }
+        if (userData && userData.managerId) {
+          await userData.populate("managerId", "firstName lastName email");
+        }
+        break;
+      case "Employee":
+        userData = await Employee.findById(id).select("-password -otp -otpExpiry");
+        if (userData && userData.depId) {
+          await userData.populate("depId");
+        }
+        if (userData && userData.managerId) {
+          await userData.populate("managerId", "firstName lastName email");
+        }
+        break;
+      default:
+        return NextResponse.json({ message: "Invalid role" }, { status: 400 });
+    }
+
+    if (!userData) {
+      return NextResponse.json({ message: "User not found" }, { status: 404 });
+    }
+
+    return NextResponse.json({ 
+      success: true, 
+      user: userData 
+    }, { status: 200 });
+
   } catch (error) {
     console.error("Profile fetch error:", error);
-    return new Response(JSON.stringify({ message: "Internal server error" }), {
-      status: 500,
-    });
+    return NextResponse.json(
+      { message: "Internal server error", error: error.message },
+      { status: 500 }
+    );
   }
 }
 
-export async function PUT(request) {
+// PUT: User profile update based on role
+export async function PUT(req) {
   try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session) {
-      return new Response(JSON.stringify({ message: "Unauthorized" }), {
-        status: 401,
-      });
-    }
-
-    const body = await request.json();
-    const { firstName, lastName, email, phone, address, profilePic } = body;
-
     await dbConnect();
-
-    const Model = roleModelMap[session.user.role];
-    if (!Model) {
-      return new Response(JSON.stringify({ message: "Invalid role" }), {
-        status: 400,
-      });
+    
+    // Get session
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user) {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    if (email && email !== session.user.email) {
-      const existingUser = await Model.findOne({ 
-        email, 
-        _id: { $ne: session.user.id } 
-      });
-      
-      if (existingUser) {
-        return new Response(JSON.stringify({ message: "Email already in use" }), {
-          status: 400,
-        });
-      }
+    const { id, role } = session.user;
+    const updateData = await req.json();
+    
+    // Remove sensitive fields that shouldn't be updated via this route
+    delete updateData.password;
+    delete updateData.role;
+    delete updateData._id;
+    delete updateData.createdAt;
+    delete updateData.updatedAt;
+
+    let updatedUser;
+    let Model;
+
+    // Role ke hisaab se model select karo
+    switch (role) {
+      case "Admin":
+        Model = Admin;
+        break;
+      case "Manager":
+        Model = Manager;
+        break;
+      case "TeamLead":
+        Model = TeamLead;
+        break;
+      case "Employee":
+        Model = Employee;
+        break;
+      default:
+        return NextResponse.json({ message: "Invalid role" }, { status: 400 });
     }
 
-    const updateFields = {};
-    if (firstName) updateFields.firstName = firstName;
-    if (lastName) updateFields.lastName = lastName;
-    if (email) updateFields.email = email;
-    if (phone !== undefined) updateFields.phone = phone;
-    if (address !== undefined) updateFields.address = address;
-    if (profilePic !== undefined) updateFields.profilePic = profilePic;
-
-    const updatedUser = await Model.findByIdAndUpdate(
-      session.user.id,
-      { $set: updateFields },
+    // Update karo
+    updatedUser = await Model.findByIdAndUpdate(
+      id,
+      { $set: updateData },
       { new: true, runValidators: true }
     ).select("-password -otp -otpExpiry");
 
     if (!updatedUser) {
-      return new Response(JSON.stringify({ message: "User not found" }), {
-        status: 404,
-      });
+      return NextResponse.json({ message: "User not found" }, { status: 404 });
     }
 
-    return new Response(JSON.stringify({ 
+    return NextResponse.json({
+      success: true,
       message: "Profile updated successfully",
-      user: updatedUser 
-    }), {
-      status: 200,
-    });
+      user: updatedUser
+    }, { status: 200 });
+
   } catch (error) {
     console.error("Profile update error:", error);
     
-    if (error.name === 'ValidationError') {
-      const errors = Object.values(error.errors).map(err => err.message);
-      return new Response(JSON.stringify({ message: errors.join(', ') }), {
-        status: 400,
-      });
+    // MongoDB duplicate key error
+    if (error.code === 11000) {
+      return NextResponse.json(
+        { message: "Email already exists" },
+        { status: 400 }
+      );
     }
     
-    if (error.code === 11000) {
-      return new Response(JSON.stringify({ message: "Email already exists" }), {
-        status: 400,
-      });
-    }
-
-    return new Response(JSON.stringify({ message: "Internal server error" }), {
-      status: 500,
-    });
+    return NextResponse.json(
+      { message: "Internal server error", error: error.message },
+      { status: 500 }
+    );
   }
 }

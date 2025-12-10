@@ -9,18 +9,33 @@ export const sharedTaskMailTemplate = (
   taskLink
 ) => {
   return `
-    <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-      <h2 style="color: #1a73e8;">New Task Shared with You</h2>
-      <p>Hi <strong>${receiverName}</strong>,</p>
-      <p><strong>${senderName}</strong> has shared a task with you.</p>
-      <p><strong>Task Title:</strong> ${taskTitle}</p>
-      <p><strong>Description:</strong> ${taskDescription}</p>
-      <p><strong>Due Date:</strong> ${dueDate ? new Date(dueDate).toLocaleString() : "N/A"}</p>
-      <p><strong>Priority:</strong> ${priority}</p>
-      ${notes ? `<p><strong>Notes:</strong> ${notes}</p>` : ""}
-      <p>You can view the task and take action by clicking the link below:</p>
-     
-      <p>Best regards,<br/>${senderName}</p>
+    <div style="font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5;">
+      <div style="max-width: 480px; margin: auto; background: #ffffff; padding: 25px; border-radius: 10px;">
+        
+        <h2 style="text-align: center; color: #4a6cf7;">New Task Shared with You</h2>
+        
+        <p>Hi <b>${receiverName}</b>,</p>
+        <p><b>${senderName}</b> has shared a new task with you.</p>
+        
+        <div style="
+          background: #f0f0f0;
+          padding: 15px;
+          border-radius: 8px;
+          margin: 20px 0;">
+          <p><b>Task Title:</b> ${taskTitle}</p>
+          <p><b>Description:</b> ${taskDescription}</p>
+          <p><b>Due Date:</b> ${dueDate ? new Date(dueDate).toLocaleString() : "N/A"}</p>
+          <p><b>Priority:</b> ${priority}</p>
+          ${notes ? `<p><b>Notes:</b> ${notes}</p>` : ""}
+        </div>
+
+        
+
+        <p style="margin-top: 25px; font-size: 12px; color: #777; text-align:center;">
+          This is an automated notification. Please do not reply to this email.
+        </p>
+
+      </div>
     </div>
   `;
 };

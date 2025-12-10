@@ -3,7 +3,7 @@ export function statusUpdateMailTemplate(name, formTitle, oldStatus, newStatus) 
     <div style="font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5;">
       <div style="max-width: 480px; margin: auto; background: #ffffff; padding: 25px; border-radius: 10px;">
 
-        <h2 style="text-align: center; color: #333;">Status Updated</h2>
+        <h2 style="text-align: center; color: #4a6cf7;">Form Status Updated</h2>
 
         <p>Hi <b>${name}</b>,</p>
         <p>The status of your submitted form has been updated.</p>
@@ -19,8 +19,9 @@ export function statusUpdateMailTemplate(name, formTitle, oldStatus, newStatus) 
           <p><b>New Status:</b> ${newStatus}</p>
         </div>
 
+
         <p style="font-size: 12px; color: #777; text-align:center;">
-          Please review the updated form status.
+          This is an automated notification. Please do not reply to this email.
         </p>
       </div>
     </div>

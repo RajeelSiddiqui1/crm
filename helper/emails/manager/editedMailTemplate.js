@@ -1,3 +1,4 @@
+
 export function editedMailTemplate(name, formTitle, editorName) {
   return `
     <div style="font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5;">
@@ -17,7 +18,7 @@ export function editedMailTemplate(name, formTitle, editorName) {
           <p><b>Form Title:</b> ${formTitle}</p>
         </div>
 
-        <p style="font-size: 12px; color: #777; text-align:center;">
+        <p style="margin-top: 25px; font-size: 12px; color: #777; text-align:center;">
           Please review the updated submission.
         </p>
       </div>

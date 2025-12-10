@@ -66,6 +66,8 @@ import {
   Check,
   Download,
   Volume2,
+  Users,
+  Briefcase,
 } from "lucide-react";
 import axios from "axios";
 
@@ -561,15 +563,14 @@ export default function AdminTasksPage() {
     }
   };
 
-  // Get manager full name and department
+  // Get manager full name and departments (array)
   const getManagerDisplayName = (manager) => {
     if (!manager) return "Unknown";
     const fullName = `${manager.firstName || ""} ${
       manager.lastName || ""
     }`.trim();
-    const department =
-      manager.departments?.name || manager.department || "No Department";
-    return `${fullName} (${department})`;
+    const departments = getManagerDepartments(manager);
+    return `${fullName} (${departments})`;
   };
 
   const getManagerShortName = (manager) => {
@@ -579,8 +580,30 @@ export default function AdminTasksPage() {
     return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase() || "??";
   };
 
-  const getManagerDepartment = (manager) => {
-    return manager.departments?.name || manager.department || "No Department";
+  // Get departments as comma-separated string
+  const getManagerDepartments = (manager) => {
+    if (!manager.departments || !Array.isArray(manager.departments)) {
+      return "No Department";
+    }
+    
+    if (manager.departments.length === 0) return "No Department";
+    
+    // Extract department names
+    const departmentNames = manager.departments.map(dept => dept.name).filter(name => name);
+    
+    if (departmentNames.length === 0) return "No Department";
+    
+    return departmentNames.join(", ");
+  };
+
+  // Get first department for badge display
+  const getManagerFirstDepartment = (manager) => {
+    if (!manager.departments || !Array.isArray(manager.departments) || manager.departments.length === 0) {
+      return "No Dept";
+    }
+    
+    const firstDept = manager.departments[0];
+    return firstDept.name || "No Dept";
   };
 
   if (status === "loading") {
@@ -613,7 +636,7 @@ export default function AdminTasksPage() {
             </h1>
             <p className="text-gray-600 mt-3 text-base sm:text-lg max-w-2xl">
               Create and manage tasks with voice instructions and assign them to
-              multiple managers
+              multiple managers across departments
             </p>
           </div>
           <Button
@@ -658,7 +681,7 @@ export default function AdminTasksPage() {
                   </p>
                 </div>
                 <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-                  <User className="w-6 h-6 text-green-600" />
+                  <Users className="w-6 h-6 text-green-600" />
                 </div>
               </div>
             </CardContent>
@@ -669,14 +692,18 @@ export default function AdminTasksPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">
-                    High Priority
+                    Departments
                   </p>
                   <p className="text-3xl font-bold text-gray-900 mt-1">
-                    {tasks.filter((t) => t.priority === "high").length}
+                    {Array.from(new Set(
+                      managers.flatMap(m => 
+                        m.departments?.map(d => d.name) || []
+                      )
+                    )).length}
                   </p>
                 </div>
-                <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center">
-                  <Clock className="w-6 h-6 text-red-600" />
+                <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
+                  <Building className="w-6 h-6 text-purple-600" />
                 </div>
               </div>
             </CardContent>
@@ -693,8 +720,8 @@ export default function AdminTasksPage() {
                     {tasks.filter((t) => t.audioUrl).length}
                   </p>
                 </div>
-                <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
-                  <Volume2 className="w-6 h-6 text-purple-600" />
+                <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
+                  <Volume2 className="w-6 h-6 text-orange-600" />
                 </div>
               </div>
             </CardContent>
@@ -742,7 +769,7 @@ export default function AdminTasksPage() {
                       }
                       placeholder="Enter task title"
                       className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 h-12 text-base rounded-xl"
-                      required
+                      
                     />
                   </div>
                   <div className="space-y-3">
@@ -766,12 +793,17 @@ export default function AdminTasksPage() {
 
                 {/* Multiple Managers Selection */}
                 <div className="space-y-3">
-                  <Label className="text-gray-700 font-semibold text-sm">
-                    Assign to Managers *
-                  </Label>
+                  <div className="flex items-center justify-between">
+                    <Label className="text-gray-700 font-semibold text-sm">
+                      Assign to Managers *
+                    </Label>
+                    <Badge variant="outline" className="text-xs">
+                      {selectedManagers.length} selected
+                    </Badge>
+                  </div>
 
                   {selectedManagers.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mb-4 p-4 bg-gray-50 rounded-xl border">
+                    <div className="flex flex-wrap gap-2 mb-4 p-4 bg-blue-50 rounded-xl border border-blue-200">
                       {selectedManagers.map((managerId) => {
                         const manager = managers.find(
                           (m) => m._id === managerId
@@ -841,8 +873,13 @@ export default function AdminTasksPage() {
                                 {manager.firstName} {manager.lastName}
                               </p>
                               <p className="text-xs text-gray-600 truncate">
-                                {getManagerDepartment(manager)} •{" "}
-                                {manager.email}
+                                <span className="flex items-center gap-1">
+                                  <Building className="w-3 h-3" />
+                                  {getManagerDepartments(manager)}
+                                </span>
+                                <span className="text-gray-500">
+                                  {manager.email}
+                                </span>
                               </p>
                             </div>
                           </div>
@@ -1099,7 +1136,7 @@ export default function AdminTasksPage() {
                 </CardTitle>
                 <CardDescription className="text-gray-600 text-base mt-2">
                   {tasks.length} task{tasks.length !== 1 ? "s" : ""} assigned to
-                  managers
+                  managers across departments
                 </CardDescription>
               </div>
               <div className="relative w-full sm:w-80">
@@ -1241,7 +1278,7 @@ export default function AdminTasksPage() {
                                     {manager.firstName} {manager.lastName}
                                   </span>
                                   <span className="text-[10px] text-gray-500">
-                                    {getManagerDepartment(manager)}
+                                    {getManagerDepartments(manager)}
                                   </span>
                                 </div>
                               </Badge>
@@ -1317,7 +1354,6 @@ export default function AdminTasksPage() {
         </Card>
       </div>
 
-      {/* Edit Task Dialog */}
       {/* Edit Task Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
         <DialogContent className="max-w-4xl bg-white text-gray-900 max-h-[90vh] overflow-y-auto rounded-2xl border-0 shadow-2xl">
@@ -1477,7 +1513,11 @@ export default function AdminTasksPage() {
                             {manager.firstName} {manager.lastName}
                           </p>
                           <p className="text-xs text-gray-600">
-                            {getManagerDepartment(manager)} • {manager.email}
+                            <span className="flex items-center gap-1">
+                              <Building className="w-3 h-3" />
+                              {getManagerDepartments(manager)}
+                            </span>
+                            {manager.email}
                           </p>
                         </div>
                         {editSelectedManagers.includes(manager._id) && (
@@ -1881,10 +1921,20 @@ export default function AdminTasksPage() {
       {/* View Task Dialog - Improved */}
       <Dialog open={viewDialogOpen} onOpenChange={setViewDialogOpen}>
         <DialogContent className="max-w-4xl bg-white text-gray-900 max-h-[90vh] overflow-y-auto rounded-2xl">
-          <DialogHeader className="p-6 border-b border-gray-200">
-            <DialogTitle className="text-2xl font-bold text-gray-900">
-              Task Details
-            </DialogTitle>
+          <DialogHeader className="p-6 border-b border-gray-200 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-t-2xl">
+            <div className="flex items-center justify-between">
+              <DialogTitle className="text-2xl font-bold text-white">
+                Task Details
+              </DialogTitle>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setViewDialogOpen(false)}
+                className="h-9 w-9 text-white hover:bg-white/20 rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </Button>
+            </div>
           </DialogHeader>
 
           {selectedTask && (
@@ -1942,7 +1992,7 @@ export default function AdminTasksPage() {
                 <Card className="bg-white border border-gray-200 rounded-xl shadow-sm">
                   <CardHeader className="bg-gradient-to-r from-gray-50 to-blue-50/50 p-6 border-b">
                     <CardTitle className="text-lg flex items-center gap-3 text-gray-900">
-                      <User className="w-6 h-6 text-blue-600" />
+                      <Users className="w-6 h-6 text-blue-600" />
                       Assigned Managers ({selectedTask.managers?.length || 0})
                     </CardTitle>
                   </CardHeader>
@@ -1964,7 +2014,10 @@ export default function AdminTasksPage() {
                                 {manager.firstName} {manager.lastName}
                               </p>
                               <p className="text-sm text-gray-600 mt-1">
-                                {getManagerDepartment(manager)}
+                                <span className="flex items-center gap-1">
+                                  <Building className="w-4 h-4" />
+                                  {getManagerDepartments(manager)}
+                                </span>
                               </p>
                               <p className="text-xs text-gray-500 mt-1">
                                 {manager.email}
@@ -2083,7 +2136,7 @@ export default function AdminTasksPage() {
               <div className="flex justify-end pt-4">
                 <Button
                   onClick={() => setViewDialogOpen(false)}
-                  className="bg-gray-600 hover:bg-gray-700 text-white rounded-xl px-8 py-3 font-semibold"
+                  className="bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800 text-white rounded-xl px-8 py-3 font-semibold"
                 >
                   Close
                 </Button>

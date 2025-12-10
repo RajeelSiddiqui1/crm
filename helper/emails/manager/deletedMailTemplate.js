@@ -9,7 +9,7 @@ export function deletedMailTemplate(name, formTitle, deletedBy) {
         <p>The following form submission has been deleted by <b>${deletedBy}</b>.</p>
 
         <div style="
-          background: #ffe6e6;
+          background: #f0f0f0;
           padding: 15px;
           border-radius: 8px;
           margin: 20px 0;
@@ -17,7 +17,7 @@ export function deletedMailTemplate(name, formTitle, deletedBy) {
           <p><b>Form Title:</b> ${formTitle}</p>
         </div>
 
-        <p style="font-size: 12px; color: #777; text-align:center;">
+        <p style="margin-top: 25px; font-size: 12px; color: #777; text-align:center;">
           If this was a mistake, please contact the manager.
         </p>
       </div>

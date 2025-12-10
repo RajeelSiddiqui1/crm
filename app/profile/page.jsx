@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Toaster } from "@/components/ui/sonner";
@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Camera, Save, User, Mail, Phone, MapPin, Calendar, Building, Upload, X, Download, QrCode, Video, VideoOff, Scan, FlipHorizontal, Clock } from "lucide-react";
+import { Loader2, Camera, Save, User, Mail, Phone, MapPin, Calendar, Building, Upload, X, Clock } from "lucide-react";
 import axios from "axios";
 
 export default function ProfilePage() {
@@ -28,153 +28,12 @@ export default function ProfilePage() {
     address: "",
     profilePic: ""
   });
-  const [showAttendanceModal, setShowAttendanceModal] = useState(false);
   const [showAvatarSelector, setShowAvatarSelector] = useState(false);
   const [avatarOption, setAvatarOption] = useState("avatar");
   const [avatars, setAvatars] = useState([]);
   const [loadingAvatars, setLoadingAvatars] = useState(false);
   const [customImage, setCustomImage] = useState(null);
   const [customImageFile, setCustomImageFile] = useState(null);
-  const [qrCode, setQrCode] = useState("");
-  const [attendanceLoading, setAttendanceLoading] = useState(false);
-  const [attendanceStatus, setAttendanceStatus] = useState("");
-  const [scanResult, setScanResult] = useState("");
-  const [cameraActive, setCameraActive] = useState(false);
-  const [scanning, setScanning] = useState(false);
-  const [cameraError, setCameraError] = useState("");
-  const [useFrontCamera, setUseFrontCamera] = useState(true);
-  const videoRef = useRef(null);
-  const [stream, setStream] = useState(null);
-  const [qrData, setQrData] = useState("");
-
-  const handleManualScan = () => {
-    if (!qrData.trim()) {
-      toast.error("Please enter QR code data");
-      return;
-    }
-    setScanning(true);
-    toast.success("QR Code Processing...");
-    
-    setTimeout(() => {
-      handleAttendanceScan(qrData);
-    }, 1000);
-  };
-
-  const handleAttendanceScan = async (scannedData) => {
-    if (!session?.user?.id || !session?.user?.role) {
-      toast.error("User data not available.");
-      return;
-    }
-
-    setAttendanceLoading(true);
-    try {
-      let employeeId = session.user.id;
-      
-      try {
-        if (scannedData.includes('http')) {
-          const parsed = new URL(scannedData);
-          employeeId = parsed.searchParams.get("id") || session.user.id;
-        }
-      } catch (e) {
-        employeeId = scannedData || session.user.id;
-      }
-
-      const res = await axios.post("/api/attendance/mark", {
-        employeeId,
-      });
-
-      if (res.data?.success) {
-        setAttendanceStatus(res.data.status || "Present");
-        toast.success(`Attendance marked as ${res.data.status}`);
-        setCameraActive(false);
-        setScanning(false);
-        stopCamera();
-      } else {
-        toast.error(res.data.message || "Attendance already marked.");
-      }
-    } catch (error) {
-      console.error("Error marking attendance:", error);
-      toast.error("Failed to mark attendance");
-    } finally {
-      setAttendanceLoading(false);
-    }
-  };
-
-  const startCamera = async () => {
-    setCameraError("");
-    setScanResult("");
-    setAttendanceStatus("");
-    setScanning(false);
-    
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      setCameraError("Camera not supported in this browser.");
-      return;
-    }
-
-    try {
-      const mediaStream = await navigator.mediaDevices.getUserMedia({ 
-        video: { 
-          facingMode: useFrontCamera ? "user" : "environment",
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
-        } 
-      });
-      
-      setStream(mediaStream);
-      setCameraActive(true);
-      
-      if (videoRef.current) {
-        videoRef.current.srcObject = mediaStream;
-      }
-      
-      toast.success("Camera started! You can see yourself in the camera.");
-    } catch (error) {
-      console.error("Camera error:", error);
-      if (error.name === "NotAllowedError") {
-        setCameraError("Camera permission denied. Please allow camera access in your browser settings.");
-      } else if (error.name === "NotFoundError") {
-        setCameraError("No camera found on this device.");
-      } else {
-        setCameraError("Failed to access camera. Please check your camera settings.");
-      }
-    }
-  };
-
-  const stopCamera = () => {
-    if (stream) {
-      stream.getTracks().forEach(track => {
-        track.stop();
-      });
-      setStream(null);
-    }
-    setCameraActive(false);
-    setScanning(false);
-    setCameraError("");
-  };
-
-  const toggleCamera = () => {
-    setUseFrontCamera(!useFrontCamera);
-    if (cameraActive) {
-      stopCamera();
-      setTimeout(() => {
-        startCamera();
-      }, 500);
-    }
-  };
-
-  const testCamera = async () => {
-    try {
-      const testStream = await navigator.mediaDevices.getUserMedia({ video: true });
-      const tracks = testStream.getTracks();
-      tracks.forEach(track => track.stop());
-      toast.success("Camera test successful!");
-      return true;
-    } catch (error) {
-      console.error("Camera test failed:", error);
-      toast.error("Camera test failed. Please check permissions.");
-      return false;
-    }
-  };
 
   useEffect(() => {
     if (status === "loading") return;
@@ -185,31 +44,7 @@ export default function ProfilePage() {
     }
 
     fetchUserData();
-
-    if (session.user?.id && session.user?.role) {
-      fetchQRCode(session.user.id, session.user.role);
-    }
   }, [session, status, router]);
-
-  useEffect(() => {
-    return () => {
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-      }
-    };
-  }, [stream]);
-
-  const fetchQRCode = async (userId, role) => {
-    try {
-      const response = await fetch(`/api/generateQR?id=${userId}&role=${role}`);
-      const data = await response.json();
-      if (data.qrImage) {
-        setQrCode(data.qrImage);
-      }
-    } catch (error) {
-      console.error("Error fetching QR code:", error);
-    }
-  };
 
   const fetchAvatars = async () => {
     try {
@@ -221,6 +56,7 @@ export default function ProfilePage() {
       }
     } catch (error) {
       console.error("Error fetching avatars:", error);
+      // Fallback avatars
       const fallbackAvatars = [];
       for (let i = 1; i <= 12; i++) {
         fallbackAvatars.push(`https://avatar.iran.liara.run/public/${i}.png`);
@@ -354,35 +190,6 @@ export default function ProfilePage() {
       }
     } catch (error) {
       toast.error("Failed to upload custom image");
-    }
-  };
-
-  const handleDownloadPDF = async () => {
-    const userId = userData?._id || session?.user?.id;
-    const userRole = userData?.role || session?.user?.role;
-
-    if (!userId || !userRole) {
-      toast.error("User data not available for PDF generation");
-      return;
-    }
-
-    try {
-      const res = await fetch(`/api/generateCardPDF?id=${userId}&role=${userRole}`);
-
-      if (!res.ok) {
-        const errorData = await res.json();
-        throw new Error(errorData.error || "Failed to generate PDF");
-      }
-
-      const blob = await res.blob();
-      const link = document.createElement("a");
-      link.href = URL.createObjectURL(blob);
-      link.download = `${userData?.firstName || 'user'}_${userRole}_MN_Enterprises_Card.pdf`;
-      link.click();
-      toast.success("PDF downloaded successfully!");
-    } catch (error) {
-      console.error("Error downloading PDF:", error);
-      toast.error(error.message || "Failed to download PDF");
     }
   };
 
@@ -552,7 +359,7 @@ export default function ProfilePage() {
                                     type="button"
                                     variant="outline"
                                     size="sm"
-                                    className="text-xs"
+                                    className="text-xs bg-red-600 hover:bg-red-700 text-white"
                                     onClick={() => {
                                       setCustomImage(null);
                                       setCustomImageFile(null);
@@ -607,14 +414,16 @@ export default function ProfilePage() {
                     {userData?.depId && (
                       <div className="flex items-center gap-2 sm:gap-3 text-gray-600">
                         <Building className="w-4 h-4 text-orange-600 flex-shrink-0" />
-                        <span className="text-xs sm:text-sm truncate">Dept: {userData.depId}</span>
+                        <span className="text-xs sm:text-sm truncate">
+                          Dept: {typeof userData.depId === 'object' ? userData.depId.name : userData.depId}
+                        </span>
                       </div>
                     )}
-                    {(session.user.startTime && session.user.endTime) && (
+                    {(userData?.startTime && userData?.endTime) && (
                       <div className="flex items-center gap-2 sm:gap-3 text-gray-600">
                         <Clock className="w-4 h-4 text-purple-600 flex-shrink-0" />
                         <span className="text-xs sm:text-sm">
-                          Shift: {session.user.startTime} - {session.user.endTime}
+                          Shift: {userData.startTime} - {userData.endTime}
                         </span>
                       </div>
                     )}
@@ -625,26 +434,6 @@ export default function ProfilePage() {
                       </span>
                     </div>
                   </div>
-
-                  {qrCode && (
-                    <div className="mt-6 pt-4 border-t border-gray-200">
-                      <h3 className="text-sm font-semibold text-gray-700 mb-3">Your QR Code</h3>
-                      <div className="flex flex-col items-center">
-                        <img
-                          src={qrCode}
-                          alt="QR Code"
-                          className="w-32 h-32 border-2 border-gray-300 p-2 rounded-lg bg-white shadow-sm"
-                        />
-                        <Button
-                          onClick={handleDownloadPDF}
-                          className="mt-3 bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700 text-white shadow-lg shadow-pink-500/25 px-4 py-2 text-xs"
-                        >
-                          <Download className="w-3 h-3 mr-2" />
-                          Download Profile Card
-                        </Button>
-                      </div>
-                    </div>
-                  )}
                 </div>
               </CardContent>
             </Card>
@@ -709,6 +498,7 @@ export default function ProfilePage() {
                           onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                           className="focus:border-green-500 focus:ring-2 focus:ring-green-200 h-10 sm:h-11"
                           required
+                          disabled={session.user.role === "Employee"} // Employee email change nahi kar sakta
                         />
                       </div>
 
@@ -759,16 +549,6 @@ export default function ProfilePage() {
                         )}
                       </Button>
                     </form>
-                    <Button
-                      onClick={() => {
-                        setShowAttendanceModal(true);
-                        startCamera();
-                      }}
-                      className="mt-3 bg-gradient-to-r from-green-500 to-green-700 hover:from-green-600 hover:to-green-800 text-white shadow-lg px-4 py-2 text-xs sm:text-sm w-full"
-                    >
-                      <QrCode className="w-4 h-4 mr-2" />
-                      Scan QR for Attendance
-                    </Button>
                   </CardContent>
                 </Card>
               </TabsContent>
@@ -776,222 +556,6 @@ export default function ProfilePage() {
           </div>
         </div>
       </div>
-      
-      {showAttendanceModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-lg w-full max-w-md p-4 sm:p-6 shadow-xl mx-4">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold text-gray-800">
-                Mark Attendance - QR Scanner
-              </h2>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => {
-                  setShowAttendanceModal(false);
-                  stopCamera();
-                }}
-              >
-                <X className="w-4 h-4" />
-              </Button>
-            </div>
-
-            <div className="flex flex-col items-center gap-4">
-              {attendanceStatus ? (
-                <div className="text-center py-8">
-                  <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                  </div>
-                  <p className="text-gray-700 mb-2 text-lg font-semibold">
-                    Attendance Marked Successfully!
-                  </p>
-                  <p className="text-gray-600 mb-4">
-                    Status: <span className="font-bold text-green-600">{attendanceStatus}</span>
-                  </p>
-                  <Button
-                    onClick={() => {
-                      setShowAttendanceModal(false);
-                      setAttendanceStatus("");
-                      setScanResult("");
-                    }}
-                    className="bg-green-600 hover:bg-green-700 text-white"
-                  >
-                    Close
-                  </Button>
-                </div>
-              ) : (
-                <>
-                  <div className="w-full flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      {cameraActive ? (
-                        <>
-                          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                          <span className="text-sm text-green-600 font-medium">
-                            {useFrontCamera ? "Front Camera Live" : "Back Camera Live"}
-                          </span>
-                        </>
-                      ) : (
-                        <>
-                          <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
-                          <span className="text-sm text-gray-500">Camera Off</span>
-                        </>
-                      )}
-                    </div>
-                    
-                    <Button
-                      onClick={toggleCamera}
-                      variant="outline"
-                      size="sm"
-                      className="h-6 text-xs"
-                    >
-                      <FlipHorizontal className="w-3 h-3 mr-1" />
-                      Switch Camera
-                    </Button>
-                  </div>
-
-                  <div className="w-full max-w-xs relative">
-                    {cameraActive ? (
-                      <div className="relative rounded-lg overflow-hidden border-2 border-green-500 shadow-lg bg-black">
-                        <video
-                          ref={videoRef}
-                          autoPlay
-                          playsInline
-                          muted
-                          className="w-full h-64 object-cover"
-                          style={{
-                            transform: useFrontCamera ? 'scaleX(-1)' : 'scaleX(1)'
-                          }}
-                        />
-                        
-                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                          <div className="w-48 h-48 border-2 border-green-400 border-dashed rounded-lg"></div>
-                        </div>
-                        
-                        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 pointer-events-none">
-                          <div className="w-32 h-32 border-2 border-white rounded-lg">
-                            <div className="absolute -top-1 -left-1 w-4 h-4 border-t-2 border-l-2 border-white"></div>
-                            <div className="absolute -top-1 -right-1 w-4 h-4 border-t-2 border-r-2 border-white"></div>
-                            <div className="absolute -bottom-1 -left-1 w-4 h-4 border-b-2 border-l-2 border-white"></div>
-                            <div className="absolute -bottom-1 -right-1 w-4 h-4 border-b-2 border-r-2 border-white"></div>
-                          </div>
-                        </div>
-
-                        <div className="absolute bottom-2 left-2 right-2 bg-black/70 p-2 rounded">
-                          <div className="flex gap-2">
-                            <Input
-                              placeholder="Or enter QR code manually"
-                              value={qrData}
-                              onChange={(e) => setQrData(e.target.value)}
-                              className="flex-1 text-white bg-gray-800 border-gray-600"
-                              onKeyPress={(e) => e.key === 'Enter' && handleManualScan()}
-                            />
-                            <Button
-                              onClick={handleManualScan}
-                              size="sm"
-                              className="bg-green-600 hover:bg-green-700"
-                              disabled={!qrData.trim()}
-                            >
-                              <Scan className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="w-full h-64 bg-gray-100 rounded-lg flex flex-col items-center justify-center border-2 border-dashed border-gray-300">
-                        <VideoOff className="w-12 h-12 text-gray-400 mb-2" />
-                        <p className="text-gray-500 text-center text-sm mb-2">
-                          Camera is not active
-                        </p>
-                        {cameraError && (
-                          <p className="text-red-500 text-xs text-center max-w-xs mb-3">
-                            {cameraError}
-                          </p>
-                        )}
-                        <div className="flex gap-2">
-                          <Button
-                            onClick={startCamera}
-                            className="bg-blue-600 hover:bg-blue-700 text-white"
-                            size="sm"
-                          >
-                            <Video className="w-4 h-4 mr-2" />
-                            Start Camera
-                          </Button>
-                          <Button
-                            onClick={testCamera}
-                            variant="outline"
-                            size="sm"
-                          >
-                            Test Camera
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="text-center w-full max-w-xs">
-                    <p className="text-sm text-gray-600 mb-4">
-                      {cameraActive 
-                        ? "✓ Camera is working! Point QR code at the camera or enter manually below"
-                        : "Click 'Start Camera' to begin scanning"
-                      }
-                    </p>
-                    
-                    {attendanceLoading && (
-                      <div className="flex items-center justify-center gap-2 text-blue-600 mb-4">
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        <span>Processing attendance...</span>
-                      </div>
-                    )}
-
-                    <div className="flex gap-2 w-full">
-                      {cameraActive ? (
-                        <Button
-                          onClick={stopCamera}
-                          variant="outline"
-                          className="flex-1"
-                        >
-                          <VideoOff className="w-4 h-4 mr-2" />
-                          Stop Camera
-                        </Button>
-                      ) : (
-                        <Button
-                          onClick={startCamera}
-                          className="flex-1 bg-blue-600 hover:bg-blue-700 text-white"
-                        >
-                          <Video className="w-4 h-4 mr-2" />
-                          Start Camera
-                        </Button>
-                      )}
-                      <Button
-                        variant="outline"
-                        className="flex-1"
-                        onClick={() => {
-                          setShowAttendanceModal(false);
-                          stopCamera();
-                        }}
-                      >
-                        Cancel
-                      </Button>
-                    </div>
-
-                    <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-                      <p className="text-xs text-blue-700 text-left">
-                        <strong>How to use:</strong><br/>
-                        1. Start camera and allow permissions<br/>
-                        2. Point QR code at the camera view<br/>
-                        3. Or enter QR code data manually in the input field below camera<br/>
-                        4. Click scan button to mark attendance
-                      </p>
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

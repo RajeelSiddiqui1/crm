@@ -1,20 +1,34 @@
 import { NextResponse } from "next/server";
 import AdminTask from "@/models/AdminTask";
+import Manager from "@/models/Manager";
 import dbConnect from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import cloudinary from "@/lib/cloudinary";
 import { sendNotification } from "@/lib/sendNotification";
+import { sendMail } from "@/lib/mail";
+import { adminTaskCreatedMailTemplate } from "@/helper/emails/admin/createTask";
 
 export async function POST(req) {
   try {
     await dbConnect();
+
     const session = await getServerSession(authOptions);
     if (!session || session.user.role !== "Admin") {
-      return NextResponse.json({ success: false, message: "Unauthorized access" }, { status: 401 });
+      return NextResponse.json(
+        { success: false, message: "Unauthorized access" },
+        { status: 401 }
+      );
     }
 
     const { title, clientName, fileAttachments, audioUrl, priority, endDate, managersId } = await req.json();
+
+    if (!title || !managersId || managersId.length === 0) {
+      return NextResponse.json(
+        { success: false, message: "Task title and assigned managers are required" },
+        { status: 400 }
+      );
+    }
 
     let uploadFileUrl = "";
     let uploadAudioUrl = "";
@@ -31,7 +45,7 @@ export async function POST(req) {
 
     const newAdminTask = new AdminTask({
       title,
-      clientName,
+      clientName: clientName || "",
       fileAttachments: uploadFileUrl || null,
       audioUrl: uploadAudioUrl || null,
       priority: priority || "low",
@@ -42,15 +56,19 @@ export async function POST(req) {
 
     await newAdminTask.save();
 
-    const taskLink = `${process.env.TASK_LINK}/manager/admin-tasks`;
+    const taskLink = `${process.env.NEXT_PUBLIC_DOMAIN}/manager/admin-tasks`;
 
-    // Notifications
-    await Promise.all(newAdminTask.managers.map(managerId =>
-      sendNotification({
+    // Fetch manager emails for sending mails
+    const managers = await Manager.find({ _id: { $in: newAdminTask.managers } });
+
+    // Send notifications and emails in parallel
+    await Promise.all(managers.map(async manager => {
+      // Send Notification
+      await sendNotification({
         senderId: session.user.id,
         senderModel: "Admin",
         senderName: session.user.name || "Admin",
-        receiverId: managerId,
+        receiverId: manager._id,
         receiverModel: "Manager",
         type: "admin_task_created",
         title: "New Admin Task",
@@ -58,14 +76,24 @@ export async function POST(req) {
         link: taskLink,
         referenceId: newAdminTask._id,
         referenceModel: "AdminTask",
-      })
-    ));
+      });
 
-    return NextResponse.json({ success: true, message: "Admin Task created successfully", task: newAdminTask }, { status: 200 });
+      // Send Email
+      const emailHtml = adminTaskCreatedMailTemplate(manager.firstName + " " + manager.lastName, title, session.user.name || "Admin", priority, endDate, taskLink);
+      await sendMail(manager.email, "New Admin Task Assigned", emailHtml);
+    }));
+
+    return NextResponse.json(
+      { success: true, message: "Admin Task created and notifications sent successfully", task: newAdminTask },
+      { status: 201 }
+    );
 
   } catch (error) {
     console.error("Admin Task creation error:", error);
-    return NextResponse.json({ success: false, message: "Admin Task creation failed", error: error.message }, { status: 500 });
+    return NextResponse.json(
+      { success: false, message: "Admin Task creation failed", error: error.message },
+      { status: 500 }
+    );
   }
 }
 
@@ -74,14 +102,11 @@ export async function GET() {
     await dbConnect();
 
     const session = await getServerSession(authOptions);
-    if (!session || !session.user || session.user.role !== "Admin") {
-      return NextResponse.json(
-        { success: false, message: "Unauthorized access" },
-        { status: 401 }
-      );
+    if (!session || session.user.role !== "Admin") {
+      return NextResponse.json({ success: false, message: "Unauthorized access" }, { status: 401 });
     }
 
-    const tasks = await AdminTask.find({submittedBy: session.user.id})
+    const tasks = await AdminTask.find({ submittedBy: session.user.id })
       .populate({
         path: "managers",
         select: "firstName lastName email departments",
