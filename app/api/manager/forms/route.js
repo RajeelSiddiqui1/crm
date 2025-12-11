@@ -5,7 +5,7 @@ import FormSubmission from "@/models/FormSubmission";
 import TeamLead from "@/models/TeamLead";
 import Manager from "@/models/Manager";
 import cloudinary from "@/lib/cloudinary";
-import { updatedMailTemplate } from "@/helper/emails/manager/updatedMailTemplate";
+import { createTaskTemplate } from "@/helper/emails/manager/createTaskTemplate";
 import { sendMail } from "@/lib/mail";
 import mongoose from "mongoose";
 import { getServerSession } from "next-auth";
@@ -24,6 +24,7 @@ export async function POST(req) {
     let body = {};
     let uploadedFileUrl = null;
 
+    // ----------------------- MULTIPART HANDLING -----------------------
     if (contentType.includes("multipart/form-data")) {
       const formData = await req.formData();
       body.formId = formData.get("formId");
@@ -51,9 +52,23 @@ export async function POST(req) {
       body = await req.json();
     }
 
-    const { formId, adminTaskId, submittedBy, assignmentType, assignedTo, multipleTeamLeadAssigned, formData } = body;
+    const {
+      formId,
+      adminTaskId,
+      submittedBy,
+      assignmentType,
+      assignedTo,
+      multipleTeamLeadAssigned,
+      formData,
+    } = body;
+
     if (uploadedFileUrl) formData.file = uploadedFileUrl;
 
+    // ----------------------- FORM TITLE FETCH -----------------------
+    const form = await Form.findById(formId);
+    const formTitle = form?.title || "New Task";
+
+    // ----------------------- SUBMISSION CREATION -----------------------
     const submissionData = {
       formId,
       adminTask: adminTaskId || null,
@@ -63,7 +78,9 @@ export async function POST(req) {
     };
 
     if (assignmentType === "multiple" && multipleTeamLeadAssigned?.length > 0) {
-      submissionData.multipleTeamLeadAssigned = multipleTeamLeadAssigned.map(id => new mongoose.Types.ObjectId(id));
+      submissionData.multipleTeamLeadAssigned = multipleTeamLeadAssigned.map(
+        (id) => new mongoose.Types.ObjectId(id)
+      );
     } else if (assignmentType === "single" && assignedTo) {
       submissionData.assignedTo = new mongoose.Types.ObjectId(assignedTo);
       submissionData.multipleTeamLeadAssigned = [];
@@ -74,21 +91,22 @@ export async function POST(req) {
     const newSubmission = new FormSubmission(submissionData);
     await newSubmission.save();
 
+    // ----------------------- MULTIPLE ASSIGN -----------------------
     if (assignmentType === "multiple" && multipleTeamLeadAssigned?.length > 0) {
       for (const tlId of multipleTeamLeadAssigned) {
         const teamLead = await TeamLead.findById(tlId);
-        if (teamLead) {
+        if (teamLead && teamLead.email) {
           try {
-            if (teamLead.email) {
-              const html = updatedMailTemplate(
-                teamLead.name || "Team Lead",
-                "New Form Assigned",
-                "Manager",
-                "Pending",
-                "A new form has been assigned to you."
-              );
-              await sendMail(teamLead.email, "New Form Assigned", html);
-            }
+            const html = createTaskTemplate({
+              name: teamLead.name || "Team Lead",
+              managerName: session.user.name || "Manager",
+              formTitle: formTitle,
+              status: "Pending",
+              message: "A new form has been assigned to you.",
+              taskLink: `https://mhcirclesolutions.com/teamlead/task-offer/`,
+            });
+
+            await sendMail(teamLead.email, "New Task Assigned", html);
           } catch (e) {}
 
           await sendNotification({
@@ -98,7 +116,7 @@ export async function POST(req) {
             receiverId: teamLead._id,
             receiverModel: "TeamLead",
             type: "form_assigned",
-            title: "New Form Assigned",
+            title: "New Task Assigned",
             message: `A new form has been assigned to you.`,
             link: `/teamlead/task-offer/`,
             referenceId: newSubmission._id,
@@ -108,20 +126,22 @@ export async function POST(req) {
       }
     }
 
+    // ----------------------- SINGLE ASSIGN -----------------------
     if (assignmentType === "single" && assignedTo) {
       const teamLead = await TeamLead.findById(assignedTo);
-      if (teamLead) {
+
+      if (teamLead && teamLead.email) {
         try {
-          if (teamLead.email) {
-            const html = updatedMailTemplate(
-              teamLead.name || "Team Lead",
-              "New Form Assigned",
-              "Manager",
-              "Pending",
-              "A new form has been assigned to you."
-            );
-            await sendMail(teamLead.email, "New Form Assigned", html);
-          }
+          const html = createTaskTemplate({
+            name: teamLead.name || "Team Lead",
+            managerName: session.user.name || "Manager",
+            formTitle: formTitle,
+            status: "Pending",
+            message: "A new form has been assigned to you.",
+            taskLink: `https://mhcirclesolutions.com/teamlead/tasks/${newSubmission._id}`,
+          });
+
+          await sendMail(teamLead.email, "New Task Assigned", html);
         } catch (e) {}
 
         await sendNotification({
@@ -131,9 +151,9 @@ export async function POST(req) {
           receiverId: teamLead._id,
           receiverModel: "TeamLead",
           type: "form_assigned",
-          title: "New Form Assigned",
+          title: "New Task Assigned",
           message: `A new form has been assigned to you.`,
-          link: `${process.env.TASK_LINK}/teamlead/submissions/${newSubmission._id}`,
+          link: `/teamlead/tasks/${newSubmission._id}`,
           referenceId: newSubmission._id,
           referenceModel: "FormSubmission",
         });
@@ -151,6 +171,7 @@ export async function POST(req) {
     );
   }
 }
+
 
 
 export async function GET(req) {

@@ -15,7 +15,7 @@ export function taskClaimedMailTemplate(managerName, taskTitle, assignedManagers
     <div style="font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5;">
       <div style="max-width: 480px; margin: auto; background: #ffffff; padding: 25px; border-radius: 10px;">
         
-        <h2 style="text-align: center; color: #4a6cf7;">Task Successfully Assigned</h2>
+        <h2 style="text-align: center; color: #4a6cf7;">Admin Task Shared</h2>
         
         <p>Hi <b>${managerName}</b>,</p>
         <p>Your task <b>"${taskTitle}"</b> has been shared with ${assignedManagers.length} manager${assignedManagers.length > 1 ? 's' : ''}.</p>

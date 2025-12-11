@@ -582,7 +582,7 @@ export default function ManagerEditSubmissionPage() {
                       <Label className="text-gray-800 font-semibold">
                         Assign New Team Lead
                       </Label>
-                      <div className="flex gap-3">
+                      <div className="flex gap-3 ">
                         <Select
                           value={selectedTeamLead}
                           onValueChange={setSelectedTeamLead}
@@ -607,7 +607,7 @@ export default function ManagerEditSubmissionPage() {
                                       </AvatarFallback>
                                     </Avatar>
                                     <div>
-                                      <span className="text-gray-900 font-medium">
+                                      <span className="text-gray-900 bg-white font-medium">
                                         {teamLead.firstName} {teamLead.lastName}
                                       </span>
                                       {teamLead.designation && (
