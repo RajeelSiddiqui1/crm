@@ -733,10 +733,10 @@ export default function EmployeeSubmissionForm() {
                                 </CardDescription>
                                 <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-6">
                                     <TabsList className="grid w-full grid-cols-2 bg-gradient-to-r from-gray-800 to-gray-900 p-1 rounded-xl">
-                                        <TabsTrigger value="available" className="data-[state=active]:bg-white data-[state=active]:text-black text-white rounded-lg py-3 text-lg">
+                                        <TabsTrigger value="available" className="data-[state=active]:bg-white data-[state=active]:text-black text-white rounded-lg  ">
                                             Available ({distinctAvailableForms.length})
                                         </TabsTrigger>
-                                        <TabsTrigger value="completed" className="data-[state=active]:bg-white data-[state=active]:text-black text-white rounded-lg py-3 text-lg">
+                                        <TabsTrigger value="completed" className="data-[state=active]:bg-white data-[state=active]:text-black text-white rounded-lg ">
                                             Submitted ({completedForms.length})
                                         </TabsTrigger>
                                     </TabsList>

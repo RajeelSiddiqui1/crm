@@ -109,7 +109,6 @@ export default function Sidebar() {
     employee: [
       { href: "/employee/home", label: "Dashboard", icon: "Dashboard" },
       { href: "/employee/tasks", label: "Tasks", icon: "Tasks" },
-      { href: "/employee/employeetask", label: "My Tasks", icon: "My Tasks" },
       { href: "/employee/subtasks", label: "Subtasks", icon: "Subtasks" },
       { href: "/employee/operation-tasks", label: "Operation Tasks", icon: "OperationTasks" },
       { href: "/employee/received-tasks", label: "Received Tasks", icon: "ReceivedTasks" },
