@@ -395,7 +395,8 @@ export default function TeamLeadDashboard() {
                         </Avatar>
                         <div>
                           <div className="text-sm font-medium text-gray-900">
-                            {employee.firstName}
+                            {employee.firstName}{" "}
+                            {employee.lastName}
                           </div>
                         </div>
                       </div>

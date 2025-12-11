@@ -21,9 +21,6 @@ import {
   Search,
   Calendar,
   FileText,
-  File,
-  Image as ImageIcon,
-  Video,
   AudioLines,
   Play,
   Pause,
@@ -43,11 +40,7 @@ import {
   ChevronRight,
   ExternalLink,
   MessageSquare,
-  Mail,
-  FileType,
-  FileVideo,
-  FileAudio,
-  XCircle
+  Mail
 } from "lucide-react";
 import axios from "axios";
 
@@ -66,9 +59,6 @@ export default function ManagerAdminTasksPage() {
   const [assigning, setAssigning] = useState(false);
   const [searchManager, setSearchManager] = useState("");
   const [refreshing, setRefreshing] = useState(false);
-  const [filePreviewOpen, setFilePreviewOpen] = useState(false);
-  const [selectedFile, setSelectedFile] = useState(null);
-  const [downloading, setDownloading] = useState(false);
 
   const audioRef = useRef(null);
 
@@ -108,6 +98,7 @@ export default function ManagerAdminTasksPage() {
     try {
       const response = await axios.get("/api/manager/managers");
       if (response.data.success) {
+        // Exclude current manager from the list
         const otherManagers = response.data.managers.filter(
           manager => manager._id !== session?.user?.id
         );
@@ -121,6 +112,7 @@ export default function ManagerAdminTasksPage() {
 
   const handleView = async (task) => {
     try {
+      // Fetch fresh task data with managers
       const response = await axios.get(`/api/manager/admin-tasks/${task._id}`);
       if (response.data.success) {
         setSelectedTask(response.data.task);
@@ -131,159 +123,16 @@ export default function ManagerAdminTasksPage() {
     } catch (error) {
       console.error("Error fetching task details:", error);
       toast.error("Failed to load task details");
+      // Fallback to local task data
       setSelectedTask(task);
       setViewDialogOpen(true);
     }
   };
 
-  const handleFilePreview = (fileUrl, fileName) => {
-    setSelectedFile({
-      url: fileUrl,
-      name: fileName,
-      type: getFileType(fileUrl),
-      downloadUrl: convertToDownloadUrl(fileUrl)
-    });
-    setFilePreviewOpen(true);
-  };
-
-  // Cloudinary URL ko download-friendly URL mein convert karega
-  const convertToDownloadUrl = (url) => {
-    if (!url) return url;
-    
-    // Cloudinary URL hai ya nahi check karo
-    if (url.includes('cloudinary.com')) {
-      // Cloudinary se direct download ke liye 'fl_attachment' parameter add karo
-      if (url.includes('?')) {
-        // Agar query parameters hain toh 'fl_attachment' add karo
-        return `${url}&fl_attachment`;
-      } else {
-        // Agar query parameters nahi hain toh '?fl_attachment' add karo
-        return `${url}?fl_attachment`;
-      }
-    }
-    
-    // Agar Cloudinary URL nahi hai toh wahi URL return karo
-    return url;
-  };
-
-  const getFileType = (url) => {
-    if (!url) return 'unknown';
-    
-    const urlWithoutParams = url.split('?')[0];
-    const extension = urlWithoutParams.split('.').pop().toLowerCase();
-    const imageTypes = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg'];
-    const videoTypes = ['mp4', 'webm', 'ogg', 'mov', 'avi', 'mkv'];
-    const audioTypes = ['mp3', 'wav', 'ogg', 'm4a', 'aac'];
-    const pdfTypes = ['pdf'];
-    const wordTypes = ['doc', 'docx'];
-    const excelTypes = ['xls', 'xlsx'];
-    const powerpointTypes = ['ppt', 'pptx'];
-    
-    if (imageTypes.includes(extension)) return 'image';
-    if (videoTypes.includes(extension)) return 'video';
-    if (audioTypes.includes(extension)) return 'audio';
-    if (pdfTypes.includes(extension)) return 'pdf';
-    if (wordTypes.includes(extension)) return 'word';
-    if (excelTypes.includes(extension)) return 'excel';
-    if (powerpointTypes.includes(extension)) return 'powerpoint';
-    
-    return 'other';
-  };
-
-  const getFileIcon = (fileUrl) => {
-    const fileType = getFileType(fileUrl);
-    switch (fileType) {
-      case 'image':
-        return <ImageIcon className="w-4 h-4 mr-2" />;
-      case 'video':
-        return <Video className="w-4 h-4 mr-2" />;
-      case 'audio':
-        return <AudioLines className="w-4 h-4 mr-2" />;
-      case 'pdf':
-        return <FileText className="w-4 h-4 mr-2" />;
-      case 'word':
-        return <FileType className="w-4 h-4 mr-2" />;
-      case 'excel':
-        return <FileType className="w-4 h-4 mr-2" />;
-      case 'powerpoint':
-        return <FileType className="w-4 h-4 mr-2" />;
-      default:
-        return <File className="w-4 h-4 mr-2" />;
-    }
-  };
-
-  const getFileNameFromUrl = (url) => {
-    if (!url) return 'Attachment';
-    // Query parameters hatao
-    const urlWithoutParams = url.split('?')[0];
-    const parts = urlWithoutParams.split('/');
-    let fileName = parts[parts.length - 1] || 'Attachment';
-    
-    // Decode URL encoded characters
-    fileName = decodeURIComponent(fileName);
-    
-    return fileName;
-  };
-
-  // Cloudinary se file download karne ka function
-  const downloadCloudinaryFile = async (fileUrl, fileName) => {
-    try {
-      setDownloading(true);
-      
-      // Agar Cloudinary URL hai toh direct fetch se download karo
-      if (fileUrl.includes('cloudinary.com')) {
-        const response = await fetch(fileUrl);
-        const blob = await response.blob();
-        const downloadUrl = window.URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = downloadUrl;
-        link.download = fileName || getFileNameFromUrl(fileUrl);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        
-        // Cleanup
-        window.URL.revokeObjectURL(downloadUrl);
-        
-        toast.success("Download started successfully");
-      } else {
-        // Normal file download
-        const link = document.createElement('a');
-        link.href = fileUrl;
-        link.download = fileName || getFileNameFromUrl(fileUrl);
-        link.target = '_blank';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        toast.success("Download started");
-      }
-    } catch (error) {
-      console.error("Download error:", error);
-      toast.error("Failed to download file");
-      
-      // Fallback: New tab mein open karo
-      window.open(fileUrl, '_blank');
-    } finally {
-      setDownloading(false);
-    }
-  };
-
-  // Cloudinary se file preview ke liye URL banaye
-  const getCloudinaryPreviewUrl = (url) => {
-    if (!url.includes('cloudinary.com')) return url;
-    
-    // Cloudinary se preview ke liye transformation parameters add karo
-    if (url.includes('?')) {
-      // Remove existing fl_attachment parameter for preview
-      url = url.replace(/&fl_attachment/g, '');
-      return url;
-    }
-    return url;
-  };
-
   const handleAssignClick = (task) => {
     setSelectedTask(task);
     
+    // Pre-select already assigned managers (excluding current user)
     const alreadyAssigned = (task.managers || [])
       .filter(manager => manager._id !== session?.user?.id)
       .map(manager => manager._id);
@@ -311,6 +160,12 @@ export default function ManagerAdminTasksPage() {
 
     setAssigning(true);
     try {
+      console.log("Submitting PUT request with:", {
+        taskId: selectedTask._id,
+        managerIds: selectedManagers,
+        currentManager: session.user.id
+      });
+
       const response = await axios.put(
         `/api/manager/admin-tasks/${selectedTask._id}`,
         { managerIds: selectedManagers },
@@ -321,9 +176,13 @@ export default function ManagerAdminTasksPage() {
         }
       );
 
+      console.log("PUT Response:", response.data);
+
       if (response.data.success) {
         toast.success(response.data.message);
         
+        // Update local task with new managers
+        const newManagers = response.data.data.newManagers || [];
         const allAssignedManagers = response.data.data.assignedManagers || [];
         
         setTasks(prev => prev.map(task => {
@@ -337,6 +196,7 @@ export default function ManagerAdminTasksPage() {
           return task;
         }));
         
+        // Refresh task list to get updated data
         setRefreshing(true);
         await fetchTasks();
         
@@ -347,7 +207,11 @@ export default function ManagerAdminTasksPage() {
         toast.error(response.data.error || "Failed to share task");
       }
     } catch (error) {
-      console.error("Error in PUT request:", error);
+      console.error("Error in PUT request:", {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
       
       if (error.response) {
         const errorMsg = error.response.data?.error || 
@@ -402,6 +266,22 @@ export default function ManagerAdminTasksPage() {
       console.error("Error playing audio:", err);
       toast.error("Failed to play audio");
     });
+  };
+
+  const downloadFile = (fileData, fileName = "attachment") => {
+    try {
+      const link = document.createElement("a");
+      link.href = fileData;
+      link.download = fileName || "task_attachment";
+      link.target = "_blank";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      toast.success("Download started");
+    } catch (error) {
+      console.error("Error downloading file:", error);
+      toast.error("Failed to download file");
+    }
   };
 
   const formatDate = (dateString) => {
@@ -466,6 +346,7 @@ export default function ManagerAdminTasksPage() {
     );
   });
 
+  // Function to get manager initials
   const getManagerInitials = (manager) => {
     if (!manager) return "M";
     if (manager.firstName && manager.lastName) {
@@ -478,6 +359,7 @@ export default function ManagerAdminTasksPage() {
     return "M";
   };
 
+  // Function to get manager display name
   const getManagerName = (manager) => {
     if (!manager) return "Manager";
     if (manager.firstName && manager.lastName) {
@@ -498,7 +380,6 @@ export default function ManagerAdminTasksPage() {
     return () => {
       if (audioRef.current) {
         audioRef.current.pause();
-        audioRef.current.currentTime = 0;
         audioRef.current = null;
       }
     };
@@ -550,6 +431,7 @@ export default function ManagerAdminTasksPage() {
               </p>
             </div>
 
+            {/* Manager Info & Actions */}
             <div className="flex flex-col sm:flex-row gap-4">
               <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg rounded-2xl">
                 <CardContent className="p-4">
@@ -571,8 +453,78 @@ export default function ManagerAdminTasksPage() {
                   </div>
                 </CardContent>
               </Card>
+
             </div>
           </div>
+        </div>
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-0 shadow-lg rounded-2xl hover:shadow-xl transition-shadow duration-300">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Total Tasks</p>
+                  <p className="text-3xl font-bold text-gray-900 mt-1">{tasks.length}</p>
+                  <p className="text-xs text-gray-500 mt-1">Assigned to you</p>
+                </div>
+                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
+                  <FileText className="w-6 h-6 text-white" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-red-50 to-pink-50 border-0 shadow-lg rounded-2xl hover:shadow-xl transition-shadow duration-300">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">High Priority</p>
+                  <p className="text-3xl font-bold text-gray-900 mt-1">
+                    {tasks.filter((t) => t.priority === "high").length}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">Require attention</p>
+                </div>
+                <div className="w-12 h-12 bg-gradient-to-br from-red-500 to-pink-600 rounded-xl flex items-center justify-center shadow-lg">
+                  <AlertCircle className="w-6 h-6 text-white" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-purple-50 to-violet-50 border-0 shadow-lg rounded-2xl hover:shadow-xl transition-shadow duration-300">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">With Audio</p>
+                  <p className="text-3xl font-bold text-gray-900 mt-1">
+                    {tasks.filter((t) => t.audioUrl).length}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">Voice instructions</p>
+                </div>
+                <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-violet-600 rounded-xl flex items-center justify-center shadow-lg">
+                  <Volume2 className="w-6 h-6 text-white" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-0 shadow-lg rounded-2xl hover:shadow-xl transition-shadow duration-300">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Shared Tasks</p>
+                  <p className="text-3xl font-bold text-gray-900 mt-1">
+                    {tasks.filter((t) => t.managers && t.managers.length > 1).length}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">With other managers</p>
+                </div>
+                <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
+                  <Users className="w-6 h-6 text-white" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Tasks List */}
@@ -580,11 +532,11 @@ export default function ManagerAdminTasksPage() {
           <CardHeader className="bg-gradient-to-r from-gray-50 to-blue-50/50 border-b border-gray-200/50 p-6">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <div>
-                <CardTitle className="text-2xl font-bold text-gray-900">
+                <CardTitle className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
                   Your Assigned Tasks
                 </CardTitle>
                 <CardDescription className="text-gray-600 text-base mt-2">
-                  {tasks.length} task{tasks.length !== 1 ? "s" : ""}
+                  {tasks.length} task{tasks.length !== 1 ? "s" : ""} • Click to view details or share with managers
                 </CardDescription>
               </div>
               <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
@@ -592,7 +544,7 @@ export default function ManagerAdminTasksPage() {
                   <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                   <Input
                     placeholder="Search tasks, clients, priority..."
-                    className="pl-12 pr-4 h-12 text-base rounded-xl bg-white/80"
+                    className="pl-12 pr-4 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 h-12 text-base rounded-xl bg-white/80"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                   />
@@ -608,6 +560,9 @@ export default function ManagerAdminTasksPage() {
                   <FileText className="w-8 h-8 text-blue-600 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" />
                 </div>
                 <h3 className="text-xl font-semibold text-gray-900 mb-2">Loading Tasks</h3>
+                <p className="text-gray-600 max-w-md text-center">
+                  Fetching your assigned tasks from the server...
+                </p>
               </div>
             ) : filteredTasks.length === 0 ? (
               <div className="text-center py-16">
@@ -617,22 +572,36 @@ export default function ManagerAdminTasksPage() {
                 <h3 className="text-2xl font-bold text-gray-900 mb-3">
                   {tasks.length === 0 ? "No tasks assigned yet" : "No matches found"}
                 </h3>
+                <p className="text-gray-600 text-lg max-w-md mx-auto mb-6">
+                  {tasks.length === 0
+                    ? "You don't have any tasks assigned to you yet. Check back later or contact admin."
+                    : "Try adjusting your search terms to find what you're looking for."}
+                </p>
+                {searchTerm && (
+                  <Button
+                    variant="outline"
+                    onClick={() => setSearchTerm("")}
+                    className="border-gray-300"
+                  >
+                    Clear Search
+                  </Button>
+                )}
               </div>
             ) : (
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader className="bg-gradient-to-r from-gray-50 to-blue-50/50">
-                    <TableRow className="border-b border-gray-200/50">
-                      <TableHead className="font-bold text-gray-900 text-sm uppercase py-4 px-6">
+                    <TableRow className="hover:bg-transparent border-b border-gray-200/50">
+                      <TableHead className="font-bold text-gray-900 text-sm uppercase tracking-wide py-4 px-6">
                         Task Details
                       </TableHead>
-                      <TableHead className="font-bold text-gray-900 text-sm uppercase py-4 px-6">
+                      <TableHead className="font-bold text-gray-900 text-sm uppercase tracking-wide py-4 px-6">
                         Priority & Due Date
                       </TableHead>
-                      <TableHead className="font-bold text-gray-900 text-sm uppercase py-4 px-6">
+                      <TableHead className="font-bold text-gray-900 text-sm uppercase tracking-wide py-4 px-6">
                         Assigned Managers
                       </TableHead>
-                      <TableHead className="font-bold text-gray-900 text-sm uppercase py-4 px-6">
+                      <TableHead className="font-bold text-gray-900 text-sm uppercase tracking-wide py-4 px-6">
                         Actions
                       </TableHead>
                     </TableRow>
@@ -641,17 +610,17 @@ export default function ManagerAdminTasksPage() {
                     {filteredTasks.map((task) => (
                       <TableRow
                         key={task._id}
-                        className="border-b border-gray-100/50"
+                        className="group hover:bg-gradient-to-r hover:from-blue-50/80 hover:to-purple-50/80 transition-all duration-300 border-b border-gray-100/50"
                       >
                         <TableCell className="py-4 px-6">
                           <div className="flex items-start gap-4">
                             <div className="flex-shrink-0">
-                              <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+                              <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform duration-200">
                                 <FileText className="w-6 h-6 text-white" />
                               </div>
                             </div>
                             <div className="min-w-0 flex-1">
-                              <div className="font-bold text-gray-900 text-lg mb-1">
+                              <div className="font-bold text-gray-900 text-lg group-hover:text-blue-700 transition-colors duration-200 mb-1">
                                 {task.title}
                               </div>
                               {task.clientName && (
@@ -673,11 +642,19 @@ export default function ManagerAdminTasksPage() {
                                 {task.fileAttachments && (
                                   <Badge
                                     variant="outline"
-                                    className="text-xs border-blue-300 text-blue-700 bg-blue-50 px-2 py-1 rounded-lg cursor-pointer hover:bg-blue-100"
-                                    onClick={() => handleFilePreview(task.fileAttachments, task.title)}
+                                    className="text-xs border-blue-300 text-blue-700 bg-blue-50 px-2 py-1 rounded-lg"
                                   >
-                                    <File className="w-3 h-3 mr-1" />
-                                    View Attachment
+                                    <FileText className="w-3 h-3 mr-1" />
+                                    File Attached
+                                  </Badge>
+                                )}
+                                {task.endDate && (
+                                  <Badge
+                                    variant="outline"
+                                    className="text-xs border-gray-300 text-gray-700 px-2 py-1 rounded-lg"
+                                  >
+                                    <Calendar className="w-3 h-3 mr-1" />
+                                    Due: {formatDate(task.endDate)}
                                   </Badge>
                                 )}
                               </div>
@@ -708,7 +685,7 @@ export default function ManagerAdminTasksPage() {
                                   {task.managers.slice(0, 3).map((manager, index) => (
                                     <Avatar 
                                       key={manager._id || index} 
-                                      className="w-8 h-8 border-2 border-white shadow-sm"
+                                      className="w-8 h-8 border-2 border-white shadow-sm hover:scale-110 transition-transform duration-200 cursor-pointer"
                                       title={`${getManagerName(manager)}\n${getManagerEmail(manager)}`}
                                     >
                                       <AvatarFallback className={`text-xs font-medium ${
@@ -724,12 +701,16 @@ export default function ManagerAdminTasksPage() {
                                     <Badge 
                                       variant="outline" 
                                       className="border-gray-300 text-gray-600 text-xs"
+                                      title={`${task.managers.length - 3} more managers`}
                                     >
                                       <MoreHorizontal className="w-3 h-3 mr-1" />
                                       +{task.managers.length - 3}
                                     </Badge>
                                   )}
                                 </div>
+                                <p className="text-xs text-gray-500">
+                                  {task.managers.length} manager{task.managers.length !== 1 ? 's' : ''}
+                                </p>
                               </>
                             ) : (
                               <Badge variant="outline" className="border-gray-300 text-gray-600">
@@ -744,7 +725,7 @@ export default function ManagerAdminTasksPage() {
                               onClick={() => handleView(task)}
                               variant="outline"
                               size="sm"
-                              className="rounded-lg border-blue-300 text-blue-700 hover:bg-blue-50"
+                              className="rounded-lg border-blue-300 text-blue-700 hover:bg-blue-50 hover:border-blue-400"
                             >
                               <Eye className="w-4 h-4 mr-2" />
                               View
@@ -754,12 +735,25 @@ export default function ManagerAdminTasksPage() {
                               onClick={() => handleAssignClick(task)}
                               variant="outline"
                               size="sm"
-                              className="rounded-lg border-purple-300 text-purple-700 hover:bg-purple-50"
+                              className="rounded-lg border-purple-300 text-purple-700 hover:bg-purple-50 hover:border-purple-400"
                             >
                               <Users className="w-4 h-4 mr-2" />
                               Share
                             </Button>
 
+                            <Button
+                              onClick={() =>
+                                router.push(
+                                  `/manager/forms/create?taskId=${task._id}`
+                                )
+                              }
+                              variant="outline"
+                              size="sm"
+                              className="rounded-lg border-green-300 text-green-700 hover:bg-green-50 hover:border-green-400"
+                            >
+                              <FileText className="w-4 h-4 mr-2" />
+                              Create Form
+                            </Button>
                             {task.audioUrl && (
                               <Button
                                 onClick={() => playAudio(task._id, task.audioUrl)}
@@ -768,7 +762,7 @@ export default function ManagerAdminTasksPage() {
                                 className={`rounded-lg ${
                                   audioPlaying === task._id
                                     ? "bg-green-50 border-green-300 text-green-700"
-                                    : "border-gray-300 text-gray-700"
+                                    : "border-gray-300 text-gray-700 hover:bg-gray-50"
                                 }`}
                               >
                                 {audioPlaying === task._id ? (
@@ -776,18 +770,23 @@ export default function ManagerAdminTasksPage() {
                                 ) : (
                                   <Play className="w-4 h-4 mr-2" />
                                 )}
-                                Audio
+                                {audioPlaying === task._id ? "Pause" : "Play"}
                               </Button>
                             )}
                             {task.fileAttachments && (
                               <Button
-                                onClick={() => handleFilePreview(task.fileAttachments, task.title)}
+                                onClick={() =>
+                                  downloadFile(
+                                    task.fileAttachments,
+                                    `task_${task.title}_attachment`
+                                  )
+                                }
                                 variant="outline"
                                 size="sm"
                                 className="rounded-lg border-green-300 text-green-700 hover:bg-green-50"
                               >
-                                <File className="w-4 h-4 mr-2" />
-                                View File
+                                <Download className="w-4 h-4 mr-2" />
+                                File
                               </Button>
                             )}
                           </div>
@@ -800,148 +799,17 @@ export default function ManagerAdminTasksPage() {
             )}
           </CardContent>
         </Card>
-      </div>
 
-      {/* File Preview Modal */}
-      {filePreviewOpen && selectedFile && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-[100]">
-          <div className="bg-white rounded-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden shadow-2xl">
-            <div className="flex justify-between items-center p-6 border-b bg-gradient-to-r from-gray-50 to-blue-50">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                  {getFileIcon(selectedFile.url)}
-                </div>
-                <div>
-                  <h2 className="text-xl font-bold text-gray-900">File Preview</h2>
-                  <p className="text-gray-600 text-sm truncate max-w-md">{selectedFile.name}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  onClick={() => downloadCloudinaryFile(selectedFile.url, getFileNameFromUrl(selectedFile.url))}
-                  variant="outline"
-                  size="sm"
-                  className="border-green-300 text-green-700 hover:bg-green-50"
-                  disabled={downloading}
-                >
-                  {downloading ? (
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  ) : (
-                    <Download className="w-4 h-4 mr-2" />
-                  )}
-                  {downloading ? "Downloading..." : "Download"}
-                </Button>
-                <Button
-                  onClick={() => setFilePreviewOpen(false)}
-                  variant="ghost"
-                  size="sm"
-                  className="rounded-full hover:bg-gray-100"
-                >
-                  <X className="w-5 h-5" />
-                </Button>
-              </div>
-            </div>
-
-            <div className="p-6 bg-gray-50 h-[calc(90vh-120px)] overflow-auto">
-              {/* Preview for different file types */}
-              {selectedFile.type === 'image' && (
-                <div className="flex items-center justify-center h-full">
-                  <img 
-                    src={getCloudinaryPreviewUrl(selectedFile.url)} 
-                    alt={selectedFile.name}
-                    className="max-w-full max-h-full rounded-lg shadow-lg"
-                    crossOrigin="anonymous"
-                  />
-                </div>
-              )}
-              
-              {selectedFile.type === 'pdf' && (
-                <div className="h-full">
-                  <iframe
-                    src={`${getCloudinaryPreviewUrl(selectedFile.url)}#view=fitH`}
-                    className="w-full h-full rounded-lg border-0"
-                    title="PDF Preview"
-                  />
-                </div>
-              )}
-              
-              {selectedFile.type === 'video' && (
-                <div className="flex items-center justify-center h-full">
-                  <div className="w-full max-w-4xl">
-                    <video 
-                      controls 
-                      className="w-full rounded-lg shadow-lg"
-                      crossOrigin="anonymous"
-                    >
-                      <source src={getCloudinaryPreviewUrl(selectedFile.url)} type="video/mp4" />
-                      Your browser does not support the video tag.
-                    </video>
-                  </div>
-                </div>
-              )}
-              
-              {selectedFile.type === 'audio' && (
-                <div className="flex items-center justify-center h-full">
-                  <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-8 rounded-2xl shadow-lg max-w-md w-full">
-                    <div className="text-center mb-6">
-                      <FileAudio className="w-16 h-16 text-purple-600 mx-auto mb-4" />
-                      <h3 className="text-xl font-bold text-gray-900">Audio File</h3>
-                      <p className="text-gray-600">{selectedFile.name}</p>
-                    </div>
-                    <audio 
-                      controls 
-                      className="w-full rounded-lg"
-                      crossOrigin="anonymous"
-                    >
-                      <source src={getCloudinaryPreviewUrl(selectedFile.url)} type="audio/mpeg" />
-                      Your browser does not support the audio element.
-                    </audio>
-                  </div>
-                </div>
-              )}
-              
-              {(selectedFile.type === 'word' || selectedFile.type === 'excel' || selectedFile.type === 'powerpoint' || selectedFile.type === 'other') && (
-                <div className="flex items-center justify-center h-full">
-                  <div className="text-center p-8 bg-gradient-to-r from-gray-50 to-blue-50 rounded-2xl shadow-lg max-w-md">
-                    <File className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-xl font-bold text-gray-900 mb-2">File Preview Not Available</h3>
-                    <p className="text-gray-600 mb-6">
-                      This file type cannot be previewed in the browser.
-                    </p>
-                    <div className="space-y-3">
-                      <Button
-                        onClick={() => downloadCloudinaryFile(selectedFile.url, getFileNameFromUrl(selectedFile.url))}
-                        className="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white"
-                        disabled={downloading}
-                      >
-                        {downloading ? (
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        ) : (
-                          <Download className="w-4 h-4 mr-2" />
-                        )}
-                        {downloading ? "Downloading..." : "Download File"}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        onClick={() => window.open(getCloudinaryPreviewUrl(selectedFile.url), '_blank')}
-                        className="w-full border-gray-300"
-                      >
-                        <ExternalLink className="w-4 h-4 mr-2" />
-                        Open in New Tab
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
+        {/* Footer Info */}
+        <div className="mt-8 text-center text-sm text-gray-500">
+          <p>Showing {filteredTasks.length} of {tasks.length} tasks • Last updated: {new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
         </div>
-      )}
+      </div>
 
       {/* View Task Dialog */}
       {viewDialogOpen && selectedTask && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-300">
+          <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl transform transition-all duration-300 scale-100">
             <div className="sticky top-0 bg-white border-b border-gray-200 p-6 z-10">
               <div className="flex justify-between items-center">
                 <div className="flex items-center gap-3">
@@ -980,6 +848,7 @@ export default function ManagerAdminTasksPage() {
             </div>
 
             <div className="p-6 space-y-6">
+              {/* Basic Info Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <Card className="border-0 shadow-sm">
                   <CardContent className="p-6">
@@ -1013,6 +882,7 @@ export default function ManagerAdminTasksPage() {
                   </CardContent>
                 </Card>
 
+                {/* Assigned Managers */}
                 <Card className="border-0 shadow-sm">
                   <CardContent className="p-6">
                     <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
@@ -1024,7 +894,7 @@ export default function ManagerAdminTasksPage() {
                         selectedTask.managers.map((manager, index) => (
                           <div
                             key={manager._id || index}
-                            className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg"
+                            className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors group"
                           >
                             <Avatar className="w-10 h-10 border-2 border-white shadow-sm">
                               <AvatarFallback className={`font-medium ${
@@ -1036,14 +906,23 @@ export default function ManagerAdminTasksPage() {
                               </AvatarFallback>
                             </Avatar>
                             <div className="flex-1 min-w-0">
-                              <p className="font-semibold text-gray-900 truncate">
-                                {getManagerName(manager)}
-                                {manager._id === session?.user?.id && (
-                                  <Badge className="ml-2 bg-blue-100 text-blue-800 border-blue-200 text-xs">
-                                    You
-                                  </Badge>
-                                )}
-                              </p>
+                              <div className="flex items-center justify-between">
+                                <p className="font-semibold text-gray-900 truncate">
+                                  {getManagerName(manager)}
+                                  {manager._id === session?.user?.id && (
+                                    <Badge className="ml-2 bg-blue-100 text-blue-800 border-blue-200 text-xs">
+                                      You
+                                    </Badge>
+                                  )}
+                                </p>
+                                <a
+                                  href={`mailto:${manager.email}`}
+                                  className="opacity-0 group-hover:opacity-100 transition-opacity"
+                                  title="Send email"
+                                >
+                                  <Mail className="w-4 h-4 text-gray-500 hover:text-blue-600" />
+                                </a>
+                              </div>
                               <p className="text-sm text-gray-600 truncate">{getManagerEmail(manager)}</p>
                             </div>
                           </div>
@@ -1052,6 +931,7 @@ export default function ManagerAdminTasksPage() {
                         <div className="text-center py-8 text-gray-500">
                           <Users className="w-12 h-12 mx-auto mb-3 text-gray-300" />
                           <p>No managers assigned yet</p>
+                          <p className="text-sm mt-1">Only you have access to this task</p>
                         </div>
                       )}
                     </div>
@@ -1113,42 +993,32 @@ export default function ManagerAdminTasksPage() {
                   <Card className="border-0 shadow-sm">
                     <CardContent className="p-6">
                       <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                        <File className="w-5 h-5 text-green-600" />
+                        <FileText className="w-5 h-5 text-green-600" />
                         File Attachments
                       </h3>
                       <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-4">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
                             <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-emerald-600 rounded-lg flex items-center justify-center">
-                              {getFileIcon(selectedTask.fileAttachments)}
+                              <FileText className="w-5 h-5 text-white" />
                             </div>
                             <div>
                               <p className="font-semibold text-gray-900">Supporting Document</p>
-                              <p className="text-sm text-gray-600">{getFileNameFromUrl(selectedTask.fileAttachments)}</p>
+                              <p className="text-sm text-gray-600">Download the attached file</p>
                             </div>
                           </div>
-                          <div className="flex gap-2">
-                            <Button
-                              onClick={() => handleFilePreview(selectedTask.fileAttachments, selectedTask.title)}
-                              className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white gap-2"
-                            >
-                              <Eye className="w-4 h-4" />
-                              Preview
-                            </Button>
-                            <Button
-                              onClick={() => downloadCloudinaryFile(selectedTask.fileAttachments, getFileNameFromUrl(selectedTask.fileAttachments))}
-                              variant="outline"
-                              className="border-green-300 text-green-700 hover:bg-green-50 gap-2"
-                              disabled={downloading}
-                            >
-                              {downloading ? (
-                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                              ) : (
-                                <Download className="w-4 h-4" />
-                              )}
-                              {downloading ? "..." : "Download"}
-                            </Button>
-                          </div>
+                          <Button
+                            onClick={() =>
+                              downloadFile(
+                                selectedTask.fileAttachments,
+                                `task_${selectedTask.title}_attachment_${new Date().getTime()}`
+                              )
+                            }
+                            className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white gap-2"
+                          >
+                            <Download className="w-4 h-4" />
+                            Download File
+                          </Button>
                         </div>
                       </div>
                     </CardContent>
@@ -1161,7 +1031,7 @@ export default function ManagerAdminTasksPage() {
                 <Button
                   onClick={() => handleAssignClick(selectedTask)}
                   variant="outline"
-                  className="flex-1 border-purple-300 text-purple-700 hover:bg-purple-50"
+                  className="flex-1 border-purple-300 text-purple-700 hover:bg-purple-50 hover:border-purple-400"
                 >
                   <Users className="w-4 h-4 mr-2" />
                   Share with Managers
@@ -1191,8 +1061,8 @@ export default function ManagerAdminTasksPage() {
 
       {/* Assign Managers Modal */}
       {assignDialogOpen && selectedTask && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-300">
+          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl transform transition-all duration-300 scale-100">
             <div className="sticky top-0 bg-white border-b border-gray-200 p-6 z-10">
               <div className="flex justify-between items-center">
                 <div>
@@ -1212,16 +1082,18 @@ export default function ManagerAdminTasksPage() {
             </div>
 
             <div className="p-6 space-y-6">
+              {/* Search Bar */}
               <div className="relative">
                 <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                 <Input
                   placeholder="Search managers by name or email..."
-                  className="pl-12 h-12 text-base"
+                  className="pl-12 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 h-12 text-base"
                   value={searchManager}
                   onChange={(e) => setSearchManager(e.target.value)}
                 />
               </div>
 
+              {/* Selected Count */}
               <div className="flex items-center justify-between bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-xl">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center">
@@ -1246,11 +1118,15 @@ export default function ManagerAdminTasksPage() {
                 )}
               </div>
 
+              {/* Managers List */}
               <div className="space-y-3 max-h-96 overflow-y-auto pr-2">
                 {filteredManagers.length === 0 ? (
                   <div className="text-center py-8 text-gray-500">
                     <Users className="w-12 h-12 mx-auto mb-3 text-gray-300" />
                     <p>No managers found</p>
+                    <p className="text-sm mt-1">
+                      {searchManager ? "Try a different search" : "All managers are already assigned to this task"}
+                    </p>
                   </div>
                 ) : (
                   filteredManagers.map((manager) => {
@@ -1262,7 +1138,7 @@ export default function ManagerAdminTasksPage() {
                     return (
                       <div
                         key={manager._id}
-                        className={`p-4 border-2 rounded-xl cursor-pointer transition-all duration-200 flex items-center justify-between ${
+                        className={`p-4 border-2 rounded-xl cursor-pointer transition-all duration-200 flex items-center justify-between group ${
                           isSelected
                             ? 'border-blue-500 bg-blue-50 shadow-sm'
                             : isAlreadyAssigned
@@ -1273,10 +1149,10 @@ export default function ManagerAdminTasksPage() {
                       >
                         <div className="flex items-center gap-3 flex-1">
                           <Avatar className="h-10 w-10 border-2 border-white shadow-sm">
-                            <AvatarFallback className={`font-medium ${
-                              isSelected ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white' : 
+                            <AvatarFallback className={`font-medium transition-all ${
+                              isSelected ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white scale-110' : 
                               isAlreadyAssigned ? 'bg-gray-400 text-white' : 
-                              'bg-gradient-to-r from-gray-200 to-gray-300 text-gray-700'
+                              'bg-gradient-to-r from-gray-200 to-gray-300 text-gray-700 group-hover:bg-blue-100'
                             }`}>
                               {getManagerInitials(manager)}
                             </AvatarFallback>
@@ -1297,10 +1173,10 @@ export default function ManagerAdminTasksPage() {
                           </div>
                         </div>
                         {!isAlreadyAssigned && (
-                          <div className={`ml-3 h-6 w-6 rounded border flex items-center justify-center ${
+                          <div className={`ml-3 h-6 w-6 rounded border flex items-center justify-center transition-all ${
                             isSelected 
                               ? 'bg-gradient-to-r from-blue-500 to-indigo-600 border-blue-500' 
-                              : 'border-gray-300'
+                              : 'border-gray-300 group-hover:border-blue-400'
                           }`}>
                             {isSelected && (
                               <Check className="h-3.5 w-3.5 text-white" />
@@ -1313,11 +1189,12 @@ export default function ManagerAdminTasksPage() {
                 )}
               </div>
 
+              {/* Action Buttons */}
               <div className="flex gap-3 pt-4 border-t border-gray-200">
                 <Button
                   onClick={handleAssignSubmit}
                   disabled={selectedManagers.length === 0 || assigning}
-                  className="flex-1 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white h-12 text-base"
+                  className="flex-1 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-600/30 transition-all duration-300 h-12 text-base"
                 >
                   {assigning ? (
                     <>
@@ -1334,10 +1211,24 @@ export default function ManagerAdminTasksPage() {
                 <Button
                   variant="outline"
                   onClick={() => setAssignDialogOpen(false)}
-                  className="bg-white text-gray-900 border-gray-300 hover:bg-gray-50 h-12 text-base"
+                  className=" bg-white text-gray-900 border-gray-300 hover:bg-gray-50 h-12 text-base"
                 >
                   Cancel
                 </Button>
+              </div>
+
+              {/* Info Note */}
+              <div className="p-4 bg-gradient-to-r from-yellow-50 to-amber-50 rounded-xl border border-yellow-200">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-medium text-yellow-800">Note</p>
+                    <p className="text-sm text-yellow-700 mt-1">
+                      Selected managers will receive email notifications and in-app alerts. 
+                      They can then create forms for their team leads based on this task.
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

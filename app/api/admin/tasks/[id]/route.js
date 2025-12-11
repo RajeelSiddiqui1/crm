@@ -1,4 +1,3 @@
-// app/api/admin-task/[id]/route.js
 import { NextResponse } from "next/server";
 import AdminTask from "@/models/AdminTask";
 import dbConnect from "@/lib/db";
@@ -20,7 +19,7 @@ export async function PATCH(req, { params }) {
     }
 
     const { id } = params;
-    const { title, clientName, fileAttachments, audioUrl, priority, endDate, managersId } = await req.json();
+    const { title, clientName, fileAttachments, fileName, fileType, audioUrl, priority, endDate, managersId } = await req.json();
 
     const task = await AdminTask.findById(id);
     if (!task) return NextResponse.json({ success: false, message: "Task not found" }, { status: 404 });
@@ -36,6 +35,8 @@ export async function PATCH(req, { params }) {
       });
 
       task.fileAttachments = fileRes.secure_url;
+      task.fileName = fileName;
+      task.fileType = fileType;
       task.filePublicId = fileRes.public_id;
     }
 

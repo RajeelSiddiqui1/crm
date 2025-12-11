@@ -1,4 +1,3 @@
-// models/AdminTask.js
 import mongoose, { Schema, model, models } from "mongoose";
 
 const adminTaskSchema = Schema(
@@ -15,9 +14,17 @@ const adminTaskSchema = Schema(
       type: String,
       required: false,
     },
+    fileName: {
+      type: String,
+      required: false,
+    },
+    fileType: {
+      type: String,
+      required: false,
+    },
     audioUrl: {
       type: String,
-      required: false, // Fixed: removed duplicate required
+      required: false,
     },
     priority: {
       type: String,
@@ -57,10 +64,18 @@ const adminTaskSchema = Schema(
     completedAt: {
       type: Date,
       required: false,
+    },
+    filePublicId: {
+      type: String,
+      required: false,
+    },
+    audioPublicId: {
+      type: String,
+      required: false,
     }
   },
   {
-    timestamps: true, // Fixed: changed from timestamp to timestamps
+    timestamps: true,
   }
 );
 

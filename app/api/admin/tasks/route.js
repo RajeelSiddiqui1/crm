@@ -21,7 +21,17 @@ export async function POST(req) {
       );
     }
 
-    const { title, clientName, fileAttachments, audioUrl, priority, endDate, managersId } = await req.json();
+    const { 
+      title, 
+      clientName, 
+      fileAttachments, 
+      fileName, 
+      fileType, 
+      audioUrl, 
+      priority, 
+      endDate, 
+      managersId 
+    } = await req.json();
 
     if (!title || !managersId || managersId.length === 0) {
       return NextResponse.json(
@@ -32,6 +42,8 @@ export async function POST(req) {
 
     let uploadFileUrl = "";
     let uploadAudioUrl = "";
+    let filePublicId = null;
+    let audioPublicId = null;
 
     if (fileAttachments) {
       const fileRes = await cloudinary.uploader.upload(fileAttachments, {
@@ -39,6 +51,7 @@ export async function POST(req) {
         folder: "admin_tasks/files",
       });
       uploadFileUrl = fileRes.secure_url;
+      filePublicId = fileRes.public_id;
     }
 
     if (audioUrl) {
@@ -47,17 +60,22 @@ export async function POST(req) {
         folder: "admin_tasks/audio",
       });
       uploadAudioUrl = audioRes.secure_url;
+      audioPublicId = audioRes.public_id;
     }
 
     const newAdminTask = new AdminTask({
       title,
       clientName: clientName || "",
       fileAttachments: uploadFileUrl || null,
+      fileName: fileName || null,
+      fileType: fileType || null,
       audioUrl: uploadAudioUrl || null,
       priority: priority || "low",
       endDate: endDate ? new Date(endDate) : null,
       managers: Array.isArray(managersId) ? managersId : [managersId],
       submittedBy: session.user.id,
+      filePublicId,
+      audioPublicId,
     });
 
     await newAdminTask.save();
@@ -95,7 +113,11 @@ export async function POST(req) {
     );
 
     return NextResponse.json(
-      { success: true, message: "Admin Task created and notifications sent successfully", task: newAdminTask },
+      { 
+        success: true, 
+        message: "Admin Task created and notifications sent successfully", 
+        task: newAdminTask 
+      },
       { status: 201 }
     );
   } catch (error) {
@@ -125,6 +147,11 @@ export async function GET() {
           select: "name description",
         },
       })
+      .populate({
+        path: "submittedBy",
+        select: "name email",
+      })
+      .sort({ createdAt: -1 })
       .lean();
 
     return NextResponse.json(
