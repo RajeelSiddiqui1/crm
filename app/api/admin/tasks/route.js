@@ -34,12 +34,18 @@ export async function POST(req) {
     let uploadAudioUrl = "";
 
     if (fileAttachments) {
-      const fileRes = await cloudinary.uploader.upload(fileAttachments, { folder: "admin_tasks/files" });
+      const fileRes = await cloudinary.uploader.upload(fileAttachments, {
+        resource_type: "raw",
+        folder: "admin_tasks/files",
+      });
       uploadFileUrl = fileRes.secure_url;
     }
 
     if (audioUrl) {
-      const audioRes = await cloudinary.uploader.upload(audioUrl, { resource_type: "video", folder: "admin_tasks/audio" });
+      const audioRes = await cloudinary.uploader.upload(audioUrl, {
+        resource_type: "video",
+        folder: "admin_tasks/audio",
+      });
       uploadAudioUrl = audioRes.secure_url;
     }
 
@@ -57,37 +63,41 @@ export async function POST(req) {
     await newAdminTask.save();
 
     const taskLink = `${process.env.NEXT_PUBLIC_DOMAIN}/manager/admin-tasks`;
-
-    // Fetch manager emails for sending mails
     const managers = await Manager.find({ _id: { $in: newAdminTask.managers } });
 
-    // Send notifications and emails in parallel
-    await Promise.all(managers.map(async manager => {
-      // Send Notification
-      await sendNotification({
-        senderId: session.user.id,
-        senderModel: "Admin",
-        senderName: session.user.name || "Admin",
-        receiverId: manager._id,
-        receiverModel: "Manager",
-        type: "admin_task_created",
-        title: "New Admin Task",
-        message: `A new admin task "${title}" has been assigned to you.`,
-        link: taskLink,
-        referenceId: newAdminTask._id,
-        referenceModel: "AdminTask",
-      });
+    await Promise.all(
+      managers.map(async (manager) => {
+        await sendNotification({
+          senderId: session.user.id,
+          senderModel: "Admin",
+          senderName: session.user.name || "Admin",
+          receiverId: manager._id,
+          receiverModel: "Manager",
+          type: "admin_task_created",
+          title: "New Admin Task",
+          message: `A new admin task "${title}" has been assigned to you.`,
+          link: taskLink,
+          referenceId: newAdminTask._id,
+          referenceModel: "AdminTask",
+        });
 
-      // Send Email
-      const emailHtml = adminTaskCreatedMailTemplate(manager.firstName + " " + manager.lastName, title, session.user.name || "Admin", priority, endDate, taskLink);
-      await sendMail(manager.email, "New Admin Task Assigned", emailHtml);
-    }));
+        const emailHtml = adminTaskCreatedMailTemplate(
+          manager.firstName + " " + manager.lastName,
+          title,
+          session.user.name || "Admin",
+          priority,
+          endDate,
+          taskLink
+        );
+
+        await sendMail(manager.email, "New Admin Task Assigned", emailHtml);
+      })
+    );
 
     return NextResponse.json(
       { success: true, message: "Admin Task created and notifications sent successfully", task: newAdminTask },
       { status: 201 }
     );
-
   } catch (error) {
     console.error("Admin Task creation error:", error);
     return NextResponse.json(
