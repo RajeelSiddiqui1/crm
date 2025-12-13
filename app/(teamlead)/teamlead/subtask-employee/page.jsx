@@ -257,7 +257,7 @@ export default function CreateSubtaskPage() {
                                     onChange={(e) => handleInputChange('title', e.target.value)}
                                     placeholder="Enter subtask title"
                                     className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900"
-                                    required
+                               
                                     disabled={isSubmitting}
                                 />
                             </div>
@@ -272,7 +272,7 @@ export default function CreateSubtaskPage() {
                                     onChange={(e) => handleInputChange('description', e.target.value)}
                                     placeholder="Enter detailed description of the subtask"
                                     className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900 min-h-[120px]"
-                                    required
+                                    
                                     disabled={isSubmitting}
                                 />
                             </div>
@@ -293,7 +293,7 @@ export default function CreateSubtaskPage() {
                                         onChange={(e) => handleInputChange('leadsRequired', e.target.value)}
                                         placeholder="Enter number of leads/calls/targets"
                                         className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900 pl-10"
-                                        required
+                                      
                                         disabled={isSubmitting}
                                     />
                                 </div>
@@ -433,7 +433,7 @@ export default function CreateSubtaskPage() {
                                             value={formData.startDate}
                                             onChange={(e) => handleInputChange('startDate', e.target.value)}
                                             className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900 pl-10"
-                                            required
+                                            
                                             disabled={isSubmitting}
                                         />
                                     </div>
@@ -451,7 +451,7 @@ export default function CreateSubtaskPage() {
                                             value={formData.endDate}
                                             onChange={(e) => handleInputChange('endDate', e.target.value)}
                                             className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900 pl-10"
-                                            required
+                                            
                                             disabled={isSubmitting}
                                         />
                                     </div>
@@ -471,7 +471,7 @@ export default function CreateSubtaskPage() {
                                             value={formData.startTime}
                                             onChange={(e) => handleInputChange('startTime', e.target.value)}
                                             className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900 pl-10"
-                                            required
+                                        
                                             disabled={isSubmitting}
                                         />
                                     </div>
@@ -489,7 +489,7 @@ export default function CreateSubtaskPage() {
                                             value={formData.endTime}
                                             onChange={(e) => handleInputChange('endTime', e.target.value)}
                                             className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900 pl-10"
-                                            required
+                                      
                                             disabled={isSubmitting}
                                         />
                                     </div>

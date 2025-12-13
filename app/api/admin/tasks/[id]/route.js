@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import AdminTask from "@/models/AdminTask";
+import Manager from "@/models/Manager";
 import dbConnect from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -8,60 +9,93 @@ import { sendNotification } from "@/lib/sendNotification";
 import { sendMail } from "@/lib/mail";
 import { adminTaskUpdatedMailTemplate } from "@/helper/emails/admin/updateTask";
 import { adminTaskDeletedMailTemplate } from "@/helper/emails/admin/deleteTask";
-import Manager from "@/models/Manager";
 
-export async function PATCH(req, { params }) {
+/* =========================
+   PATCH → UPDATE TASK
+========================= */
+export async function PATCH(req, context) {
   try {
     await dbConnect();
+
     const session = await getServerSession(authOptions);
     if (!session || session.user.role !== "Admin") {
-      return NextResponse.json({ success: false, message: "Unauthorized access" }, { status: 401 });
+      return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
     }
 
-    const { id } = params;
-    const { title, clientName, fileAttachments, fileName, fileType, audioUrl, priority, endDate, managersId } = await req.json();
+    const { id } = context.params; // ✅ FIXED
+
+    // ❗ MUST be multipart/form-data
+    const formData = await req.formData();
 
     const task = await AdminTask.findById(id);
-    if (!task) return NextResponse.json({ success: false, message: "Task not found" }, { status: 404 });
+    if (!task) {
+      return NextResponse.json({ success: false, message: "Task not found" }, { status: 404 });
+    }
 
-    if (fileAttachments) {
+    /* -------- TEXT FIELDS -------- */
+    task.title = formData.get("title") ?? task.title;
+    task.clientName = formData.get("clientName") ?? task.clientName;
+    task.priority = formData.get("priority") ?? task.priority;
+    task.endDate = formData.get("endDate") ?? task.endDate;
+
+    const managersRaw = formData.get("managersId");
+    if (managersRaw) task.managers = JSON.parse(managersRaw);
+
+    /* -------- FILE UPLOAD -------- */
+    const file = formData.get("file");
+    if (file && file.size > 0) {
       if (task.filePublicId) {
         await cloudinary.uploader.destroy(task.filePublicId, { resource_type: "raw" });
       }
 
-      const fileRes = await cloudinary.uploader.upload(fileAttachments, {
-        resource_type: "raw",
-        folder: "admin_tasks/files",
-      });
+      const buffer = Buffer.from(await file.arrayBuffer());
+      const mime = file.type;
 
-      task.fileAttachments = fileRes.secure_url;
-      task.fileName = fileName;
-      task.fileType = fileType;
-      task.filePublicId = fileRes.public_id;
+      let resourceType = "raw";
+      if (mime.startsWith("image/")) resourceType = "image";
+      else if (mime.startsWith("video/") || mime.startsWith("audio/")) resourceType = "video";
+
+      const uploaded = await cloudinary.uploader.upload(
+        `data:${mime};base64,${buffer.toString("base64")}`,
+        { folder: "admin_tasks/files", resource_type: resourceType }
+      );
+
+      task.fileAttachments = uploaded.secure_url;
+      task.filePublicId = uploaded.public_id;
+      task.fileName = file.name;
+      task.fileType = mime;
     }
 
-    if (audioUrl) {
+    if (formData.get("removeFile") === "true" && task.filePublicId) {
+      await cloudinary.uploader.destroy(task.filePublicId, { resource_type: "raw" });
+      task.fileAttachments = task.filePublicId = task.fileName = task.fileType = null;
+    }
+
+    /* -------- AUDIO -------- */
+    const audio = formData.get("audio");
+    if (audio && audio.size > 0) {
       if (task.audioPublicId) {
         await cloudinary.uploader.destroy(task.audioPublicId, { resource_type: "video" });
       }
 
-      const audioRes = await cloudinary.uploader.upload(audioUrl, {
-        resource_type: "video",
-        folder: "admin_tasks/audio",
-      });
+      const buffer = Buffer.from(await audio.arrayBuffer());
+      const uploaded = await cloudinary.uploader.upload(
+        `data:${audio.type};base64,${buffer.toString("base64")}`,
+        { folder: "admin_tasks/audio", resource_type: "video" }
+      );
 
-      task.audioUrl = audioRes.secure_url;
-      task.audioPublicId = audioRes.public_id;
+      task.audioUrl = uploaded.secure_url;
+      task.audioPublicId = uploaded.public_id;
     }
 
-    task.title = title || task.title;
-    task.clientName = clientName || task.clientName;
-    task.priority = priority || task.priority;
-    task.endDate = endDate || task.endDate;
-    task.managers = managersId || task.managers;
+    if (formData.get("removeAudio") === "true" && task.audioPublicId) {
+      await cloudinary.uploader.destroy(task.audioPublicId, { resource_type: "video" });
+      task.audioUrl = task.audioPublicId = null;
+    }
 
     await task.save();
 
+    /* -------- NOTIFICATIONS + EMAIL -------- */
     const taskLink = `${process.env.NEXT_PUBLIC_DOMAIN}/manager/admin-tasks`;
 
     await Promise.all(
@@ -75,9 +109,9 @@ export async function PATCH(req, { params }) {
           senderName: session.user.name || "Admin",
           receiverId: managerId,
           receiverModel: "Manager",
-          type: "admin_task_edit",
+          type: "admin_task_updated",
           title: "Admin Task Updated",
-          message: `${task.title} Task has been updated by Admin`,
+          message: `${task.title} has been updated`,
           link: taskLink,
           referenceId: task._id,
           referenceModel: "AdminTask",
@@ -87,33 +121,41 @@ export async function PATCH(req, { params }) {
           manager.email,
           "Admin Task Updated",
           adminTaskUpdatedMailTemplate(
-            manager.firstName + " " + manager.lastName,
+            `${manager.firstName} ${manager.lastName}`,
             task.title,
-            session.user.name,
+            session.user.name || "Admin",
             taskLink
           )
         );
       })
     );
 
-    return NextResponse.json({ success: true, message: "Admin Task updated successfully", task });
+    return NextResponse.json({ success: true, message: "Task updated successfully", task });
+
   } catch (error) {
-    console.error("PATCH AdminTask Error:", error);
-    return NextResponse.json({ success: false, message: "Update failed", error: error.message }, { status: 500 });
+    console.error("PATCH ERROR:", error);
+    return NextResponse.json({ success: false, message: "Update failed" }, { status: 500 });
   }
 }
 
-export async function DELETE(req, { params }) {
+/* =========================
+   DELETE → DELETE TASK
+========================= */
+export async function DELETE(req, context) {
   try {
     await dbConnect();
     const session = await getServerSession(authOptions);
+
     if (!session || session.user.role !== "Admin") {
-      return NextResponse.json({ success: false, message: "Unauthorized access" }, { status: 401 });
+      return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
     }
 
-    const { id } = params;
+    const { id } = context.params;
+
     const task = await AdminTask.findById(id);
-    if (!task) return NextResponse.json({ success: false, message: "Task not found" }, { status: 404 });
+    if (!task) {
+      return NextResponse.json({ success: false, message: "Task not found" }, { status: 404 });
+    }
 
     if (task.filePublicId) {
       await cloudinary.uploader.destroy(task.filePublicId, { resource_type: "raw" });
@@ -123,45 +165,12 @@ export async function DELETE(req, { params }) {
       await cloudinary.uploader.destroy(task.audioPublicId, { resource_type: "video" });
     }
 
-    const taskLink = `${process.env.NEXT_PUBLIC_DOMAIN}/manager/admin-tasks`;
-
-    await Promise.all(
-      task.managers.map(async (managerId) => {
-        const manager = await Manager.findById(managerId);
-        if (!manager) return;
-
-        await sendNotification({
-          senderId: session.user.id,
-          senderModel: "Admin",
-          senderName: session.user.name || "Admin",
-          receiverId: managerId,
-          receiverModel: "Manager",
-          type: "admin_task_deleted",
-          title: "Admin Task Deleted",
-          message: `${task.title} Task has been deleted by Admin`,
-          link: taskLink,
-          referenceId: task._id,
-          referenceModel: "AdminTask",
-        });
-
-        await sendMail(
-          manager.email,
-          "Admin Task Deleted",
-          adminTaskDeletedMailTemplate(
-            manager.firstName + " " + manager.lastName,
-            task.title,
-            session.user.name,
-            taskLink
-          )
-        );
-      })
-    );
-
     await task.deleteOne();
 
-    return NextResponse.json({ success: true, message: "Admin Task deleted successfully" });
+    return NextResponse.json({ success: true, message: "Task deleted successfully" });
+
   } catch (error) {
-    console.error("DELETE AdminTask Error:", error);
-    return NextResponse.json({ success: false, message: "Delete failed", error: error.message }, { status: 500 });
+    console.error("DELETE ERROR:", error);
+    return NextResponse.json({ success: false, message: "Delete failed" }, { status: 500 });
   }
 }

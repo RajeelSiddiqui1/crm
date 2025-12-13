@@ -454,45 +454,61 @@ export default function AdminTasksPage() {
     setViewDialogOpen(true);
   };
 
-  const handleUpdate = async () => {
-    if (!selectedTask) return;
+const handleUpdate = async () => {
+  if (!selectedTask) return;
 
-    setLoading(true);
-    try {
-      let audioBase64 = editFormData.audioUrl;
+  setLoading(true);
+  try {
+    const formData = new FormData();
 
-      // If there's a new recording, use it (override)
-      if (editAudioBlob) {
-        audioBase64 = await new Promise((resolve) => {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result);
-          reader.readAsDataURL(editAudioBlob);
-        });
-      }
+    // TEXT FIELDS
+    formData.append("title", editFormData.title || "");
+    formData.append("clientName", editFormData.clientName || "");
+    formData.append("priority", editFormData.priority || "");
+    formData.append("endDate", editFormData.endDate || "");
 
-      const updateData = {
-        ...editFormData,
-        audioUrl: audioBase64,
-        managersId: editSelectedManagers,
-      };
+    // MANAGERS
+    formData.append("managersId", JSON.stringify(editSelectedManagers));
 
-      const response = await axios.patch(
-        `/api/admin/tasks/${selectedTask._id}`,
-        updateData
-      );
-
-      if (response.data.success) {
-        toast.success("Task updated successfully!");
-        setEditDialogOpen(false);
-        fetchTasks();
-        clearEditRecording();
-      }
-    } catch (error) {
-      toast.error(error.response?.data?.message || "Failed to update task");
-    } finally {
-      setLoading(false);
+    /* ---------------- FILE ---------------- */
+    if (editFormData.file instanceof File) {
+      formData.append("file", editFormData.file);
     }
-  };
+
+    if (editFormData.removeFile) {
+      formData.append("removeFile", "true");
+    }
+
+    /* ---------------- AUDIO ---------------- */
+    if (editAudioBlob) {
+      const audioFile = new File([editAudioBlob], "audio.webm", {
+        type: editAudioBlob.type || "audio/webm",
+      });
+      formData.append("audio", audioFile);
+    }
+
+    if (editFormData.removeAudio) {
+      formData.append("removeAudio", "true");
+    }
+
+    const response = await axios.patch(
+      `/api/admin/tasks/${selectedTask._id}`,
+      formData
+    );
+
+    if (response.data.success) {
+      toast.success("Task updated successfully!");
+      setEditDialogOpen(false);
+      fetchTasks();
+      clearEditRecording();
+    }
+  } catch (error) {
+    toast.error(error.response?.data?.message || "Failed to update task");
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   const handleDelete = async (taskId) => {
     if (!confirm("Are you sure you want to delete this task?")) return;
@@ -515,21 +531,21 @@ export default function AdminTasksPage() {
         return;
       }
 
-      // Store the file object directly
       if (isEdit) {
         setEditFormData((prev) => ({
           ...prev,
-          file: file, // Store file object
-          filePreview: URL.createObjectURL(file), // For preview
+          file: file, // Store file object for upload
+          fileAttachments: URL.createObjectURL(file), // For preview
         }));
+        toast.success("New file selected for upload!");
       } else {
         setFormData((prev) => ({
           ...prev,
           file: file,
-          filePreview: URL.createObjectURL(file),
+          fileAttachments: URL.createObjectURL(file),
         }));
+        toast.success("File attached successfully!");
       }
-      toast.success("File attached successfully!");
     }
   };
   const removeFileAttachment = (isEdit = false) => {
@@ -1829,6 +1845,14 @@ export default function AdminTasksPage() {
                     📎 File Attached
                   </Badge>
                 )}
+                {editFormData.file && (
+                  <Badge
+                    variant="outline"
+                    className="ml-2 bg-blue-50 text-blue-700 border-blue-200 text-xs"
+                  >
+                    🔄 New File
+                  </Badge>
+                )}
               </Label>
 
               <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 bg-gradient-to-br from-gray-50 to-blue-50/30">
@@ -1840,19 +1864,17 @@ export default function AdminTasksPage() {
                   accept="*/*"
                 />
 
-                {editFormData.fileAttachments && (
+                {editFormData.fileAttachments && !editFormData.file && (
                   <div className="flex items-center gap-4 p-4 bg-green-50 border border-green-200 rounded-lg">
                     <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
                       <FileText className="w-6 h-6 text-green-600" />
                     </div>
                     <div className="flex-1">
                       <p className="font-semibold text-green-800 text-base">
-                        File Attached Successfully
+                        Existing File Attached
                       </p>
                       <p className="text-green-600 text-sm">
-                        {editRecordedAudio
-                          ? "New file will override existing"
-                          : "File is ready with task"}
+                        Upload a new file to replace this one
                       </p>
                     </div>
                     <div className="flex gap-2">
@@ -1861,21 +1883,71 @@ export default function AdminTasksPage() {
                         size="sm"
                         variant="outline"
                         onClick={() =>
-                          downloadFile(
-                            editFormData.fileAttachments,
-                            "attachment"
-                          )
+                          window.open(editFormData.fileAttachments, "_blank")
                         }
                         className="rounded-lg border-green-300 text-green-700 hover:bg-green-50 font-semibold"
                       >
-                        <Download className="w-4 h-4 mr-2" />
-                        Download
+                        <Eye className="w-4 h-4 mr-2" />
+                        View
                       </Button>
                       <Button
                         type="button"
                         size="sm"
                         variant="outline"
-                        onClick={() => removeFileAttachment(true)}
+                        onClick={() => {
+                          setEditFormData((prev) => ({
+                            ...prev,
+                            fileAttachments: "",
+                          }));
+                          toast.info("File marked for removal");
+                        }}
+                        className="rounded-lg border-red-300 text-red-600 hover:bg-red-50 font-semibold"
+                      >
+                        <X className="w-4 h-4 mr-2" />
+                        Remove
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {editFormData.file && (
+                  <div className="flex items-center gap-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                      <FileText className="w-6 h-6 text-blue-600" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-semibold text-blue-800 text-base">
+                        {editFormData.file.name}
+                      </p>
+                      <p className="text-blue-600 text-sm">
+                        New file to upload (
+                        {(editFormData.file.size / 1024 / 1024).toFixed(2)} MB)
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() =>
+                          window.open(
+                            URL.createObjectURL(editFormData.file),
+                            "_blank"
+                          )
+                        }
+                        className="rounded-lg border-blue-300 text-blue-700 hover:bg-blue-50 font-semibold"
+                      >
+                        <Eye className="w-4 h-4 mr-2" />
+                        Preview
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setEditFormData((prev) => ({ ...prev, file: null }));
+                          toast.info("New file removed");
+                        }}
                         className="rounded-lg border-red-300 text-red-600 hover:bg-red-50 font-semibold"
                       >
                         <X className="w-4 h-4 mr-2" />
@@ -1887,8 +1959,8 @@ export default function AdminTasksPage() {
 
                 <p className="text-xs text-gray-500 mt-3 flex items-center gap-1">
                   <FileText className="w-3 h-3" />
-                  Supported: Images, Documents, PDFs, etc. (Max 10MB). New files
-                  will override existing ones.
+                  Upload a new file to replace the existing one. Leave empty to
+                  keep current file.
                 </p>
               </div>
             </div>
