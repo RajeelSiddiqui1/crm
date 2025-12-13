@@ -72,16 +72,16 @@ export async function POST(request) {
 
     const depId = teamLead.depId;
 
-    // const employees = await Employee.find({
-    //   _id: { $in: assignedEmployees.map((emp) => emp.employeeId) },
-    // });
+    const employees = await Employee.find({
+      _id: { $in: assignedEmployees.map((emp) => emp.employeeId) },
+    });
 
-    // if (employees.length !== assignedEmployees.length) {
-    //   return NextResponse.json(
-    //     { error: "Some employees not found" },
-    //     { status: 400 }
-    //   );
-    // }
+    if (employees.length !== assignedEmployees.length) {
+      return NextResponse.json(
+        { error: "Some employees not found" },
+        { status: 400 }
+      );
+    }
 
     // Lead name for emails/notifications
     const leadName = `${teamLead.firstName} ${teamLead.lastName}`;
@@ -116,6 +116,8 @@ export async function POST(request) {
     const populatedSubtask = await Subtask.findById(subtask._id)
       .populate("submissionId", "title description")
       .populate("assignedEmployees.employeeId", "firstName lastName email");
+
+      console.log(populatedSubtask)
 
     // Notifications + Mails (parallel)
     for (const emp of employees) {
