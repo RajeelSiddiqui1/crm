@@ -83,9 +83,7 @@ export default function TeamLeadSubmissionsPage() {
         toast.error("Please login again");
         router.push("/login");
       } else {
-        toast.error(
-          error.response?.data?.error || "Failed to fetch tasks"
-        );
+        toast.error(error.response?.data?.error || "Failed to fetch tasks");
       }
     } finally {
       setFetching(false);
@@ -150,7 +148,9 @@ export default function TeamLeadSubmissionsPage() {
     total: submissions.length,
     pending: submissions.filter((s) => s.status === "pending").length,
     in_progress: submissions.filter((s) => s.status === "in_progress").length,
-    completed: submissions.filter((s) => s.status === "completed" || s.status === "approved").length,
+    completed: submissions.filter(
+      (s) => s.status === "completed" || s.status === "approved"
+    ).length,
     rejected: submissions.filter((s) => s.status === "rejected").length,
   };
 
@@ -438,12 +438,15 @@ export default function TeamLeadSubmissionsPage() {
                             <div className="flex items-center gap-2">
                               <Avatar className="w-6 h-6">
                                 <AvatarFallback className="text-xs bg-gray-100 text-gray-600">
-                                  {submission.submittedBy?.firstName?.[0] || 'U'}
+                                  {submission.submittedBy?.firstName?.[0] ||
+                                    "U"}
                                 </AvatarFallback>
                               </Avatar>
                               <div>
                                 <div className="text-sm font-medium text-gray-900">
-                                  {submission.submittedBy?.firstName || "Unknown"} {submission.submittedBy?.lastName || ""}
+                                  {submission.submittedBy?.firstName ||
+                                    "Unknown"}{" "}
+                                  {submission.submittedBy?.lastName || ""}
                                 </div>
                                 <div className="text-xs text-gray-500 truncate max-w-[120px]">
                                   {submission.submittedBy?.email || "N/A"}
@@ -475,15 +478,29 @@ export default function TeamLeadSubmissionsPage() {
                               {formatDate(submission.createdAt)}
                             </div>
                           </TableCell>
-                          <TableCell className="py-3">
-                            <Link href={`/teamlead/tasks/${submission._id}`}>
+
+                          <TableCell className="py-3 flex gap-2 flex-wrap">
+                            <Link
+                              href={`/group-chat?submissionId=${submission._id}`}
+                            >
                               <Button
-                                className="bg-blue-600 text-white hover:bg-blue-700 text-xs h-7"
+                                className="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white text-xs h-7 px-2 rounded-md shadow-sm transition"
                                 size="sm"
                               >
-                                <Eye className="w-3 h-3 mr-1" />
-                                Details
-                                <ArrowRight className="w-3 h-3 ml-1" />
+                                <Eye className="w-3 h-3" />
+                                Chat
+                                <ArrowRight className="w-3 h-3" />
+                              </Button>
+                            </Link>
+
+                            <Link href={`/teamlead/tasks/${submission._id}`}>
+                              <Button
+                                className="flex items-center gap-1 bg-green-600 hover:bg-green-700 text-white text-xs h-7 px-2 rounded-md shadow-sm transition"
+                                size="sm"
+                              >
+                                <Eye className="w-3 h-3" />
+                                Task Details
+                                <ArrowRight className="w-3 h-3" />
                               </Button>
                             </Link>
                           </TableCell>
