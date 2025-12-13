@@ -367,22 +367,40 @@ export default function AdminTasksPage() {
     }
 
     try {
-      let audioBase64 = "";
-      if (audioBlob) {
-        audioBase64 = await new Promise((resolve) => {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result);
-          reader.readAsDataURL(audioBlob);
+      const submitFormData = new FormData();
+
+      // Add text fields
+      submitFormData.append("title", formData.title);
+      submitFormData.append("clientName", formData.clientName);
+      submitFormData.append("priority", formData.priority);
+      submitFormData.append("endDate", formData.endDate);
+      submitFormData.append("managersId", JSON.stringify(selectedManagers));
+
+      // Add file if exists
+      if (formData.fileAttachments) {
+        // Convert base64 to file
+        const fileBlob = await fetch(formData.fileAttachments).then((res) =>
+          res.blob()
+        );
+        const file = new File([fileBlob], "attachment", {
+          type: fileBlob.type,
         });
+        submitFormData.append("file", file);
       }
 
-      const submitData = {
-        ...formData,
-        audioUrl: audioBase64,
-        managersId: selectedManagers,
-      };
+      // Add audio if exists
+      if (audioBlob) {
+        const audioFile = new File([audioBlob], "audio.wav", {
+          type: "audio/wav",
+        });
+        submitFormData.append("audio", audioFile);
+      }
 
-      const response = await axios.post("/api/admin/tasks", submitData);
+      const response = await axios.post("/api/admin/tasks", submitFormData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
 
       if (response.data.success) {
         toast.success("Task created successfully!");
@@ -390,6 +408,7 @@ export default function AdminTasksPage() {
         fetchTasks();
       }
     } catch (error) {
+      console.error("Error:", error);
       toast.error(error.response?.data?.message || "Failed to create task");
     } finally {
       setLoading(false);
@@ -400,7 +419,8 @@ export default function AdminTasksPage() {
     setFormData({
       title: "",
       clientName: "",
-      fileAttachments: "",
+      file: null,
+      filePreview: null,
       audioUrl: "",
       priority: "low",
       endDate: "",
@@ -487,7 +507,6 @@ export default function AdminTasksPage() {
       toast.error(error.response?.data?.message || "Failed to delete task");
     }
   };
-
   const handleFileUpload = (e, isEdit = false) => {
     const file = e.target.files[0];
     if (file) {
@@ -496,25 +515,23 @@ export default function AdminTasksPage() {
         return;
       }
 
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        if (isEdit) {
-          setEditFormData((prev) => ({
-            ...prev,
-            fileAttachments: reader.result,
-          }));
-          toast.success(
-            "File attached successfully! This will override the existing file."
-          );
-        } else {
-          setFormData((prev) => ({ ...prev, fileAttachments: reader.result }));
-          toast.success("File attached successfully!");
-        }
-      };
-      reader.readAsDataURL(file);
+      // Store the file object directly
+      if (isEdit) {
+        setEditFormData((prev) => ({
+          ...prev,
+          file: file, // Store file object
+          filePreview: URL.createObjectURL(file), // For preview
+        }));
+      } else {
+        setFormData((prev) => ({
+          ...prev,
+          file: file,
+          filePreview: URL.createObjectURL(file),
+        }));
+      }
+      toast.success("File attached successfully!");
     }
   };
-
   const removeFileAttachment = (isEdit = false) => {
     if (isEdit) {
       setEditFormData((prev) => ({ ...prev, fileAttachments: "" }));
@@ -585,23 +602,29 @@ export default function AdminTasksPage() {
     if (!manager.departments || !Array.isArray(manager.departments)) {
       return "No Department";
     }
-    
+
     if (manager.departments.length === 0) return "No Department";
-    
+
     // Extract department names
-    const departmentNames = manager.departments.map(dept => dept.name).filter(name => name);
-    
+    const departmentNames = manager.departments
+      .map((dept) => dept.name)
+      .filter((name) => name);
+
     if (departmentNames.length === 0) return "No Department";
-    
+
     return departmentNames.join(", ");
   };
 
   // Get first department for badge display
   const getManagerFirstDepartment = (manager) => {
-    if (!manager.departments || !Array.isArray(manager.departments) || manager.departments.length === 0) {
+    if (
+      !manager.departments ||
+      !Array.isArray(manager.departments) ||
+      manager.departments.length === 0
+    ) {
       return "No Dept";
     }
-    
+
     const firstDept = manager.departments[0];
     return firstDept.name || "No Dept";
   };
@@ -695,11 +718,15 @@ export default function AdminTasksPage() {
                     Departments
                   </p>
                   <p className="text-3xl font-bold text-gray-900 mt-1">
-                    {Array.from(new Set(
-                      managers.flatMap(m => 
-                        m.departments?.map(d => d.name) || []
-                      )
-                    )).length}
+                    {
+                      Array.from(
+                        new Set(
+                          managers.flatMap(
+                            (m) => m.departments?.map((d) => d.name) || []
+                          )
+                        )
+                      ).length
+                    }
                   </p>
                 </div>
                 <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
@@ -769,7 +796,6 @@ export default function AdminTasksPage() {
                       }
                       placeholder="Enter task title"
                       className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 h-12 text-base rounded-xl"
-                      
                     />
                   </div>
                   <div className="space-y-3">
@@ -1053,15 +1079,15 @@ export default function AdminTasksPage() {
                     className="rounded-xl border-gray-300 h-12"
                     accept="*/*"
                   />
-                  {formData.fileAttachments && (
+                  {formData.file && (
                     <div className="flex items-center gap-3 p-4 bg-green-50 border border-green-200 rounded-xl">
                       <FileText className="w-6 h-6 text-green-600" />
                       <div className="flex-1">
                         <p className="font-semibold text-green-800">
-                          File attached successfully
+                          {formData.file.name}
                         </p>
                         <p className="text-sm text-green-600">
-                          Ready to upload with task
+                          {(formData.file.size / 1024 / 1024).toFixed(2)} MB
                         </p>
                       </div>
                       <div className="flex gap-2">
@@ -1070,18 +1096,25 @@ export default function AdminTasksPage() {
                           size="sm"
                           variant="outline"
                           onClick={() =>
-                            downloadFile(formData.fileAttachments, "attachment")
+                            window.open(formData.filePreview, "_blank")
                           }
                           className="rounded-lg border-green-300 text-green-700 hover:bg-green-50"
                         >
-                          <Download className="w-4 h-4 mr-2" />
-                          Download
+                          <Eye className="w-4 h-4 mr-2" />
+                          Preview
                         </Button>
                         <Button
                           type="button"
                           size="sm"
                           variant="outline"
-                          onClick={() => removeFileAttachment(false)}
+                          onClick={() => {
+                            setFormData((prev) => ({
+                              ...prev,
+                              file: null,
+                              filePreview: null,
+                            }));
+                            toast.info("File removed");
+                          }}
                           className="rounded-lg border-red-300 text-red-600 hover:bg-red-50"
                         >
                           <X className="w-4 h-4 mr-2" />
