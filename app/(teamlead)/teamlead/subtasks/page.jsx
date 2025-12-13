@@ -58,6 +58,7 @@ import axios from "axios";
 import Link from "next/link";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogTitle, AlertDialogTrigger } from "@radix-ui/react-alert-dialog";
 import { AlertDialogFooter, AlertDialogHeader } from "@/components/ui/alert-dialog";
+import { sub } from "date-fns";
 
 export default function AllSubtasksPage() {
   const { data: session, status } = useSession();
@@ -113,7 +114,7 @@ export default function AllSubtasksPage() {
     setIsDeleting(true);
     try {
       const response = await axios.delete(
-        `/api/teamlead/subtasks/${subtaskId}`
+        `/api/teamlead/subtasks/${subtask._id}`
       );
 
       if (response.status === 200) {
@@ -663,9 +664,7 @@ export default function AllSubtasksPage() {
                       <TableHead className="font-bold text-black text-sm uppercase tracking-wide py-4">
                         Subtask Details
                       </TableHead>
-                      <TableHead className="font-bold text-black text-sm uppercase tracking-wide py-4">
-                        Parent Submission
-                      </TableHead>
+                     
                       <TableHead className="font-bold text-black text-sm uppercase tracking-wide py-4">
                         Status
                       </TableHead>
@@ -772,23 +771,7 @@ export default function AllSubtasksPage() {
                               )}
                           </div>
                         </TableCell>
-                        <TableCell className="py-4">
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2 text-sm text-black">
-                              <Calendar className="w-4 h-4 text-green-500" />
-                              <span>
-                                Start: {formatDate(subtask.startDate)}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-2 text-sm text-black">
-                              <Calendar className="w-4 h-4 text-red-500" />
-                              <span>End: {formatDate(subtask.endDate)}</span>
-                            </div>
-                            <div className="text-xs text-gray-700">
-                              {subtask.startTime} - {subtask.endTime}
-                            </div>
-                          </div>
-                        </TableCell>
+                       
                         <TableCell className="py-4">
                           <div className="flex gap-2">
 
