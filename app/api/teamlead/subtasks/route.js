@@ -8,6 +8,7 @@ import dbConnect from "@/lib/db";
 import { sendNotification } from "@/lib/sendNotification";
 import { sendMail } from "@/lib/mail";
 import { createdSubtaskMailTemplate } from "@/helper/emails/teamlead/createdSubtaskMailTemplate";
+import TeamLead from "@/models/TeamLead";
 
 export async function GET(req) {
   try {
@@ -60,7 +61,7 @@ export async function POST(request) {
       submission = await FormSubmission.findById(submissionId);
     }
 
-    const teamLead = await Employee.findOne({ email: session.user.email });
+    const teamLead = await TeamLead.findOne({ _id:teamLeadId });
 
     if (!teamLead) {
       return NextResponse.json(
@@ -71,16 +72,16 @@ export async function POST(request) {
 
     const depId = teamLead.depId;
 
-    const employees = await Employee.find({
-      _id: { $in: assignedEmployees.map((emp) => emp.employeeId) },
-    });
+    // const employees = await Employee.find({
+    //   _id: { $in: assignedEmployees.map((emp) => emp.employeeId) },
+    // });
 
-    if (employees.length !== assignedEmployees.length) {
-      return NextResponse.json(
-        { error: "Some employees not found" },
-        { status: 400 }
-      );
-    }
+    // if (employees.length !== assignedEmployees.length) {
+    //   return NextResponse.json(
+    //     { error: "Some employees not found" },
+    //     { status: 400 }
+    //   );
+    // }
 
     // Lead name for emails/notifications
     const leadName = `${teamLead.firstName} ${teamLead.lastName}`;
@@ -92,7 +93,7 @@ export async function POST(request) {
       title,
       description,
       submissionId: submission ? submission._id : null,
-      teamLeadId: teamLeadId,
+      teamLeadId: teamLead._id,
       depId,
       assignedEmployees: assignedEmployees.map((emp) => ({
         employeeId: emp.employeeId,
