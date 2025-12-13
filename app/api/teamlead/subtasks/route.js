@@ -47,6 +47,7 @@ export async function POST(request) {
             endTime,
             priority,
             leadsRequired, // <-- lead number aa raha hai idhar se
+            teamLeadId
         } = body;
 
         // submission optional
@@ -81,7 +82,7 @@ export async function POST(request) {
             title,
             description,
             submissionId: submission ? submission._id : null,
-            teamLeadId: teamLead._id,
+            teamLeadId: teamLeadId,
             depId,
             assignedEmployees: assignedEmployees.map(emp => ({
                 employeeId: emp.employeeId,

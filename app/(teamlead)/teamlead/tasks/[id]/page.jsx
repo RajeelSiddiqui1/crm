@@ -147,7 +147,7 @@ export default function TeamLeadTaskDetailPage() {
       return;
     }
     const completed = task.assignedEmployees.filter(
-      emp => emp.status === "completed"
+      (emp) => emp.status === "completed"
     ).length;
     const total = task.assignedEmployees.length;
     setProgress(Math.round((completed / total) * 100));
@@ -201,9 +201,12 @@ export default function TeamLeadTaskDetailPage() {
     try {
       const updateData = {
         status: newStatus,
-        teamLeadFeedback: feedback || `Status changed to ${newStatus}`
+        teamLeadFeedback: feedback || `Status changed to ${newStatus}`,
       };
-      const response = await axios.put(`/api/teamlead/tasks/${taskId}`, updateData);
+      const response = await axios.put(
+        `/api/teamlead/tasks/${taskId}`,
+        updateData
+      );
       if (response.status === 200) {
         toast.success("✅ Task status updated successfully!");
         setTask(response.data.task);
@@ -228,11 +231,16 @@ export default function TeamLeadTaskDetailPage() {
     setAssigning(true);
     try {
       const updateData = {
-        assignedEmployees: selectedEmployees
+        assignedEmployees: selectedEmployees,
       };
-      const response = await axios.put(`/api/teamlead/tasks/${taskId}`, updateData);
+      const response = await axios.put(
+        `/api/teamlead/tasks/${taskId}`,
+        updateData
+      );
       if (response.status === 200) {
-        toast.success(`🎯 Assigned ${selectedEmployees.length} employee(s) successfully!`);
+        toast.success(
+          `🎯 Assigned ${selectedEmployees.length} employee(s) successfully!`
+        );
         setTask(response.data.task);
         setSelectedEmployees([]);
         setShowAssignDialog(false);
@@ -253,7 +261,7 @@ export default function TeamLeadTaskDetailPage() {
     setRemoving(true);
     try {
       const response = await axios.put(`/api/teamlead/tasks/${taskId}`, {
-        removeEmployeeId: employeeToRemove._id
+        removeEmployeeId: employeeToRemove._id,
       });
       if (response.status === 200) {
         toast.success(`✅ Employee removed successfully!`);
@@ -321,10 +329,13 @@ export default function TeamLeadTaskDetailPage() {
 
   const getAvailableEmployees = () => {
     if (!task || !Array.isArray(employees)) return employees;
-    const assignedEmployeeIds = task.assignedEmployees?.map(emp => 
-      emp.employeeId?._id?.toString() || emp.employeeId.toString()
-    ) || [];
-    return employees.filter(emp => !assignedEmployeeIds.includes(emp._id.toString()));
+    const assignedEmployeeIds =
+      task.assignedEmployees?.map(
+        (emp) => emp.employeeId?._id?.toString() || emp.employeeId.toString()
+      ) || [];
+    return employees.filter(
+      (emp) => !assignedEmployeeIds.includes(emp._id.toString())
+    );
   };
 
   const formatDate = (dateString) => {
@@ -365,7 +376,7 @@ export default function TeamLeadTaskDetailPage() {
   const getTaskPriority = () => {
     if (!task?.assignedEmployees?.length) return "Low";
     const pendingCount = task.assignedEmployees.filter(
-      emp => emp.status === "pending"
+      (emp) => emp.status === "pending"
     ).length;
     if (pendingCount > 3) return "High";
     if (pendingCount > 1) return "Medium";
@@ -393,8 +404,12 @@ export default function TeamLeadTaskDetailPage() {
             <div className="w-16 h-16 md:w-20 md:h-20 border-4 border-blue-100 rounded-full"></div>
             <div className="absolute top-0 left-0 w-16 h-16 md:w-20 md:h-20 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
           </div>
-          <h3 className="mt-6 text-lg font-semibold text-gray-800">Loading Task Details</h3>
-          <p className="text-gray-500 mt-2 text-sm md:text-base">Fetching the latest information...</p>
+          <h3 className="mt-6 text-lg font-semibold text-gray-800">
+            Loading Task Details
+          </h3>
+          <p className="text-gray-500 mt-2 text-sm md:text-base">
+            Fetching the latest information...
+          </p>
         </div>
       </div>
     );
@@ -413,9 +428,12 @@ export default function TeamLeadTaskDetailPage() {
               <div className="inline-flex items-center justify-center w-12 h-12 md:w-16 md:h-16 rounded-full bg-rose-100 mb-4">
                 <AlertTriangle className="w-6 h-6 md:w-8 md:h-8 text-rose-600" />
               </div>
-              <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-2">Task Not Found</h2>
+              <h2 className="text-xl md:text-2xl font-bold text-gray-900 mb-2">
+                Task Not Found
+              </h2>
               <p className="text-gray-600 mb-6 text-sm md:text-base">
-                The requested task could not be found or you don't have access to it.
+                The requested task could not be found or you don't have access
+                to it.
               </p>
               <div className="space-y-3">
                 <Button
@@ -441,18 +459,19 @@ export default function TeamLeadTaskDetailPage() {
     );
   }
 
-  const filteredEmployees = getAvailableEmployees().filter(emp =>
-    emp.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    emp.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    emp.email?.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredEmployees = getAvailableEmployees().filter(
+    (emp) =>
+      emp.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      emp.lastName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      emp.email?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100">
-      <Toaster 
-        position="top-right" 
+      <Toaster
+        position="top-right"
         toastOptions={{
-          className: 'bg-white text-gray-900 border border-gray-200 shadow-lg',
+          className: "bg-white text-gray-900 border border-gray-200 shadow-lg",
         }}
       />
 
@@ -477,11 +496,15 @@ export default function TeamLeadTaskDetailPage() {
                 <Menu className="w-5 h-5" />
               </Button>
               <div>
-                <h1 className="text-base md:text-lg font-semibold text-gray-900">Task Management</h1>
-                <p className="text-xs md:text-sm text-gray-500">Team Lead Dashboard</p>
+                <h1 className="text-base md:text-lg font-semibold text-gray-900">
+                  Task Management
+                </h1>
+                <p className="text-xs md:text-sm text-gray-500">
+                  Team Lead Dashboard
+                </p>
               </div>
             </div>
-            
+
             <div className="flex items-center gap-2 md:gap-3">
               <TooltipProvider>
                 <Tooltip>
@@ -492,7 +515,9 @@ export default function TeamLeadTaskDetailPage() {
                       onClick={fetchTask}
                       className="gap-2 text-gray-900 bg-white hidden sm:flex"
                     >
-                      <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+                      <RefreshCw
+                        className={`w-4 h-4 ${loading ? "animate-spin" : ""}`}
+                      />
                       <span className="hidden md:inline">Refresh</span>
                     </Button>
                   </TooltipTrigger>
@@ -508,20 +533,32 @@ export default function TeamLeadTaskDetailPage() {
                 onClick={fetchTask}
                 className="gap-2 text-gray-900 bg-white sm:hidden"
               >
-                <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+                <RefreshCw
+                  className={`w-4 h-4 ${loading ? "animate-spin" : ""}`}
+                />
               </Button>
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="gap-2 text-gray-900 bg-white">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-2 text-gray-900 bg-white"
+                  >
                     <MoreVertical className="w-4 h-4" />
                     <span className="hidden md:inline">Actions</span>
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56 bg-white text-gray-900 shadow-xl">
+                <DropdownMenuContent
+                  align="end"
+                  className="w-56 bg-white text-gray-900 shadow-xl"
+                >
                   <DropdownMenuLabel>Task Actions</DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={copyTaskId} className="cursor-pointer">
+                  <DropdownMenuItem
+                    onClick={copyTaskId}
+                    className="cursor-pointer"
+                  >
                     <Copy className="w-4 h-4 mr-2" />
                     Copy Task ID
                   </DropdownMenuItem>
@@ -530,7 +567,7 @@ export default function TeamLeadTaskDetailPage() {
                     Export Data
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem 
+                  <DropdownMenuItem
                     onClick={() => setShowAssignDialog(true)}
                     className="cursor-pointer"
                   >
@@ -576,11 +613,20 @@ export default function TeamLeadTaskDetailPage() {
                 <div className="flex flex-col gap-4">
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-2 mb-3">
-                      <Badge className={`${getStatusVariant(task.status2)} font-semibold px-2 py-1 md:px-3 text-xs md:text-sm`}>
+                      <Badge
+                        className={`${getStatusVariant(
+                          task.status2
+                        )} font-semibold px-2 py-1 md:px-3 text-xs md:text-sm`}
+                      >
                         {getStatusIcon(task.status2)}
-                        <span className="ml-1">{task.status2.replace("_", " ")}</span>
+                        <span className="ml-1">
+                          {task.status2.replace("_", " ")}
+                        </span>
                       </Badge>
-                      <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-xs md:text-sm">
+                      <Badge
+                        variant="outline"
+                        className="bg-blue-50 text-blue-700 border-blue-200 text-xs md:text-sm"
+                      >
                         <Target className="w-3 h-3 mr-1" />
                         {getTaskPriority()} Priority
                       </Badge>
@@ -594,21 +640,26 @@ export default function TeamLeadTaskDetailPage() {
                     <div className="flex flex-wrap items-center gap-3 text-xs md:text-sm">
                       <div className="flex items-center gap-1 md:gap-2 text-gray-500">
                         <Calendar className="w-3 h-3 md:w-4 md:h-4" />
-                        <span className="hidden sm:inline">Created:</span> {formatDate(task.createdAt)}
+                        <span className="hidden sm:inline">Created:</span>{" "}
+                        {formatDate(task.createdAt)}
                       </div>
                       <div className="flex items-center gap-1 md:gap-2 text-gray-500">
                         <User className="w-3 h-3 md:w-4 md:h-4" />
-                        By: {task.submittedBy?.firstName} {task.submittedBy?.lastName}
+                        By: {task.submittedBy?.firstName}{" "}
+                        {task.submittedBy?.lastName}
                       </div>
                       {task.completedAt && (
                         <div className="flex items-center gap-1 md:gap-2 text-emerald-600">
                           <CheckCircle className="w-3 h-3 md:w-4 md:h-4" />
-                          <span className="hidden sm:inline">Completed:</span> {formatDate(task.completedAt)}
+                          <span className="hidden sm:inline">
+                            Completed:
+                          </span>{" "}
+                          {formatDate(task.completedAt)}
                         </div>
                       )}
                     </div>
                   </div>
-                  
+
                   <div className="flex-shrink-0">
                     <TooltipProvider>
                       <Tooltip>
@@ -632,24 +683,30 @@ export default function TeamLeadTaskDetailPage() {
               </CardContent>
             </Card>
 
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <Tabs
+              value={activeTab}
+              onValueChange={setActiveTab}
+              className="w-full"
+            >
               <TabsList className="grid w-full grid-cols-3 bg-gray-100 p-1 rounded-lg">
-                <TabsTrigger 
-                  value="details" 
+                <TabsTrigger
+                  value="details"
                   className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md text-gray-900 text-xs md:text-sm"
                 >
                   <FileText className="w-3 h-3 md:w-4 md:h-4 mr-1 md:mr-2" />
                   <span className="truncate">Form Details</span>
                 </TabsTrigger>
-                <TabsTrigger 
-                  value="team" 
+                <TabsTrigger
+                  value="team"
                   className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md text-gray-900 text-xs md:text-sm"
                 >
                   <Users className="w-3 h-3 md:w-4 md:h-4 mr-1 md:mr-2" />
-                  <span className="truncate">Team ({task.assignedEmployees?.length || 0})</span>
+                  <span className="truncate">
+                    Team ({task.assignedEmployees?.length || 0})
+                  </span>
                 </TabsTrigger>
-                <TabsTrigger 
-                  value="updates" 
+                <TabsTrigger
+                  value="updates"
                   className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md text-gray-900 text-xs md:text-sm"
                 >
                   <Activity className="w-3 h-3 md:w-4 md:h-4 mr-1 md:mr-2" />
@@ -657,7 +714,10 @@ export default function TeamLeadTaskDetailPage() {
                 </TabsTrigger>
               </TabsList>
 
-              <TabsContent value="details" className="space-y-4 md:space-y-6 pt-4 md:pt-6">
+              <TabsContent
+                value="details"
+                className="space-y-4 md:space-y-6 pt-4 md:pt-6"
+              >
                 <Card className="border-0 shadow-sm bg-white">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-base md:text-lg">
@@ -669,30 +729,46 @@ export default function TeamLeadTaskDetailPage() {
                     <div className="space-y-4">
                       <div>
                         <div className="flex justify-between items-center mb-2">
-                          <span className="text-sm font-medium text-gray-700">Task Completion</span>
-                          <span className="text-sm font-semibold text-gray-900">{progress}%</span>
+                          <span className="text-sm font-medium text-gray-700">
+                            Task Completion
+                          </span>
+                          <span className="text-sm font-semibold text-gray-900">
+                            {progress}%
+                          </span>
                         </div>
                         <Progress value={progress} className="h-2" />
                       </div>
-                      
+
                       <div className="grid grid-cols-3 gap-2 md:gap-4">
                         <div className="text-center p-3 md:p-4 bg-emerald-50 rounded-lg">
                           <div className="text-lg md:text-2xl font-bold text-emerald-700">
-                            {task.assignedEmployees?.filter(e => e.status === "completed").length || 0}
+                            {task.assignedEmployees?.filter(
+                              (e) => e.status === "completed"
+                            ).length || 0}
                           </div>
-                          <div className="text-xs md:text-sm text-emerald-600">Completed</div>
+                          <div className="text-xs md:text-sm text-emerald-600">
+                            Completed
+                          </div>
                         </div>
                         <div className="text-center p-3 md:p-4 bg-blue-50 rounded-lg">
                           <div className="text-lg md:text-2xl font-bold text-blue-700">
-                            {task.assignedEmployees?.filter(e => e.status === "in_progress").length || 0}
+                            {task.assignedEmployees?.filter(
+                              (e) => e.status === "in_progress"
+                            ).length || 0}
                           </div>
-                          <div className="text-xs md:text-sm text-blue-600">In Progress</div>
+                          <div className="text-xs md:text-sm text-blue-600">
+                            In Progress
+                          </div>
                         </div>
                         <div className="text-center p-3 md:p-4 bg-amber-50 rounded-lg">
                           <div className="text-lg md:text-2xl font-bold text-amber-700">
-                            {task.assignedEmployees?.filter(e => e.status === "pending").length || 0}
+                            {task.assignedEmployees?.filter(
+                              (e) => e.status === "pending"
+                            ).length || 0}
                           </div>
-                          <div className="text-xs md:text-sm text-amber-600">Pending</div>
+                          <div className="text-xs md:text-sm text-amber-600">
+                            Pending
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -711,87 +787,102 @@ export default function TeamLeadTaskDetailPage() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
-                      {task.formData && Object.entries(task.formData).map(([key, value]) => (
-                        <div key={key} className="border border-gray-200 rounded-lg md:rounded-xl p-4 md:p-5 bg-white hover:shadow-md transition-shadow">
-                          <div className="flex items-center gap-2 mb-2 md:mb-3">
-                            <div className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-blue-500"></div>
-                            <Label className="text-gray-700 font-bold text-sm md:text-base break-words">
-                              {key.replace(/([A-Z])/g, " $1").trim()}
-                            </Label>
+                      {task.formData &&
+                        Object.entries(task.formData).map(([key, value]) => (
+                          <div
+                            key={key}
+                            className="border border-gray-200 rounded-lg md:rounded-xl p-4 md:p-5 bg-white hover:shadow-md transition-shadow"
+                          >
+                            <div className="flex items-center gap-2 mb-2 md:mb-3">
+                              <div className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-blue-500"></div>
+                              <Label className="text-gray-700 font-bold text-sm md:text-base break-words">
+                                {key.replace(/([A-Z])/g, " $1").trim()}
+                              </Label>
+                            </div>
+                            <div className="text-gray-800">
+                              {typeof value === "object" &&
+                              !Array.isArray(value) ? (
+                                <pre className="text-xs md:text-sm overflow-x-auto whitespace-pre-wrap bg-gray-50 p-3 md:p-4 rounded-lg">
+                                  {JSON.stringify(value, null, 2)}
+                                </pre>
+                              ) : Array.isArray(value) ? (
+                                <div className="flex flex-wrap gap-2">
+                                  {value.map((item, index) => (
+                                    <Badge
+                                      key={index}
+                                      className="bg-gradient-to-r from-blue-100 to-cyan-100 text-blue-800 border-0 shadow-sm text-xs md:text-sm"
+                                    >
+                                      <Check className="w-2.5 h-2.5 md:w-3 md:h-3 mr-1" />
+                                      {item}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              ) : (
+                                <div className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 md:px-4 md:py-3 text-gray-800 text-sm md:text-base break-words">
+                                  {value?.toString() || "Not provided"}
+                                </div>
+                              )}
+                            </div>
                           </div>
-                          <div className="text-gray-800">
-                            {typeof value === "object" && !Array.isArray(value) ? (
-                              <pre className="text-xs md:text-sm overflow-x-auto whitespace-pre-wrap bg-gray-50 p-3 md:p-4 rounded-lg">
-                                {JSON.stringify(value, null, 2)}
-                              </pre>
-                            ) : Array.isArray(value) ? (
-                              <div className="flex flex-wrap gap-2">
-                                {value.map((item, index) => (
-                                  <Badge 
-                                    key={index} 
-                                    className="bg-gradient-to-r from-blue-100 to-cyan-100 text-blue-800 border-0 shadow-sm text-xs md:text-sm"
-                                  >
-                                    <Check className="w-2.5 h-2.5 md:w-3 md:h-3 mr-1" />
-                                    {item}
-                                  </Badge>
-                                ))}
-                              </div>
-                            ) : (
-                              <div className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 md:px-4 md:py-3 text-gray-800 text-sm md:text-base break-words">
-                                {value?.toString() || "Not provided"}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      ))}
+                        ))}
                     </div>
                   </CardContent>
                 </Card>
               </TabsContent>
 
-              <TabsContent value="team" className="space-y-4 md:space-y-6 pt-4 md:pt-6">
+              <TabsContent
+                value="team"
+                className="space-y-4 md:space-y-6 pt-4 md:pt-6"
+              >
                 <Card className="border-0 shadow-sm bg-white">
                   <CardHeader>
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                       <div>
-                        <CardTitle className="flex items-center gap-2 text-base md:text-lg">
-                          <Users className="w-4 h-4 md:w-5 md:h-5 text-green-600" />
-                          Assigned Team
+                        <CardTitle className="flex items-center gap-2 text-base md:text-lg text-gray-900">
+                          <Users className="w-4 h-4 md:w-5 md:h-5 text-emerald-600" />
+                          Assigned Team Members
                         </CardTitle>
                         <CardDescription className="text-gray-600 text-sm md:text-base">
-                          {task.assignedEmployees?.length || 0} employees working on this task
+                          {task.assignedEmployees?.length || 0} team member
+                          {task.assignedEmployees?.length !== 1 ? "s" : ""}{" "}
+                          currently assigned
                         </CardDescription>
                       </div>
                       <Button
                         onClick={() => setShowAssignDialog(true)}
-                        className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg text-sm md:text-base"
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-md text-sm md:text-base"
                       >
                         <Plus className="w-4 h-4 mr-2" />
-                        Assign More
+                        Add Team Member
                       </Button>
                     </div>
                   </CardHeader>
+
                   <CardContent>
-                    {task.assignedEmployees && task.assignedEmployees.length > 0 ? (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+                    {task.assignedEmployees?.length > 0 ? (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {task.assignedEmployees.map((assignment) => {
                           const employee = assignment.employeeId;
+
                           return (
-                            <div 
-                              key={assignment._id} 
-                              className="border border-gray-200 rounded-lg md:rounded-xl p-3 md:p-4 bg-white hover:shadow-lg transition-all duration-300 group relative"
+                            <div
+                              key={assignment._id}
+                              className="relative border border-gray-200 rounded-xl p-4 bg-white hover:shadow-md transition-all group"
                             >
                               <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                   <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity w-6 h-6 md:w-8 md:h-8"
+                                    className="absolute top-2 right-2 w-8 h-8 opacity-0 group-hover:opacity-100 bg-gray-100 hover:bg-gray-200 text-gray-600"
                                   >
-                                    <MoreVertical className="w-3 h-3 md:w-4 md:h-4" />
+                                    <MoreVertical className="w-4 h-4" />
                                   </Button>
                                 </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="w-40 md:w-48">
+                                <DropdownMenuContent
+                                  align="end"
+                                  className="w-48"
+                                >
                                   <DropdownMenuItem
                                     onClick={() => {
                                       setEmployeeToRemove(employee);
@@ -799,58 +890,80 @@ export default function TeamLeadTaskDetailPage() {
                                     }}
                                     className="text-rose-600 cursor-pointer text-sm"
                                   >
-                                    <Trash2 className="w-3 h-3 md:w-4 md:h-4 mr-2" />
+                                    <Trash2 className="w-4 h-4 mr-2" />
                                     Remove from Task
                                   </DropdownMenuItem>
                                 </DropdownMenuContent>
                               </DropdownMenu>
 
                               <div className="flex justify-between items-start mb-3">
-                                <div className="flex items-center gap-2 md:gap-3">
-                                  <Avatar className="w-10 h-10 md:w-12 md:h-12 border-2 border-white shadow-lg">
-                                    <AvatarFallback className="bg-gradient-to-r from-green-500 to-emerald-600 text-white font-semibold text-sm">
-                                      {employee?.firstName?.[0]}{employee?.lastName?.[0]}
+                                <div className="flex items-center gap-3 min-w-0">
+                                  <Avatar className="w-12 h-12 border border-gray-200 shadow-sm">
+                                    <AvatarFallback className="bg-emerald-600 text-white font-semibold">
+                                      {employee?.firstName?.[0]}
+                                      {employee?.lastName?.[0]}
                                     </AvatarFallback>
                                   </Avatar>
+
                                   <div className="min-w-0">
-                                    <p className="font-bold text-gray-900 text-sm md:text-base truncate">
+                                    <p className="font-semibold text-gray-900 truncate">
                                       {employee?.firstName} {employee?.lastName}
                                     </p>
-                                    <p className="text-xs md:text-sm text-gray-500 truncate">{employee?.email}</p>
-                                    {employee?.department && (
-                                      <div className="flex items-center gap-1 mt-1">
-                                        <Building className="w-2.5 h-2.5 md:w-3 md:h-3 text-gray-400" />
-                                        <span className="text-xs text-gray-600 truncate">{employee.department}</span>
-                                      </div>
-                                    )}
-                                    {employee?.position && (
-                                      <div className="flex items-center gap-1 mt-1">
-                                        <Briefcase className="w-2.5 h-2.5 md:w-3 md:h-3 text-gray-400" />
-                                        <span className="text-xs text-gray-600 truncate">{employee.position}</span>
+                                    <p className="text-sm text-gray-500 truncate">
+                                      {employee?.email}
+                                    </p>
+
+                                    {(employee?.department ||
+                                      employee?.position) && (
+                                      <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1 text-xs text-gray-600">
+                                        {employee?.department && (
+                                          <span className="flex items-center gap-1">
+                                            <Building className="w-3 h-3" />
+                                            {employee.department}
+                                          </span>
+                                        )}
+                                        {employee?.position && (
+                                          <span className="flex items-center gap-1">
+                                            <Briefcase className="w-3 h-3" />
+                                            {employee.position}
+                                          </span>
+                                        )}
                                       </div>
                                     )}
                                   </div>
                                 </div>
-                                <Badge className={`${getEmployeeStatusColor(assignment.status)} font-medium text-xs md:text-sm`}>
+
+                                <Badge
+                                  className={`${getEmployeeStatusColor(
+                                    assignment.status
+                                  )} text-xs font-medium capitalize`}
+                                >
                                   {assignment.status.replace("_", " ")}
                                 </Badge>
                               </div>
-                              
-                              <div className="space-y-1 md:space-y-2 text-xs md:text-sm">
-                                <div className="flex items-center justify-between text-gray-600">
+
+                              <div className="space-y-2 text-sm">
+                                <div className="flex justify-between text-gray-600">
                                   <span className="flex items-center gap-1">
-                                    <Calendar className="w-2.5 h-2.5 md:w-3 md:h-3" />
-                                    Assigned:
+                                    <Calendar className="w-3 h-3" />
+                                    Assigned
                                   </span>
-                                  <span className="font-medium">{formatRelativeDate(assignment.assignedAt)}</span>
+                                  <span className="font-medium">
+                                    {formatRelativeDate(assignment.assignedAt)}
+                                  </span>
                                 </div>
+
                                 {assignment.completedAt && (
-                                  <div className="flex items-center justify-between text-emerald-600">
+                                  <div className="flex justify-between text-emerald-600">
                                     <span className="flex items-center gap-1">
-                                      <CheckCircle className="w-2.5 h-2.5 md:w-3 md:h-3" />
-                                      Completed:
+                                      <CheckCircle className="w-3 h-3" />
+                                      Completed
                                     </span>
-                                    <span className="font-medium">{formatRelativeDate(assignment.completedAt)}</span>
+                                    <span className="font-medium">
+                                      {formatRelativeDate(
+                                        assignment.completedAt
+                                      )}
+                                    </span>
                                   </div>
                                 )}
                               </div>
@@ -859,20 +972,22 @@ export default function TeamLeadTaskDetailPage() {
                         })}
                       </div>
                     ) : (
-                      <div className="text-center py-8 md:py-12">
-                        <div className="inline-flex items-center justify-center w-16 h-16 md:w-20 md:h-20 rounded-full bg-gray-100 mb-4">
-                          <Users className="w-8 h-8 md:w-10 md:h-10 text-gray-400" />
+                      <div className="text-center py-12">
+                        <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gray-100 mb-4">
+                          <Users className="w-10 h-10 text-gray-400" />
                         </div>
-                        <h3 className="text-base md:text-lg font-semibold text-gray-900 mb-2">No Team Assigned</h3>
-                        <p className="text-gray-600 mb-6 max-w-md mx-auto text-sm md:text-base">
-                          Assign employees to start working on this task.
+                        <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                          No Team Members Assigned
+                        </h3>
+                        <p className="text-gray-600 mb-6 max-w-md mx-auto">
+                          Add employees to this task so work can begin.
                         </p>
                         <Button
                           onClick={() => setShowAssignDialog(true)}
-                          className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white shadow-lg text-sm md:text-base"
+                          className="bg-emerald-600 hover:bg-emerald-700 text-white shadow-md"
                         >
                           <Users className="w-4 h-4 mr-2" />
-                          Assign First Employee
+                          Assign Team Member
                         </Button>
                       </div>
                     )}
@@ -880,7 +995,10 @@ export default function TeamLeadTaskDetailPage() {
                 </Card>
               </TabsContent>
 
-              <TabsContent value="updates" className="space-y-4 md:space-y-6 pt-4 md:pt-6">
+              <TabsContent
+                value="updates"
+                className="space-y-4 md:space-y-6 pt-4 md:pt-6"
+              >
                 <Card className="border-0 shadow-sm bg-white">
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-base md:text-lg">
@@ -894,27 +1012,39 @@ export default function TeamLeadTaskDetailPage() {
                   <CardContent>
                     <div className="space-y-4 md:space-y-6">
                       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 md:gap-3">
-                        {["pending", "in_progress", "completed", "approved", "rejected"].map((statusOption) => (
+                        {[
+                          "pending",
+                          "in_progress",
+                          "completed",
+                          "approved",
+                          "rejected",
+                        ].map((statusOption) => (
                           <Button
                             key={statusOption}
-                            variant={newStatus === statusOption ? "default" : "outline"}
+                            variant={
+                              newStatus === statusOption ? "default" : "outline"
+                            }
                             onClick={() => setNewStatus(statusOption)}
                             className={`justify-start h-auto py-2 md:py-3 px-2 md:px-4 text-xs md:text-sm ${
-                              newStatus === statusOption 
+                              newStatus === statusOption
                                 ? getStatusVariant(statusOption)
                                 : "border-gray-300 hover:border-gray-400 text-gray-700"
                             }`}
                           >
                             <div className="flex items-center gap-1 md:gap-2">
                               {getStatusIcon(statusOption)}
-                              <span className="capitalize truncate">{statusOption.replace("_", " ")}</span>
+                              <span className="capitalize truncate">
+                                {statusOption.replace("_", " ")}
+                              </span>
                             </div>
                           </Button>
                         ))}
                       </div>
-                      
+
                       <div className="space-y-2 md:space-y-3">
-                        <Label className="text-gray-700 font-medium text-sm md:text-base">Add Feedback / Comments</Label>
+                        <Label className="text-gray-700 font-medium text-sm md:text-base">
+                          Add Feedback / Comments
+                        </Label>
                         <Textarea
                           placeholder="Enter your feedback, instructions, or comments here..."
                           value={feedback}
@@ -923,30 +1053,36 @@ export default function TeamLeadTaskDetailPage() {
                           className="border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all text-gray-700 text-sm md:text-base min-h-[100px]"
                         />
                         <p className="text-xs md:text-sm text-gray-500">
-                          This feedback will be sent to the manager and all assigned employees.
+                          This feedback will be sent to the manager and all
+                          assigned employees.
                         </p>
                       </div>
-                      
+
                       <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 md:p-4">
                         <div className="flex items-center gap-2 mb-2">
                           <Bell className="w-4 h-4 text-blue-600" />
-                          <span className="font-medium text-blue-900 text-sm md:text-base">Notifications</span>
+                          <span className="font-medium text-blue-900 text-sm md:text-base">
+                            Notifications
+                          </span>
                         </div>
                         <p className="text-xs md:text-sm text-blue-700">
-                          When you update the status, notifications will be sent to:
+                          When you update the status, notifications will be sent
+                          to:
                         </p>
                         <ul className="mt-2 space-y-1 text-xs md:text-sm text-blue-700">
                           <li className="flex items-center gap-2">
                             <User className="w-3 h-3" />
-                            Manager: {task.submittedBy?.firstName} {task.submittedBy?.lastName}
+                            Manager: {task.submittedBy?.firstName}{" "}
+                            {task.submittedBy?.lastName}
                           </li>
                           <li className="flex items-center gap-2">
                             <Users className="w-3 h-3" />
-                            All assigned employees ({task.assignedEmployees?.length || 0})
+                            All assigned employees (
+                            {task.assignedEmployees?.length || 0})
                           </li>
                         </ul>
                       </div>
-                      
+
                       <Button
                         onClick={handleStatusUpdate}
                         disabled={updating || newStatus === task.status2}
@@ -983,26 +1119,36 @@ export default function TeamLeadTaskDetailPage() {
                           <div className="flex-shrink-0">
                             <Avatar className="w-8 h-8 md:w-10 md:h-10 border-2 border-white shadow">
                               <AvatarFallback className="bg-gradient-to-r from-purple-500 to-pink-600 text-white text-sm">
-                                {session?.user?.firstName?.[0]}{session?.user?.lastName?.[0]}
+                                {session?.user?.firstName?.[0]}
+                                {session?.user?.lastName?.[0]}
                               </AvatarFallback>
                             </Avatar>
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-1 gap-1">
                               <span className="font-semibold text-gray-900 text-sm md:text-base truncate">
-                                {session?.user?.firstName} {session?.user?.lastName}
+                                {session?.user?.firstName}{" "}
+                                {session?.user?.lastName}
                               </span>
-                              <span className="text-xs md:text-sm text-gray-500">{formatRelativeDate(task.updatedAt)}</span>
+                              <span className="text-xs md:text-sm text-gray-500">
+                                {formatRelativeDate(task.updatedAt)}
+                              </span>
                             </div>
                             <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 md:p-4">
-                              <p className="text-gray-800 text-sm md:text-base">{task.teamLeadFeedback}</p>
+                              <p className="text-gray-800 text-sm md:text-base">
+                                {task.teamLeadFeedback}
+                              </p>
                             </div>
                             <div className="flex flex-wrap items-center gap-2 mt-2 text-xs md:text-sm text-gray-500">
                               <span className="flex items-center gap-1">
                                 <Shield className="w-3 h-3" />
                                 Team Lead
                               </span>
-                              <Badge className={`${getStatusVariant(task.status2)} text-xs`}>
+                              <Badge
+                                className={`${getStatusVariant(
+                                  task.status2
+                                )} text-xs`}
+                              >
                                 Status: {task.status2}
                               </Badge>
                             </div>
@@ -1019,31 +1165,45 @@ export default function TeamLeadTaskDetailPage() {
           <div className="space-y-4 md:space-y-6">
             <Card className="border-0 shadow-sm bg-white">
               <CardHeader>
-                <CardTitle className="text-base md:text-lg text-gray-900">Quick Stats</CardTitle>
+                <CardTitle className="text-base md:text-lg text-gray-900">
+                  Quick Stats
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3 md:space-y-4">
                 <div className="space-y-2 md:space-y-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-gray-600 text-sm md:text-base">Task ID</span>
+                    <span className="text-gray-600 text-sm md:text-base">
+                      Task ID
+                    </span>
                     <code className="text-xs md:text-sm bg-gray-100 px-2 py-1 rounded font-mono text-gray-800">
                       {task._id.slice(-8)}
                     </code>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-gray-600 text-sm md:text-base">Priority</span>
-                    <Badge className={`${getPriorityColor(getTaskPriority())} text-white text-xs md:text-sm`}>
+                    <span className="text-gray-600 text-sm md:text-base">
+                      Priority
+                    </span>
+                    <Badge
+                      className={`${getPriorityColor(
+                        getTaskPriority()
+                      )} text-white text-xs md:text-sm`}
+                    >
                       {getTaskPriority()}
                     </Badge>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-gray-600 text-sm md:text-base">Last Updated</span>
-                    <span className="font-medium text-gray-900 text-sm md:text-base">{formatRelativeDate(task.updatedAt)}</span>
+                    <span className="text-gray-600 text-sm md:text-base">
+                      Last Updated
+                    </span>
+                    <span className="font-medium text-gray-900 text-sm md:text-base">
+                      {formatRelativeDate(task.updatedAt)}
+                    </span>
                   </div>
                 </div>
                 <Separator />
                 <div className="text-center">
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     className="w-full text-gray-700 hover:text-gray-900 text-sm md:text-base"
                     onClick={() => setActiveTab("updates")}
                   >
@@ -1065,14 +1225,17 @@ export default function TeamLeadTaskDetailPage() {
                 <div className="flex items-center gap-3">
                   <Avatar className="w-10 h-10 md:w-12 md:h-12 border-2 border-white shadow">
                     <AvatarFallback className="bg-gradient-to-r from-blue-500 to-cyan-600 text-white text-sm">
-                      {task.submittedBy?.firstName?.[0]}{task.submittedBy?.lastName?.[0]}
+                      {task.submittedBy?.firstName?.[0]}
+                      {task.submittedBy?.lastName?.[0]}
                     </AvatarFallback>
                   </Avatar>
                   <div className="min-w-0">
                     <p className="font-semibold text-gray-900 text-sm md:text-base truncate">
                       {task.submittedBy?.firstName} {task.submittedBy?.lastName}
                     </p>
-                    <p className="text-xs md:text-sm text-gray-500 truncate">{task.submittedBy?.email}</p>
+                    <p className="text-xs md:text-sm text-gray-500 truncate">
+                      {task.submittedBy?.email}
+                    </p>
                     <p className="text-xs text-gray-400 mt-1">Manager</p>
                   </div>
                 </div>
@@ -1101,32 +1264,47 @@ export default function TeamLeadTaskDetailPage() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2 md:space-y-3">
-                    {["completed", "in_progress", "pending", "rejected"].map((status) => {
-                      const count = task.assignedEmployees.filter(
-                        emp => emp.status === status
-                      ).length;
-                      if (count === 0) return null;
-                      
-                      return (
-                        <div key={status} className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <div className={`w-1.5 h-1.5 md:w-2 md:h-2 rounded-full ${
-                              status === "completed" ? "bg-emerald-500" :
-                              status === "in_progress" ? "bg-blue-500" :
-                              status === "pending" ? "bg-amber-500" : "bg-rose-500"
-                            }`}></div>
-                            <span className="text-sm text-gray-600 capitalize">
-                              {status.replace("_", " ")}
+                    {["completed", "in_progress", "pending", "rejected"].map(
+                      (status) => {
+                        const count = task.assignedEmployees.filter(
+                          (emp) => emp.status === status
+                        ).length;
+                        if (count === 0) return null;
+
+                        return (
+                          <div
+                            key={status}
+                            className="flex items-center justify-between"
+                          >
+                            <div className="flex items-center gap-2">
+                              <div
+                                className={`w-1.5 h-1.5 md:w-2 md:h-2 rounded-full ${
+                                  status === "completed"
+                                    ? "bg-emerald-500"
+                                    : status === "in_progress"
+                                    ? "bg-blue-500"
+                                    : status === "pending"
+                                    ? "bg-amber-500"
+                                    : "bg-rose-500"
+                                }`}
+                              ></div>
+                              <span className="text-sm text-gray-600 capitalize">
+                                {status.replace("_", " ")}
+                              </span>
+                            </div>
+                            <span className="font-semibold text-gray-900">
+                              {count}
                             </span>
                           </div>
-                          <span className="font-semibold text-gray-900">{count}</span>
-                        </div>
-                      );
-                    })}
+                        );
+                      }
+                    )}
                   </div>
                   <div className="mt-3 md:mt-4 pt-3 md:pt-4 border-t border-gray-200">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">Total Assigned</span>
+                      <span className="text-sm text-gray-600">
+                        Total Assigned
+                      </span>
                       <span className="font-bold text-gray-900">
                         {task.assignedEmployees.length}
                       </span>
@@ -1142,11 +1320,16 @@ export default function TeamLeadTaskDetailPage() {
                   <div className="inline-flex items-center justify-center w-10 h-10 md:w-12 md:h-12 rounded-full bg-blue-100 mb-3">
                     <HelpCircle className="w-5 h-5 md:w-6 md:h-6 text-blue-600" />
                   </div>
-                  <h4 className="font-semibold text-gray-900 mb-2 text-sm md:text-base">Need Help?</h4>
+                  <h4 className="font-semibold text-gray-900 mb-2 text-sm md:text-base">
+                    Need Help?
+                  </h4>
                   <p className="text-xs md:text-sm text-gray-600 mb-4">
                     Having issues with this task?
                   </p>
-                  <Button variant="outline" className="w-full text-gray-700 hover:text-gray-900 text-sm md:text-base">
+                  <Button
+                    variant="outline"
+                    className="w-full text-gray-700 hover:text-gray-900 text-sm md:text-base"
+                  >
                     <MessageSquare className="w-4 h-4 mr-2" />
                     Contact Support
                   </Button>
@@ -1165,7 +1348,8 @@ export default function TeamLeadTaskDetailPage() {
               Assign Employees to Task
             </DialogTitle>
             <DialogDescription className="text-gray-600 text-sm md:text-base">
-              Select employees to work on "{task?.formId?.title}". They'll receive email notifications.
+              Select employees to work on "{task?.formId?.title}". They'll
+              receive email notifications.
             </DialogDescription>
           </DialogHeader>
 
@@ -1191,12 +1375,14 @@ export default function TeamLeadTaskDetailPage() {
                   </Badge>
                 )}
               </div>
-              
+
               {filteredEmployees.length === 0 ? (
                 <div className="text-center py-6 md:py-8 border-2 border-dashed border-gray-300 rounded-lg">
                   <Users className="w-8 h-8 md:w-12 md:h-12 text-gray-300 mx-auto mb-3" />
                   <p className="text-gray-500 font-medium text-sm md:text-base">
-                    {searchTerm ? "No employees found matching your search" : "No available employees"}
+                    {searchTerm
+                      ? "No employees found matching your search"
+                      : "No available employees"}
                   </p>
                 </div>
               ) : (
@@ -1211,9 +1397,16 @@ export default function TeamLeadTaskDetailPage() {
                       }`}
                       onClick={() => {
                         if (selectedEmployees.includes(employee._id)) {
-                          setSelectedEmployees(selectedEmployees.filter(id => id !== employee._id));
+                          setSelectedEmployees(
+                            selectedEmployees.filter(
+                              (id) => id !== employee._id
+                            )
+                          );
                         } else {
-                          setSelectedEmployees([...selectedEmployees, employee._id]);
+                          setSelectedEmployees([
+                            ...selectedEmployees,
+                            employee._id,
+                          ]);
                         }
                       }}
                     >
@@ -1221,14 +1414,17 @@ export default function TeamLeadTaskDetailPage() {
                         <div className="flex items-center gap-2 md:gap-3 min-w-0">
                           <Avatar className="w-8 h-8 md:w-10 md:h-10">
                             <AvatarFallback className="bg-gradient-to-r from-green-500 to-emerald-600 text-white text-xs">
-                              {employee.firstName?.[0]}{employee.lastName?.[0]}
+                              {employee.firstName?.[0]}
+                              {employee.lastName?.[0]}
                             </AvatarFallback>
                           </Avatar>
                           <div className="min-w-0">
                             <p className="font-semibold text-gray-900 text-sm md:text-base truncate">
                               {employee.firstName} {employee.lastName}
                             </p>
-                            <p className="text-xs md:text-sm text-gray-500 truncate">{employee.email}</p>
+                            <p className="text-xs md:text-sm text-gray-500 truncate">
+                              {employee.email}
+                            </p>
                           </div>
                         </div>
                         {selectedEmployees.includes(employee._id) ? (
@@ -1240,7 +1436,9 @@ export default function TeamLeadTaskDetailPage() {
                       {employee.department && (
                         <div className="mt-2 flex items-center gap-1 text-xs md:text-sm text-gray-600">
                           <Building className="w-3 h-3" />
-                          <span className="truncate">{employee.department}</span>
+                          <span className="truncate">
+                            {employee.department}
+                          </span>
                         </div>
                       )}
                       {employee.position && (
@@ -1257,15 +1455,17 @@ export default function TeamLeadTaskDetailPage() {
 
             {selectedEmployees.length > 0 && (
               <div className="space-y-2 md:space-y-3">
-                <Label className="text-gray-700 font-semibold text-sm md:text-base">Selected Team</Label>
+                <Label className="text-gray-700 font-semibold text-sm md:text-base">
+                  Selected Team
+                </Label>
                 <div className="flex flex-wrap gap-2 p-3 md:p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg md:rounded-xl border border-green-200">
                   {selectedEmployees.map((empId) => {
-                    const employee = employees.find(e => e._id === empId);
+                    const employee = employees.find((e) => e._id === empId);
                     if (!employee) return null;
-                    
+
                     return (
-                      <Badge 
-                        key={empId} 
+                      <Badge
+                        key={empId}
                         className="bg-gradient-to-r from-green-500 to-emerald-600 text-white border-0 px-3 py-1.5 md:px-4 md:py-2 flex items-center gap-2 text-xs md:text-sm"
                       >
                         <User className="w-3 h-3" />
@@ -1278,7 +1478,9 @@ export default function TeamLeadTaskDetailPage() {
                           className="h-4 w-4 md:h-5 md:w-5 ml-1 hover:bg-green-600 hover:text-white p-0"
                           onClick={(e) => {
                             e.stopPropagation();
-                            setSelectedEmployees(selectedEmployees.filter(id => id !== empId));
+                            setSelectedEmployees(
+                              selectedEmployees.filter((id) => id !== empId)
+                            );
                           }}
                         >
                           <X className="w-2 h-2 md:w-3 md:h-3" />
@@ -1294,9 +1496,12 @@ export default function TeamLeadTaskDetailPage() {
               <div className="flex items-center gap-2 md:gap-3">
                 <Bell className="w-4 h-4 md:w-5 md:h-5 text-blue-600" />
                 <div>
-                  <p className="font-medium text-blue-900 text-sm md:text-base">Notifications</p>
+                  <p className="font-medium text-blue-900 text-sm md:text-base">
+                    Notifications
+                  </p>
                   <p className="text-xs md:text-sm text-blue-700 mt-1">
-                    Selected employees will receive an email notification with task details.
+                    Selected employees will receive an email notification with
+                    task details.
                   </p>
                 </div>
               </div>
@@ -1327,7 +1532,8 @@ export default function TeamLeadTaskDetailPage() {
               ) : (
                 <>
                   <Users className="w-4 h-4 mr-2" />
-                  Assign {selectedEmployees.length} Employee{selectedEmployees.length !== 1 ? 's' : ''}
+                  Assign {selectedEmployees.length} Employee
+                  {selectedEmployees.length !== 1 ? "s" : ""}
                 </>
               )}
             </Button>
@@ -1343,7 +1549,8 @@ export default function TeamLeadTaskDetailPage() {
               Remove Employee from Task
             </DialogTitle>
             <DialogDescription className="text-gray-600 text-sm md:text-base">
-              This action cannot be undone. The employee will be notified via email.
+              This action cannot be undone. The employee will be notified via
+              email.
             </DialogDescription>
           </DialogHeader>
 
@@ -1357,9 +1564,13 @@ export default function TeamLeadTaskDetailPage() {
                   <p className="font-semibold text-gray-900 text-sm md:text-base truncate">
                     {employeeToRemove.firstName} {employeeToRemove.lastName}
                   </p>
-                  <p className="text-xs md:text-sm text-gray-600 truncate">{employeeToRemove.email}</p>
+                  <p className="text-xs md:text-sm text-gray-600 truncate">
+                    {employeeToRemove.email}
+                  </p>
                   {employeeToRemove.department && (
-                    <p className="text-xs text-gray-500 truncate">{employeeToRemove.department}</p>
+                    <p className="text-xs text-gray-500 truncate">
+                      {employeeToRemove.department}
+                    </p>
                   )}
                 </div>
               </div>
@@ -1368,9 +1579,13 @@ export default function TeamLeadTaskDetailPage() {
                 <div className="flex items-start gap-2">
                   <AlertTriangle className="w-4 h-4 md:w-5 md:h-5 text-amber-600 flex-shrink-0" />
                   <div>
-                    <p className="font-medium text-amber-900 text-sm md:text-base">Important Notice</p>
+                    <p className="font-medium text-amber-900 text-sm md:text-base">
+                      Important Notice
+                    </p>
                     <ul className="mt-1 text-xs md:text-sm text-amber-700 space-y-1">
-                      <li>• Employee will be removed from this task immediately</li>
+                      <li>
+                        • Employee will be removed from this task immediately
+                      </li>
                       <li>• Removal notification email will be sent</li>
                       <li>• Task progress will be recalculated</li>
                       <li>• Employee can be reassigned later if needed</li>
