@@ -665,15 +665,14 @@ export default function AllSubtasksPage() {
                         Subtask Details
                       </TableHead>
                      
+                    
                       <TableHead className="font-bold text-black text-sm uppercase tracking-wide py-4">
-                        Status
+                        Assigned Employees Status
                       </TableHead>
                       <TableHead className="font-bold text-black text-sm uppercase tracking-wide py-4">
-                        Assigned Employees
+                         Employees Status
                       </TableHead>
-                      <TableHead className="font-bold text-black text-sm uppercase tracking-wide py-4">
-                        Timeline
-                      </TableHead>
+                      
                       <TableHead className="font-bold text-black text-sm uppercase tracking-wide py-4">
                         Actions
                       </TableHead>
@@ -712,30 +711,8 @@ export default function AllSubtasksPage() {
                             </div>
                           </div>
                         </TableCell>
-                        <TableCell className="py-4">
-                          <div className="text-sm text-black font-medium">
-                            {subtask.submissionId?.title || "N/A"}
-                          </div>
-                          <div className="text-xs text-gray-700">
-                            {subtask.submissionId?.description
-                              ? subtask.submissionId.description.substring(
-                                  0,
-                                  50
-                                ) + "..."
-                              : "No description"}
-                          </div>
-                        </TableCell>
-                        <TableCell className="py-4">
-                          <Badge
-                            className={`${getStatusVariant(
-                              subtask.status
-                            )} border flex items-center gap-1 px-3 py-1.5 font-medium`}
-                          >
-                            {getStatusIcon(subtask.status)}
-                            {subtask.status.replace("_", " ")}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="py-4">
+                       
+                       <TableCell className="py-4">
                           <div className="flex flex-col gap-1">
                             {subtask.assignedEmployees &&
                             subtask.assignedEmployees.length > 0 ? (
@@ -771,6 +748,17 @@ export default function AllSubtasksPage() {
                               )}
                           </div>
                         </TableCell>
+                        <TableCell className="py-4">
+                          <Badge
+                            className={`${getStatusVariant(
+                              subtask.status
+                            )} border flex items-center gap-1 px-3 py-1.5 font-medium`}
+                          >
+                            {getStatusIcon(subtask.status)}
+                            {subtask.status.replace("_", " ")}
+                          </Badge>
+                        </TableCell>
+                        
                        
                         <TableCell className="py-4">
                           <div className="flex gap-2">
@@ -799,58 +787,7 @@ export default function AllSubtasksPage() {
                                 Edit
                               </Button>
                             </Link>
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button
-                                  variant="destructive"
-                                  className="bg-red-600 hover:bg-red-700"
-                                  disabled={isDeleting}
-                                >
-                                  {isDeleting ? (
-                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                  ) : (
-                                    <Trash2 className="w-4 h-4 mr-2" />
-                                  )}
-                                  Delete
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader className="text-gray-900">
-                                  <AlertDialogTitle>
-                                    Are you absolutely sure?
-                                  </AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    This action cannot be undone. This will
-                                    permanently delete the subtask and remove
-                                    all associated data including employee
-                                    assignments. All assigned employees will be
-                                    notified.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel
-                                    disabled={isDeleting}
-                                    className="text-gray-900"
-                                  >
-                                    Cancel
-                                  </AlertDialogCancel>
-                                  <AlertDialogAction
-                                    onClick={handleDelete}
-                                    className="bg-red-600 hover:bg-red-700"
-                                    disabled={isDeleting}
-                                  >
-                                    {isDeleting ? (
-                                      <>
-                                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                        Deleting...
-                                      </>
-                                    ) : (
-                                      "Delete Subtask"
-                                    )}
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
+                            
                             <Link
                               href={`/teamlead/subtasks/${subtask._id}`}
                             >

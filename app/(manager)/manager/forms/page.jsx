@@ -46,7 +46,8 @@ import {
     CalendarDays,
     Type,
     TextQuote,
-    GripVertical
+    GripVertical,
+    UserCircle
 } from "lucide-react";
 import axios from "axios";
 
@@ -62,6 +63,7 @@ export default function ManagerFormsPage() {
     const [searchTerm, setSearchTerm] = useState("");
 
     const [formData, setFormData] = useState({
+        clinetName: "", // Added clinetName field
         assignmentType: "single",
         assignedTo: "",
         multipleTeamLeadAssigned: [],
@@ -148,6 +150,7 @@ export default function ManagerFormsPage() {
         });
         setDynamicFormData(initialData);
         setFormData({
+            clinetName: "", // Reset clinetName when selecting new form
             assignmentType: "single",
             assignedTo: "",
             multipleTeamLeadAssigned: [],
@@ -226,6 +229,8 @@ export default function ManagerFormsPage() {
         e.preventDefault();
         setLoading(true);
 
+     
+
         // Validate assignments based on type
         if (formData.assignmentType === "single" && !formData.assignedTo) {
             toast.error("Please select a team lead");
@@ -256,6 +261,7 @@ export default function ManagerFormsPage() {
             const submitData = {
                 formId: selectedForm._id,
                 submittedBy: session.user.id,
+                clinetName: formData.clinetName.trim(), // Include clinetName in submission
                 assignmentType: formData.assignmentType,
                 assignedTo: formData.assignedTo,
                 multipleTeamLeadAssigned: formData.multipleTeamLeadAssigned,
@@ -280,6 +286,7 @@ export default function ManagerFormsPage() {
 
     const resetForm = () => {
         setFormData({
+            clinetName: "",
             assignmentType: "single",
             assignedTo: "",
             multipleTeamLeadAssigned: [],
@@ -959,6 +966,29 @@ export default function ManagerFormsPage() {
                         </CardHeader>
                         <CardContent className="pt-8">
                             <form onSubmit={handleSubmit} className="space-y-6">
+                                {/* Client Name Field (Compulsory) */}
+                                <div className="space-y-3 p-4 border border-gray-200 rounded-lg bg-white/50">
+                                    <Label htmlFor="clinetName" className="text-gray-800 font-semibold flex items-center gap-2">
+                                        <UserCircle className="w-4 h-4 text-blue-600" />
+                                        Client Name *
+                                    </Label>
+                                    <div className="relative">
+                                        <Input
+                                            id="clinetName"
+                                            type="text"
+                                            value={formData.clinetName}
+                                            onChange={(e) => setFormData({...formData, clinetName: e.target.value})}
+                                            placeholder="Enter client name"
+                                            className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900 pl-10"
+                                            required
+                                        />
+                                        <UserCircle className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                    </div>
+                                    <p className="text-sm text-gray-500">
+                                        This is a required field for all form submissions
+                                    </p>
+                                </div>
+
                                 <div className="space-y-6">
                                     <h3 className="text-lg font-semibold text-gray-900">Form Details</h3>
                                     {selectedForm.fields.map((field, index) => (

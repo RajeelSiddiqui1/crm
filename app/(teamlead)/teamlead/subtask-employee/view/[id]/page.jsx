@@ -10,6 +10,17 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
     ArrowLeft,
     Edit,
     Calendar,
@@ -19,6 +30,7 @@ import {
     Users,
     UserRound,
     Target,
+    Trash2 ,
     CheckCircle,
     XCircle,
     AlertTriangle,
@@ -45,6 +57,7 @@ export default function ViewSubtaskPage() {
     const subtaskId = params.id;
 
     const [loading, setLoading] = useState(true);
+    const [isDeleting, setIsDeleting] = useState(false);
     const [subtask, setSubtask] = useState(null);
 
     useEffect(() => {
@@ -62,7 +75,7 @@ export default function ViewSubtaskPage() {
         try {
             setLoading(true);
             const response = await axios.get(`/api/teamlead/subtasks/${subtaskId}`);
-            
+
             if (response.status === 200) {
                 setSubtask(response.data.subtask);
             }
@@ -74,6 +87,27 @@ export default function ViewSubtaskPage() {
             setLoading(false);
         }
     };
+
+    const handleDelete = async () => {
+        if (isDeleting) return;
+
+        setIsDeleting(true);
+        try {
+            const response = await axios.delete(`/api/teamlead/subtasks/${subtaskId}`);
+
+            if (response.status === 200) {
+                toast.success("Subtask deleted successfully!");
+                setTimeout(() => {
+                    router.push('/teamlead/subtasks');
+                }, 1000);
+            }
+        } catch (error) {
+            console.error("Error deleting subtask:", error);
+            toast.error(error.response?.data?.error || "Failed to delete subtask");
+            setIsDeleting(false);
+        }
+    };
+
 
     const getPriorityColor = (priority) => {
         switch (priority) {
@@ -146,7 +180,7 @@ export default function ViewSubtaskPage() {
                             </div>
                             <h2 className="text-2xl font-bold text-gray-900 mb-3">Access Restricted</h2>
                             <p className="text-gray-700 mb-6">You need to be logged in as a Team Lead to view this page.</p>
-                            <Button 
+                            <Button
                                 onClick={() => router.push('/login')}
                                 className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg"
                             >
@@ -170,7 +204,7 @@ export default function ViewSubtaskPage() {
                             </div>
                             <h2 className="text-2xl font-bold text-gray-900 mb-3">Subtask Not Found</h2>
                             <p className="text-gray-700 mb-6">The subtask you're looking for doesn't exist or has been removed.</p>
-                            <Button 
+                            <Button
                                 onClick={() => router.push('/teamlead/subtasks')}
                                 className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg"
                             >
@@ -184,7 +218,7 @@ export default function ViewSubtaskPage() {
         );
     }
 
-    const progressPercentage = subtask.totalLeadsRequired ? 
+    const progressPercentage = subtask.totalLeadsRequired ?
         Math.round(((subtask.leadsCompleted || 0) / subtask.totalLeadsRequired) * 100) : 0;
 
     const isOverdue = new Date() > new Date(subtask.endDate);
@@ -216,8 +250,60 @@ export default function ViewSubtaskPage() {
                             </p>
                         </div>
                     </div>
-                    
+
                     <div className="flex flex-wrap gap-3">
+                        <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <Button
+                                    variant="destructive"
+                                    className="bg-red-600 hover:bg-red-700"
+                                    disabled={isDeleting}
+                                >
+                                    {isDeleting ? (
+                                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                    ) : (
+                                        <Trash2 className="w-4 h-4 mr-2" />
+                                    )}
+                                    Delete
+                                </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader className="text-gray-900">
+                                    <AlertDialogTitle>
+                                        Are you absolutely sure?
+                                    </AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        This action cannot be undone. This will
+                                        permanently delete the subtask and remove
+                                        all associated data including employee
+                                        assignments. All assigned employees will be
+                                        notified.
+                                    </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel
+                                        disabled={isDeleting}
+                                        className="text-gray-900"
+                                    >
+                                        Cancel
+                                    </AlertDialogCancel>
+                                    <AlertDialogAction
+                                        onClick={handleDelete}
+                                        className="bg-red-600 hover:bg-red-700"
+                                        disabled={isDeleting}
+                                    >
+                                        {isDeleting ? (
+                                            <>
+                                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                                Deleting...
+                                            </>
+                                        ) : (
+                                            "Delete Subtask"
+                                        )}
+                                    </AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
                         <Button
                             onClick={() => router.push(`/teamlead/subtask-employee/${subtaskId}`)}
                             className="border-slate-300 text-slate-800 hover:bg-slate-50 hover:text-slate-900 hover:border-slate-400 font-medium shadow-sm"
@@ -343,8 +429,8 @@ export default function ViewSubtaskPage() {
                                                             {subtask.leadsCompleted || 0} / {subtask.totalLeadsRequired || 0}
                                                         </span>
                                                     </div>
-                                                    <Progress 
-                                                        value={progressPercentage} 
+                                                    <Progress
+                                                        value={progressPercentage}
                                                         className="h-3 bg-purple-100"
                                                     />
                                                     <div className="flex justify-between items-center mt-2">
@@ -411,9 +497,9 @@ export default function ViewSubtaskPage() {
                                         const employee = assignment.employeeId;
                                         const employeeProgress = assignment.leadsCompleted || 0;
                                         const employeeTarget = assignment.leadsAssigned || 0;
-                                        const employeePercentage = employeeTarget > 0 ? 
+                                        const employeePercentage = employeeTarget > 0 ?
                                             Math.round((employeeProgress / employeeTarget) * 100) : 0;
-                                        
+
                                         return (
                                             <div key={index} className="flex flex-col md:flex-row md:items-center justify-between p-5 border border-slate-200 rounded-xl bg-gradient-to-r from-slate-50/50 to-white hover:bg-slate-50/80 transition-all duration-200">
                                                 <div className="flex items-center gap-4 mb-4 md:mb-0">
@@ -428,9 +514,9 @@ export default function ViewSubtaskPage() {
                                                                 {employee?.firstName} {employee?.lastName}
                                                             </p>
                                                             <Badge className={`
-                                                                ${assignment.status === 'completed' ? 'bg-emerald-100 text-emerald-800 border-emerald-200' : 
-                                                                assignment.status === 'in_progress' ? 'bg-blue-100 text-blue-800 border-blue-200' : 
-                                                                'bg-amber-100 text-amber-800 border-amber-200'} 
+                                                                ${assignment.status === 'completed' ? 'bg-emerald-100 text-emerald-800 border-emerald-200' :
+                                                                    assignment.status === 'in_progress' ? 'bg-blue-100 text-blue-800 border-blue-200' :
+                                                                        'bg-amber-100 text-amber-800 border-amber-200'} 
                                                                 text-xs font-medium
                                                             `}>
                                                                 {assignment.status?.replace('_', ' ')}
@@ -444,7 +530,7 @@ export default function ViewSubtaskPage() {
                                                         </div>
                                                     </div>
                                                 </div>
-                                                
+
                                                 <div className="flex flex-col md:items-end gap-3">
                                                     <div className="flex items-center gap-4">
                                                         <div className="text-center">
@@ -460,14 +546,14 @@ export default function ViewSubtaskPage() {
                                                             <div className="text-xs text-gray-600 font-medium">Progress</div>
                                                         </div>
                                                     </div>
-                                                    
+
                                                     <div className="w-48">
                                                         <div className="flex justify-between text-xs text-gray-600 mb-1">
                                                             <span>Progress</span>
                                                             <span>{employeePercentage}%</span>
                                                         </div>
-                                                        <Progress 
-                                                            value={employeePercentage} 
+                                                        <Progress
+                                                            value={employeePercentage}
                                                             className="h-2 bg-slate-200"
                                                         />
                                                     </div>
@@ -520,7 +606,7 @@ export default function ViewSubtaskPage() {
                                         </div>
                                     </div>
                                 </div>
-                                
+
                                 <div className="flex items-center justify-between p-3 bg-gradient-to-r from-purple-50 to-purple-100/50 rounded-xl">
                                     <div className="flex items-center gap-3">
                                         <div className="p-2 bg-white rounded-lg shadow-sm">
@@ -532,7 +618,7 @@ export default function ViewSubtaskPage() {
                                         </div>
                                     </div>
                                 </div>
-                                
+
                                 <div className="flex items-center justify-between p-3 bg-gradient-to-r from-emerald-50 to-emerald-100/50 rounded-xl">
                                     <div className="flex items-center gap-3">
                                         <div className="p-2 bg-white rounded-lg shadow-sm">
@@ -544,7 +630,7 @@ export default function ViewSubtaskPage() {
                                         </div>
                                     </div>
                                 </div>
-                                
+
                                 <div className="flex items-center justify-between p-3 bg-gradient-to-r from-amber-50 to-amber-100/50 rounded-xl">
                                     <div className="flex items-center gap-3">
                                         <div className="p-2 bg-white rounded-lg shadow-sm">
@@ -575,16 +661,16 @@ export default function ViewSubtaskPage() {
                                         {format(new Date(subtask.createdAt), 'PPP')}
                                     </div>
                                 </div>
-                                
+
                                 <div className="space-y-2">
                                     <div className="text-sm text-gray-600 font-medium">Last Updated</div>
                                     <div className="text-gray-900 font-semibold">
-                                        {subtask.updatedAt ? 
-                                            formatRelative(new Date(subtask.updatedAt), new Date()) : 
+                                        {subtask.updatedAt ?
+                                            formatRelative(new Date(subtask.updatedAt), new Date()) :
                                             'Never updated'}
                                     </div>
                                 </div>
-                                
+
                                 <div className="space-y-2">
                                     <div className="text-sm text-gray-600 font-medium">Time Remaining</div>
                                     <div className={`font-semibold ${isOverdue ? 'text-rose-600' : 'text-emerald-600'}`}>
@@ -596,7 +682,7 @@ export default function ViewSubtaskPage() {
                                         ) : timeRemaining}
                                     </div>
                                 </div>
-                                
+
                                 <div className="pt-4 border-t border-slate-200">
                                     <div className="text-sm text-gray-600 font-medium mb-2">Subtask ID</div>
                                     <div className="flex items-center gap-2">
@@ -636,7 +722,7 @@ export default function ViewSubtaskPage() {
                                     <Edit className="w-4 h-4 mr-3" />
                                     Edit Subtask Details
                                 </Button>
-                                
+
                                 <Button
                                     onClick={handleCopyLink}
                                     className="w-full justify-start border-slate-300 text-slate-800 hover:bg-slate-50 hover:text-slate-900 hover:border-slate-400 font-medium py-3 px-4 rounded-lg"
@@ -644,7 +730,7 @@ export default function ViewSubtaskPage() {
                                     <Share2 className="w-4 h-4 mr-3" />
                                     Share Subtask
                                 </Button>
-                                
+
                                 <Button
                                     onClick={handleExportPDF}
                                     className="w-full justify-start border-slate-300 text-slate-800 hover:bg-slate-50 hover:text-slate-900 hover:border-slate-400 font-medium py-3 px-4 rounded-lg"
@@ -652,7 +738,7 @@ export default function ViewSubtaskPage() {
                                     <Download className="w-4 h-4 mr-3" />
                                     Export as PDF
                                 </Button>
-                                
+
                                 <Button
                                     onClick={handlePrint}
                                     className="w-full justify-start border-slate-300 text-slate-800 hover:bg-slate-50 hover:text-slate-900 hover:border-slate-400 font-medium py-3 px-4 rounded-lg"
@@ -660,7 +746,7 @@ export default function ViewSubtaskPage() {
                                     <Printer className="w-4 h-4 mr-3" />
                                     Print Details
                                 </Button>
-                                
+
                                 <Button
                                     onClick={() => router.push('/teamlead/subtasks')}
                                     className="w-full justify-start border-slate-300 text-slate-800 hover:bg-slate-50 hover:text-slate-900 hover:border-slate-400 font-medium py-3 px-4 rounded-lg mt-4"

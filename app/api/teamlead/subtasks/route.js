@@ -13,7 +13,13 @@ import TeamLead from "@/models/TeamLead";
 export async function GET(req) {
   try {
     await dbConnect();
-    const subtasks = await Subtask.find({})
+    const session = await getServerSession(authOptions);
+
+    if (!session || session.user.role !== "TeamLead") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const subtasks = await Subtask.find({teamLeadId: session.user.id})
       .populate("submissionId", "title description")
       .populate({
         path: "assignedEmployees.employeeId",
@@ -61,7 +67,7 @@ export async function POST(request) {
       submission = await FormSubmission.findById(submissionId);
     }
 
-    const teamLead = await TeamLead.findOne({ _id:teamLeadId });
+    const teamLead = await TeamLead.findOne({ _id: teamLeadId });
 
     if (!teamLead) {
       return NextResponse.json(
@@ -117,7 +123,7 @@ export async function POST(request) {
       .populate("submissionId", "title description")
       .populate("assignedEmployees.employeeId", "firstName lastName email");
 
-      console.log(populatedSubtask)
+    console.log(populatedSubtask)
 
     // Notifications + Mails (parallel)
     for (const emp of employees) {

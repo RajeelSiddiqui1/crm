@@ -425,12 +425,10 @@ export default function TeamLeadSubmissionsPage() {
                               </Avatar>
                               <div className="min-w-0 flex-1">
                                 <div className="font-semibold text-gray-900 text-sm group-hover:text-gray-700 transition-colors truncate">
-                                  {submission.formId?.title || "Untitled Task"}
+                                  {submission.clinetName || "No Client"}
                                 </div>
-                                <div className="text-xs text-gray-600 truncate">
-                                  {submission.formId?.description ||
-                                    "No description"}
-                                </div>
+                                
+                               
                               </div>
                             </div>
                           </TableCell>

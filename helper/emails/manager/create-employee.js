@@ -1,7 +1,7 @@
 import { sendMail } from "@/lib/mail";
 
 export const sendEmployeeWelcomeEmail = async (email, firstName,lastName, userId, password, departmentName) => {
-  const subject = "🎉 Welcome to MH Circle Solutions - Your Team Lead Account";
+  const subject = "🎉 Welcome to MH Circle Solutions - Your Employee Account";
 
   const html = `
     <div style="font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5;">

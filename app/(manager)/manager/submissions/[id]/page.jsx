@@ -70,6 +70,7 @@ import {
   Info,
   CheckCheck,
   AlertTriangle,
+  UserCircle
 } from "lucide-react";
 import axios from "axios";
 
@@ -91,6 +92,7 @@ export default function ManagerEditSubmissionPage() {
   const [selectedTeamLead, setSelectedTeamLead] = useState("");
   const [allTeamLeadsAssigned, setAllTeamLeadsAssigned] = useState(false);
   const [previouslyAssignedTeamLeads, setPreviouslyAssignedTeamLeads] = useState([]);
+  const [clinetName, setClinetName] = useState(""); // Added clinetName state
 
   useEffect(() => {
     if (status === "loading") return;
@@ -114,6 +116,7 @@ export default function ManagerEditSubmissionPage() {
         const submissionData = response.data;
         setSubmission(submissionData);
         setSelectedTeamLead(submissionData.assignedTo?._id || "");
+        setClinetName(submissionData.clinetName || ""); // Set clinetName from submission
 
         // Get previously assigned team leads (from multipleTeamLeadAssigned)
         if (submissionData.multipleTeamLeadAssigned) {
@@ -197,6 +200,10 @@ export default function ManagerEditSubmissionPage() {
     }
   };
 
+  const handleClinetNameChange = (value) => {
+    setClinetName(value);
+  };
+
   const handleFieldChange = (fieldName, value) => {
     setSubmission((prev) => ({
       ...prev,
@@ -247,6 +254,7 @@ export default function ManagerEditSubmissionPage() {
         `/api/manager/submissions/${submissionId}`,
         {
           assignedTeamLeadId: selectedTeamLead,
+          clinetName: clinetName, // Include clinetName in update
           formData: submission.formData,
           managerComments: submission.managerComments,
         }
@@ -366,10 +374,18 @@ export default function ManagerEditSubmissionPage() {
     e.preventDefault();
     setLoading(true);
 
+    // Validate clinetName
+    if (!clinetName || clinetName.trim() === "") {
+      toast.error("Please enter client name");
+      setLoading(false);
+      return;
+    }
+
     try {
       const response = await axios.put(
         `/api/manager/submissions/${submissionId}`,
         {
+          clinetName: clinetName.trim(), // Include clinetName in submission
           formData: submission.formData,
           managerComments: submission.managerComments,
         }
@@ -512,6 +528,52 @@ export default function ManagerEditSubmissionPage() {
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
           {/* Left Side - Admin Task & Submission Info */}
           <div className="space-y-6">
+            {/* Client Name Card */}
+            <Card className="border-0 shadow-2xl bg-white rounded-2xl overflow-hidden border border-blue-100">
+              <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50/50 border-b border-blue-100 p-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-gradient-to-r from-purple-600 to-pink-700 rounded-xl flex items-center justify-center">
+                      <UserCircle className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-gray-900 text-xl font-bold">
+                        Client Information
+                      </CardTitle>
+                      <CardDescription className="text-gray-700 font-medium">
+                        Update client details
+                      </CardDescription>
+                    </div>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="p-6">
+                <div className="space-y-4">
+                  <div className="space-y-3">
+                    <Label htmlFor="clinetName" className="text-gray-800 font-semibold flex items-center gap-2">
+                      <UserCircle className="w-4 h-4 text-purple-600" />
+                      Client Name *
+                    </Label>
+                    <div className="relative">
+                      <Input
+                        id="clinetName"
+                        type="text"
+                        value={clinetName}
+                        onChange={(e) => handleClinetNameChange(e.target.value)}
+                        placeholder="Enter client name"
+                        className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900 pl-10"
+                        required
+                      />
+                      <UserCircle className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    </div>
+                    <p className="text-sm text-gray-500">
+                      This is a required field for all form submissions
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Team Lead Assignment Card */}
             <Card className="border-0 shadow-2xl bg-white rounded-2xl overflow-hidden border border-blue-100">
               <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50/50 border-b border-blue-100 p-6">
@@ -739,7 +801,6 @@ export default function ManagerEditSubmissionPage() {
               </CardContent>
             </Card>
 
-            {/* Rest of the code remains the same... */}
             {/* Admin Task Reference */}
             {adminTask && (
               <Card className="border-0 shadow-2xl bg-white rounded-2xl overflow-hidden border border-blue-100">

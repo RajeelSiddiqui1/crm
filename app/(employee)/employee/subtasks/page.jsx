@@ -217,6 +217,12 @@ export default function EmployeeSubtasksPage() {
         }
     };
 
+    // Safe status formatter
+    const formatStatus = (status) => {
+        if (!status) return 'Unknown';
+        return status.replace('_', ' ');
+    };
+
     const formatDate = (dateString) => {
         if (!dateString) return 'N/A';
         return new Date(dateString).toLocaleDateString('en-US', {
@@ -262,7 +268,7 @@ export default function EmployeeSubtasksPage() {
                     </div>
                     <div className="text-center">
                         <h3 className="text-xl font-bold text-gray-900">Loading Dashboard</h3>
-                        <p className="text-gray-700 mt-2">Preparing your task management workspace...</p>
+                        <p className="text-gray-800 mt-2">Preparing your task management workspace...</p>
                     </div>
                 </div>
             </div>
@@ -337,11 +343,11 @@ export default function EmployeeSubtasksPage() {
                                 <div className="flex flex-wrap gap-4 mt-6">
                                     <Badge className={`${getStatusVariant(selectedSubtask.status)} px-4 py-2 font-semibold text-sm`}>
                                         {getStatusIcon(selectedSubtask.status)}
-                                        {selectedSubtask.status.replace('_', ' ')}
+                                        {formatStatus(selectedSubtask.status)}
                                     </Badge>
                                     <Badge className={`${getPriorityVariant(selectedSubtask.priority)} px-4 py-2 font-semibold text-sm`}>
                                         <Target className="w-3.5 h-3.5 mr-1.5" />
-                                        {selectedSubtask.priority} Priority
+                                        {selectedSubtask.priority || 'Medium'} Priority
                                     </Badge>
                                     <Badge className="bg-white/20 backdrop-blur-sm text-white px-4 py-2 font-semibold text-sm border border-white/30">
                                         <Calendar className="w-3.5 h-3.5 mr-1.5" />
@@ -417,7 +423,7 @@ export default function EmployeeSubtasksPage() {
                                             
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                                 <div className="space-y-2">
-                                                    <div className="flex items-center gap-2 text-gray-700">
+                                                    <div className="flex items-center gap-2 text-gray-800">
                                                         <Calendar className="w-4 h-4" />
                                                         <span className="font-medium">Start Date</span>
                                                     </div>
@@ -426,7 +432,7 @@ export default function EmployeeSubtasksPage() {
                                                     </div>
                                                 </div>
                                                 <div className="space-y-2">
-                                                    <div className="flex items-center gap-2 text-gray-700">
+                                                    <div className="flex items-center gap-2 text-gray-800">
                                                         <Calendar className="w-4 h-4" />
                                                         <span className="font-medium">End Date</span>
                                                     </div>
@@ -437,12 +443,12 @@ export default function EmployeeSubtasksPage() {
                                             </div>
                                             
                                             <div className="space-y-2">
-                                                <div className="flex items-center gap-2 text-gray-700">
+                                                <div className="flex items-center gap-2 text-gray-800">
                                                     <Clock className="w-4 h-4" />
                                                     <span className="font-medium">Working Hours</span>
                                                 </div>
                                                 <div className="text-lg font-semibold text-gray-900 bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg">
-                                                    {selectedSubtask.startTime} - {selectedSubtask.endTime}
+                                                    {selectedSubtask.startTime || '09:00'} - {selectedSubtask.endTime || '17:00'}
                                                 </div>
                                             </div>
                                         </CardContent>
@@ -452,41 +458,7 @@ export default function EmployeeSubtasksPage() {
                                 {/* Right Column */}
                                 <div className="space-y-8">
                                     {/* Team Lead Info */}
-                                    <Card className="border border-gray-200/50 shadow-lg rounded-xl overflow-hidden">
-                                        <CardHeader className="bg-gradient-to-r from-gray-50 to-white border-b border-gray-100">
-                                            <div className="flex items-center gap-3">
-                                                <div className="p-2 bg-gradient-to-r from-purple-500 to-pink-600 rounded-lg">
-                                                    <User className="w-5 h-5 text-white" />
-                                                </div>
-                                                <CardTitle className="text-xl font-bold text-gray-900">
-                                                    Team Lead
-                                                </CardTitle>
-                                            </div>
-                                        </CardHeader>
-                                        <CardContent className="p-6">
-                                            <div className="flex items-center gap-4 p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl border border-purple-100">
-                                                <Avatar className="w-16 h-16 border-4 border-white shadow-lg">
-                                                    <AvatarFallback className="bg-gradient-to-r from-purple-600 to-pink-600 text-white text-xl font-bold">
-                                                        {selectedSubtask.teamLeadId?.firstName?.[0]}{selectedSubtask.teamLeadId?.lastName?.[0]}
-                                                    </AvatarFallback>
-                                                </Avatar>
-                                                <div className="flex-1">
-                                                    <h4 className="font-bold text-gray-900 text-lg">
-                                                        {selectedSubtask.teamLeadId?.firstName} {selectedSubtask.teamLeadId?.lastName}
-                                                    </h4>
-                                                    <p className="text-gray-800 text-sm mt-1">{selectedSubtask.teamLeadId?.email}</p>
-                                                    <Button 
-                                                        size="sm" 
-                                                        variant="ghost" 
-                                                        className="mt-3 text-purple-700 hover:text-purple-800 hover:bg-purple-50"
-                                                    >
-                                                        <MessageSquare className="w-4 h-4 mr-2" />
-                                                        Send Message
-                                                    </Button>
-                                                </div>
-                                            </div>
-                                        </CardContent>
-                                    </Card>
+                                    
 
                                     {/* Team Members */}
                                     <Card className="border border-gray-200/50 shadow-lg rounded-xl overflow-hidden">
@@ -507,37 +479,40 @@ export default function EmployeeSubtasksPage() {
                                         </CardHeader>
                                         <CardContent className="p-6">
                                             <div className="space-y-4">
-                                                {selectedSubtask.assignedEmployees?.slice(0, 4).map((emp, index) => (
-                                                    <div key={emp.employeeId._id} className="flex items-center justify-between group hover:bg-gray-50 p-2 rounded-lg transition-colors">
-                                                        <div className="flex items-center gap-3">
-                                                            <div className="relative">
-                                                                <Avatar className="w-10 h-10 border-2 border-white shadow-sm">
-                                                                    <AvatarFallback className={`text-sm font-medium ${
-                                                                        index % 3 === 0 ? 'bg-gradient-to-r from-blue-500 to-cyan-500' :
-                                                                        index % 3 === 1 ? 'bg-gradient-to-r from-emerald-500 to-teal-500' :
-                                                                        'bg-gradient-to-r from-purple-500 to-pink-500'
-                                                                    } text-white`}>
-                                                                        {emp.employeeId.firstName?.[0]}{emp.employeeId.lastName?.[0]}
-                                                                    </AvatarFallback>
-                                                                </Avatar>
-                                                                {emp.status === 'completed' && (
-                                                                    <div className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-white flex items-center justify-center">
-                                                                        <CheckCircle className="w-2.5 h-2.5 text-white" />
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                            <div>
-                                                                <div className="font-medium text-gray-900 text-sm">
-                                                                    {emp.employeeId.firstName} {emp.employeeId.lastName}
+                                                {selectedSubtask.assignedEmployees?.slice(0, 4).map((emp, index) => {
+                                                    const employee = emp.employeeId || emp;
+                                                    return (
+                                                        <div key={employee._id} className="flex items-center justify-between group hover:bg-gray-50 p-2 rounded-lg transition-colors">
+                                                            <div className="flex items-center gap-3">
+                                                                <div className="relative">
+                                                                    <Avatar className="w-10 h-10 border-2 border-white shadow-sm">
+                                                                        <AvatarFallback className={`text-sm font-medium ${
+                                                                            index % 3 === 0 ? 'bg-gradient-to-r from-blue-500 to-cyan-500' :
+                                                                            index % 3 === 1 ? 'bg-gradient-to-r from-emerald-500 to-teal-500' :
+                                                                            'bg-gradient-to-r from-purple-500 to-pink-500'
+                                                                        } text-white`}>
+                                                                            {employee.firstName?.[0]}{employee.lastName?.[0]}
+                                                                        </AvatarFallback>
+                                                                    </Avatar>
+                                                                    {emp.status === 'completed' && (
+                                                                        <div className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-white flex items-center justify-center">
+                                                                            <CheckCircle className="w-2.5 h-2.5 text-white" />
+                                                                        </div>
+                                                                    )}
                                                                 </div>
-                                                                <div className="text-xs text-gray-800">{emp.email}</div>
+                                                                <div>
+                                                                    <div className="font-medium text-gray-900 text-sm">
+                                                                        {employee.firstName} {employee.lastName}
+                                                                    </div>
+                                                                   
+                                                                </div>
                                                             </div>
+                                                            <Badge className={`text-xs px-2 py-1 ${getStatusVariant(emp.status)}`}>
+                                                                {formatStatus(emp.status)}
+                                                            </Badge>
                                                         </div>
-                                                        <Badge className={`text-xs px-2 py-1 ${getStatusVariant(emp.status)}`}>
-                                                            {emp.status.replace('_', ' ')}
-                                                        </Badge>
-                                                    </div>
-                                                ))}
+                                                    );
+                                                })}
                                                 
                                                 {selectedSubtask.assignedEmployees?.length > 4 && (
                                                     <div className="text-center pt-4 border-t border-gray-100">
@@ -575,20 +550,7 @@ export default function EmployeeSubtasksPage() {
                                                     <FileText className="w-4 h-4 mr-2" />
                                                     Submit Task Form
                                                 </Button>
-                                                <Button
-                                                    variant="outline"
-                                                    className="w-full border-blue-200 text-blue-800 hover:bg-blue-50 hover:border-blue-300"
-                                                >
-                                                    <Upload className="w-4 h-4 mr-2" />
-                                                    Upload Attachment
-                                                </Button>
-                                                <Button
-                                                    variant="outline"
-                                                    className="w-full border-gray-200 text-gray-800 hover:bg-gray-50"
-                                                >
-                                                    <Download className="w-4 h-4 mr-2" />
-                                                    Download Resources
-                                                </Button>
+                                               
                                             </div>
                                         </CardContent>
                                     </Card>
@@ -613,7 +575,7 @@ export default function EmployeeSubtasksPage() {
                                     <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent">
                                         My Task Dashboard
                                     </h1>
-                                    <p className="text-gray-800 mt-2 text-lg">
+                                    <p className="text-gray-900 mt-2 text-lg">
                                         Welcome back, <span className="font-semibold text-gray-900">{session?.user?.name}</span>! Track and manage your assigned tasks
                                     </p>
                                 </div>
@@ -647,7 +609,7 @@ export default function EmployeeSubtasksPage() {
                                 <div className="flex items-center justify-between">
                                     <div>
                                         <div className="text-3xl font-bold text-gray-900">{subtasks.length}</div>
-                                        <div className="text-sm text-gray-800 mt-1">Total Tasks</div>
+                                        <div className="text-sm text-gray-900 mt-1">Total Tasks</div>
                                     </div>
                                     <div className="p-3 bg-blue-100/50 rounded-xl">
                                         <FileText className="w-6 h-6 text-blue-600" />
@@ -660,8 +622,8 @@ export default function EmployeeSubtasksPage() {
                             <CardContent className="p-6">
                                 <div className="flex items-center justify-between">
                                     <div>
-                                        <div className="text-3xl font-bold text-amber-800">{stats.pending}</div>
-                                        <div className="text-sm text-gray-800 mt-1">Pending</div>
+                                        <div className="text-3xl font-bold text-gray-900">{stats.pending}</div>
+                                        <div className="text-sm text-gray-900 mt-1">Pending</div>
                                     </div>
                                     <div className="p-3 bg-amber-100/50 rounded-xl">
                                         <AlertCircle className="w-6 h-6 text-amber-600" />
@@ -674,8 +636,8 @@ export default function EmployeeSubtasksPage() {
                             <CardContent className="p-6">
                                 <div className="flex items-center justify-between">
                                     <div>
-                                        <div className="text-3xl font-bold text-cyan-800">{stats.inProgress}</div>
-                                        <div className="text-sm text-gray-800 mt-1">In Progress</div>
+                                        <div className="text-3xl font-bold text-gray-900">{stats.inProgress}</div>
+                                        <div className="text-sm text-gray-900 mt-1">In Progress</div>
                                     </div>
                                     <div className="p-3 bg-cyan-100/50 rounded-xl">
                                         <Clock className="w-6 h-6 text-cyan-600" />
@@ -688,8 +650,8 @@ export default function EmployeeSubtasksPage() {
                             <CardContent className="p-6">
                                 <div className="flex items-center justify-between">
                                     <div>
-                                        <div className="text-3xl font-bold text-emerald-800">{stats.completed}</div>
-                                        <div className="text-sm text-gray-800 mt-1">Completed</div>
+                                        <div className="text-3xl font-bold text-gray-900">{stats.completed}</div>
+                                        <div className="text-sm text-gray-900 mt-1">Completed</div>
                                     </div>
                                     <div className="p-3 bg-emerald-100/50 rounded-xl">
                                         <CheckCircle className="w-6 h-6 text-emerald-600" />
@@ -702,8 +664,8 @@ export default function EmployeeSubtasksPage() {
                             <CardContent className="p-6">
                                 <div className="flex items-center justify-between">
                                     <div>
-                                        <div className="text-3xl font-bold text-rose-800">{stats.highPriority}</div>
-                                        <div className="text-sm text-gray-800 mt-1">High Priority</div>
+                                        <div className="text-3xl font-bold text-gray-900">{stats.highPriority}</div>
+                                        <div className="text-sm text-gray-900 mt-1">High Priority</div>
                                     </div>
                                     <div className="p-3 bg-rose-100/50 rounded-xl">
                                         <Award className="w-6 h-6 text-rose-600" />
@@ -716,8 +678,8 @@ export default function EmployeeSubtasksPage() {
                             <CardContent className="p-6">
                                 <div className="flex items-center justify-between">
                                     <div>
-                                        <div className="text-3xl font-bold text-violet-800">{stats.efficiency}%</div>
-                                        <div className="text-sm text-gray-800 mt-1">Efficiency</div>
+                                        <div className="text-3xl font-bold text-gray-900">{stats.efficiency}%</div>
+                                        <div className="text-sm text-gray-900 mt-1">Efficiency</div>
                                     </div>
                                     <div className="p-3 bg-violet-100/50 rounded-xl">
                                         <TrendingUp className="w-6 h-6 text-violet-600" />
@@ -736,7 +698,7 @@ export default function EmployeeSubtasksPage() {
                                 <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-500" />
                                 <Input
                                     placeholder="Search tasks by title or description..."
-                                    className="pl-12 pr-4 py-6 text-base border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 rounded-xl shadow-sm bg-white text-gray-900 placeholder-gray-500"
+                                    className="pl-12 pr-4 py-6 text-base border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 rounded-xl shadow-sm bg-white text-gray-900 placeholder-gray-600"
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                 />
@@ -797,23 +759,23 @@ export default function EmployeeSubtasksPage() {
                                 <CardTitle className="text-2xl font-bold text-gray-900">
                                     My Tasks
                                 </CardTitle>
-                                <CardDescription className="text-gray-800">
+                                <CardDescription className="text-gray-900">
                                     {filteredSubtasks.length} task{filteredSubtasks.length !== 1 ? 's' : ''} found • {stats.overdue} overdue
                                 </CardDescription>
                             </div>
                             
                             <Tabs defaultValue="all" className="w-full lg:w-auto" onValueChange={setActiveTab}>
                                 <TabsList className="grid w-full lg:w-auto grid-cols-4 bg-gray-100/50 p-1 rounded-xl">
-                                    <TabsTrigger value="all" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm text-gray-700 data-[state=active]:text-gray-900">
+                                    <TabsTrigger value="all" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm text-gray-800 data-[state=active]:text-gray-900">
                                         All
                                     </TabsTrigger>
-                                    <TabsTrigger value="active" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm text-gray-700 data-[state=active]:text-gray-900">
+                                    <TabsTrigger value="active" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm text-gray-800 data-[state=active]:text-gray-900">
                                         Active
                                     </TabsTrigger>
-                                    <TabsTrigger value="pending" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm text-gray-700 data-[state=active]:text-gray-900">
+                                    <TabsTrigger value="pending" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm text-gray-800 data-[state=active]:text-gray-900">
                                         Pending
                                     </TabsTrigger>
-                                    <TabsTrigger value="completed" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm text-gray-700 data-[state=active]:text-gray-900">
+                                    <TabsTrigger value="completed" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm text-gray-800 data-[state=active]:text-gray-900">
                                         Completed
                                     </TabsTrigger>
                                 </TabsList>
@@ -829,17 +791,17 @@ export default function EmployeeSubtasksPage() {
                                     <div className="absolute top-0 left-0 w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
                                 </div>
                                 <h3 className="text-xl font-semibold text-gray-900 mb-2">Loading Tasks</h3>
-                                <p className="text-gray-700">Fetching your assigned tasks...</p>
+                                <p className="text-gray-900">Fetching your assigned tasks...</p>
                             </div>
                         ) : filteredSubtasks.length === 0 ? (
                             <div className="text-center py-20">
                                 <div className="w-24 h-24 bg-gradient-to-r from-gray-100 to-gray-200 rounded-full flex items-center justify-center mx-auto mb-6">
-                                    <FileText className="w-12 h-12 text-gray-500" />
+                                    <FileText className="w-12 h-12 text-gray-600" />
                                 </div>
                                 <h3 className="text-2xl font-bold text-gray-900 mb-3">
                                     {subtasks.length === 0 ? "No Tasks Assigned Yet" : "No Tasks Found"}
                                 </h3>
-                                <p className="text-gray-800 max-w-md mx-auto mb-8">
+                                <p className="text-gray-900 max-w-md mx-auto mb-8">
                                     {subtasks.length === 0
                                         ? "You don't have any assigned tasks. Tasks will appear here once assigned by your team lead."
                                         : "No tasks match your search criteria. Try adjusting your filters."
@@ -904,10 +866,10 @@ export default function EmployeeSubtasksPage() {
                                                                         </Badge>
                                                                     )}
                                                                 </div>
-                                                                <p className="text-gray-800 text-sm line-clamp-2 mb-2">
+                                                                <p className="text-gray-900 text-sm line-clamp-2 mb-2">
                                                                     {subtask.description}
                                                                 </p>
-                                                                <div className="flex items-center gap-4 text-xs text-gray-700">
+                                                                <div className="flex items-center gap-4 text-xs text-gray-900">
                                                                     <div className="flex items-center gap-1">
                                                                         <Users className="w-3.5 h-3.5" />
                                                                         <span>{subtask.assignedEmployees?.length || 0} members</span>
@@ -915,7 +877,7 @@ export default function EmployeeSubtasksPage() {
                                                                     <div className="flex items-center gap-1">
                                                                         <User className="w-3.5 h-3.5" />
                                                                         <span className="truncate max-w-[120px] text-gray-900">
-                                                                            {subtask.teamLeadId?.firstName} {subtask.teamLeadId?.lastName}
+                                                                            {subtask.teamLeadId?.firstName || 'Unknown'} {subtask.teamLeadId?.lastName || ''}
                                                                         </span>
                                                                     </div>
                                                                 </div>
@@ -926,13 +888,13 @@ export default function EmployeeSubtasksPage() {
                                                     <TableCell className="py-5">
                                                         <Badge className={`${getStatusVariant(subtask.status)} flex items-center gap-1.5 px-3 py-1.5 font-semibold text-sm rounded-full`}>
                                                             {getStatusIcon(subtask.status)}
-                                                            {subtask.status.replace('_', ' ')}
+                                                            {formatStatus(subtask.status)}
                                                         </Badge>
                                                     </TableCell>
                                                     
                                                     <TableCell className="py-5">
                                                         <Badge className={`${getPriorityVariant(subtask.priority)} px-3 py-1.5 font-semibold text-sm rounded-full`}>
-                                                            {subtask.priority}
+                                                            {subtask.priority || 'Medium'}
                                                         </Badge>
                                                     </TableCell>
                                                     
@@ -991,16 +953,16 @@ export default function EmployeeSubtasksPage() {
                         {!fetching && filteredSubtasks.length > 0 && (
                             <div className="border-t border-gray-100 p-4 bg-gradient-to-r from-gray-50 to-white/50">
                                 <div className="flex items-center justify-between text-sm">
-                                    <div className="text-gray-800">
+                                    <div className="text-gray-900">
                                         Showing <span className="font-semibold text-gray-900">{filteredSubtasks.length}</span> of{' '}
                                         <span className="font-semibold text-gray-900">{subtasks.length}</span> tasks
                                     </div>
                                     <div className="flex items-center gap-2">
-                                        <Button variant="ghost" size="sm" className="text-gray-800 hover:text-gray-900">
+                                        <Button variant="ghost" size="sm" className="text-gray-900 hover:text-gray-900">
                                             <ChevronRight className="w-4 h-4 mr-1 rotate-180" />
                                             Previous
                                         </Button>
-                                        <Button variant="ghost" size="sm" className="text-gray-800 hover:text-gray-900">
+                                        <Button variant="ghost" size="sm" className="text-gray-900 hover:text-gray-900">
                                             Next
                                             <ChevronRight className="w-4 h-4 ml-1" />
                                         </Button>
@@ -1020,7 +982,7 @@ export default function EmployeeSubtasksPage() {
                                     <Zap className="w-5 h-5 text-blue-600" />
                                 </div>
                                 <div>
-                                    <div className="text-sm text-gray-800">Task Efficiency</div>
+                                    <div className="text-sm text-gray-900">Task Efficiency</div>
                                     <div className="text-2xl font-bold text-gray-900">{stats.efficiency}%</div>
                                 </div>
                             </div>
@@ -1034,7 +996,7 @@ export default function EmployeeSubtasksPage() {
                                     <CheckCircle className="w-5 h-5 text-emerald-600" />
                                 </div>
                                 <div>
-                                    <div className="text-sm text-gray-800">Completion Rate</div>
+                                    <div className="text-sm text-gray-900">Completion Rate</div>
                                     <div className="text-2xl font-bold text-gray-900">
                                         {subtasks.length > 0 ? Math.round((stats.completed / subtasks.length) * 100) : 0}%
                                     </div>
@@ -1050,7 +1012,7 @@ export default function EmployeeSubtasksPage() {
                                     <Clock className="w-5 h-5 text-amber-600" />
                                 </div>
                                 <div>
-                                    <div className="text-sm text-gray-800">Avg. Time to Complete</div>
+                                    <div className="text-sm text-gray-900">Avg. Time to Complete</div>
                                     <div className="text-2xl font-bold text-gray-900">3.2 days</div>
                                 </div>
                             </div>

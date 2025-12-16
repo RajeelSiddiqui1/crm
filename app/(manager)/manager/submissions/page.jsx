@@ -1362,12 +1362,9 @@ export default function ManagerSubmissionsPage() {
                             </Avatar>
                             <div className="flex-1 min-w-0">
                               <div className="font-bold text-gray-900 text-lg group-hover:text-blue-700 transition-colors duration-200 truncate">
-                                {submission.formId?.title || "Untitled Form"}
+                                {submission.clinetName || "No Clinet"}
                               </div>
-                              <div className="text-sm text-gray-600 line-clamp-2">
-                                {submission.formId?.description ||
-                                  "No description provided"}
-                              </div>
+                             
                               <div className="flex items-center gap-2 mt-2">
                                 <Calendar className="w-3 h-3 text-gray-400" />
                                 <span className="text-xs text-gray-500">

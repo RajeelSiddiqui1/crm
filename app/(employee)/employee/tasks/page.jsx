@@ -521,7 +521,7 @@ export default function EmployeeTasksPage() {
                               </Avatar>
                               <div className="min-w-0 flex-1">
                                 <div className="font-semibold text-gray-900 text-sm group-hover:text-green-700 transition-colors duration-200 truncate">
-                                  {task.formId?.title || "Untitled Task"}
+                                  {task.ClinetName || "No Client"}
                                 </div>
                                 <div className="text-xs text-gray-600 truncate">
                                   Assigned by: {task.assignedTo}

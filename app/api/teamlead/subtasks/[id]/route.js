@@ -7,6 +7,7 @@ import dbConnect from "@/lib/db";
 import { sendNotification } from "@/lib/sendNotification";
 import { sendMail } from "@/lib/mail";
 import { updatedSubtaskMailTemplate, deletedSubtaskMailTemplate } from "@/helper/emails/teamlead/subtaskMailTemplates";
+import TeamLead from "@/models/TeamLead";
 
 export async function GET(req, { params }) {
     try {
@@ -82,7 +83,7 @@ export async function PUT(request, { params }) {
         }
 
         // Check if user is the creator
-        const teamLead = await Employee.findOne({ email: session.user.email });
+        const teamLead = await TeamLead.findOne({ _id: session.user.id });
         if (existingSubtask.teamLeadId.toString() !== teamLead._id.toString()) {
             return NextResponse.json({ error: "You can only edit your own subtasks" }, { status: 403 });
         }
@@ -287,7 +288,7 @@ export async function DELETE(request, { params }) {
         }
 
         // Check if user is the creator
-        const teamLead = await Employee.findOne({ email: session.user.email });
+        const teamLead = await TeamLead.findOne({ _id: session.user.id });
         if (existingSubtask.teamLeadId.toString() !== teamLead._id.toString()) {
             return NextResponse.json({ error: "You can only delete your own subtasks" }, { status: 403 });
         }

@@ -3,6 +3,10 @@ import mongoose from "mongoose";
 
 const formSubmissionSchema = new mongoose.Schema(
   {
+    clinetName:{
+      type:String,
+      required:false
+    },
     formId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Form",
@@ -14,6 +18,14 @@ const formSubmissionSchema = new mongoose.Schema(
       required: true,
     },
 
+    
+    multipleManagerAssigned: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Manager",
+        default: [],
+      },
+    ],
     multipleTeamLeadAssigned: [
       {
         type: mongoose.Schema.Types.ObjectId,

@@ -49,7 +49,8 @@ import {
     TextQuote,
     List,
     MapPin,
-    CreditCard
+    CreditCard,
+    UserCircle // Added UserCircle icon
 } from "lucide-react";
 import axios from "axios";
 
@@ -70,6 +71,7 @@ export default function ManagerCreateFormPage() {
     const [searchQuery, setSearchQuery] = useState("");
 
     const [formData, setFormData] = useState({
+        clinetName: "", // Added clinetName field
         assignmentType: "single",
         assignedTo: "",
         multipleTeamLeadAssigned: [],
@@ -183,6 +185,7 @@ export default function ManagerCreateFormPage() {
         });
         setDynamicFormData(initialData);
         setFormData({
+            clinetName: "", // Reset clinetName when selecting new form
             assignmentType: "single",
             assignedTo: "",
             multipleTeamLeadAssigned: [],
@@ -190,6 +193,10 @@ export default function ManagerCreateFormPage() {
         });
         setShowPasswords({});
         setDragOver({});
+    };
+
+    const handleClinetNameChange = (value) => {
+        setFormData(prev => ({ ...prev, clinetName: value }));
     };
 
     const handleDynamicFieldChange = (fieldName, value) => {
@@ -314,6 +321,13 @@ export default function ManagerCreateFormPage() {
         e.preventDefault();
         setLoading(true);
 
+        // Validate clinetName
+        if (!formData.clinetName || formData.clinetName.trim() === "") {
+            toast.error("Please enter client name");
+            setLoading(false);
+            return;
+        }
+
         if (formData.assignmentType === "single" && !formData.assignedTo) {
             toast.error("Please select a team lead");
             setLoading(false);
@@ -342,6 +356,7 @@ export default function ManagerCreateFormPage() {
                 formId: selectedForm._id,
                 adminTaskId: taskId,
                 submittedBy: session.user.id,
+                clinetName: formData.clinetName.trim(), // Include clinetName in submission
                 assignmentType: formData.assignmentType,
                 assignedTo: formData.assignedTo,
                 multipleTeamLeadAssigned: formData.multipleTeamLeadAssigned,
@@ -1249,6 +1264,33 @@ export default function ManagerCreateFormPage() {
                                     </CardHeader>
                                     <CardContent className="p-6">
                                         <form onSubmit={handleSubmit} className="space-y-6">
+                                            {/* Client Name Field */}
+                                            <Card className="border border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50/50 shadow-sm">
+                                                <CardContent className="p-4">
+                                                    <div className="space-y-3">
+                                                        <Label htmlFor="clinetName" className="text-gray-900 font-semibold text-base flex items-center gap-2">
+                                                            <UserCircle className="w-4 h-4 text-blue-600" />
+                                                            Client Name *
+                                                        </Label>
+                                                        <div className="relative group">
+                                                            <UserCircle className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500 group-focus-within:text-blue-500 transition-colors" />
+                                                            <Input
+                                                                id="clinetName"
+                                                                type="text"
+                                                                value={formData.clinetName}
+                                                                onChange={(e) => handleClinetNameChange(e.target.value)}
+                                                                placeholder="Enter client name"
+                                                                className="pl-10 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 bg-white border-gray-300"
+                                                                required
+                                                            />
+                                                        </div>
+                                                        <p className="text-xs text-gray-700 italic">
+                                                            This is a required field for all form submissions
+                                                        </p>
+                                                    </div>
+                                                </CardContent>
+                                            </Card>
+
                                             {/* Form Header */}
                                             <div className="p-5 bg-gradient-to-r from-white to-blue-50 rounded-xl border border-blue-100 shadow-sm">
                                                 <div className="flex items-center gap-4">

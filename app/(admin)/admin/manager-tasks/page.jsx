@@ -843,7 +843,7 @@ export default function AdminManagerTasksPage() {
                                 </div>
                                 <div>
                                   <div className="font-semibold text-gray-900">
-                                    {submission.formId?.title || "Unknown Form"}
+                                    {submission.clientName || "Unknown Form"}
                                   </div>
                                   <div className="flex items-center gap-1 text-sm text-gray-600">
                                     <User className="w-3 h-3 text-gray-500" />
@@ -1040,7 +1040,7 @@ export default function AdminManagerTasksPage() {
               <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl border border-blue-100">
                 <div className="flex-1">
                   <h3 className="text-xl font-bold text-gray-900">
-                    {selectedSubmission.formId?.title || "Unknown Form"}
+                    {selectedSubmission.clinetName || "No Client"}
                   </h3>
                   <p className="text-gray-700 mt-1">
                     Submitted by {selectedSubmission.submittedBy?.firstName} {selectedSubmission.submittedBy?.lastName}

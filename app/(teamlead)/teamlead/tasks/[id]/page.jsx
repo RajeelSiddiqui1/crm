@@ -632,11 +632,9 @@ export default function TeamLeadTaskDetailPage() {
                       </Badge>
                     </div>
                     <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 mb-2 break-words">
-                      {task.formId?.title || "Untitled Task"}
+                      Clinet Name: <span className="text-blue-600">{task.clinetName || "No Clinet"}</span>
                     </h1>
-                    <p className="text-gray-600 mb-4 text-sm md:text-base">
-                      {task.formId?.description || "No description available"}
-                    </p>
+                    
                     <div className="flex flex-wrap items-center gap-3 text-xs md:text-sm">
                       <div className="flex items-center gap-1 md:gap-2 text-gray-500">
                         <Calendar className="w-3 h-3 md:w-4 md:h-4" />
