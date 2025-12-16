@@ -200,11 +200,18 @@ export default function ManagerFormsPage() {
         document.getElementById(`file-input-${fieldName}`)?.click();
     };
 
-    const handleFileChange = (fieldName, files) => {
-        handleDynamicFieldChange(fieldName, files);
-        toast.success(`${files.length} file(s) selected`);
-    };
-
+   const handleFileChange = (fieldName, files) => {
+  console.log("File selected for field:", fieldName);
+  console.log("Files:", Array.from(files).map(f => ({
+    name: f.name,
+    size: f.size,
+    type: f.type
+  })));
+  
+  // Store the actual File objects
+  handleDynamicFieldChange(fieldName, files);
+  toast.success(`${files.length} file(s) selected`);
+};
     const handleDragOver = (e, fieldName) => {
         e.preventDefault();
         setDragOver(prev => ({ ...prev, [fieldName]: true }));
@@ -218,71 +225,140 @@ export default function ManagerFormsPage() {
     const handleDrop = (e, fieldName) => {
         e.preventDefault();
         setDragOver(prev => ({ ...prev, [fieldName]: false }));
-        
+
         const files = e.dataTransfer.files;
         if (files.length > 0) {
             handleFileChange(fieldName, files);
         }
     };
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        setLoading(true);
+   const handleSubmit = async (e) => {
+  e.preventDefault();
+  setLoading(true);
 
-     
+  // Validate client name
+  if (!formData.clinetName || formData.clinetName.trim() === "") {
+    toast.error("Please enter client name");
+    setLoading(false);
+    return;
+  }
 
-        // Validate assignments based on type
-        if (formData.assignmentType === "single" && !formData.assignedTo) {
-            toast.error("Please select a team lead");
-            setLoading(false);
-            return;
-        }
+  // Validate assignments
+  if (formData.assignmentType === "single" && !formData.assignedTo) {
+    toast.error("Please select a team lead");
+    setLoading(false);
+    return;
+  }
 
-        if (formData.assignmentType === "multiple" && formData.multipleTeamLeadAssigned.length === 0) {
-            toast.error("Please select at least one team lead");
-            setLoading(false);
-            return;
-        }
+  if (formData.assignmentType === "multiple" && formData.multipleTeamLeadAssigned.length === 0) {
+    toast.error("Please select at least one team lead");
+    setLoading(false);
+    return;
+  }
 
-        // Validate required fields
-        for (const field of selectedForm.fields) {
-            if (field.required) {
-                const value = dynamicFormData[field.name];
-                if (value === undefined || value === null || value === "" ||
-                    (Array.isArray(value) && value.length === 0)) {
-                    toast.error(`Please fill in ${field.label}`);
-                    setLoading(false);
-                    return;
-                }
+  // Validate required fields
+  for (const field of selectedForm.fields) {
+    if (field.required) {
+      const value = dynamicFormData[field.name];
+      if (
+        value === undefined ||
+        value === null ||
+        value === "" ||
+        (Array.isArray(value) && value.length === 0)
+      ) {
+        toast.error(`Please fill in ${field.label}`);
+        setLoading(false);
+        return;
+      }
+    }
+  }
+
+  try {
+    // Create FormData object
+    const formDataToSend = new FormData();
+    
+    // Add text fields
+    formDataToSend.append("formId", selectedForm._id);
+    formDataToSend.append("submittedBy", session.user.id);
+    formDataToSend.append("clinetName", formData.clinetName.trim());
+    formDataToSend.append("assignmentType", formData.assignmentType);
+    formDataToSend.append("assignedTo", formData.assignedTo || "");
+    formDataToSend.append("multipleTeamLeadAssigned", JSON.stringify(formData.multipleTeamLeadAssigned || []));
+    
+    // Prepare formData object for non-file fields
+    const formDataObj = {};
+    
+    // Handle all form fields
+    for (const field of selectedForm.fields) {
+      const value = dynamicFormData[field.name];
+      
+      if (field.type === "file") {
+        // File field - handle separately
+        if (value && value.length > 0) {
+          if (field.multiple) {
+            // Multiple files
+            const fileNames = [];
+            for (let i = 0; i < value.length; i++) {
+              formDataToSend.append(`files`, value[i]); // Append each file
+              fileNames.push(value[i].name);
             }
+            formDataObj[field.name] = fileNames;
+          } else {
+            // Single file
+            formDataToSend.append("file", value[0]); // Main file field
+            formDataObj[field.name] = value[0].name;
+          }
+        } else {
+          formDataObj[field.name] = null;
         }
-
-        try {
-            const submitData = {
-                formId: selectedForm._id,
-                submittedBy: session.user.id,
-                clinetName: formData.clinetName.trim(), // Include clinetName in submission
-                assignmentType: formData.assignmentType,
-                assignedTo: formData.assignedTo,
-                multipleTeamLeadAssigned: formData.multipleTeamLeadAssigned,
-                formData: dynamicFormData,
-                departmentId: session.user.depId
-            };
-
-            const response = await axios.post("/api/manager/forms", submitData);
-
-            if (response.status === 201) {
-                toast.success("Form submitted successfully!");
-                resetForm();
-                fetchForms();
-                router.push('/manager/submissions');
-            }
-        } catch (error) {
-            toast.error(error.response?.data?.error || "Failed to submit form");
-        } finally {
-            setLoading(false);
+      } else {
+        // Non-file field
+        if (value !== undefined && value !== null) {
+          formDataObj[field.name] = value;
+        } else {
+          formDataObj[field.name] = "";
         }
-    };
+      }
+    }
+    
+    // Add formData as JSON string
+    formDataToSend.append("formData", JSON.stringify(formDataObj));
+    
+    // Debug: Check what's being sent
+    console.log("=== DEBUG: FormData Contents ===");
+    for (let pair of formDataToSend.entries()) {
+      if (pair[0] === "file" || pair[0] === "files") {
+        console.log(pair[0] + ": [FILE]", pair[1].name, pair[1].size, pair[1].type);
+      } else {
+        console.log(pair[0] + ":", pair[1]);
+      }
+    }
+    console.log("formData JSON:", JSON.parse(formDataToSend.get("formData")));
+
+    // Send to backend
+    const response = await axios.post("/api/manager/forms", formDataToSend, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+
+    if (response.status === 201) {
+      toast.success("Form submitted successfully!");
+      resetForm();
+      fetchForms();
+      router.push("/manager/submissions");
+    }
+  } catch (error) {
+    console.error("Submission error:", error);
+    toast.error(
+      error.response?.data?.error ||
+      error.response?.data?.message ||
+      "Failed to submit form"
+    );
+  } finally {
+    setLoading(false);
+  }
+};
 
     const resetForm = () => {
         setFormData({
@@ -534,7 +610,7 @@ export default function ManagerFormsPage() {
             case "file":
                 const files = fieldValue;
                 const fileCount = files ? (field.multiple ? files.length : 1) : 0;
-                
+
                 return (
                     <div className="space-y-3">
                         <Input
@@ -546,7 +622,7 @@ export default function ManagerFormsPage() {
                             accept={field.accept}
                             required={field.required && !fileCount}
                         />
-                        
+
                         <div
                             onClick={() => handleFileInputClick(field.name)}
                             onDragOver={(e) => handleDragOver(e, field.name)}
@@ -554,8 +630,8 @@ export default function ManagerFormsPage() {
                             onDrop={(e) => handleDrop(e, field.name)}
                             className={`
                                 border-2 border-dashed rounded-lg p-6 text-center bg-white cursor-pointer transition-all duration-200
-                                ${isDragOver 
-                                    ? 'border-blue-500 bg-blue-50 scale-105' 
+                                ${isDragOver
+                                    ? 'border-blue-500 bg-blue-50 scale-105'
                                     : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'
                                 }
                             `}
@@ -616,8 +692,8 @@ export default function ManagerFormsPage() {
                             >
                                 <Star
                                     className={`w-6 h-6 transition-colors ${i < fieldValue
-                                            ? 'text-yellow-400 fill-yellow-400'
-                                            : 'text-gray-300 hover:text-yellow-200'
+                                        ? 'text-yellow-400 fill-yellow-400'
+                                        : 'text-gray-300 hover:text-yellow-200'
                                         }`}
                                 />
                             </button>
@@ -649,7 +725,7 @@ export default function ManagerFormsPage() {
                             <Input
                                 type="text"
                                 value={fieldValue?.street || ""}
-                                onChange={(e) => handleDynamicFieldChange(field.name, {...fieldValue, street: e.target.value})}
+                                onChange={(e) => handleDynamicFieldChange(field.name, { ...fieldValue, street: e.target.value })}
                                 placeholder="Street address"
                                 className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900 pl-10"
                                 required={field.required}
@@ -660,7 +736,7 @@ export default function ManagerFormsPage() {
                             <Input
                                 type="text"
                                 value={fieldValue?.city || ""}
-                                onChange={(e) => handleDynamicFieldChange(field.name, {...fieldValue, city: e.target.value})}
+                                onChange={(e) => handleDynamicFieldChange(field.name, { ...fieldValue, city: e.target.value })}
                                 placeholder="City"
                                 className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900"
                                 required={field.required}
@@ -668,7 +744,7 @@ export default function ManagerFormsPage() {
                             <Input
                                 type="text"
                                 value={fieldValue?.state || ""}
-                                onChange={(e) => handleDynamicFieldChange(field.name, {...fieldValue, state: e.target.value})}
+                                onChange={(e) => handleDynamicFieldChange(field.name, { ...fieldValue, state: e.target.value })}
                                 placeholder="State"
                                 className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900"
                                 required={field.required}
@@ -678,7 +754,7 @@ export default function ManagerFormsPage() {
                             <Input
                                 type="text"
                                 value={fieldValue?.zip || ""}
-                                onChange={(e) => handleDynamicFieldChange(field.name, {...fieldValue, zip: e.target.value})}
+                                onChange={(e) => handleDynamicFieldChange(field.name, { ...fieldValue, zip: e.target.value })}
                                 placeholder="ZIP code"
                                 className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900"
                                 required={field.required}
@@ -686,7 +762,7 @@ export default function ManagerFormsPage() {
                             <Input
                                 type="text"
                                 value={fieldValue?.country || ""}
-                                onChange={(e) => handleDynamicFieldChange(field.name, {...fieldValue, country: e.target.value})}
+                                onChange={(e) => handleDynamicFieldChange(field.name, { ...fieldValue, country: e.target.value })}
                                 placeholder="Country"
                                 className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900"
                                 required={field.required}
@@ -701,7 +777,7 @@ export default function ManagerFormsPage() {
                             <Input
                                 type="text"
                                 value={fieldValue?.cardNumber || ""}
-                                onChange={(e) => handleDynamicFieldChange(field.name, {...fieldValue, cardNumber: e.target.value})}
+                                onChange={(e) => handleDynamicFieldChange(field.name, { ...fieldValue, cardNumber: e.target.value })}
                                 placeholder="Card number"
                                 className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900 pl-10"
                                 required={field.required}
@@ -712,7 +788,7 @@ export default function ManagerFormsPage() {
                             <Input
                                 type="text"
                                 value={fieldValue?.expiry || ""}
-                                onChange={(e) => handleDynamicFieldChange(field.name, {...fieldValue, expiry: e.target.value})}
+                                onChange={(e) => handleDynamicFieldChange(field.name, { ...fieldValue, expiry: e.target.value })}
                                 placeholder="MM/YY"
                                 className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900"
                                 required={field.required}
@@ -720,7 +796,7 @@ export default function ManagerFormsPage() {
                             <Input
                                 type="text"
                                 value={fieldValue?.cvv || ""}
-                                onChange={(e) => handleDynamicFieldChange(field.name, {...fieldValue, cvv: e.target.value})}
+                                onChange={(e) => handleDynamicFieldChange(field.name, { ...fieldValue, cvv: e.target.value })}
                                 placeholder="CVC"
                                 className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900"
                                 required={field.required}
@@ -729,7 +805,7 @@ export default function ManagerFormsPage() {
                         <Input
                             type="text"
                             value={fieldValue?.nameOnCard || ""}
-                            onChange={(e) => handleDynamicFieldChange(field.name, {...fieldValue, nameOnCard: e.target.value})}
+                            onChange={(e) => handleDynamicFieldChange(field.name, { ...fieldValue, nameOnCard: e.target.value })}
                             placeholder="Cardholder name"
                             className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900"
                             required={field.required}
@@ -977,7 +1053,7 @@ export default function ManagerFormsPage() {
                                             id="clinetName"
                                             type="text"
                                             value={formData.clinetName}
-                                            onChange={(e) => setFormData({...formData, clinetName: e.target.value})}
+                                            onChange={(e) => setFormData({ ...formData, clinetName: e.target.value })}
                                             placeholder="Enter client name"
                                             className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900 pl-10"
                                             required
@@ -1016,15 +1092,15 @@ export default function ManagerFormsPage() {
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                         <div
                                             className={`p-4 border-2 rounded-lg cursor-pointer transition-all duration-200 ${formData.assignmentType === 'single'
-                                                    ? 'border-blue-500 bg-blue-50'
-                                                    : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                                                ? 'border-blue-500 bg-blue-50'
+                                                : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                                                 }`}
                                             onClick={() => handleAssignmentTypeChange('single')}
                                         >
                                             <div className="flex items-center gap-3">
                                                 <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${formData.assignmentType === 'single'
-                                                        ? 'border-blue-500'
-                                                        : 'border-gray-300'
+                                                    ? 'border-blue-500'
+                                                    : 'border-gray-300'
                                                     }`}>
                                                     {formData.assignmentType === 'single' && (
                                                         <div className="w-2 h-2 rounded-full bg-blue-500"></div>
@@ -1043,15 +1119,15 @@ export default function ManagerFormsPage() {
                                         </div>
                                         <div
                                             className={`p-4 border-2 rounded-lg cursor-pointer transition-all duration-200 ${formData.assignmentType === 'multiple'
-                                                    ? 'border-blue-500 bg-blue-50'
-                                                    : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                                                ? 'border-blue-500 bg-blue-50'
+                                                : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                                                 }`}
                                             onClick={() => handleAssignmentTypeChange('multiple')}
                                         >
                                             <div className="flex items-center gap-3">
                                                 <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${formData.assignmentType === 'multiple'
-                                                        ? 'border-blue-500'
-                                                        : 'border-gray-300'
+                                                    ? 'border-blue-500'
+                                                    : 'border-gray-300'
                                                     }`}>
                                                     {formData.assignmentType === 'multiple' && (
                                                         <div className="w-2 h-2 rounded-full bg-blue-500"></div>
@@ -1089,7 +1165,7 @@ export default function ManagerFormsPage() {
                                                 <option value="">Select a team lead</option>
                                                 {teamLeads.map((tl) => (
                                                     <option key={tl._id} value={tl._id}>
-                                                      {tl.email}
+                                                        {tl.email}
                                                     </option>
                                                 ))}
                                             </select>
@@ -1111,8 +1187,8 @@ export default function ManagerFormsPage() {
                                                 <div
                                                     key={tl._id}
                                                     className={`p-3 border rounded-lg cursor-pointer transition-all duration-200 flex items-center justify-between ${formData.multipleTeamLeadAssigned.includes(tl._id)
-                                                            ? 'border-blue-500 bg-blue-50'
-                                                            : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                                                        ? 'border-blue-500 bg-blue-50'
+                                                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                                                         }`}
                                                     onClick={() => handleMultipleTeamLeadToggle(tl._id)}
                                                 >
@@ -1128,8 +1204,8 @@ export default function ManagerFormsPage() {
                                                         </div>
                                                     </div>
                                                     <div className={`w-5 h-5 border rounded flex items-center justify-center ${formData.multipleTeamLeadAssigned.includes(tl._id)
-                                                            ? 'bg-blue-500 border-blue-500'
-                                                            : 'border-gray-300'
+                                                        ? 'bg-blue-500 border-blue-500'
+                                                        : 'border-gray-300'
                                                         }`}>
                                                         {formData.multipleTeamLeadAssigned.includes(tl._id) && (
                                                             <CheckSquare className="w-3 h-3 text-white" />

@@ -35,17 +35,37 @@ export async function POST(req) {
       body.multipleTeamLeadAssigned = JSON.parse(formData.get("multipleTeamLeadAssigned") || "[]");
       body.formData = JSON.parse(formData.get("formData") || "{}");
 
+      // In your POST handler's multipart section:
       const file = formData.get("file");
       if (file && file.name) {
         const buffer = Buffer.from(await file.arrayBuffer());
+
+        // Determine resource type based on file MIME type
+        const mimeType = file.type || '';
+        let resourceType = 'auto'; // Cloudinary can detect automatically
+
+        // Or set explicitly:
+        if (mimeType.startsWith('video/')) {
+          resourceType = 'video';
+        } else if (mimeType.includes('pdf') || mimeType.includes('zip') || mimeType.includes('document')) {
+          resourceType = 'raw'; // For non-image, non-video files
+        }
+
         const uploadResult = await new Promise((resolve, reject) => {
           cloudinary.uploader
-            .upload_stream({ folder: "form_uploads" }, (err, result) => {
-              if (err) reject(err);
-              else resolve(result);
-            })
+            .upload_stream(
+              {
+                folder: "form_uploads",
+                resource_type: resourceType // ← CRITICAL FIX
+              },
+              (err, result) => {
+                if (err) reject(err);
+                else resolve(result);
+              }
+            )
             .end(buffer);
         });
+
         uploadedFileUrl = uploadResult.secure_url;
       }
     } else {
@@ -109,7 +129,7 @@ export async function POST(req) {
             });
 
             await sendMail(teamLead.email, "New Task Assigned", html);
-          } catch (e) {}
+          } catch (e) { }
 
           await sendNotification({
             senderId: session.user.id,
@@ -144,7 +164,7 @@ export async function POST(req) {
           });
 
           await sendMail(teamLead.email, "New Task Assigned", html);
-        } catch (e) {}
+        } catch (e) { }
 
         await sendNotification({
           senderId: session.user.id,

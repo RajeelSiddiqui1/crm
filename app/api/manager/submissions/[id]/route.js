@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
 import dbConnect from "@/lib/db";
 import FormSubmission from "@/models/FormSubmission";
+import Form from "@/models/Form";
 import cloudinary from "@/lib/cloudinary";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { sendMail } from "@/lib/mail";
-import { editedMailTemplate } from "@/helper/emails/manager/editedMailTemplate";
 import { deletedMailTemplate } from "@/helper/emails/manager/deletedMailTemplate";
 import { statusUpdateMailTemplate } from "@/helper/emails/manager/statusUpdateMailTemplate";
+import { taskEditedMailTemplate } from "@/helper/emails/manager/taskEditMail";
 import { sendNotification } from "@/lib/sendNotification";
 
 function getPublicIdFromUrl(url) {
@@ -42,100 +43,126 @@ export async function GET(req, { params }) {
   }
 }
 
+
+
 // ----------------------- UPDATE Submission -----------------------
-// In your PUT handler in /api/manager/submissions/[id]
 export async function PUT(req, { params }) {
   try {
     await dbConnect();
     const session = await getServerSession(authOptions);
     const { id } = params;
-
-    const contentType = req.headers.get("content-type") || "";
-    let body = {};
-    let newFileUrl = null;
-    let assignedTeamLeadId = null;
-    let clinetName = null; // Add this
+    const body = await req.json();
+    const { title, managerComments, assignedTeamLeadId, status, clinetName, formData } = body; // ✅ Added clinetName and formData
 
     const submission = await FormSubmission.findById(id)
       .populate("formId")
+      .populate("assignedTo")
       .populate("multipleTeamLeadAssigned")
       .populate("assignedEmployees.employeeId");
 
-    if (!submission) return NextResponse.json({ error: "Submission not found" }, { status: 404 });
+    if (!submission) 
+      return NextResponse.json({ error: "Submission not found" }, { status: 404 });
 
-    // ----------------------- HANDLE MULTIPART -----------------------
-    if (contentType.includes("multipart/form-data")) {
-      const formData = await req.formData();
-      body.formData = JSON.parse(formData.get("formData") || "{}");
-      body.managerComments = formData.get("managerComments") || "";
-      assignedTeamLeadId = formData.get("assignedTeamLeadId");
-      clinetName = formData.get("clinetName"); // Get clinetName from formData
-      const file = formData.get("file");
-
-      if (file && file.name) {
-        const buffer = Buffer.from(await file.arrayBuffer());
-
-        if (submission.formData?.file) {
-          const publicId = getPublicIdFromUrl(submission.formData.file);
-          if (publicId) await cloudinary.uploader.destroy(publicId);
-        }
-
-        const uploadResponse = await new Promise((resolve, reject) => {
-          cloudinary.uploader
-            .upload_stream({ folder: "form_uploads" }, (error, result) => {
-              if (error) reject(error);
-              else resolve(result);
-            })
-            .end(buffer);
-        });
-        newFileUrl = uploadResponse.secure_url;
-      }
-    } else {
-      body = await req.json();
-      assignedTeamLeadId = body.assignedTeamLeadId;
-      clinetName = body.clinetName; // Get clinetName from body
-    }
-
-    const { formData, managerComments } = body;
-
-    // ----------------------- UPDATE CLINETNAME -----------------------
+    // ✅ Update clinetName if provided
     if (clinetName !== undefined && clinetName !== null) {
-      submission.clinetName = clinetName.trim(); // Update clinetName
+      submission.clinetName = clinetName.trim();
     }
 
-    // ----------------------- UPDATE TEAM LEAD -----------------------
-    if (assignedTeamLeadId && assignedTeamLeadId !== submission.assignedTo?.toString()) {
+    // ✅ Update form data if provided
+    if (formData && typeof formData === 'object') {
+      Object.keys(formData).forEach(key => {
+        submission.formData.set(key, formData[key]);
+      });
+    }
+
+    if (title) submission.formData.title = title;
+    if (managerComments !== undefined) submission.managerComments = managerComments;
+    if (status) submission.status = status;
+
+    // ✅ Handle team lead reassignment if provided
+    if (assignedTeamLeadId && assignedTeamLeadId !== submission.assignedTo?._id?.toString()) {
+      // Remove current assignedTo from multipleTeamLeadAssigned if exists
       if (submission.assignedTo) {
         submission.multipleTeamLeadAssigned = submission.multipleTeamLeadAssigned.filter(
-          tl => tl._id.toString() !== submission.assignedTo.toString()
+          tl => tl._id.toString() !== submission.assignedTo._id.toString()
         );
       }
 
+      // Update assignedTo
       submission.assignedTo = assignedTeamLeadId;
 
+      // Check if already in multipleTeamLeadAssigned
       const isAlreadyAssigned = submission.multipleTeamLeadAssigned.some(
         tl => tl._id.toString() === assignedTeamLeadId
       );
 
-      if (!isAlreadyAssigned) submission.multipleTeamLeadAssigned.push(assignedTeamLeadId);
+      // Add to multipleTeamLeadAssigned if not already there
+      if (!isAlreadyAssigned) {
+        submission.multipleTeamLeadAssigned.push(assignedTeamLeadId);
+      }
     }
 
-    if (formData) {
-      Object.entries(formData).forEach(([key, value]) => {
-        submission.formData.set(key, value);
-      });
-    }
-
-    if (newFileUrl) submission.formData.file = newFileUrl;
-    if (managerComments !== undefined) submission.managerComments = managerComments;
     submission.updatedAt = new Date();
     await submission.save();
 
-    // ... rest of the email and notification code remains the same ...
+    const submissionLink = `${process.env.NEXT_PUBLIC_BASE_URL}/teamlead/tasks/${submission._id}`;
+    const updatedBy = session.user.name || "Manager";
 
-    return NextResponse.json({ message: "Updated", submission }, { status: 200 });
+    // Collect all recipients
+    const recipients = [
+      submission.assignedTo,
+      ...(submission.multipleTeamLeadAssigned || []),
+      ...(submission.assignedEmployees.map(emp => emp.employeeId) || [])
+    ].filter(Boolean); // remove nulls
+
+    // Send emails
+    const mailPromises = recipients.map(recipient => {
+      const name = recipient.firstName || recipient.name || "Team Member";
+      const email = recipient.email || recipient.emailId;
+      
+      if (!email) return null;
+      
+      return sendMail(
+        `${name} <${email}>`,
+        "Submission Updated",
+        taskEditedMailTemplate(name, submission.formId?.title || "Submission", updatedBy, submissionLink)
+      );
+    }).filter(Boolean); // filter out nulls
+
+    // Send notifications
+    const notiPromises = recipients.map(recipient => {
+      const model = recipient.__t === "Employee" ? "Employee" : "TeamLead";
+      return sendNotification({
+        senderId: session.user.id,
+        senderModel: "Manager",
+        senderName: updatedBy,
+        receiverId: recipient._id,
+        receiverModel: model,
+        type: "submission_edited",
+        title: "Submission Updated",
+        message: `${submission.formId?.title || "Submission"} has been edited`,
+        referenceId: submission._id,
+        referenceModel: "FormSubmission",
+      });
+    });
+
+    await Promise.all([...mailPromises, ...notiPromises]);
+
+    return NextResponse.json({ 
+      message: "Submission updated successfully", 
+      submission: {
+        _id: submission._id,
+        clinetName: submission.clinetName,
+        formData: submission.formData,
+        managerComments: submission.managerComments,
+        status: submission.status,
+        assignedTo: submission.assignedTo,
+        updatedAt: submission.updatedAt
+      }
+    }, { status: 200 });
   } catch (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("Error updating submission:", error);
+    return NextResponse.json({ error: error.message || "Failed to update submission" }, { status: 500 });
   }
 }
 

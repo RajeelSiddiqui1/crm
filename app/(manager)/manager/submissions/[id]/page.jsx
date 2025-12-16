@@ -370,37 +370,37 @@ export default function ManagerEditSubmissionPage() {
     return fieldIcons[fieldType] || FileText;
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  setLoading(true);
 
-    // Validate clinetName
-    if (!clinetName || clinetName.trim() === "") {
-      toast.error("Please enter client name");
-      setLoading(false);
-      return;
-    }
+  // Validate clinetName
+  if (!clinetName || clinetName.trim() === "") {
+    toast.error("Please enter client name");
+    setLoading(false);
+    return;
+  }
 
-    try {
-      const response = await axios.put(
-        `/api/manager/submissions/${submissionId}`,
-        {
-          clinetName: clinetName.trim(), // Include clinetName in submission
-          formData: submission.formData,
-          managerComments: submission.managerComments,
-        }
-      );
-
-      if (response.status === 200) {
-        toast.success("Submission updated successfully!");
-        router.push("/manager/submissions");
+  try {
+    const response = await axios.put(
+      `/api/manager/submissions/${submissionId}`,
+      {
+        clinetName: clinetName.trim(), // ✅ Make sure this is included
+        formData: submission.formData,
+        managerComments: submission.managerComments,
       }
-    } catch (error) {
-      toast.error(error.response?.data?.error || "Failed to update submission");
-    } finally {
-      setLoading(false);
+    );
+
+    if (response.status === 200) {
+      toast.success("Submission updated successfully!");
+      router.push("/manager/submissions");
     }
-  };
+  } catch (error) {
+    toast.error(error.response?.data?.error || "Failed to update submission");
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleDelete = async () => {
     if (
