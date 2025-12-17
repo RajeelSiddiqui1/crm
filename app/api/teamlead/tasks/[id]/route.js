@@ -50,12 +50,12 @@ export async function GET(req, { params }) {
 
     // Check if teamlead has access to this task
     const hasAccess =
-  task.assignedTo?.some(
-    (assigned) => assigned._id.toString() === teamLead._id.toString()
-  ) ||
-  task.multipleTeamLeadAssigned?.some(
-    (tl) => tl._id.toString() === teamLead._id.toString()
-  );
+      task.assignedTo?.some(
+        (assigned) => assigned._id.toString() === teamLead._id.toString()
+      ) ||
+      task.multipleTeamLeadAssigned?.some(
+        (tl) => tl._id.toString() === teamLead._id.toString()
+      );
 
 
     if (!hasAccess) {
@@ -99,9 +99,14 @@ export async function PUT(req, { params }) {
       return NextResponse.json({ error: "Task not found" }, { status: 404 });
     }
 
-    const hasAccess =
-      task.assignedTo?._id?.toString() === teamLead._id.toString() ||
-      task.multipleTeamLeadAssigned?.some(tl => tl._id.toString() === teamLead._id.toString());
+  const hasAccess =
+      task.assignedTo?.some(
+        (assigned) => assigned._id.toString() === teamLead._id.toString()
+      ) ||
+      task.multipleTeamLeadAssigned?.some(
+        (tl) => tl._id.toString() === teamLead._id.toString()
+      );
+
 
     if (!hasAccess) {
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
@@ -255,16 +260,16 @@ export async function PUT(req, { params }) {
       .populate("assignedTo", "firstName lastName email")
       .populate("assignedEmployees.employeeId", "firstName lastName email department position");
 
-    return NextResponse.json({ 
-      success: true, 
-      message: "Task updated successfully", 
-      task: updatedTask 
+    return NextResponse.json({
+      success: true,
+      message: "Task updated successfully",
+      task: updatedTask
     }, { status: 200 });
   } catch (error) {
     console.error("PUT task update error:", error);
-    return NextResponse.json({ 
-      error: "Internal Server Error", 
-      details: error.message 
+    return NextResponse.json({
+      error: "Internal Server Error",
+      details: error.message
     }, { status: 500 });
   }
 }

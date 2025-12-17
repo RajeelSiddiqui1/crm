@@ -52,6 +52,11 @@ const adminTaskSchema = Schema(
       ref: "Admin",
       required: false,
     },
+    departments:[
+    {   type: mongoose.Schema.Types.ObjectId,
+      ref: "Admin",
+      default: []}
+    ],
     isLate: {
       type: Boolean,
       default: false,

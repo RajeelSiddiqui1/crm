@@ -13,13 +13,15 @@ export async function POST(req) {
   try {
     await dbConnect();
 
+    // -------------------------------
+    // AUTH CHECK
+    // -------------------------------
     const session = await getServerSession(authOptions);
     if (!session || session.user.role !== "Admin") {
       return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
     }
 
     const formData = await req.formData();
-
     const title = formData.get("title");
     const clientName = formData.get("clientName");
     const priority = formData.get("priority") || "low";
@@ -36,32 +38,23 @@ export async function POST(req) {
       );
     }
 
-    let fileUrl = null;
-    let filePublicId = null;
-    let fileType = null;
-    let fileName = null;
-
     // -------------------------------
-    // FILE UPLOAD (Excel, PDF, Word, Image, Video)
+    // FILE UPLOAD
     // -------------------------------
+    let fileUrl = null, filePublicId = null, fileType = null, fileName = null;
     if (file && file.size > 0) {
       const buffer = Buffer.from(await file.arrayBuffer());
-
       const mime = file.type;
       fileName = file.name;
       fileType = mime;
 
       let resourceType = "raw";
-
       if (mime.startsWith("image/")) resourceType = "image";
       else if (mime.startsWith("video/") || mime.startsWith("audio/")) resourceType = "video";
 
       const uploadRes = await cloudinary.uploader.upload(
         `data:${mime};base64,${buffer.toString("base64")}`,
-        {
-          folder: "admin_tasks/files",
-          resource_type: resourceType,
-        }
+        { folder: "admin_tasks/files", resource_type: resourceType }
       );
 
       fileUrl = uploadRes.secure_url;
@@ -69,20 +62,14 @@ export async function POST(req) {
     }
 
     // -------------------------------
-    // AUDIO UPLOAD (OPTIONAL)
+    // AUDIO UPLOAD
     // -------------------------------
-    let audioUrl = null;
-    let audioPublicId = null;
-
+    let audioUrl = null, audioPublicId = null;
     if (audio && audio.size > 0) {
       const buffer = Buffer.from(await audio.arrayBuffer());
-
       const uploadAudio = await cloudinary.uploader.upload(
         `data:${audio.type};base64,${buffer.toString("base64")}`,
-        {
-          folder: "admin_tasks/audio",
-          resource_type: "video",
-        }
+        { folder: "admin_tasks/audio", resource_type: "video" }
       );
 
       audioUrl = uploadAudio.secure_url;
@@ -90,7 +77,19 @@ export async function POST(req) {
     }
 
     // -------------------------------
-    // SAVE TASK
+    // FETCH MANAGERS AND UNIQUE DEPARTMENTS
+    // -------------------------------
+    const managers = await Manager.find({ _id: { $in: managersId } });
+
+    // Collect all departments from managers and remove duplicates
+    const departmentSet = new Set();
+    managers.forEach(manager => {
+      manager.departments.forEach(dep => departmentSet.add(dep.toString()));
+    });
+    const departmentIds = Array.from(departmentSet);
+
+    // -------------------------------
+    // SAVE ADMIN TASK
     // -------------------------------
     const newTask = new AdminTask({
       title,
@@ -102,6 +101,7 @@ export async function POST(req) {
       priority,
       endDate: endDate ? new Date(endDate) : null,
       managers: managersId,
+      departments: departmentIds, // unique departments only
       submittedBy: session.user.id,
       filePublicId,
       audioPublicId,
@@ -110,13 +110,12 @@ export async function POST(req) {
     await newTask.save();
 
     // -------------------------------
-    // NOTIFICATIONS + EMAILS
+    // SEND NOTIFICATIONS + EMAILS TO MANAGERS
     // -------------------------------
     const taskLink = `${process.env.NEXT_PUBLIC_DOMAIN}/manager/admin-tasks`;
-    const managers = await Manager.find({ _id: { $in: managersId } });
 
     await Promise.all(
-      managers.map(async (manager) => {
+      managers.map(async manager => {
         await sendNotification({
           senderId: session.user.id,
           senderModel: "Admin",
@@ -157,6 +156,7 @@ export async function POST(req) {
     );
   }
 }
+
 
 
 export async function GET() {
