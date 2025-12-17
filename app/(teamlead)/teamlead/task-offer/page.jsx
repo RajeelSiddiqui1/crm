@@ -42,7 +42,7 @@ export default function TaskOfferPage() {
       if (response.status === 200) {
         toast.success("Task claimed");
         setTasks(prev => prev.filter(task => task._id !== taskId));
-        router.push(`/teamlead/submissions/${taskId}`);
+        router.push(`/teamlead/tasks`);
       }
     } catch (error) {
       toast.error(error.response?.data?.message || "Failed to claim");

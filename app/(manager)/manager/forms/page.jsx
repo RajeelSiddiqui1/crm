@@ -103,9 +103,9 @@ export default function ManagerFormsPage() {
 
     const fetchTeamLeads = async () => {
         try {
-            const response = await axios.get(`/api/manager/teamlead`);
+            const response = await axios.get(`/api/manager/teamleads-list`);
             if (response.status === 200) {
-                setTeamLeads(response.data.teamLeads || []);
+                setTeamLeads(response.data.teamleads || []);
             }
         } catch (error) {
             console.error("Error fetching team leads:", error);
@@ -277,10 +277,12 @@ export default function ManagerFormsPage() {
     // Create FormData object
     const formDataToSend = new FormData();
     
-    // Add text fields
+    // ✅ IMPORTANT: Add clinetName to FormData
+    formDataToSend.append("clinetName", formData.clinetName.trim());
+    
+    // Add other text fields
     formDataToSend.append("formId", selectedForm._id);
     formDataToSend.append("submittedBy", session.user.id);
-    formDataToSend.append("clinetName", formData.clinetName.trim());
     formDataToSend.append("assignmentType", formData.assignmentType);
     formDataToSend.append("assignedTo", formData.assignedTo || "");
     formDataToSend.append("multipleTeamLeadAssigned", JSON.stringify(formData.multipleTeamLeadAssigned || []));
@@ -314,12 +316,20 @@ export default function ManagerFormsPage() {
       } else {
         // Non-file field
         if (value !== undefined && value !== null) {
-          formDataObj[field.name] = value;
+          // Handle nested objects (like address, creditCard)
+          if (typeof value === 'object' && !Array.isArray(value)) {
+            formDataObj[field.name] = value;
+          } else {
+            formDataObj[field.name] = value;
+          }
         } else {
           formDataObj[field.name] = "";
         }
       }
     }
+    
+    // ✅ Add clinetName to formDataObj as well (for consistency)
+    formDataObj.clinetName = formData.clinetName.trim();
     
     // Add formData as JSON string
     formDataToSend.append("formData", JSON.stringify(formDataObj));
@@ -333,7 +343,11 @@ export default function ManagerFormsPage() {
         console.log(pair[0] + ":", pair[1]);
       }
     }
-    console.log("formData JSON:", JSON.parse(formDataToSend.get("formData")));
+    
+    // Check clinetName specifically
+    const formDataJson = JSON.parse(formDataToSend.get("formData"));
+    console.log("clinetName in formData:", formDataJson.clinetName);
+    console.log("clinetName from formDataToSend:", formDataToSend.get("clinetName"));
 
     // Send to backend
     const response = await axios.post("/api/manager/forms", formDataToSend, {
@@ -349,7 +363,7 @@ export default function ManagerFormsPage() {
       router.push("/manager/submissions");
     }
   } catch (error) {
-    console.error("Submission error:", error);
+    console.error("Submission error:", error.response?.data || error);
     toast.error(
       error.response?.data?.error ||
       error.response?.data?.message ||
@@ -1165,7 +1179,7 @@ export default function ManagerFormsPage() {
                                                 <option value="">Select a team lead</option>
                                                 {teamLeads.map((tl) => (
                                                     <option key={tl._id} value={tl._id}>
-                                                        {tl.email}
+                                                        {tl.email} {" "} ({tl.depId?.name})
                                                     </option>
                                                 ))}
                                             </select>
@@ -1200,7 +1214,9 @@ export default function ManagerFormsPage() {
                                                         </Avatar>
                                                         <div>
                                                             <div className="font-medium text-gray-900">{tl.name}</div>
-                                                            <div className="text-xs text-gray-500">{tl.email}</div>
+                                                            <div className="text-lg text-green-900">{tl.email}</div> 
+                                                            <div className="text-xs text-gray-900">({tl.depId?.name})</div>
+                                                            
                                                         </div>
                                                     </div>
                                                     <div className={`w-5 h-5 border rounded flex items-center justify-center ${formData.multipleTeamLeadAssigned.includes(tl._id)

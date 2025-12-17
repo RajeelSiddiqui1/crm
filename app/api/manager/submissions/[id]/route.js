@@ -5,6 +5,7 @@ import Form from "@/models/Form";
 import cloudinary from "@/lib/cloudinary";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import mongoose from "mongoose";
 import { sendMail } from "@/lib/mail";
 import { deletedMailTemplate } from "@/helper/emails/manager/deletedMailTemplate";
 import { statusUpdateMailTemplate } from "@/helper/emails/manager/statusUpdateMailTemplate";
@@ -33,15 +34,38 @@ export async function GET(req, { params }) {
       .populate("formId", "title description fields depId")
       .populate("assignedTo", "firstName lastName email")
       .populate("multipleTeamLeadAssigned", "firstName lastName email")
-      .populate("assignedEmployees.employeeId", "firstName lastName email");
+      .populate("assignedEmployees.employeeId", "firstName lastName email")
+      .lean();
 
-    if (!submission) return NextResponse.json({ error: "Submission not found" }, { status: 404 });
+    if (!submission) {
+      return NextResponse.json(
+        { error: "Submission not found" },
+        { status: 404 }
+      );
+    }
 
-    return NextResponse.json(submission, { status: 200 });
+    // 🔥 normalize assignedTo (array or single)
+    const assignedTo =
+      Array.isArray(submission.assignedTo)
+        ? submission.assignedTo[0] || null
+        : submission.assignedTo || null;
+
+    return NextResponse.json(
+      {
+        ...submission,
+        assignedTo,
+      },
+      { status: 200 }
+    );
+
   } catch (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(
+      { error: error.message },
+      { status: 500 }
+    );
   }
 }
+
 
 
 
@@ -52,91 +76,126 @@ export async function PUT(req, { params }) {
     const session = await getServerSession(authOptions);
     const { id } = params;
     const body = await req.json();
-    const { title, managerComments, assignedTeamLeadId, status, clinetName, formData } = body; // ✅ Added clinetName and formData
+
+    const {
+      title,
+      managerComments,
+      assignedTeamLeadId,
+      status,
+      clinetName,
+      formData
+    } = body;
 
     const submission = await FormSubmission.findById(id)
       .populate("formId")
-      .populate("assignedTo")
-      .populate("multipleTeamLeadAssigned")
-      .populate("assignedEmployees.employeeId");
+      .populate("assignedTo", "firstName lastName email")
+      .populate("multipleTeamLeadAssigned", "firstName lastName email")
+      .populate("assignedEmployees.employeeId", "firstName lastName email");
 
-    if (!submission) 
-      return NextResponse.json({ error: "Submission not found" }, { status: 404 });
+    if (!submission) {
+      return NextResponse.json(
+        { error: "Submission not found" },
+        { status: 404 }
+      );
+    }
 
-    // ✅ Update clinetName if provided
+    /* ---------------- BASIC UPDATES ---------------- */
     if (clinetName !== undefined && clinetName !== null) {
       submission.clinetName = clinetName.trim();
     }
 
-    // ✅ Update form data if provided
-    if (formData && typeof formData === 'object') {
+    if (managerComments !== undefined) {
+      submission.managerComments = managerComments;
+    }
+
+    if (status) {
+      submission.status = status;
+    }
+
+    if (title) {
+      submission.formData.title = title;
+    }
+
+    if (formData && typeof formData === "object") {
       Object.keys(formData).forEach(key => {
         submission.formData.set(key, formData[key]);
       });
     }
 
-    if (title) submission.formData.title = title;
-    if (managerComments !== undefined) submission.managerComments = managerComments;
-    if (status) submission.status = status;
+    /* ---------------- TEAM LEAD REASSIGN (FIXED) ---------------- */
+    if (assignedTeamLeadId) {
+      const newTlId = assignedTeamLeadId.toString();
 
-    // ✅ Handle team lead reassignment if provided
-    if (assignedTeamLeadId && assignedTeamLeadId !== submission.assignedTo?._id?.toString()) {
-      // Remove current assignedTo from multipleTeamLeadAssigned if exists
-      if (submission.assignedTo) {
-        submission.multipleTeamLeadAssigned = submission.multipleTeamLeadAssigned.filter(
-          tl => tl._id.toString() !== submission.assignedTo._id.toString()
+      const currentAssignedId =
+        submission.assignedTo?.[0]?._id?.toString() ||
+        submission.assignedTo?.[0]?.toString();
+
+      if (newTlId !== currentAssignedId) {
+
+        // remove old TL from multiple list
+        if (currentAssignedId) {
+          submission.multipleTeamLeadAssigned =
+            submission.multipleTeamLeadAssigned.filter(
+              tl => tl._id.toString() !== currentAssignedId
+            );
+        }
+
+        // assignedTo MUST be array
+        submission.assignedTo = [
+          new mongoose.Types.ObjectId(newTlId)
+        ];
+
+        // add to multiple list if not exists
+        const exists = submission.multipleTeamLeadAssigned.some(
+          tl => tl._id.toString() === newTlId
         );
-      }
 
-      // Update assignedTo
-      submission.assignedTo = assignedTeamLeadId;
-
-      // Check if already in multipleTeamLeadAssigned
-      const isAlreadyAssigned = submission.multipleTeamLeadAssigned.some(
-        tl => tl._id.toString() === assignedTeamLeadId
-      );
-
-      // Add to multipleTeamLeadAssigned if not already there
-      if (!isAlreadyAssigned) {
-        submission.multipleTeamLeadAssigned.push(assignedTeamLeadId);
+        if (!exists) {
+          submission.multipleTeamLeadAssigned.push(
+            new mongoose.Types.ObjectId(newTlId)
+          );
+        }
       }
     }
 
     submission.updatedAt = new Date();
     await submission.save();
 
+    /* ---------------- EMAIL + NOTIFICATIONS ---------------- */
     const submissionLink = `${process.env.NEXT_PUBLIC_BASE_URL}/teamlead/tasks/${submission._id}`;
     const updatedBy = session.user.name || "Manager";
 
-    // Collect all recipients
     const recipients = [
-      submission.assignedTo,
+      ...(submission.assignedTo || []),
       ...(submission.multipleTeamLeadAssigned || []),
       ...(submission.assignedEmployees.map(emp => emp.employeeId) || [])
-    ].filter(Boolean); // remove nulls
+    ].filter(Boolean);
 
-    // Send emails
-    const mailPromises = recipients.map(recipient => {
-      const name = recipient.firstName || recipient.name || "Team Member";
-      const email = recipient.email || recipient.emailId;
-      
+    const mailPromises = recipients.map(user => {
+      const name = user.firstName || "User";
+      const email = user.email;
       if (!email) return null;
-      
+
       return sendMail(
         `${name} <${email}>`,
         "Submission Updated",
-        taskEditedMailTemplate(name, submission.formId?.title || "Submission", updatedBy, submissionLink)
+        taskEditedMailTemplate(
+          name,
+          submission.formId?.title || "Submission",
+          updatedBy,
+          submissionLink
+        )
       );
-    }).filter(Boolean); // filter out nulls
+    }).filter(Boolean);
 
-    // Send notifications
-    const notiPromises = recipients.map(recipient => {
-      const model = recipient.__t === "Employee" ? "Employee" : "TeamLead";
+    const notiPromises = recipients.map(user => {
+      const model = user.__t === "Employee" ? "Employee" : "TeamLead";
+
       return sendNotification({
         senderId: session.user.id,
         senderModel: "Manager",
         senderName: updatedBy,
-        receiverId: recipient._id,
+        receiverId: user._id,
         receiverModel: model,
         type: "submission_edited",
         title: "Submission Updated",
@@ -148,21 +207,28 @@ export async function PUT(req, { params }) {
 
     await Promise.all([...mailPromises, ...notiPromises]);
 
-    return NextResponse.json({ 
-      message: "Submission updated successfully", 
-      submission: {
-        _id: submission._id,
-        clinetName: submission.clinetName,
-        formData: submission.formData,
-        managerComments: submission.managerComments,
-        status: submission.status,
-        assignedTo: submission.assignedTo,
-        updatedAt: submission.updatedAt
-      }
-    }, { status: 200 });
+    return NextResponse.json(
+      {
+        message: "Submission updated successfully",
+        submission: {
+          _id: submission._id,
+          clinetName: submission.clinetName,
+          formData: submission.formData,
+          managerComments: submission.managerComments,
+          status: submission.status,
+          assignedTo: submission.assignedTo,
+          updatedAt: submission.updatedAt
+        }
+      },
+      { status: 200 }
+    );
+
   } catch (error) {
     console.error("Error updating submission:", error);
-    return NextResponse.json({ error: error.message || "Failed to update submission" }, { status: 500 });
+    return NextResponse.json(
+      { error: error.message || "Failed to update submission" },
+      { status: 500 }
+    );
   }
 }
 

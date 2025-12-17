@@ -19,13 +19,17 @@ const formSubmissionSchema = new mongoose.Schema(
     },
 
     
-    multipleManagerAssigned: [
+    multipleManagerShared: [
       {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Manager",
         default: [],
       },
     ],
+    sharedBy:{
+       type: mongoose.Schema.Types.ObjectId,
+        ref: "Manager"
+    },
     multipleTeamLeadAssigned: [
       {
         type: mongoose.Schema.Types.ObjectId,
@@ -33,10 +37,10 @@ const formSubmissionSchema = new mongoose.Schema(
         default: [],
       },
     ],
-    assignedTo: {
+    assignedTo: [{
       type: mongoose.Schema.Types.ObjectId,
       ref: "TeamLead",
-    },
+    }],
     claimedAt: {
       type: Date,
     },

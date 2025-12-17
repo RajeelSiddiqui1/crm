@@ -21,7 +21,7 @@ export async function GET(req, { params }) {
     }
 
     await dbConnect();
-    const { id } = params;
+    const { id } = await params;
 
     // Find teamlead
     const teamLead = await TeamLead.findOne({ email: session.user.email });

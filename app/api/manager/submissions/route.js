@@ -102,21 +102,31 @@ export async function GET(req) {
 
     const session = await getServerSession(authOptions);
     if (!session || session.user.role !== "Manager") {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+      return Response.json({ message: "Unauthorized" }, { status: 401 });
     }
 
     const managerId = session.user.id;
 
-    const submissions = await FormSubmission.find({ submittedBy: managerId })
-      .populate("formId", "title description fields depId")
-      .populate("assignedEmployees.employeeId", "firstName lastName email depId")
-      .populate("assignedTo", "firstName lastName email")
-      .populate("multipleTeamLeadAssigned", "firstName lastName email")
-      .sort({ createdAt: -1 })
-      .lean();
+    // Find submissions where this manager is in the multipleManagerShared array
+   const submissions = await FormSubmission.find({
+  $or: [
+    { multipleManagerShared: managerId },
+    { submittedBy: managerId }
+  ]
+})
+  .populate("formId", "title description fields depId")
+  .populate("submittedBy", "firstName lastName email")
+  .populate("multipleManagerShared", "firstName lastName email")
+  .populate("sharedBy", "firstName lastName email")
+  .populate("assignedEmployees.employeeId", "firstName lastName email depId")
+  .populate("assignedTo", "firstName lastName email")
+  .populate("multipleTeamLeadAssigned", "firstName lastName email")
+  .sort({ createdAt: -1 })
+  .lean();
 
-    return NextResponse.json(submissions, { status: 200 });
+
+    return Response.json(submissions, { status: 200 });
   } catch (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return Response.json({ error: error.message }, { status: 500 });
   }
 }

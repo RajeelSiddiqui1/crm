@@ -56,7 +56,7 @@ export default function TeamLeadSubmissionsPage() {
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const [status2Filter, setstatus2Filter] = useState("all");
 
   useEffect(() => {
     if (status === "loading") return;
@@ -90,8 +90,8 @@ export default function TeamLeadSubmissionsPage() {
     }
   };
 
-  const getStatusVariant = (status) => {
-    switch (status) {
+  const getstatus2Variant = (status2) => {
+    switch (status2) {
       case "completed":
       case "approved":
         return "bg-green-50 text-green-700 border-green-200";
@@ -106,8 +106,8 @@ export default function TeamLeadSubmissionsPage() {
     }
   };
 
-  const getStatusIcon = (status) => {
-    switch (status) {
+  const getstatus2Icon = (status2) => {
+    switch (status2) {
       case "completed":
       case "approved":
         return <CheckCircle className="w-4 h-4" />;
@@ -127,13 +127,32 @@ export default function TeamLeadSubmissionsPage() {
       submission.formId?.title
         ?.toLowerCase()
         .includes(searchTerm.toLowerCase()) ||
-      submission.status?.toLowerCase().includes(searchTerm.toLowerCase());
+      submission.status2?.toLowerCase().includes(searchTerm.toLowerCase());
 
-    const matchesStatus =
-      statusFilter === "all" || submission.status === statusFilter;
+    const matchesstatus2 =
+      status2Filter === "all" || submission.status2 === status2Filter;
 
-    return matchesSearch && matchesStatus;
+    return matchesSearch && matchesstatus2;
   });
+
+
+  const getStatusBadgeClass = (status) => {
+  switch (status) {
+    case "pending":
+      return "bg-yellow-100 text-yellow-800 border border-yellow-300";
+    case "in_progress":
+      return "bg-blue-100 text-blue-800 border border-blue-300";
+    case "completed":
+      return "bg-green-100 text-green-800 border border-green-300";
+    case "approved":
+      return "bg-emerald-100 text-emerald-800 border border-emerald-300";
+    case "rejected":
+      return "bg-red-100 text-red-800 border border-red-300";
+    default:
+      return "bg-gray-100 text-gray-800 border border-gray-300";
+  }
+};
+
 
   const formatDate = (dateString) => {
     if (!dateString) return "N/A";
@@ -144,14 +163,14 @@ export default function TeamLeadSubmissionsPage() {
     });
   };
 
-  const statusStats = {
+  const status2Stats = {
     total: submissions.length,
-    pending: submissions.filter((s) => s.status === "pending").length,
-    in_progress: submissions.filter((s) => s.status === "in_progress").length,
+    pending: submissions.filter((s) => s.status2 === "pending").length,
+    in_progress: submissions.filter((s) => s.status2 === "in_progress").length,
     completed: submissions.filter(
-      (s) => s.status === "completed" || s.status === "approved"
+      (s) => s.status2 === "completed" || s.status2 === "approved"
     ).length,
-    rejected: submissions.filter((s) => s.status === "rejected").length,
+    rejected: submissions.filter((s) => s.status2 === "rejected").length,
   };
 
   if (status === "loading") {
@@ -193,9 +212,8 @@ export default function TeamLeadSubmissionsPage() {
               size="sm"
             >
               <RefreshCw
-                className={`w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 ${
-                  fetching ? "animate-spin" : ""
-                }`}
+                className={`w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 ${fetching ? "animate-spin" : ""
+                  }`}
               />
               {fetching ? "Refreshing..." : "Refresh"}
             </Button>
@@ -204,16 +222,16 @@ export default function TeamLeadSubmissionsPage() {
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
           {[
-            { label: "Total Tasks", value: statusStats.total, color: "gray" },
-            { label: "Pending", value: statusStats.pending, color: "amber" },
+            { label: "Total Tasks", value: status2Stats.total, color: "gray" },
+            { label: "Pending", value: status2Stats.pending, color: "amber" },
             {
               label: "In Progress",
-              value: statusStats.in_progress,
+              value: status2Stats.in_progress,
               color: "blue",
             },
             {
               label: "Completed",
-              value: statusStats.completed,
+              value: status2Stats.completed,
               color: "green",
             },
           ].map((stat, index) => (
@@ -223,15 +241,14 @@ export default function TeamLeadSubmissionsPage() {
             >
               <CardContent className="p-3 text-center">
                 <div
-                  className={`text-lg sm:text-xl font-bold ${
-                    stat.color === "gray"
+                  className={`text-lg sm:text-xl font-bold ${stat.color === "gray"
                       ? "text-gray-900"
                       : stat.color === "amber"
-                      ? "text-amber-600"
-                      : stat.color === "blue"
-                      ? "text-blue-600"
-                      : "text-green-600"
-                  }`}
+                        ? "text-amber-600"
+                        : stat.color === "blue"
+                          ? "text-blue-600"
+                          : "text-green-600"
+                    }`}
                 >
                   {stat.value}
                 </div>
@@ -267,12 +284,12 @@ export default function TeamLeadSubmissionsPage() {
                   />
                 </div>
 
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <Select value={status2Filter} onValueChange={setstatus2Filter}>
                   <SelectTrigger className="w-full sm:w-36 border border-gray-300 bg-white text-gray-900 focus:border-gray-400 focus:ring-1 focus:ring-gray-400 h-9 text-sm">
-                    <SelectValue placeholder="Filter Status" />
+                    <SelectValue placeholder="Filter status2" />
                   </SelectTrigger>
                   <SelectContent className="bg-white border border-gray-200 text-gray-900">
-                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="all">All status2</SelectItem>
                     <SelectItem value="pending">Pending</SelectItem>
                     <SelectItem value="in_progress">In Progress</SelectItem>
                     <SelectItem value="completed">Completed</SelectItem>
@@ -332,22 +349,22 @@ export default function TeamLeadSubmissionsPage() {
                             </div>
                           </div>
                           <Badge
-                            className={`${getStatusVariant(
-                              submission.status
+                            className={`${getstatus2Variant(
+                              submission.status2
                             )} text-xs font-semibold capitalize px-2 py-1 rounded border flex items-center gap-1 flex-shrink-0 ml-2`}
                           >
-                            {getStatusIcon(submission.status)}
+                            {getstatus2Icon(submission.status2)}
                             <span className="hidden sm:inline">
-                              {submission.status.replace("_", " ")}
+                              {submission.status2.replace("_", " ")}
                             </span>
                             <span className="sm:hidden">
-                              {submission.status === "completed"
+                              {submission.status2 === "completed"
                                 ? "Done"
-                                : submission.status === "in_progress"
-                                ? "Progress"
-                                : submission.status === "pending"
-                                ? "Pending"
-                                : submission.status.slice(0, 3)}
+                                : submission.status2 === "in_progress"
+                                  ? "Progress"
+                                  : submission.status2 === "pending"
+                                    ? "Pending"
+                                    : submission.status2.slice(0, 3)}
                             </span>
                           </Badge>
                         </div>
@@ -397,14 +414,12 @@ export default function TeamLeadSubmissionsPage() {
                           Submitted By
                         </TableHead>
                         <TableHead className="font-semibold text-gray-700 text-sm py-3 w-[100px]">
-                          Status
+                          Manager
                         </TableHead>
                         <TableHead className="font-semibold text-gray-700 text-sm py-3 w-[100px]">
-                          Employees
+                          Your Status
                         </TableHead>
-                        <TableHead className="font-semibold text-gray-700 text-sm py-3 w-[120px]">
-                          Assigned Date
-                        </TableHead>
+                       
                         <TableHead className="font-semibold text-gray-700 text-sm py-3 w-[100px]">
                           Actions
                         </TableHead>
@@ -427,8 +442,8 @@ export default function TeamLeadSubmissionsPage() {
                                 <div className="font-semibold text-gray-900 text-sm group-hover:text-gray-700 transition-colors truncate">
                                   {submission.clinetName || "No Client"}
                                 </div>
-                                
-                               
+
+
                               </div>
                             </div>
                           </TableCell>
@@ -454,28 +469,23 @@ export default function TeamLeadSubmissionsPage() {
                           </TableCell>
                           <TableCell className="py-3">
                             <Badge
-                              className={`${getStatusVariant(
-                                submission.status
-                              )} border flex items-center gap-1 px-2 py-1 font-medium text-xs`}
+                              className={`${getStatusBadgeClass(submission.status)} capitalize px-3 py-1 text-xs font-semibold`}
                             >
-                              {getStatusIcon(submission.status)}
                               {submission.status.replace("_", " ")}
                             </Badge>
                           </TableCell>
+
                           <TableCell className="py-3">
-                            <div className="flex items-center gap-1">
-                              <Users className="w-4 h-4 text-gray-500" />
-                              <span className="text-sm font-medium">
-                                {submission.assignedEmployees?.length || 0}
-                              </span>
-                            </div>
+                            <Badge
+                              className={`${getstatus2Variant(
+                                submission.status2
+                              )} border flex items-center gap-1 px-2 py-1 font-medium text-xs`}
+                            >
+                              {getstatus2Icon(submission.status2)}
+                              {submission.status2.replace("_", " ")}
+                            </Badge>
                           </TableCell>
-                          <TableCell className="py-3">
-                            <div className="flex items-center gap-1 text-sm text-gray-700">
-                              <Calendar className="w-3 h-3 text-gray-500" />
-                              {formatDate(submission.createdAt)}
-                            </div>
-                          </TableCell>
+                          
 
                           <TableCell className="py-3 flex gap-2 flex-wrap">
                             <Link

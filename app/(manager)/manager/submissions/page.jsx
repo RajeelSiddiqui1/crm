@@ -33,6 +33,21 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
+import {
   Search,
   FileText,
   User,
@@ -84,6 +99,15 @@ import {
   Check,
   ChevronRight,
   ExternalLink,
+  Share2,
+  UserPlus,
+  UserMinus,
+  Copy,
+  Mail as MailIcon,
+  Globe,
+  Lock as LockIcon,
+  ChevronDown,
+  MoreVertical,
 } from "lucide-react";
 import axios from "axios";
 
@@ -105,6 +129,13 @@ export default function ManagerSubmissionsPage() {
   const [showPasswords, setShowPasswords] = useState({});
   const [statusFilter, setStatusFilter] = useState("all");
   const [depIdFilter, setdepIdFilter] = useState("all");
+  const [managers, setManagers] = useState([]);
+  const [showShareDialog, setShowShareDialog] = useState(false);
+  const [selectedShareSubmission, setSelectedShareSubmission] = useState(null);
+  const [selectedManagers, setSelectedManagers] = useState([]);
+  const [shareLoading, setShareLoading] = useState(false);
+  const [viewType, setViewType] = useState("my"); // 'my' or 'shared'
+  const [showSharedList, setShowSharedList] = useState({});
   const fileInputRefs = useRef({});
 
   useEffect(() => {
@@ -116,12 +147,17 @@ export default function ManagerSubmissionsPage() {
     }
 
     fetchSubmissions();
-  }, [session, status, router]);
+    fetchManagers();
+  }, [session, status, router, viewType]);
 
   const fetchSubmissions = async () => {
     try {
       setFetching(true);
-      const response = await axios.get(`/api/manager/submissions`);
+      const endpoint = viewType === 'my'
+        ? '/api/manager/submissions'
+        : '/api/manager/submissions/shared';
+
+      const response = await axios.get(endpoint);
       if (response.status === 200) {
         setSubmissions(response.data || []);
       }
@@ -130,6 +166,72 @@ export default function ManagerSubmissionsPage() {
       toast.error("Failed to fetch submissions");
     } finally {
       setFetching(false);
+    }
+  };
+
+  const fetchManagers = async () => {
+    try {
+      const response = await axios.get('/api/manager/managers');
+      if (response.status === 200) {
+        setManagers(response.data.managers || []);
+      }
+    } catch (error) {
+      console.error("Error fetching managers:", error);
+    }
+  };
+
+  const handleShareSubmission = (submission) => {
+    setSelectedShareSubmission(submission);
+    // Pre-select already shared managers
+    const alreadyShared = submission.multipleManagerShared?.map(m => m._id?.toString() || m) || [];
+    setSelectedManagers(alreadyShared);
+    setShowShareDialog(true);
+  };
+
+  const handleManagerToggle = (managerId) => {
+    setSelectedManagers(prev => {
+      if (prev.includes(managerId)) {
+        return prev.filter(id => id !== managerId);
+      } else {
+        return [...prev, managerId];
+      }
+    });
+  };
+
+  const confirmShareSubmission = async () => {
+    if (!selectedShareSubmission) return;
+
+    setShareLoading(true);
+    try {
+      const response = await axios.put(`/api/manager/submissions/${selectedShareSubmission._id}/share`, {
+        managerIds: selectedManagers,
+        sharedBy: session.user.id
+      });
+
+      if (response.status === 200) {
+        toast.success("Submission shared successfully!");
+        fetchSubmissions();
+        setShowShareDialog(false);
+        setSelectedShareSubmission(null);
+        setSelectedManagers([]);
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.error || "Failed to share submission");
+    } finally {
+      setShareLoading(false);
+    }
+  };
+
+  const handleRemoveSharedManager = async (submissionId, managerId) => {
+    try {
+      const response = await axios.delete(`/api/manager/submissions/${submissionId}/share/${managerId}`);
+
+      if (response.status === 200) {
+        toast.success("Manager removed from sharing");
+        fetchSubmissions();
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.error || "Failed to remove manager");
     }
   };
 
@@ -293,19 +395,28 @@ export default function ManagerSubmissionsPage() {
     }
   };
 
-  const getTeamLeadFullName = (teamLead) => {
-    if (!teamLead) return "Unassigned";
+ const getTeamLeadFullName = (teamLeads) => {
+  if (!teamLeads || (Array.isArray(teamLeads) && teamLeads.length === 0)) {
+    return "Unassigned";
+  }
 
-    if (teamLead.firstName && teamLead.lastName) {
-      return `${teamLead.firstName} ${teamLead.lastName}`;
-    }
+  // Agar array hai
+  if (Array.isArray(teamLeads)) {
+    return teamLeads
+      .map((tl) => {
+        if (tl.firstName && tl.lastName) return `${tl.firstName} ${tl.lastName}`;
+        if (tl.name) return tl.name;
+        return tl.email || "Unknown Team Lead";
+      })
+      .join(", "); // comma separated
+  }
 
-    if (teamLead.name) {
-      return teamLead.name;
-    }
+  // Single object
+  if (teamLeads.firstName && teamLeads.lastName) return `${teamLeads.firstName} ${teamLeads.lastName}`;
+  if (teamLeads.name) return teamLeads.name;
+  return teamLeads.email || "Unknown Team Lead";
+};
 
-    return teamLead.email || "Unknown Team Lead";
-  };
 
   const getTeamLeadEmail = (teamLead) => {
     if (!teamLead) return "";
@@ -508,9 +619,8 @@ export default function ManagerSubmissionsPage() {
 
     return "Unknown Employee";
   };
-  // Updated function to get department info
+
   const getSubmissionDepartment = (submission) => {
-    // Check if depId is populated with department object
     if (submission.formId?.depId?.name) {
       return {
         id: submission.formId.depId._id,
@@ -519,7 +629,6 @@ export default function ManagerSubmissionsPage() {
       };
     }
 
-    // If depId is just an ObjectId string
     if (submission.formId?.depId) {
       return {
         id: submission.formId.depId.toString(),
@@ -528,7 +637,6 @@ export default function ManagerSubmissionsPage() {
       };
     }
 
-    // Fallback
     return {
       id: "unknown",
       name: "Unknown Department",
@@ -536,11 +644,37 @@ export default function ManagerSubmissionsPage() {
     };
   };
 
-  // For backward compatibility
   const getSubmissiondepId = (submission) => {
     const dept = getSubmissionDepartment(submission);
     return dept.name;
   };
+
+  const getManagerFullName = (manager) => {
+    if (!manager) return "Unknown Manager";
+    if (manager.firstName && manager.lastName) {
+      return `${manager.firstName} ${manager.lastName}`;
+    }
+    if (manager.email) {
+      return manager.email.split("@")[0];
+    }
+    return "Unknown Manager";
+  };
+
+  const getSharingStatus = (submission) => {
+    const currentManagerId = session?.user?.id;
+    const isOwner = submission.submittedBy?._id === currentManagerId ||
+      submission.submittedBy?.toString() === currentManagerId;
+    const isSharedWithMe = !isOwner && submission.sharedBy;
+    const sharedCount = submission.multipleManagerShared?.length || 0;
+
+    return {
+      isOwner,
+      isSharedWithMe,
+      sharedCount,
+      sharedBy: submission.sharedBy
+    };
+  };
+
   const renderEditFormField = (fieldConfig, fieldName, fieldValue) => {
     if (!fieldConfig) {
       return (
@@ -718,291 +852,116 @@ export default function ManagerSubmissionsPage() {
   const renderTeamInformationCell = (submission) => {
     const claimStatus = getClaimStatus(submission);
     const StatusIcon = claimStatus.icon;
-    const dept = getSubmissionDepartment(submission);
+    const sharingStatus = getSharingStatus(submission);
 
     return (
       <TableCell className="py-5">
         <div className="space-y-3">
+          {/* Ownership Badge */}
           <div className="flex items-center gap-2">
-           
+            {sharingStatus.isOwner ? (
+              <Badge className="bg-blue-100 text-blue-800 border-blue-200 text-xs">
+                <User className="w-3 h-3 mr-1" />
+                Owner
+              </Badge>
+            ) : (
+              <Badge className="bg-green-100 text-green-800 border-green-200 text-xs">
+                <UserPlus className="w-3 h-3 mr-1" />
+                Shared with me
+              </Badge>
+            )}
           </div>
 
-          <div className="flex items-center gap-2">
-            <StatusIcon className="w-4 h-4" />
-            <Badge className={`${claimStatus.color} border text-xs px-2 py-1`}>
-              {claimStatus.message}
-            </Badge>
-          </div>
-
-          {isTaskClaimed(submission) && submission.assignedTo && (
-            <div className="flex items-center gap-2 bg-purple-50 p-2 rounded-lg border border-purple-200">
-              <UserCheck className="w-4 h-4 text-purple-600" />
-              <div className="min-w-0">
-                <div className="text-sm font-medium text-gray-900 truncate">
-                  {getTeamLeadFullName(submission.assignedTo)}
+          {/* Sharing Status */}
+          {sharingStatus.isOwner && sharingStatus.sharedCount > 0 && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Share2 className="w-4 h-4 text-green-600" />
+                  <span className="text-sm font-medium text-gray-700">
+                    Shared with {sharingStatus.sharedCount} manager{sharingStatus.sharedCount !== 1 ? 's' : ''}
+                  </span>
                 </div>
-                <div className="text-xs text-gray-500">
-                  Claimed on {formatDate(submission.claimedAt)}
-                </div>
+                <button
+                  onClick={() => setShowSharedList(prev => ({
+                    ...prev,
+                    [submission._id]: !prev[submission._id]
+                  }))}
+                  className="text-xs text-blue-600 hover:text-blue-800"
+                >
+                  {showSharedList[submission._id] ? "Hide" : "Show"}
+                </button>
               </div>
+
+              {showSharedList[submission._id] && (
+                <div className="space-y-2 pl-6">
+                  {submission.multipleManagerShared?.map((manager) => (
+                    <div key={manager._id} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <Avatar className="h-6 w-6">
+                          <AvatarFallback className="text-xs bg-green-900 text-white">
+                            {manager.firstName?.charAt(0) || manager.email?.charAt(0) || "M"}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <div className="text-sm font-medium bg-white text-gray-900">
+                            {getManagerFullName(manager)}
+                          </div>
+                          <div className="text-xs text-gray-500">{manager.email}</div>
+                        </div>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-6 w-6 p-0 text-black hover:bg-red-100 hover:text-red-600"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRemoveSharedManager(submission._id, manager._id);
+                        }}
+                      >
+                        <UserMinus className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
-          {!isTaskClaimed(submission) &&
-            submission.multipleTeamLeadAssigned &&
-            submission.multipleTeamLeadAssigned.length > 0 && (
-              <div className="space-y-1">
-                <div className="text-xs text-gray-600 font-medium">
-                  Available for:
-                </div>
-                <div className="flex flex-wrap gap-1">
-                  {submission.multipleTeamLeadAssigned
-                    .slice(0, 3)
-                    .map((teamLead, idx) => (
-                      <Badge
-                        key={teamLead._id || idx}
-                        variant="outline"
-                        className="text-xs text-gray-700"
-                      >
-                        {teamLead.firstName?.charAt(0) ||
-                          teamLead.email?.charAt(0) ||
-                          "T"}
-                      </Badge>
-                    ))}
-                  {submission.multipleTeamLeadAssigned.length > 3 && (
-                    <Badge
-                      variant="secondary"
-                      className="text-xs text-gray-700"
-                    >
-                      +{submission.multipleTeamLeadAssigned.length - 3}
-                    </Badge>
-                  )}
-                </div>
-              </div>
-            )}
+          {sharingStatus.isSharedWithMe && sharingStatus.sharedBy && (
+            <div className="flex items-center gap-2 px-3 py-2 bg-purple-50 border border-purple-200 rounded-lg">
+              <UserPlus className="w-4 h-4 text-purple-600" />
 
-          {!isTaskClaimed(submission) &&
-            submission.assignedTo &&
-            (!submission.multipleTeamLeadAssigned ||
-              submission.multipleTeamLeadAssigned.length === 0) && (
-              <div className="flex items-center gap-2 bg-blue-50 p-2 rounded-lg border border-blue-200">
-                <User className="w-4 h-4 text-blue-600" />
-                <div className="min-w-0">
-                  <div className="text-sm font-medium text-gray-900 truncate">
-                    {getTeamLeadFullName(submission.assignedTo)}
-                  </div>
-                  <div className="text-xs text-gray-500">Directly assigned</div>
-                </div>
-              </div>
-            )}
-
-          {submission.assignedEmployees &&
-            submission.assignedEmployees.length > 0 && (
-              <div className="flex items-center gap-2 pt-2 border-t">
-                <Users className="w-4 h-4 text-green-600" />
-                <span className="text-sm text-gray-700">
-                  {submission.assignedEmployees.length} employee
-                  {submission.assignedEmployees.length !== 1 ? "s" : ""}
+              <span className="text-sm text-gray-700">
+                <span className="font-medium">Shared by:</span>
+                <span className="ml-1 font-semibold text-purple-700">
+                  {getManagerFullName(sharingStatus.sharedBy)}
                 </span>
-              </div>
-            )}
+              </span>
+            </div>
+          )}
+
+
+          {/* Team Lead Assignment */}
+          <div className="pt-2 border-t border-gray-100">
+            <div className="flex items-center gap-2">
+              <StatusIcon className="w-4 h-4" />
+              <Badge className={`${claimStatus.color} border text-xs px-2 py-1`}>
+                {claimStatus.message}
+              </Badge>
+            </div>
+          </div>
         </div>
       </TableCell>
     );
   };
 
-  const renderTeamLeadSection = (submission) => {
-    const claimStatus = getClaimStatus(submission);
-    const StatusIcon = claimStatus.icon;
-
-    return (
-      <div className="bg-gradient-to-br from-purple-50 via-white to-indigo-50 rounded-2xl p-6 border border-purple-100 shadow-sm">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-          <Users className="w-5 h-5 text-purple-600" />
-          Team Lead Assignment
-        </h3>
-
-        <div className="space-y-4">
-          <div className="flex items-center justify-between p-3 bg-white rounded-lg border shadow-sm">
-            <div className="flex items-center gap-2">
-              <StatusIcon className="w-4 h-4" />
-              <span className="font-medium text-gray-900">Status:</span>
-            </div>
-            <Badge className={`${claimStatus.color} border`}>
-              {claimStatus.message}
-            </Badge>
-          </div>
-
-          {isTaskClaimed(submission) && submission.assignedTo && (
-            <div className="bg-white rounded-lg border p-4 shadow-sm">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <Crown className="w-4 h-4 text-orange-900" />
-                  <span className="font-medium text-gray-900">Claimed By:</span>
-                </div>
-                <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200">
-                  <Sparkles className="w-3 h-3 mr-1" />
-                  Claimed
-                </Badge>
-              </div>
-              <div className="flex items-center gap-3 mt-3">
-                <Avatar className="h-10 w-10 ring-2 ring-yellow-200">
-                  <AvatarFallback className="bg-yellow-100 text-yellow-600 font-semibold">
-                    {submission.assignedTo.firstName?.charAt(0) ||
-                      submission.assignedTo.email?.charAt(0) ||
-                      "T"}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1 min-w-0">
-                  <div className="font-semibold text-gray-900 truncate">
-                    {getTeamLeadFullName(submission.assignedTo)}
-                  </div>
-                  <div className="text-sm text-gray-600 truncate">
-                    {submission.assignedTo.email}
-                  </div>
-                  <div className="text-xs text-gray-500 mt-1">
-                    <Clock className="w-3 h-3 inline mr-1" />
-                    Claimed on {formatDate(submission.claimedAt)}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {submission.multipleTeamLeadAssigned &&
-            submission.multipleTeamLeadAssigned.length > 0 && (
-              <div className="bg-white rounded-lg border p-4 shadow-sm">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <Users className="w-4 h-4 text-green-600" />
-                    <span className="font-medium text-gray-900">
-                      Available for {submission.multipleTeamLeadAssigned.length}{" "}
-                      Team Leads
-                    </span>
-                  </div>
-                  <Badge
-                    variant="outline"
-                    className="text-green-700 border-green-300"
-                  >
-                    <Zap className="w-3 h-3 mr-1" />
-                    Multiple
-                  </Badge>
-                </div>
-                <div className="space-y-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
-                  {submission.multipleTeamLeadAssigned.map((teamLead) => (
-                    <div
-                      key={teamLead._id}
-                      className={`flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors ${
-                        isTaskClaimed(submission) &&
-                        submission.assignedTo?._id === teamLead._id
-                          ? "border-yellow-300 bg-yellow-50"
-                          : "border-gray-200"
-                      }`}
-                    >
-                      <div className="flex items-center gap-3 flex-1 min-w-0">
-                        <Avatar className="h-8 w-8">
-                          <AvatarFallback
-                            className={`text-xs ${
-                              isTaskClaimed(submission) &&
-                              submission.assignedTo?._id === teamLead._id
-                                ? "bg-yellow-100 text-yellow-600"
-                                : "bg-green-100 text-green-600"
-                            }`}
-                          >
-                            {teamLead.firstName?.charAt(0) ||
-                              teamLead.email?.charAt(0) ||
-                              "T"}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1 min-w-0">
-                          <div className="font-medium text-sm text-gray-900 truncate">
-                            {getTeamLeadFullName(teamLead)}
-                          </div>
-                          <div className="text-xs text-gray-500 truncate">
-                            {teamLead.email}
-                          </div>
-                        </div>
-                      </div>
-                      {isTaskClaimed(submission) &&
-                        submission.assignedTo?._id === teamLead._id && (
-                          <Badge className="bg-yellow-100 text-yellow-800 text-xs ml-2 whitespace-nowrap">
-                            <Crown className="w-3 h-3 mr-1" />
-                            Claimed
-                          </Badge>
-                        )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-          {!isTaskClaimed(submission) &&
-            submission.assignedTo &&
-            (!submission.multipleTeamLeadAssigned ||
-              submission.multipleTeamLeadAssigned.length === 0) && (
-              <div className="bg-white rounded-lg border p-4 shadow-sm">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <User className="w-4 h-4 text-blue-600" />
-                    <span className="font-medium text-gray-900">
-                      Directly Assigned To:
-                    </span>
-                  </div>
-                  <Badge
-                    variant="outline"
-                    className="text-blue-700 border-blue-300"
-                  >
-                    <Target className="w-3 h-3 mr-1" />
-                    Single
-                  </Badge>
-                </div>
-                <div className="flex items-center gap-3">
-                  <Avatar className="h-10 w-10 ring-2 ring-blue-200">
-                    <AvatarFallback className="bg-blue-100 text-blue-600 font-semibold">
-                      {submission.assignedTo.firstName?.charAt(0) ||
-                        submission.assignedTo.email?.charAt(0) ||
-                        "T"}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0">
-                    <div className="font-semibold text-gray-900 truncate">
-                      {getTeamLeadFullName(submission.assignedTo)}
-                    </div>
-                    <div className="text-sm text-gray-600 truncate">
-                      {submission.assignedTo.email}
-                    </div>
-                    <div className="text-xs text-gray-500 mt-1">
-                      <UserCheck className="w-3 h-3 inline mr-1" />
-                      Direct assignment
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-        </div>
-      </div>
-    );
-  };
-
   const filteredSubmissions = submissions.filter((submission) => {
     const matchesSearch =
-      submission.formId?.title
-        ?.toLowerCase()
-        .includes(searchTerm.toLowerCase()) ||
-      submission.assignedTo?.email
-        ?.toLowerCase()
-        .includes(searchTerm.toLowerCase()) ||
+      submission.clinetName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      submission.formId?.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       submission.status?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      getSubmissionDepartment(submission)
-        .name.toLowerCase()
-        .includes(searchTerm.toLowerCase()) ||
-      (submission.multipleTeamLeadAssigned &&
-        submission.multipleTeamLeadAssigned.some(
-          (tl) =>
-            tl.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            tl.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            tl.lastName?.toLowerCase().includes(searchTerm.toLowerCase())
-        ));
+      getSubmissionDepartment(submission).name.toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesStatus =
       statusFilter === "all" || submission.status === statusFilter;
@@ -1014,7 +973,6 @@ export default function ManagerSubmissionsPage() {
     return matchesSearch && matchesStatus && matchesdepId;
   });
 
-  // Update the depIds extraction
   const depIds = [
     ...new Set(
       submissions.map((sub) => {
@@ -1044,19 +1002,10 @@ export default function ManagerSubmissionsPage() {
     completed: submissions.filter((s) => s.status === "completed").length,
   };
 
-  const claimStats = {
-    claimed: submissions.filter((s) => isTaskClaimed(s)).length,
-    available: submissions.filter(
-      (s) =>
-        s.multipleTeamLeadAssigned &&
-        s.multipleTeamLeadAssigned.length > 0 &&
-        !isTaskClaimed(s)
-    ).length,
-    single: submissions.filter(
-      (s) =>
-        s.assignedTo &&
-        (!s.multipleTeamLeadAssigned || s.multipleTeamLeadAssigned.length === 0)
-    ).length,
+  const sharingStats = {
+    owned: submissions.filter(s => getSharingStatus(s).isOwner).length,
+    sharedWithMe: submissions.filter(s => getSharingStatus(s).isSharedWithMe).length,
+    totalShared: submissions.reduce((sum, s) => sum + (getSharingStatus(s).sharedCount || 0), 0),
   };
 
   if (status === "loading") {
@@ -1086,6 +1035,7 @@ export default function ManagerSubmissionsPage() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 p-4 lg:p-6">
       <Toaster position="top-right" richColors />
 
+      {/* Floating Add Form Button */}
       <Button
         onClick={() => router.push("/manager/forms")}
         className="fixed bottom-6 right-6 bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white rounded-full p-5 shadow-2xl shadow-blue-500/30 hover:shadow-blue-600/40 transition-all duration-300 transform hover:scale-110 z-50 group"
@@ -1097,6 +1047,7 @@ export default function ManagerSubmissionsPage() {
       </Button>
 
       <div className="max-w-7xl mx-auto">
+        {/* Header */}
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-8">
           <div className="text-center lg:text-left">
             <div className="flex items-center gap-3 mb-3">
@@ -1105,7 +1056,7 @@ export default function ManagerSubmissionsPage() {
               </div>
               <div>
                 <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-indigo-700 bg-clip-text text-transparent">
-                  My Submissions
+                  {viewType === 'my' ? 'My Submissions' : 'Shared with Me'}
                 </h1>
                 <p className="text-gray-600 mt-2 text-lg">
                   Track and manage your form submissions
@@ -1129,6 +1080,29 @@ export default function ManagerSubmissionsPage() {
           </div>
         </div>
 
+        {/* View Tabs */}
+        <div className="mb-8">
+          <Tabs value={viewType} onValueChange={setViewType} className="w-full">
+            <TabsList className="grid grid-cols-2 w-full max-w-md">
+              <TabsTrigger value="my" className="flex items-center gap-2 bg-white text-gray-900">
+                <User className="w-4 h-4" />
+                My Submissions
+                <Badge variant="secondary" className="ml-2">
+                  {sharingStats.owned}
+                </Badge>
+              </TabsTrigger>
+              <TabsTrigger value="shared" className="flex items-center gap-2 bg-white text-gray-900">
+                <Share2 className="w-4 h-4" />
+                Shared with Me
+                <Badge variant="secondary " className="ml-2 ">
+                  {sharingStats.sharedWithMe}
+                </Badge>
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
+
+        {/* Stats Cards */}
         <div className="grid grid-cols-2 lg:grid-cols-8 gap-4 mb-8">
           <Card className="bg-white border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 col-span-2">
             <CardContent className="p-4">
@@ -1151,12 +1125,12 @@ export default function ManagerSubmissionsPage() {
 
           <Card className="bg-white border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
             <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-purple-600">
-                {claimStats.claimed}
+              <div className="text-2xl font-bold text-blue-600">
+                {sharingStats.owned}
               </div>
               <div className="text-sm text-gray-600 flex items-center justify-center gap-1">
-                <Crown className="w-4 h-4" />
-                Claimed
+                <User className="w-4 h-4" />
+                My Submissions
               </div>
             </CardContent>
           </Card>
@@ -1164,23 +1138,23 @@ export default function ManagerSubmissionsPage() {
           <Card className="bg-white border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
             <CardContent className="p-4 text-center">
               <div className="text-2xl font-bold text-green-600">
-                {claimStats.available}
+                {sharingStats.sharedWithMe}
               </div>
               <div className="text-sm text-gray-600 flex items-center justify-center gap-1">
-                <Users className="w-4 h-4" />
-                Available
+                <Share2 className="w-4 h-4" />
+                Shared with Me
               </div>
             </CardContent>
           </Card>
 
           <Card className="bg-white border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
             <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-blue-600">
-                {claimStats.single}
+              <div className="text-2xl font-bold text-purple-600">
+                {sharingStats.totalShared}
               </div>
               <div className="text-sm text-gray-600 flex items-center justify-center gap-1">
-                <User className="w-4 h-4" />
-                Single
+                <Users className="w-4 h-4" />
+                Total Shared
               </div>
             </CardContent>
           </Card>
@@ -1196,6 +1170,7 @@ export default function ManagerSubmissionsPage() {
               </div>
             </CardContent>
           </Card>
+
           <Card className="bg-white border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
             <CardContent className="p-4 text-center">
               <div className="text-2xl font-bold text-blue-600">
@@ -1207,6 +1182,7 @@ export default function ManagerSubmissionsPage() {
               </div>
             </CardContent>
           </Card>
+
           <Card className="bg-white border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
             <CardContent className="p-4 text-center">
               <div className="text-2xl font-bold text-yellow-600">
@@ -1218,6 +1194,7 @@ export default function ManagerSubmissionsPage() {
               </div>
             </CardContent>
           </Card>
+
           <Card className="bg-white border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
             <CardContent className="p-4 text-center">
               <div className="text-2xl font-bold text-red-600">
@@ -1231,20 +1208,18 @@ export default function ManagerSubmissionsPage() {
           </Card>
         </div>
 
+        {/* Main Table Card */}
         <Card className="shadow-2xl shadow-blue-500/10 border-0 bg-gradient-to-br from-white to-blue-50/50 backdrop-blur-sm overflow-hidden">
           <CardHeader className="bg-gradient-to-r from-white to-blue-50 border-b border-blue-100/50">
             <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
               <div>
                 <CardTitle className="text-2xl font-bold text-gray-900 flex items-center gap-3">
                   <ClipboardCheck className="w-7 h-7 text-blue-600" />
-                  Submission Management
+                  {viewType === 'my' ? 'My Submission Management' : 'Shared Submissions Management'}
                 </CardTitle>
                 <CardDescription className="text-gray-600 text-base">
                   {filteredSubmissions.length} submission
-                  {filteredSubmissions.length !== 1 ? "s" : ""} found •
-                  <span className="ml-2 text-green-600 font-medium">
-                    {claimStats.available} available for claiming
-                  </span>
+                  {filteredSubmissions.length !== 1 ? "s" : ""} found
                 </CardDescription>
               </div>
 
@@ -1334,7 +1309,7 @@ export default function ManagerSubmissionsPage() {
                         Form Details
                       </TableHead>
                       <TableHead className="font-bold text-gray-900 text-sm uppercase tracking-wide py-4">
-                        Team Assignment
+                        Sharing & Assignment
                       </TableHead>
                       <TableHead className="font-bold text-gray-900 text-sm uppercase tracking-wide py-4">
                         Status Hierarchy
@@ -1348,197 +1323,214 @@ export default function ManagerSubmissionsPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredSubmissions.map((submission) => (
-                      <TableRow
-                        key={submission._id}
-                        className="group hover:bg-gradient-to-r hover:from-blue-50/80 hover:to-indigo-50/80 transition-all duration-300 border-b border-gray-100/50"
-                      >
-                        <TableCell className="py-5">
-                          <div className="flex items-center gap-4">
-                            <Avatar className="border-2 border-white shadow-lg shadow-blue-500/20 group-hover:shadow-xl group-hover:shadow-blue-600/30 transition-all duration-300 size-12">
-                              <AvatarFallback className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-bold text-sm">
-                                <FileText className="w-5 h-5" />
-                              </AvatarFallback>
-                            </Avatar>
-                            <div className="flex-1 min-w-0">
-                              <div className="font-bold text-gray-900 text-lg group-hover:text-blue-700 transition-colors duration-200 truncate">
-                                {submission.clinetName || "No Clinet"}
+                    {filteredSubmissions.map((submission) => {
+                      const sharingStatus = getSharingStatus(submission);
+                      return (
+                        <TableRow
+                          key={submission._id}
+                          className="group hover:bg-gradient-to-r hover:from-blue-50/80 hover:to-indigo-50/80 transition-all duration-300 border-b border-gray-100/50"
+                        >
+                          <TableCell className="py-5">
+                            <div className="flex items-center gap-4">
+                              <Avatar className="border-2 border-white shadow-lg shadow-blue-500/20 group-hover:shadow-xl group-hover:shadow-blue-600/30 transition-all duration-300 size-12">
+                                <AvatarFallback className={`${sharingStatus.isOwner
+                                  ? "bg-gradient-to-r from-blue-500 to-indigo-600"
+                                  : "bg-gradient-to-r from-green-500 to-emerald-600"
+                                  } text-white font-bold text-sm`}>
+                                  {sharingStatus.isOwner ? "O" : "S"}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="flex-1 min-w-0">
+                                <div className="font-bold text-gray-900 text-lg group-hover:text-blue-700 transition-colors duration-200 truncate">
+                                  {submission.clinetName || "No Client"}
+                                </div>
+                                <div className="flex items-center gap-2 mt-2">
+                                  <Calendar className="w-3 h-3 text-gray-400" />
+                                  <span className="text-xs text-gray-500">
+                                    {formatDate(submission.createdAt)}
+                                  </span>
+                                </div>
                               </div>
-                             
-                              <div className="flex items-center gap-2 mt-2">
-                                <Calendar className="w-3 h-3 text-gray-400" />
-                                <span className="text-xs text-gray-500">
-                                  {formatDate(submission.createdAt)}
-                                </span>
-                              </div>
                             </div>
-                          </div>
-                        </TableCell>
+                          </TableCell>
 
-                        {renderTeamInformationCell(submission)}
+                          {renderTeamInformationCell(submission)}
 
-                        <TableCell className="py-5">
-                          <div className="space-y-3">
-                            <div className="flex items-center gap-2">
-                              <User className="w-4 h-4 text-blue-600" />
-                              <Badge
-                                className={`${getStatusVariant(
-                                  submission.status
-                                )} border flex items-center gap-1 px-2 py-1 text-xs font-medium transition-colors`}
-                              >
-                                {getStatusIcon(submission.status)}
-                                Manager: {submission.status.replace("_", " ")}
-                              </Badge>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <User className="w-4 h-4 text-green-600" />
-                              <Badge
-                                className={`${getStatusVariant(
-                                  submission.status2
-                                )} border flex items-center gap-1 px-2 py-1 text-xs font-medium transition-colors`}
-                              >
-                                {getStatusIcon(submission.status2)}
-                                Team Lead:{" "}
-                                {submission.status2.replace("_", " ")}
-                              </Badge>
-                            </div>
-                            {submission.assignedEmployees?.map((emp, index) => (
-                              <div
-                                key={emp.employeeId?._id || index}
-                                className="flex items-center gap-2"
-                              >
-                                <Users className="w-4 h-4 text-purple-600" />
+                          <TableCell className="py-5">
+                            <div className="space-y-3">
+                              <div className="flex items-center gap-2">
+                                <User className="w-4 h-4 text-blue-600" />
                                 <Badge
                                   className={`${getStatusVariant(
-                                    emp.status
+                                    submission.status
                                   )} border flex items-center gap-1 px-2 py-1 text-xs font-medium transition-colors`}
                                 >
-                                  {getStatusIcon(emp.status)}
-                                  {getEmployeeFullName(emp.employeeId)}:{" "}
-                                  {emp.status.replace("_", " ")}
+                                  {getStatusIcon(submission.status)}
+                                  Manager: {submission.status.replace("_", " ")}
                                 </Badge>
                               </div>
-                            ))}
-                          </div>
-                        </TableCell>
+                              <div className="flex items-center gap-2">
+                                <User className="w-4 h-4 text-green-600" />
+                                <Badge
+                                  className={`${getStatusVariant(
+                                    submission.status2
+                                  )} border flex items-center gap-1 px-2 py-1 text-xs font-medium transition-colors`}
+                                >
+                                  {getStatusIcon(submission.status2)}
+                                  Team Lead:{" "}
+                                  {submission.status2.replace("_", " ")}
+                                </Badge>
+                              </div>
+                              {submission.assignedEmployees?.map((emp, index) => (
+                                <div
+                                  key={emp.employeeId?._id || index}
+                                  className="flex items-center gap-2"
+                                >
+                                  <Users className="w-4 h-4 text-purple-600" />
+                                  <Badge
+                                    className={`${getStatusVariant(
+                                      emp.status
+                                    )} border flex items-center gap-1 px-2 py-1 text-xs font-medium transition-colors`}
+                                  >
+                                    {getStatusIcon(emp.status)}
+                                    {getEmployeeFullName(emp.employeeId)}:{" "}
+                                    {emp.status.replace("_", " ")}
+                                  </Badge>
+                                </div>
+                              ))}
+                            </div>
+                          </TableCell>
 
-                        <TableCell className="py-5">
-                          <div className="flex flex-col gap-2">
-                            {canManagerUpdateStatus(submission) ? (
-                              <>
+                          <TableCell className="py-5">
+                            <div className="flex flex-col gap-2">
+                              {canManagerUpdateStatus(submission) ? (
+                                <>
+                                  <Button
+                                    onClick={() =>
+                                      handleQuickStatusUpdate(
+                                        submission._id,
+                                        "approved"
+                                      )
+                                    }
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-8 px-3 text-xs border-green-200 text-green-700 hover:bg-green-50 hover:border-green-300 hover:text-green-800 transition-all duration-200"
+                                    disabled={loading}
+                                  >
+                                    <CheckCircle className="w-3 h-3 mr-1" />
+                                    Approve
+                                  </Button>
+                                  <Button
+                                    onClick={() =>
+                                      handleQuickStatusUpdate(
+                                        submission._id,
+                                        "rejected"
+                                      )
+                                    }
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-8 px-3 text-xs border-red-200 text-red-700 hover:bg-red-50 hover:border-red-300 hover:text-red-800 transition-all duration-200"
+                                    disabled={loading}
+                                  >
+                                    <XCircle className="w-3 h-3 mr-1" />
+                                    Reject
+                                  </Button>
+                                </>
+                              ) : (
+                                <div className="text-xs text-yellow-600 bg-yellow-50 border border-yellow-200 rounded px-3 py-2 text-center">
+                                  <Clock className="w-3 h-3 inline mr-1" />
+                                  Wait for Team Lead
+                                </div>
+                              )}
+                              <Button
+                                onClick={() =>
+                                  handleQuickStatusUpdate(
+                                    submission._id,
+                                    "in_progress"
+                                  )
+                                }
+                                size="sm"
+                                variant="outline"
+                                className="h-8 px-3 text-xs border-blue-200 text-blue-700 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-800 transition-all duration-200"
+                                disabled={loading}
+                              >
+                                <Clock className="w-3 h-3 mr-1" />
+                                In Progress
+                              </Button>
+                              {isTaskClaimed(submission) && (
+                                <div className="text-xs text-purple-600 bg-purple-50 border border-purple-200 rounded px-3 py-2 text-center">
+                                  <Crown className="w-3 h-3 inline mr-1" />
+                                  Task Claimed
+                                </div>
+                              )}
+                            </div>
+                          </TableCell>
+
+                          <TableCell className="py-5">
+                            <div className="flex flex-col gap-2">
+                              <Button
+                                onClick={() => viewSubmissionDetails(submission)}
+                                variant="outline"
+                                size="sm"
+                                className="border-blue-200 text-blue-700 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-800 transition-all duration-200 justify-start"
+                              >
+                                <Eye className="w-4 h-4 mr-2" />
+                                View Details
+                              </Button>
+                              {sharingStatus.isOwner && (
+                                <Button
+                                  onClick={() => handleShareSubmission(submission)}
+                                  variant="outline"
+                                  size="sm"
+                                  className="border-green-200 text-green-700 hover:bg-green-50 hover:border-green-300 hover:text-green-800 transition-all duration-200 justify-start"
+                                >
+                                  <Share2 className="w-4 h-4 mr-2" />
+                                  Share
+                                </Button>
+                              )}
+                              {sharingStatus.isOwner && (
+                                <Button
+                                  onClick={() => router.push(`/manager/submissions/${submission._id}`)}
+                                  variant="outline"
+                                  size="sm"
+                                  className="border-yellow-200 text-yellow-700 hover:bg-yellow-50 hover:border-yellow-300 hover:text-yellow-800 transition-all duration-200 justify-start"
+                                >
+                                  <Edit className="w-4 h-4 mr-2" />
+                                  Edit
+                                </Button>
+
+                              )}
+                              <Button
+                                onClick={() =>
+                                  router.push(
+                                    `/group-chat?submissionId=${submission._id}`
+                                  )
+                                }
+                                variant="outline"
+                                size="sm"
+                                className="border-purple-200 text-purple-700 hover:bg-purple-50 hover:border-purple-300 hover:text-purple-800 transition-all duration-200 justify-start"
+                              >
+                                <MessageCircle className="w-4 h-4 mr-2" />
+                                Group Chat
+                              </Button>
+                              {sharingStatus.isOwner && (
                                 <Button
                                   onClick={() =>
-                                    handleQuickStatusUpdate(
-                                      submission._id,
-                                      "approved"
-                                    )
+                                    handleDeleteSubmission(submission._id)
                                   }
-                                  size="sm"
                                   variant="outline"
-                                  className="h-8 px-3 text-xs border-green-200 text-green-700 hover:bg-green-50 hover:border-green-300 hover:text-green-800 transition-all duration-200"
-                                  disabled={loading}
-                                >
-                                  <CheckCircle className="w-3 h-3 mr-1" />
-                                  Approve
-                                </Button>
-                                <Button
-                                  onClick={() =>
-                                    handleQuickStatusUpdate(
-                                      submission._id,
-                                      "rejected"
-                                    )
-                                  }
                                   size="sm"
-                                  variant="outline"
-                                  className="h-8 px-3 text-xs border-red-200 text-red-700 hover:bg-red-50 hover:border-red-300 hover:text-red-800 transition-all duration-200"
-                                  disabled={loading}
+                                  className="border-red-200 text-red-700 hover:bg-red-50 hover:border-red-300 hover:text-red-800 transition-all duration-200 justify-start"
                                 >
-                                  <XCircle className="w-3 h-3 mr-1" />
-                                  Reject
+                                  <Trash2 className="w-4 h-4 mr-2" />
+                                  Delete
                                 </Button>
-                              </>
-                            ) : (
-                              <div className="text-xs text-yellow-600 bg-yellow-50 border border-yellow-200 rounded px-3 py-2 text-center">
-                                <Clock className="w-3 h-3 inline mr-1" />
-                                Wait for Team Lead
-                              </div>
-                            )}
-                            <Button
-                              onClick={() =>
-                                handleQuickStatusUpdate(
-                                  submission._id,
-                                  "in_progress"
-                                )
-                              }
-                              size="sm"
-                              variant="outline"
-                              className="h-8 px-3 text-xs border-blue-200 text-blue-700 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-800 transition-all duration-200"
-                              disabled={loading}
-                            >
-                              <Clock className="w-3 h-3 mr-1" />
-                              In Progress
-                            </Button>
-                            {isTaskClaimed(submission) && (
-                              <div className="text-xs text-purple-600 bg-purple-50 border border-purple-200 rounded px-3 py-2 text-center">
-                                <Crown className="w-3 h-3 inline mr-1" />
-                                Task Claimed
-                              </div>
-                            )}
-                          </div>
-                        </TableCell>
-
-                        <TableCell className="py-5">
-                          <div className="flex flex-col gap-2">
-                            <Button
-                              onClick={() => viewSubmissionDetails(submission)}
-                              variant="outline"
-                              size="sm"
-                              className="border-blue-200 text-blue-700 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-800 transition-all duration-200 justify-start"
-                            >
-                              <Eye className="w-4 h-4 mr-2" />
-                              View Details
-                            </Button>
-                            <Button
-                              onClick={() =>
-                                router.push(
-                                  `/manager/submissions/${submission._id}`
-                                )
-                              }
-                              variant="outline"
-                              size="sm"
-                              className="border-green-200 text-green-700 hover:bg-green-50 hover:border-green-300 hover:text-green-800 transition-all duration-200 justify-start"
-                            >
-                              <Edit className="w-4 h-4 mr-2" />
-                              Edit
-                            </Button>
-                            <Button
-                              onClick={() =>
-                                router.push(
-                                  `/group-chat?submissionId=${submission._id}`
-                                )
-                              }
-                              variant="outline"
-                              size="sm"
-                              className="border-purple-200 text-purple-700 hover:bg-purple-50 hover:border-purple-300 hover:text-purple-800 transition-all duration-200 justify-start"
-                            >
-                              <MessageCircle className="w-4 h-4 mr-2" />
-                              Group Chat
-                            </Button>
-                            <Button
-                              onClick={() =>
-                                handleDeleteSubmission(submission._id)
-                              }
-                              variant="outline"
-                              size="sm"
-                              className="border-red-200 text-red-700 hover:bg-red-50 hover:border-red-300 hover:text-red-800 transition-all duration-200 justify-start"
-                            >
-                              <Trash2 className="w-4 h-4 mr-2" />
-                              Delete
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>
@@ -1546,6 +1538,110 @@ export default function ManagerSubmissionsPage() {
           </CardContent>
         </Card>
 
+        {/* Share Dialog */}
+        <Dialog open={showShareDialog} onOpenChange={setShowShareDialog}>
+          <DialogContent className="sm:max-w-md bg-white text-gray-900">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Share2 className="w-5 h-5" />
+                Share Submission
+              </DialogTitle>
+              <DialogDescription>
+                Select managers to share this submission with. They'll be able to view and manage this submission.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4">
+              <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <h4 className="font-medium text-gray-900 mb-2">
+                  Sharing: {selectedShareSubmission?.clinetName || "Submission"}
+                </h4>
+                <p className="text-sm text-gray-600">
+                  {selectedShareSubmission?.formId?.title || "No description"}
+                </p>
+              </div>
+
+              <div className="max-h-60 overflow-y-auto pr-2 custom-scrollbar">
+                {managers.length === 0 ? (
+                  <div className="text-center py-4 text-gray-500">
+                    <Users className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                    <p>No other managers found</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {managers.map((manager) => (
+                      <div
+                        key={manager._id}
+                        className={`flex items-center justify-between p-3 border rounded-lg cursor-pointer transition-all duration-200 ${selectedManagers.includes(manager._id)
+                          ? "border-blue-300 bg-blue-50"
+                          : "border-gray-200 hover:bg-gray-50"
+                          }`}
+                        onClick={() => handleManagerToggle(manager._id)}
+                      >
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-8 w-8">
+                            <AvatarFallback className="bg-blue-100 text-blue-600 text-sm">
+                              {manager.firstName?.charAt(0) || manager.email?.charAt(0) || "M"}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <div className="font-medium text-gray-900">
+                              {getManagerFullName(manager)}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {manager.email}
+                            </div>
+                          </div>
+                        </div>
+                        {selectedManagers.includes(manager._id) ? (
+                          <Check className="w-5 h-5 text-blue-600" />
+                        ) : (
+                          <div className="w-5 h-5 border-2 border-gray-300 rounded" />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <DialogFooter className="sm:justify-between">
+              <div className="text-sm text-gray-500">
+                {selectedManagers.length} manager{selectedManagers.length !== 1 ? 's' : ''} selected
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setShowShareDialog(false);
+                    setSelectedManagers([]);
+                  }}
+                  disabled={shareLoading}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  onClick={confirmShareSubmission}
+                  disabled={shareLoading || selectedManagers.length === 0}
+                  className="bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800"
+                >
+                  {shareLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Sharing...
+                    </>
+                  ) : (
+                    "Share Submission"
+                  )}
+                </Button>
+              </div>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Rest of your modals (View Details, Edit Form) remain the same */}
         {showDetails && selectedSubmission && (
           <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm animate-in fade-in">
             <Card className="w-full max-w-6xl max-h-[95vh] overflow-hidden bg-white border-0 shadow-2xl flex flex-col animate-in fade-in-90 zoom-in-95">
@@ -1726,8 +1822,6 @@ export default function ManagerSubmissionsPage() {
                         )}
                       </div>
                     </div>
-
-                    {renderTeamLeadSection(selectedSubmission)}
 
                     <div className="space-y-4">
                       {selectedSubmission.teamLeadFeedback && (
@@ -1946,161 +2040,6 @@ export default function ManagerSubmissionsPage() {
           </div>
         )}
 
-        {showEditForm && editingSubmission && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-            <Card className="w-full max-w-4xl max-h-[95vh] overflow-hidden bg-white border-0 shadow-2xl flex flex-col animate-in fade-in-90 zoom-in-95">
-              <CardHeader className="bg-gradient-to-r from-green-600 to-emerald-700 text-white flex-shrink-0">
-                <div className="flex justify-between items-center">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-white/20 rounded-lg">
-                      <Edit className="w-6 h-6" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-white text-2xl">
-                        Edit Submission
-                      </CardTitle>
-                      <CardDescription className="text-green-100">
-                        Update form data and comments
-                      </CardDescription>
-                    </div>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => {
-                      setShowEditForm(false);
-                      setEditingSubmission(null);
-                    }}
-                    className="h-9 w-9 text-white hover:bg-white/20 rounded-lg transition-colors"
-                  >
-                    <X className="w-5 h-5" />
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent className="pt-6 overflow-y-auto flex-1 custom-scrollbar">
-                <form onSubmit={handleEditSubmission} className="space-y-6">
-                  <div className="grid grid-cols-1 gap-8">
-                    <div className="space-y-6">
-                      <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                        <FileText className="w-5 h-5 text-blue-600" />
-                        Form Data
-                      </h3>
-
-                      <div className="space-y-4 max-h-96 overflow-y-auto p-4 border border-gray-200 rounded-xl bg-gray-50/50 pr-2 custom-scrollbar">
-                        {editingSubmission.formData &&
-                          Object.entries(editingSubmission.formData).map(
-                            ([fieldName, fieldValue]) => {
-                              const fieldConfig =
-                                editingSubmission.formId?.fields?.find(
-                                  (f) => f.name === fieldName
-                                );
-                              const IconComponent = fieldConfig
-                                ? getFieldIcon(fieldConfig.type)
-                                : FileText;
-
-                              return (
-                                <div
-                                  key={fieldName}
-                                  className="space-y-3 p-4 border border-gray-200 rounded-xl bg-white hover:border-gray-300 transition-colors duration-200"
-                                >
-                                  <div className="flex items-center gap-3 mb-3">
-                                    <div className="p-2 rounded-lg bg-blue-100 text-blue-600">
-                                      <IconComponent className="w-4 h-4" />
-                                    </div>
-                                    <Label className="text-gray-800 font-semibold text-base capitalize">
-                                      {fieldName
-                                        .replace(/([A-Z])/g, " $1")
-                                        .trim()}
-                                      {fieldConfig?.required && (
-                                        <span className="text-red-500 ml-1">
-                                          *
-                                        </span>
-                                      )}
-                                    </Label>
-                                  </div>
-                                  {renderEditFormField(
-                                    fieldConfig,
-                                    fieldName,
-                                    fieldValue
-                                  )}
-                                  {fieldConfig?.placeholder && (
-                                    <p className="text-xs text-gray-500 mt-2">
-                                      {fieldConfig.placeholder}
-                                    </p>
-                                  )}
-                                </div>
-                              );
-                            }
-                          )}
-                      </div>
-                    </div>
-
-                    <div className="space-y-6">
-                      <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                        <MessageCircle className="w-5 h-5 text-green-600" />
-                        Manager Comments
-                      </h3>
-
-                      <div className="space-y-4">
-                        <div className="space-y-3">
-                          <Label
-                            htmlFor="managerComments"
-                            className="text-gray-800 font-semibold"
-                          >
-                            Your Comments
-                          </Label>
-                          <Textarea
-                            value={editingSubmission.managerComments || ""}
-                            onChange={(e) =>
-                              setEditingSubmission((prev) => ({
-                                ...prev,
-                                managerComments: e.target.value,
-                              }))
-                            }
-                            placeholder="Add your comments, feedback, or notes about this submission..."
-                            className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900 min-h-[120px] resize-vertical bg-white"
-                            rows={6}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-3 pt-6 border-t border-gray-200">
-                    <Button
-                      type="submit"
-                      disabled={loading}
-                      className="bg-gradient-to-r from-green-600 to-emerald-700 hover:from-green-700 hover:to-emerald-800 text-white px-8 py-2.5 shadow-lg shadow-green-500/25 hover:shadow-xl hover:shadow-green-600/30 transition-all duration-300 transform hover:scale-105 disabled:transform-none disabled:hover:scale-100 disabled:opacity-50"
-                    >
-                      {loading ? (
-                        <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Updating...
-                        </>
-                      ) : (
-                        <>
-                          <Edit className="w-4 h-4 mr-2" />
-                          Update Submission
-                        </>
-                      )}
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => {
-                        setShowEditForm(false);
-                        setEditingSubmission(null);
-                      }}
-                      className="border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400 px-6 py-2.5 transition-all duration-200 shadow-sm"
-                    >
-                      Cancel
-                    </Button>
-                  </div>
-                </form>
-              </CardContent>
-            </Card>
-          </div>
-        )}
       </div>
 
       <style jsx>{`
@@ -2118,12 +2057,6 @@ export default function ManagerSubmissionsPage() {
         }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
           background: #94a3b8;
-        }
-        .line-clamp-2 {
-          display: -webkit-box;
-          -webkit-line-clamp: 2;
-          -webkit-box-orient: vertical;
-          overflow: hidden;
         }
       `}</style>
     </div>

@@ -27,28 +27,34 @@ export async function POST(req) {
     // ----------------------- MULTIPART HANDLING -----------------------
     if (contentType.includes("multipart/form-data")) {
       const formData = await req.formData();
+      
+      // ✅ Get all form data
       body.formId = formData.get("formId");
-      body.adminTaskId = formData.get("adminTaskId");
       body.submittedBy = formData.get("submittedBy");
+      body.clinetName = formData.get("clinetName"); // ✅ Get clinetName
       body.assignmentType = formData.get("assignmentType") || "single";
       body.assignedTo = formData.get("assignedTo");
       body.multipleTeamLeadAssigned = JSON.parse(formData.get("multipleTeamLeadAssigned") || "[]");
-      body.formData = JSON.parse(formData.get("formData") || "{}");
+      
+      // Get formData JSON
+      const formDataJson = formData.get("formData");
+      if (formDataJson) {
+        body.formData = JSON.parse(formDataJson);
+      } else {
+        body.formData = {};
+      }
 
-      // In your POST handler's multipart section:
+      // File upload handling
       const file = formData.get("file");
-      if (file && file.name) {
+      if (file && file.name && file.size > 0) {
         const buffer = Buffer.from(await file.arrayBuffer());
-
-        // Determine resource type based on file MIME type
         const mimeType = file.type || '';
-        let resourceType = 'auto'; // Cloudinary can detect automatically
+        let resourceType = 'auto';
 
-        // Or set explicitly:
         if (mimeType.startsWith('video/')) {
           resourceType = 'video';
         } else if (mimeType.includes('pdf') || mimeType.includes('zip') || mimeType.includes('document')) {
-          resourceType = 'raw'; // For non-image, non-video files
+          resourceType = 'raw';
         }
 
         const uploadResult = await new Promise((resolve, reject) => {
@@ -56,7 +62,7 @@ export async function POST(req) {
             .upload_stream(
               {
                 folder: "form_uploads",
-                resource_type: resourceType // ← CRITICAL FIX
+                resource_type: resourceType
               },
               (err, result) => {
                 if (err) reject(err);
@@ -67,53 +73,93 @@ export async function POST(req) {
         });
 
         uploadedFileUrl = uploadResult.secure_url;
+        
+        // Update formData with file URL
+        if (uploadedFileUrl) {
+          // Find file field and update it
+          for (const key in body.formData) {
+            if (typeof body.formData[key] === 'string' && body.formData[key].includes(file.name)) {
+              body.formData[key] = uploadedFileUrl;
+              break;
+            }
+          }
+        }
       }
     } else {
       body = await req.json();
     }
 
+    console.log("=== BACKEND RECEIVED DATA ===");
+    console.log("clinetName:", body.clinetName);
+    console.log("formId:", body.formId);
+    console.log("assignmentType:", body.assignmentType);
+
     const {
       formId,
-      adminTaskId,
       submittedBy,
-      clinetName,
+      clinetName, // ✅ This should now be available
       assignmentType,
       assignedTo,
       multipleTeamLeadAssigned,
       formData,
     } = body;
 
-    if (uploadedFileUrl) formData.file = uploadedFileUrl;
+    // Validate clinetName
+    if (!clinetName || clinetName.trim() === "") {
+      return NextResponse.json(
+        { error: "Client name is required" },
+        { status: 400 }
+      );
+    }
 
     // ----------------------- FORM TITLE FETCH -----------------------
     const form = await Form.findById(formId);
-    const formTitle = form?.title || "New Task";
+    if (!form) {
+      return NextResponse.json(
+        { error: "Form not found" },
+        { status: 404 }
+      );
+    }
+    
+    const formTitle = form.title;
 
     // ----------------------- SUBMISSION CREATION -----------------------
     const submissionData = {
       formId,
-      adminTask: adminTaskId || null,
       submittedBy,
-      clinetName,
+      clinetName: clinetName.trim(), // ✅ Store clinetName
       formData,
       status: "pending",
+      status2: "pending",
+      assignedTo: [],                  // ✅ always array
+      multipleTeamLeadAssigned: [],    // ✅ always array
     };
 
+    // Handle multiple assignment
     if (assignmentType === "multiple" && multipleTeamLeadAssigned?.length > 0) {
       submissionData.multipleTeamLeadAssigned = multipleTeamLeadAssigned.map(
         (id) => new mongoose.Types.ObjectId(id)
       );
-    } else if (assignmentType === "single" && assignedTo) {
-      submissionData.assignedTo = new mongoose.Types.ObjectId(assignedTo);
-      submissionData.multipleTeamLeadAssigned = [];
-    } else {
-      return NextResponse.json({ error: "Invalid assignment data" }, { status: 400 });
+    }
+    // Handle single assignment
+    else if (assignmentType === "single" && assignedTo) {
+      submissionData.assignedTo = [
+        new mongoose.Types.ObjectId(assignedTo)
+      ];
+    }
+    else {
+      return NextResponse.json(
+        { error: "Invalid assignment data" },
+        { status: 400 }
+      );
     }
 
     const newSubmission = new FormSubmission(submissionData);
     await newSubmission.save();
 
-    // ----------------------- MULTIPLE ASSIGN -----------------------
+    console.log("Submission created with clinetName:", newSubmission.clinetName);
+
+    // ----------------------- NOTIFICATIONS AND EMAILS -----------------------
     if (assignmentType === "multiple" && multipleTeamLeadAssigned?.length > 0) {
       for (const tlId of multipleTeamLeadAssigned) {
         const teamLead = await TeamLead.findById(tlId);
@@ -124,12 +170,14 @@ export async function POST(req) {
               managerName: session.user.name || "Manager",
               formTitle: formTitle,
               status: "Pending",
-              message: "A new form has been assigned to you.",
+              message: `A new form "${formTitle}" has been assigned to you for client: ${clinetName}`,
               taskLink: `https://mhcirclesolutions.com/teamlead/task-offer/`,
             });
 
             await sendMail(teamLead.email, "New Task Assigned", html);
-          } catch (e) { }
+          } catch (e) {
+            console.error("Email error:", e);
+          }
 
           await sendNotification({
             senderId: session.user.id,
@@ -139,7 +187,7 @@ export async function POST(req) {
             receiverModel: "TeamLead",
             type: "form_assigned",
             title: "New Task Assigned",
-            message: `A new form has been assigned to you.`,
+            message: `A new form "${formTitle}" has been assigned to you for client: ${clinetName}`,
             link: `/teamlead/task-offer/`,
             referenceId: newSubmission._id,
             referenceModel: "FormSubmission",
@@ -148,7 +196,7 @@ export async function POST(req) {
       }
     }
 
-    // ----------------------- SINGLE ASSIGN -----------------------
+    // Single assignment notifications
     if (assignmentType === "single" && assignedTo) {
       const teamLead = await TeamLead.findById(assignedTo);
 
@@ -159,12 +207,14 @@ export async function POST(req) {
             managerName: session.user.name || "Manager",
             formTitle: formTitle,
             status: "Pending",
-            message: "A new form has been assigned to you.",
+            message: `A new form "${formTitle}" has been assigned to you for client: ${clinetName}`,
             taskLink: `https://mhcirclesolutions.com/teamlead/tasks/${newSubmission._id}`,
           });
 
           await sendMail(teamLead.email, "New Task Assigned", html);
-        } catch (e) { }
+        } catch (e) {
+          console.error("Email error:", e);
+        }
 
         await sendNotification({
           senderId: session.user.id,
@@ -174,7 +224,7 @@ export async function POST(req) {
           receiverModel: "TeamLead",
           type: "form_assigned",
           title: "New Task Assigned",
-          message: `A new form has been assigned to you.`,
+          message: `A new form "${formTitle}" has been assigned to you for client: ${clinetName}`,
           link: `/teamlead/tasks/${newSubmission._id}`,
           referenceId: newSubmission._id,
           referenceModel: "FormSubmission",
@@ -183,17 +233,21 @@ export async function POST(req) {
     }
 
     return NextResponse.json(
-      { message: "Form submitted successfully", submission: newSubmission },
+      { 
+        message: "Form submitted successfully", 
+        submission: newSubmission,
+        clinetName: newSubmission.clinetName // ✅ Return clinetName in response
+      },
       { status: 201 }
     );
   } catch (error) {
+    console.error("POST error:", error);
     return NextResponse.json(
       { error: error.message, details: error.errors || null },
       { status: 500 }
     );
   }
 }
-
 
 
 export async function GET(req) {
