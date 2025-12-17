@@ -50,10 +50,13 @@ export async function GET(req, { params }) {
 
     // Check if teamlead has access to this task
     const hasAccess =
-      task.assignedTo?._id?.toString() === teamLead._id.toString() ||
-      task.multipleTeamLeadAssigned?.some(
-        (tl) => tl._id.toString() === teamLead._id.toString()
-      );
+  task.assignedTo?.some(
+    (assigned) => assigned._id.toString() === teamLead._id.toString()
+  ) ||
+  task.multipleTeamLeadAssigned?.some(
+    (tl) => tl._id.toString() === teamLead._id.toString()
+  );
+
 
     if (!hasAccess) {
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
