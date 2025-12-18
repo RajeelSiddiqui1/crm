@@ -28,7 +28,7 @@ export async function GET(request) {
       .populate({
         path: "teamLeadId",
         select: "firstName lastName email avatar designation",
-        model: "Employee"
+        model: "TeamLead"
       })
       .populate({
         path: "depId",

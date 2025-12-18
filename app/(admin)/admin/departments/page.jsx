@@ -11,6 +11,7 @@ import {
   Download,
   RefreshCw,
   Filter,
+  FolderOpen,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,7 +43,7 @@ export default function DepartmentsPage() {
       router.push("/adminlogin");
       return;
     }
-  },[session, router,status]);
+  }, [session, router, status]);
 
   const [departments, setDepartments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -243,11 +244,11 @@ export default function DepartmentsPage() {
   // Filter departments based on search - SAFE VERSION
   const filteredDepartments = Array.isArray(departments)
     ? departments.filter(
-        (dept) =>
-          dept?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          (dept?.description &&
-            dept.description.toLowerCase().includes(searchTerm.toLowerCase()))
-      )
+      (dept) =>
+        dept?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (dept?.description &&
+          dept.description.toLowerCase().includes(searchTerm.toLowerCase()))
+    )
     : [];
 
   if (loading) {
@@ -454,6 +455,15 @@ export default function DepartmentsPage() {
                           <Building2 className="w-3 h-3" />
                           <span>{dept.employeeCount || 0} employees</span>
                         </div>
+                        <Button
+                          onClick={() => router.push(`/admin/departments/${dept._id}`)}
+                          size="sm"
+                          variant="outline"
+                          className="text-xs text-gray-900"
+                        >
+                          <FolderOpen className="w-3 h-3 mr-1 text-green-900" />
+                          View Tasks
+                        </Button>
                         <Badge
                           variant="outline"
                           className="bg-blue-50 text-blue-700 border-blue-200 text-xs"

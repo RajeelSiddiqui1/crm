@@ -12,9 +12,13 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { sendNotification } from "@/lib/sendNotification";
 
+
+
 export async function POST(req) {
   try {
     await dbConnect();
+
+    // ---------------- AUTH ----------------
     const session = await getServerSession(authOptions);
     if (!session || session.user.role !== "Manager") {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
@@ -24,226 +28,147 @@ export async function POST(req) {
     let body = {};
     let uploadedFileUrl = null;
 
-    // ----------------------- MULTIPART HANDLING -----------------------
+    // ---------------- MULTIPART ----------------
     if (contentType.includes("multipart/form-data")) {
       const formData = await req.formData();
-      
-      // ✅ Get all form data
+
       body.formId = formData.get("formId");
-      body.submittedBy = formData.get("submittedBy");
-      body.clinetName = formData.get("clinetName"); // ✅ Get clinetName
+      body.clinetName = formData.get("clinetName");
       body.assignmentType = formData.get("assignmentType") || "single";
       body.assignedTo = formData.get("assignedTo");
-      body.multipleTeamLeadAssigned = JSON.parse(formData.get("multipleTeamLeadAssigned") || "[]");
-      
-      // Get formData JSON
+      body.multipleTeamLeadAssigned = JSON.parse(
+        formData.get("multipleTeamLeadAssigned") || "[]"
+      );
+
       const formDataJson = formData.get("formData");
-      if (formDataJson) {
-        body.formData = JSON.parse(formDataJson);
-      } else {
-        body.formData = {};
-      }
+      body.formData = formDataJson ? JSON.parse(formDataJson) : {};
 
-      // File upload handling
       const file = formData.get("file");
-      if (file && file.name && file.size > 0) {
+      if (file && file.size > 0) {
         const buffer = Buffer.from(await file.arrayBuffer());
-        const mimeType = file.type || '';
-        let resourceType = 'auto';
 
-        if (mimeType.startsWith('video/')) {
-          resourceType = 'video';
-        } else if (mimeType.includes('pdf') || mimeType.includes('zip') || mimeType.includes('document')) {
-          resourceType = 'raw';
-        }
-
-        const uploadResult = await new Promise((resolve, reject) => {
-          cloudinary.uploader
-            .upload_stream(
-              {
-                folder: "form_uploads",
-                resource_type: resourceType
-              },
-              (err, result) => {
-                if (err) reject(err);
-                else resolve(result);
-              }
-            )
-            .end(buffer);
-        });
-
-        uploadedFileUrl = uploadResult.secure_url;
-        
-        // Update formData with file URL
-        if (uploadedFileUrl) {
-          // Find file field and update it
-          for (const key in body.formData) {
-            if (typeof body.formData[key] === 'string' && body.formData[key].includes(file.name)) {
-              body.formData[key] = uploadedFileUrl;
-              break;
-            }
+        const upload = await cloudinary.uploader.upload(
+          `data:${file.type};base64,${buffer.toString("base64")}`,
+          {
+            folder: "form_uploads",
+            resource_type: "auto",
           }
-        }
+        );
+
+        uploadedFileUrl = upload.secure_url;
       }
     } else {
       body = await req.json();
     }
 
-    console.log("=== BACKEND RECEIVED DATA ===");
-    console.log("clinetName:", body.clinetName);
-    console.log("formId:", body.formId);
-    console.log("assignmentType:", body.assignmentType);
-
     const {
       formId,
-      submittedBy,
-      clinetName, // ✅ This should now be available
+      clinetName,
       assignmentType,
       assignedTo,
       multipleTeamLeadAssigned,
       formData,
     } = body;
 
-    // Validate clinetName
-    if (!clinetName || clinetName.trim() === "") {
+    if (!formId || !clinetName) {
       return NextResponse.json(
-        { error: "Client name is required" },
+        { error: "formId and client name are required" },
         { status: 400 }
       );
     }
 
-    // ----------------------- FORM TITLE FETCH -----------------------
-    const form = await Form.findById(formId);
-    if (!form) {
-      return NextResponse.json(
-        { error: "Form not found" },
-        { status: 404 }
-      );
-    }
-    
-    const formTitle = form.title;
+    // ---------------- FORM FETCH (depId SOURCE) ----------------
+    const form = await Form.findById(
+      new mongoose.Types.ObjectId(formId)
+    ).select("title depId");
 
-    // ----------------------- SUBMISSION CREATION -----------------------
+    if (!form) {
+      return NextResponse.json({ error: "Form not found" }, { status: 404 });
+    }
+
+    // ---------------- SUBMISSION DATA ----------------
     const submissionData = {
-      formId,
-      submittedBy,
-      clinetName: clinetName.trim(), // ✅ Store clinetName
+      formId: form._id,
+      depId: form.depId, // ✅ AUTO FROM FORM
+      clinetName: clinetName.trim(),
       formData,
       status: "pending",
       status2: "pending",
-      assignedTo: [],                  // ✅ always array
-      multipleTeamLeadAssigned: [],    // ✅ always array
+      submittedBy: session.user.id,
+      assignedTo: [],
+      multipleTeamLeadAssigned: [],
     };
 
-    // Handle multiple assignment
-    if (assignmentType === "multiple" && multipleTeamLeadAssigned?.length > 0) {
-      submissionData.multipleTeamLeadAssigned = multipleTeamLeadAssigned.map(
-        (id) => new mongoose.Types.ObjectId(id)
-      );
-    }
-    // Handle single assignment
-    else if (assignmentType === "single" && assignedTo) {
+    if (assignmentType === "multiple" && multipleTeamLeadAssigned.length > 0) {
+      submissionData.multipleTeamLeadAssigned =
+        multipleTeamLeadAssigned.map(
+          (id) => new mongoose.Types.ObjectId(id)
+        );
+    } else if (assignmentType === "single" && assignedTo) {
       submissionData.assignedTo = [
-        new mongoose.Types.ObjectId(assignedTo)
+        new mongoose.Types.ObjectId(assignedTo),
       ];
-    }
-    else {
+    } else {
       return NextResponse.json(
         { error: "Invalid assignment data" },
         { status: 400 }
       );
     }
 
-    const newSubmission = new FormSubmission(submissionData);
-    await newSubmission.save();
+    // ---------------- SAVE ----------------
+    const newSubmission = await FormSubmission.create(submissionData);
 
-    console.log("Submission created with clinetName:", newSubmission.clinetName);
+    // ---------------- NOTIFY FUNCTION ----------------
+    const notifyTeamLead = async (teamLeadId) => {
+      const teamLead = await TeamLead.findById(teamLeadId);
+      if (!teamLead) return;
 
-    // ----------------------- NOTIFICATIONS AND EMAILS -----------------------
-    if (assignmentType === "multiple" && multipleTeamLeadAssigned?.length > 0) {
+      const html = createTaskTemplate({
+        name: teamLead.name || "Team Lead",
+        managerName: session.user.name || "Manager",
+        formTitle: form.title,
+        status: "Pending",
+        message: `A new form "${form.title}" has been assigned for client: ${clinetName}`,
+        taskLink: `/teamlead/tasks/${newSubmission._id}`,
+      });
+
+      await sendMail(teamLead.email, "New Task Assigned", html);
+
+      await sendNotification({
+        senderId: session.user.id,
+        senderModel: "Manager",
+        senderName: session.user.name || "Manager",
+        receiverId: teamLead._id,
+        receiverModel: "TeamLead",
+        type: "form_assigned",
+        title: "New Task Assigned",
+        message: `Form "${form.title}" assigned for client ${clinetName}`,
+        link: `/teamlead/tasks/${newSubmission._id}`,
+        referenceId: newSubmission._id,
+        referenceModel: "FormSubmission",
+      });
+    };
+
+    // ---------------- SEND NOTIFICATIONS ----------------
+    if (assignmentType === "multiple") {
       for (const tlId of multipleTeamLeadAssigned) {
-        const teamLead = await TeamLead.findById(tlId);
-        if (teamLead && teamLead.email) {
-          try {
-            const html = createTaskTemplate({
-              name: teamLead.name || "Team Lead",
-              managerName: session.user.name || "Manager",
-              formTitle: formTitle,
-              status: "Pending",
-              message: `A new form "${formTitle}" has been assigned to you for client: ${clinetName}`,
-              taskLink: `https://mhcirclesolutions.com/teamlead/task-offer/`,
-            });
-
-            await sendMail(teamLead.email, "New Task Assigned", html);
-          } catch (e) {
-            console.error("Email error:", e);
-          }
-
-          await sendNotification({
-            senderId: session.user.id,
-            senderModel: "Manager",
-            senderName: session.user.name || "Manager",
-            receiverId: teamLead._id,
-            receiverModel: "TeamLead",
-            type: "form_assigned",
-            title: "New Task Assigned",
-            message: `A new form "${formTitle}" has been assigned to you for client: ${clinetName}`,
-            link: `/teamlead/task-offer/`,
-            referenceId: newSubmission._id,
-            referenceModel: "FormSubmission",
-          });
-        }
+        await notifyTeamLead(tlId);
       }
-    }
-
-    // Single assignment notifications
-    if (assignmentType === "single" && assignedTo) {
-      const teamLead = await TeamLead.findById(assignedTo);
-
-      if (teamLead && teamLead.email) {
-        try {
-          const html = createTaskTemplate({
-            name: teamLead.name || "Team Lead",
-            managerName: session.user.name || "Manager",
-            formTitle: formTitle,
-            status: "Pending",
-            message: `A new form "${formTitle}" has been assigned to you for client: ${clinetName}`,
-            taskLink: `https://mhcirclesolutions.com/teamlead/tasks/${newSubmission._id}`,
-          });
-
-          await sendMail(teamLead.email, "New Task Assigned", html);
-        } catch (e) {
-          console.error("Email error:", e);
-        }
-
-        await sendNotification({
-          senderId: session.user.id,
-          senderModel: "Manager",
-          senderName: session.user.name || "Manager",
-          receiverId: teamLead._id,
-          receiverModel: "TeamLead",
-          type: "form_assigned",
-          title: "New Task Assigned",
-          message: `A new form "${formTitle}" has been assigned to you for client: ${clinetName}`,
-          link: `/teamlead/tasks/${newSubmission._id}`,
-          referenceId: newSubmission._id,
-          referenceModel: "FormSubmission",
-        });
-      }
+    } else {
+      await notifyTeamLead(assignedTo);
     }
 
     return NextResponse.json(
-      { 
-        message: "Form submitted successfully", 
+      {
+        message: "Form submitted successfully",
         submission: newSubmission,
-        clinetName: newSubmission.clinetName // ✅ Return clinetName in response
       },
       { status: 201 }
     );
   } catch (error) {
     console.error("POST error:", error);
     return NextResponse.json(
-      { error: error.message, details: error.errors || null },
+      { error: "Submission failed", details: error.message },
       { status: 500 }
     );
   }

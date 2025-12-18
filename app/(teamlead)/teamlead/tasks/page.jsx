@@ -45,9 +45,11 @@ import {
   Users,
   Plus,
   ArrowRight,
+  Share2,
 } from "lucide-react";
 import axios from "axios";
 import Link from "next/link";
+import ShareTaskModal from "./[id]/share-modal/page";
 
 export default function TeamLeadSubmissionsPage() {
   const { data: session, status } = useSession();
@@ -57,6 +59,8 @@ export default function TeamLeadSubmissionsPage() {
   const [fetching, setFetching] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [status2Filter, setstatus2Filter] = useState("all");
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [submissionId, setSubmissionId] = useState("");
 
   useEffect(() => {
     if (status === "loading") return;
@@ -137,21 +141,21 @@ export default function TeamLeadSubmissionsPage() {
 
 
   const getStatusBadgeClass = (status) => {
-  switch (status) {
-    case "pending":
-      return "bg-yellow-100 text-yellow-800 border border-yellow-300";
-    case "in_progress":
-      return "bg-blue-100 text-blue-800 border border-blue-300";
-    case "completed":
-      return "bg-green-100 text-green-800 border border-green-300";
-    case "approved":
-      return "bg-emerald-100 text-emerald-800 border border-emerald-300";
-    case "rejected":
-      return "bg-red-100 text-red-800 border border-red-300";
-    default:
-      return "bg-gray-100 text-gray-800 border border-gray-300";
-  }
-};
+    switch (status) {
+      case "pending":
+        return "bg-yellow-100 text-yellow-800 border border-yellow-300";
+      case "in_progress":
+        return "bg-blue-100 text-blue-800 border border-blue-300";
+      case "completed":
+        return "bg-green-100 text-green-800 border border-green-300";
+      case "approved":
+        return "bg-emerald-100 text-emerald-800 border border-emerald-300";
+      case "rejected":
+        return "bg-red-100 text-red-800 border border-red-300";
+      default:
+        return "bg-gray-100 text-gray-800 border border-gray-300";
+    }
+  };
 
 
   const formatDate = (dateString) => {
@@ -242,12 +246,12 @@ export default function TeamLeadSubmissionsPage() {
               <CardContent className="p-3 text-center">
                 <div
                   className={`text-lg sm:text-xl font-bold ${stat.color === "gray"
-                      ? "text-gray-900"
-                      : stat.color === "amber"
-                        ? "text-amber-600"
-                        : stat.color === "blue"
-                          ? "text-blue-600"
-                          : "text-green-600"
+                    ? "text-gray-900"
+                    : stat.color === "amber"
+                      ? "text-amber-600"
+                      : stat.color === "blue"
+                        ? "text-blue-600"
+                        : "text-green-600"
                     }`}
                 >
                   {stat.value}
@@ -419,7 +423,7 @@ export default function TeamLeadSubmissionsPage() {
                         <TableHead className="font-semibold text-gray-700 text-sm py-3 w-[100px]">
                           Your Status
                         </TableHead>
-                       
+
                         <TableHead className="font-semibold text-gray-700 text-sm py-3 w-[100px]">
                           Actions
                         </TableHead>
@@ -485,7 +489,17 @@ export default function TeamLeadSubmissionsPage() {
                               {submission.status2.replace("_", " ")}
                             </Badge>
                           </TableCell>
-                          
+
+                          <TableCell>
+                            <Button
+                              onClick={() => setIsShareModalOpen(true)}
+                              className="bg-purple-600 hover:bg-purple-700 text-white"
+                            >
+                              <Share2 className="w-4 h-4 mr-2" />
+                              Share with Team Leads
+                            </Button>
+                          </TableCell>
+
 
                           <TableCell className="py-3 flex gap-2 flex-wrap">
                             <Link
@@ -522,6 +536,15 @@ export default function TeamLeadSubmissionsPage() {
           </CardContent>
         </Card>
       </div>
+        <ShareTaskModal
+        submissionId={submissionId}
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        onSuccess={() => {
+          // Refresh task details or show success message
+        }}
+      />
     </div>
+    
   );
 }

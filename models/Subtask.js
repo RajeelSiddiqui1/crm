@@ -13,7 +13,7 @@ const subtaskSchema = new mongoose.Schema(
 
     teamLeadId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Employee",
+      ref: "TeamLead",
       required: true,
     },
 

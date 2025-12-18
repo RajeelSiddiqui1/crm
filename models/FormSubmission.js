@@ -12,13 +12,15 @@ const formSubmissionSchema = new mongoose.Schema(
       ref: "Form",
       required: true,
     },
+    depId:{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Department",
+    },
     submittedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Manager",
       required: true,
-    },
-
-    
+    },   
     multipleManagerShared: [
       {
         type: mongoose.Schema.Types.ObjectId,
@@ -37,6 +39,17 @@ const formSubmissionSchema = new mongoose.Schema(
         default: [],
       },
     ],
+     multipleTeamLeadShared: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "TeamLead",
+        default: [],
+      },
+    ],
+     sharedByTeamlead:{
+       type: mongoose.Schema.Types.ObjectId,
+        ref: "Teamlead"
+    },
     assignedTo: [{
       type: mongoose.Schema.Types.ObjectId,
       ref: "TeamLead",
@@ -68,6 +81,23 @@ const formSubmissionSchema = new mongoose.Schema(
           type: Date,
         },
       },
+    ],
+       employeeFeedbacks: [
+      {
+        employeeId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Employee",
+          required: true,
+        },
+        feedback: {
+          type: String,
+          required: true,
+        },
+        submittedAt: {
+          type: Date,
+          default: Date.now,
+        },
+      }
     ],
     formData: {
       type: Map,
@@ -104,6 +134,10 @@ const formSubmissionSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "AdminTask",
     },
+     sharedTasksCount: {
+      type: Number,
+      default: 0
+    }
   },
   { timestamps: true }
 );
