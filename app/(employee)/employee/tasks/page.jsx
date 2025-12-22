@@ -57,6 +57,19 @@ import {
   Info,
   MessageSquare,
   Send,
+  Users,
+  Building,
+  Briefcase,
+  Mail,
+  Phone,
+  ChevronDown,
+  ChevronUp,
+  Shield,
+  UserCog,
+  Users2,
+  FolderTree,
+  FileCheck,
+  ArrowRight,
 } from "lucide-react";
 import axios from "axios";
 import {
@@ -77,6 +90,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Separator } from "@/components/ui/separator";
+import Link from "next/link";
 
 export default function EmployeeTasksPage() {
   const { data: session, status } = useSession();
@@ -92,6 +107,9 @@ export default function EmployeeTasksPage() {
   const [activeTab, setActiveTab] = useState("all");
   const [showFeedbackDialog, setShowFeedbackDialog] = useState(false);
   const [selectedTaskForFeedback, setSelectedTaskForFeedback] = useState(null);
+  const [showManagerDetails, setShowManagerDetails] = useState(false);
+  const [showTeamLeadDetails, setShowTeamLeadDetails] = useState(false);
+  const [expandedTasks, setExpandedTasks] = useState({});
 
   useEffect(() => {
     if (status === "loading") return;
@@ -190,6 +208,13 @@ export default function EmployeeTasksPage() {
     setShowFeedbackDialog(true);
   };
 
+  const toggleTaskExpansion = (taskId) => {
+    setExpandedTasks(prev => ({
+      ...prev,
+      [taskId]: !prev[taskId]
+    }));
+  };
+
   const getStatusVariant = (status) => {
     switch (status) {
       case "completed":
@@ -198,6 +223,7 @@ export default function EmployeeTasksPage() {
           text: "text-emerald-700",
           border: "border-emerald-200",
           icon: <CheckCircle className="w-3 h-3" />,
+          color: "emerald"
         };
       case "approved":
         return {
@@ -205,6 +231,7 @@ export default function EmployeeTasksPage() {
           text: "text-green-700",
           border: "border-green-200",
           icon: <CheckCircle className="w-3 h-3" />,
+          color: "green"
         };
       case "in_progress":
         return {
@@ -212,6 +239,7 @@ export default function EmployeeTasksPage() {
           text: "text-blue-700",
           border: "border-blue-200",
           icon: <TrendingUp className="w-3 h-3" />,
+          color: "blue"
         };
       case "pending":
         return {
@@ -219,6 +247,7 @@ export default function EmployeeTasksPage() {
           text: "text-amber-700",
           border: "border-amber-200",
           icon: <Clock className="w-3 h-3" />,
+          color: "amber"
         };
       case "rejected":
         return {
@@ -226,6 +255,7 @@ export default function EmployeeTasksPage() {
           text: "text-red-700",
           border: "border-red-200",
           icon: <XCircle className="w-3 h-3" />,
+          color: "red"
         };
       default:
         return {
@@ -233,6 +263,7 @@ export default function EmployeeTasksPage() {
           text: "text-gray-700",
           border: "border-gray-300",
           icon: <AlertCircle className="w-3 h-3" />,
+          color: "gray"
         };
     }
   };
@@ -254,7 +285,9 @@ export default function EmployeeTasksPage() {
     const matchesSearch =
       task.clinetName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       task.formId?.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      task.employeeStatus?.toLowerCase().includes(searchTerm.toLowerCase());
+      task.employeeStatus?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      task.submittedBy?.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      task.submittedBy?.lastName?.toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesStatus =
       statusFilter === "all" || task.employeeStatus === statusFilter;
@@ -520,7 +553,7 @@ export default function EmployeeTasksPage() {
                 <div className="relative flex-1 lg:w-64 text-gray-900">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-900" />
                   <Input
-                    placeholder="Search tasks, client names..."
+                    placeholder="Search tasks, client names, managers..."
                     className="pl-10 text-gray-900 bg-white border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
@@ -540,8 +573,6 @@ export default function EmployeeTasksPage() {
                     <SelectItem value="rejected">Rejected</SelectItem>
                   </SelectContent>
                 </Select>
-
-               
               </div>
             </div>
 
@@ -559,28 +590,24 @@ export default function EmployeeTasksPage() {
                 >
                   All ({tasks.length})
                 </TabsTrigger>
-
                 <TabsTrigger
                   value="pending"
                   className="text-gray-600 data-[state=active]:text-gray-900 data-[state=active]:bg-white data-[state=active]:shadow-sm"
                 >
                   Pending ({statusStats.pending})
                 </TabsTrigger>
-
                 <TabsTrigger
                   value="in_progress"
                   className="text-gray-600 data-[state=active]:text-gray-900 data-[state=active]:bg-white data-[state=active]:shadow-sm"
                 >
                   In Progress ({statusStats.in_progress})
                 </TabsTrigger>
-
                 <TabsTrigger
                   value="completed"
                   className="text-gray-600 data-[state=active]:text-gray-900 data-[state=active]:bg-white data-[state=active]:shadow-sm"
                 >
                   Completed ({statusStats.completed})
                 </TabsTrigger>
-
               </TabsList>
             </Tabs>
           </CardHeader>
@@ -609,6 +636,357 @@ export default function EmployeeTasksPage() {
               </div>
             ) : (
               <div className="overflow-x-auto">
+                {/* Desktop Table with Expandable Rows */}
+                <Table className="hidden lg:table">
+                  <TableHeader className="bg-gray-50">
+                    <TableRow>
+                      <TableHead className="w-[30px] text-gray-700 font-semibold"></TableHead>
+                      <TableHead className="w-[300px] text-gray-700 font-semibold">
+                        Client & Task
+                      </TableHead>
+                      <TableHead className="text-gray-700 font-semibold">
+                        Department
+                      </TableHead>
+                      <TableHead className="text-gray-700 font-semibold">
+                        Manager
+                      </TableHead>
+                      <TableHead className="text-gray-700 font-semibold">
+                        Team Lead
+                      </TableHead>
+                      <TableHead className="text-gray-700 font-semibold">
+                        Your Status
+                      </TableHead>
+                      <TableHead className="text-gray-700 font-semibold text-right">
+                        Actions
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredTasks.map((task) => {
+                      const statusVariant = getStatusVariant(task.employeeStatus);
+                      const isExpanded = expandedTasks[task._id];
+                      
+                      return (
+                        <React.Fragment key={task._id}>
+                          <TableRow
+                            className="hover:bg-blue-50/50 transition-colors cursor-pointer"
+                            onClick={() => toggleTaskExpansion(task._id)}
+                          >
+                            <TableCell>
+                              {isExpanded ? (
+                                <ChevronUp className="w-4 h-4 text-gray-500" />
+                              ) : (
+                                <ChevronDown className="w-4 h-4 text-gray-500" />
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-3">
+                                <Avatar className="h-10 w-10 border-2 border-white shadow">
+                                  <AvatarFallback className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
+                                    {task.clinetName?.[0]?.toUpperCase() || "C"}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div>
+                                  <div className="font-semibold text-gray-900">
+                                    {task.clinetName || "Unnamed Client"}
+                                  </div>
+                                  <div className="text-sm text-gray-600">
+                                    {task.formId?.title}
+                                  </div>
+                                  <div className="text-xs text-gray-500 mt-1">
+                                    <Calendar className="w-3 h-3 inline mr-1" />
+                                    Assigned: {formatDate(task.assignedAt)}
+                                  </div>
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <Building className="w-4 h-4 text-gray-400" />
+                                <span className="text-sm text-gray-700">
+                                  {task.depId?.name || "No Department"}
+                                </span>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <UserCog className="w-4 h-4 text-purple-500" />
+                                <div className="text-sm">
+                                  <div className="font-medium text-gray-900">
+                                    {task.submittedBy?.firstName} {task.submittedBy?.lastName}
+                                  </div>
+                                  <div className="text-xs text-gray-500">
+                                    {task.submittedBy?.email || "No email"}
+                                  </div>
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              {task.assignedTo?.length > 0 ? (
+                                <div className="flex items-center gap-2">
+                                  <Shield className="w-4 h-4 text-orange-500" />
+                                  <div className="text-sm">
+                                    <div className="font-medium text-gray-900">
+                                      {task.assignedTo[0]?.firstName} {task.assignedTo[0]?.lastName}
+                                    </div>
+                                    <div className="text-xs text-gray-500">
+                                      {task.assignedTo[0]?.email || "No email"}
+                                    </div>
+                                  </div>
+                                </div>
+                              ) : (
+                                <span className="text-sm text-gray-500">No Team Lead</span>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <Badge
+                                  className={`${statusVariant.bg} ${statusVariant.text} ${statusVariant.border} border flex items-center gap-1 px-3 py-1`}
+                                >
+                                  {statusVariant.icon}
+                                  {task.employeeStatus.replace("_", " ")}
+                                </Badge>
+                                <Select
+                                  onValueChange={(value) =>
+                                    handleQuickStatusUpdate(task._id, value)
+                                  }
+                                  disabled={loading}
+                                >
+                                  <SelectTrigger className="w-28 h-8 border-gray-300 bg-white text-gray-900 hover:bg-gray-50">
+                                    <SelectValue placeholder="Update" className="text-gray-900" />
+                                  </SelectTrigger>
+                                  <SelectContent className="bg-white text-gray-900 border border-gray-200 shadow-lg">
+                                    <SelectItem value="pending">
+                                      <div className="flex items-center gap-2">
+                                        <Clock className="w-3 h-3" />
+                                        Pending
+                                      </div>
+                                    </SelectItem>
+                                    <SelectItem value="in_progress">
+                                      <div className="flex items-center gap-2">
+                                        <TrendingUp className="w-3 h-3" />
+                                        In Progress
+                                      </div>
+                                    </SelectItem>
+                                    <SelectItem value="completed">
+                                      <div className="flex items-center gap-2">
+                                        <CheckCircle className="w-3 h-3" />
+                                        Completed
+                                      </div>
+                                    </SelectItem>
+                                    <SelectItem value="rejected">
+                                      <div className="flex items-center gap-2">
+                                        <XCircle className="w-3 h-3" />
+                                        Rejected
+                                      </div>
+                                    </SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center justify-end gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="border-gray-300 text-gray-900 hover:bg-gray-50"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedTask(task);
+                                    setShowDetails(true);
+                                  }}
+                                >
+                                  <Eye className="w-4 h-4 mr-1" />
+                                  View
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="border-blue-200 text-blue-600 hover:bg-blue-50"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    openFeedbackDialog(task);
+                                  }}
+                                >
+                                  <MessageSquare className="w-4 h-4" />
+                                </Button>
+                              </div>
+                              <Link
+                              href={`/group-chat?submissionId=${task._id}`}
+                            >
+                              <Button
+                                className="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white text-xs h-7 px-2 rounded-md shadow-sm transition mt-2"
+                                size="sm"
+                              >
+                                <Eye className="w-3 h-3" />
+                                Chat
+                                <ArrowRight className="w-3 h-3" />
+                              </Button>
+                            </Link>
+                            </TableCell>
+                          </TableRow>
+                          
+                          {/* Expanded Details Row */}
+                          {isExpanded && (
+                            <TableRow className="bg-blue-50/30">
+                              <TableCell colSpan={7} className="p-4">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                  {/* Manager Details */}
+                                  <Card className="border border-blue-100">
+                                    <CardContent className="p-4">
+                                      <div className="flex items-center gap-2 mb-3">
+                                        <UserCog className="w-5 h-5 text-purple-600" />
+                                        <h4 className="font-semibold text-gray-900">Manager Details</h4>
+                                      </div>
+                                      <div className="space-y-2 text-sm">
+                                        <div className="flex items-center gap-2">
+                                          <User className="w-4 h-4 text-gray-400" />
+                                          <span className="font-medium">Name:</span>
+                                          <span>{task.submittedBy?.firstName} {task.submittedBy?.lastName}</span>
+                                        </div>
+                                        {task.submittedBy?.email && (
+                                          <div className="flex items-center gap-2">
+                                            <Mail className="w-4 h-4 text-gray-400" />
+                                            <span className="font-medium">Email:</span>
+                                            <span className="truncate">{task.submittedBy.email}</span>
+                                          </div>
+                                        )}
+                                        {task.submittedBy?.phone && (
+                                          <div className="flex items-center gap-2">
+                                            <Phone className="w-4 h-4 text-gray-400" />
+                                            <span className="font-medium">Phone:</span>
+                                            <span>{task.submittedBy.phone}</span>
+                                          </div>
+                                        )}
+                                        <div className="mt-3">
+                                          <Button
+                                            size="sm"
+                                            variant="outline"
+                                            className="w-full text-purple-600 border-purple-200 hover:bg-purple-50"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setSelectedTask(task);
+                                              setShowManagerDetails(true);
+                                            }}
+                                          >
+                                            View Full Manager Info
+                                          </Button>
+                                        </div>
+                                      </div>
+                                    </CardContent>
+                                  </Card>
+
+                                  {/* Team Lead Details */}
+                                  <Card className="border border-orange-100">
+                                    <CardContent className="p-4">
+                                      <div className="flex items-center gap-2 mb-3">
+                                        <Shield className="w-5 h-5 text-orange-600" />
+                                        <h4 className="font-semibold text-gray-900">Team Lead Details</h4>
+                                      </div>
+                                      {task.assignedTo?.length > 0 ? (
+                                        <div className="space-y-2 text-sm">
+                                          <div className="flex items-center gap-2">
+                                            <User className="w-4 h-4 text-gray-400" />
+                                            <span className="font-medium">Name:</span>
+                                            <span>{task.assignedTo[0]?.firstName} {task.assignedTo[0]?.lastName}</span>
+                                          </div>
+                                          {task.assignedTo[0]?.email && (
+                                            <div className="flex items-center gap-2">
+                                              <Mail className="w-4 h-4 text-gray-400" />
+                                              <span className="font-medium">Email:</span>
+                                              <span className="truncate">{task.assignedTo[0].email}</span>
+                                            </div>
+                                          )}
+                                          {task.assignedTo[0]?.department && (
+                                            <div className="flex items-center gap-2">
+                                              <Building className="w-4 h-4 text-gray-400" />
+                                              <span className="font-medium">Department:</span>
+                                              <span>{task.assignedTo[0].department}</span>
+                                            </div>
+                                          )}
+                                          {task.teamLeadFeedback && (
+                                            <div className="mt-2 pt-2 border-t">
+                                              <div className="flex items-center gap-2 mb-1">
+                                                <MessageSquare className="w-4 h-4 text-orange-500" />
+                                                <span className="font-medium">Feedback:</span>
+                                              </div>
+                                              <p className="text-sm text-gray-600 italic">
+                                                "{task.teamLeadFeedback}"
+                                              </p>
+                                            </div>
+                                          )}
+                                          <div className="mt-3">
+                                            <Button
+                                              size="sm"
+                                              variant="outline"
+                                              className="w-full text-orange-600 border-orange-200 hover:bg-orange-50"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                setSelectedTask(task);
+                                                setShowTeamLeadDetails(true);
+                                              }}
+                                            >
+                                              View Full Team Lead Info
+                                            </Button>
+                                          </div>
+                                        </div>
+                                      ) : (
+                                        <div className="text-center py-4">
+                                          <p className="text-gray-500 text-sm">No Team Lead Assigned</p>
+                                        </div>
+                                      )}
+                                    </CardContent>
+                                  </Card>
+
+                                  {/* Task Status & Feedback */}
+                                  <Card className="border border-emerald-100">
+                                    <CardContent className="p-4">
+                                      <div className="flex items-center gap-2 mb-3">
+                                        <FileCheck className="w-5 h-5 text-emerald-600" />
+                                        <h4 className="font-semibold text-gray-900">Task Status</h4>
+                                      </div>
+                                      <div className="space-y-3">
+                                        <div>
+                                          <div className="text-xs text-gray-500 mb-1">Manager Status</div>
+                                          <Badge className={`${getStatusVariant(task.status).bg} ${getStatusVariant(task.status).text} ${getStatusVariant(task.status).border}`}>
+                                            {task.status?.replace("_", " ") || "N/A"}
+                                          </Badge>
+                                        </div>
+                                        <div>
+                                          <div className="text-xs text-gray-500 mb-1">Team Lead Status</div>
+                                          <Badge className={`${getStatusVariant(task.status2).bg} ${getStatusVariant(task.status2).text} ${getStatusVariant(task.status2).border}`}>
+                                            {task.status2?.replace("_", " ") || "N/A"}
+                                          </Badge>
+                                        </div>
+                                        {task.managerComments && (
+                                          <div className="pt-2 border-t">
+                                            <div className="text-xs text-gray-500 mb-1">Manager Comments</div>
+                                            <p className="text-sm text-gray-700 italic">
+                                              "{task.managerComments}"
+                                            </p>
+                                          </div>
+                                        )}
+                                        {task.employeeFeedback && (
+                                          <div className="pt-2 border-t">
+                                            <div className="text-xs text-gray-500 mb-1">Your Feedback</div>
+                                            <p className="text-sm text-gray-700 italic">
+                                              "{task.employeeFeedback}"
+                                            </p>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </CardContent>
+                                  </Card>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </React.Fragment>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+
                 {/* Mobile View */}
                 <div className="block lg:hidden space-y-3 p-4">
                   {filteredTasks.map((task) => {
@@ -616,11 +994,7 @@ export default function EmployeeTasksPage() {
                     return (
                       <Card
                         key={task._id}
-                        className="border border-gray-200 hover:border-blue-200 transition-colors cursor-pointer"
-                        onClick={() => {
-                          setSelectedTask(task);
-                          setShowDetails(true);
-                        }}
+                        className="border border-gray-200 hover:border-blue-200 transition-colors"
                       >
                         <CardContent className="p-4">
                           <div className="flex justify-between items-start mb-3">
@@ -630,7 +1004,7 @@ export default function EmployeeTasksPage() {
                                   <FileText className="w-4 h-4 text-blue-600" />
                                 </div>
                                 <div>
-                                  <h4 className="font-semibold text-gray-900 line-clamp-1">
+                                  <h4 className="font-semibold text-gray-900">
                                     {task.clinetName || "Unnamed Client"}
                                   </h4>
                                   <p className="text-xs text-gray-500">
@@ -638,7 +1012,7 @@ export default function EmployeeTasksPage() {
                                   </p>
                                 </div>
                               </div>
-                              <p className="text-sm text-gray-600 line-clamp-2">
+                              <p className="text-sm text-gray-600">
                                 {task.formId?.description || "No description"}
                               </p>
                             </div>
@@ -652,187 +1026,73 @@ export default function EmployeeTasksPage() {
                             </Badge>
                           </div>
 
-                          <div className="flex items-center justify-between text-sm text-gray-600">
-                            <div className="flex items-center gap-2">
-                              <Calendar className="w-3 h-3" />
-                              <span>{formatDate(task.assignedAt)}</span>
+                          <div className="space-y-3 mt-3">
+                            <div className="flex items-center justify-between text-sm">
+                              <div className="flex items-center gap-2 text-gray-600">
+                                <Building className="w-3 h-3" />
+                                <span>{task.depId?.name || "No Dept"}</span>
+                              </div>
+                              <div className="flex items-center gap-2 text-gray-600">
+                                <Calendar className="w-3 h-3" />
+                                <span>{formatDate(task.assignedAt)}</span>
+                              </div>
                             </div>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="text-blue-600 hover:text-blue-700"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                openFeedbackDialog(task);
-                              }}
-                            >
-                              <MessageSquare className="w-4 h-4" />
-                            </Button>
+
+                            <div className="grid grid-cols-2 gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="text-purple-600 border-purple-200"
+                                onClick={() => {
+                                  setSelectedTask(task);
+                                  setShowManagerDetails(true);
+                                }}
+                              >
+                                <UserCog className="w-4 h-4 mr-2" />
+                                Manager
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="text-orange-600 border-orange-200"
+                                onClick={() => {
+                                  setSelectedTask(task);
+                                  setShowTeamLeadDetails(true);
+                                }}
+                              >
+                                <Shield className="w-4 h-4 mr-2" />
+                                Team Lead
+                              </Button>
+                            </div>
+
+                            <div className="flex items-center justify-between">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="text-gray-700 border-gray-300"
+                                onClick={() => {
+                                  setSelectedTask(task);
+                                  setShowDetails(true);
+                                }}
+                              >
+                                <Eye className="w-4 h-4 mr-2" />
+                                View Details
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="text-blue-600 border-blue-200"
+                                onClick={() => openFeedbackDialog(task)}
+                              >
+                                <MessageSquare className="w-4 h-4" />
+                              </Button>
+                            </div>
                           </div>
                         </CardContent>
                       </Card>
                     );
                   })}
                 </div>
-
-                {/* Desktop Table */}
-                <Table className="hidden lg:table">
-                  <TableHeader className="bg-gray-50">
-                    <TableRow>
-                      <TableHead className="w-[300px] text-gray-700 font-semibold">
-                        Client & Task
-                      </TableHead>
-                      <TableHead className="text-gray-700 font-semibold">
-                        Assigned Date
-                      </TableHead>
-                      <TableHead className="text-gray-700 font-semibold">
-                        Manager Status
-                      </TableHead>
-                      <TableHead className="text-gray-700 font-semibold">
-                        TeamLead Status
-                      </TableHead>
-                      <TableHead className="text-gray-700 font-semibold">
-                        Your Status
-                      </TableHead>
-                      <TableHead className="text-gray-700 font-semibold text-right">
-                        Actions
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredTasks.map((task) => {
-                      const statusVariant = getStatusVariant(task.employeeStatus);
-                      return (
-                        <TableRow
-                          key={task._id}
-                          className="hover:bg-blue-50/50 transition-colors"
-                        >
-                          <TableCell>
-                            <div className="flex items-center gap-3">
-                              <Avatar className="h-10 w-10 border-2 border-white shadow">
-                                <AvatarFallback className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">
-                                  {task.clinetName?.[0]?.toUpperCase() || "C"}
-                                </AvatarFallback>
-                              </Avatar>
-                              <div>
-                                <div className="font-semibold text-gray-900">
-                                  {task.clinetName || "Unnamed Client"}
-                                </div>
-                                <div className="text-sm text-gray-600">
-                                  {task.formId?.title}
-                                </div>
-                              </div>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2 text-sm text-gray-700">
-                              <Calendar className="w-4 h-4" />
-                              {formatFullDate(task.assignedAt)}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge
-                              variant="outline"
-                              className={`${getStatusVariant(task.status).bg} ${getStatusVariant(task.status).text} ${getStatusVariant(task.status).border} border`}
-                            >
-                              {task.status?.replace("_", " ") || "N/A"}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Badge
-                              variant="outline"
-                              className={`${getStatusVariant(task.status2).bg} ${getStatusVariant(task.status2).text} ${getStatusVariant(task.status2).border} border`}
-                            >
-                              {task.status2?.replace("_", " ") || "N/A"}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <Badge
-                                className={`${statusVariant.bg} ${statusVariant.text} ${statusVariant.border} border flex items-center gap-1 px-3 py-1`}
-                              >
-                                {statusVariant.icon}
-                                {task.employeeStatus.replace("_", " ")}
-                              </Badge>
-                              <Select
-                                onValueChange={(value) =>
-                                  handleQuickStatusUpdate(task._id, value)
-                                }
-                                disabled={loading}
-                              >
-                                <SelectTrigger className="w-28 h-8 border-gray-300 bg-white text-gray-900 hover:bg-gray-50">
-                                  <SelectValue placeholder="Update" className="text-gray-900" />
-                                </SelectTrigger>
-                                <SelectContent className="bg-white text-gray-900 border border-gray-200 shadow-lg">
-                                  <SelectItem value="pending">
-                                    <div className="flex items-center gap-2">
-                                      <Clock className="w-3 h-3" />
-                                      Pending
-                                    </div>
-                                  </SelectItem>
-                                  <SelectItem value="in_progress">
-                                    <div className="flex items-center gap-2">
-                                      <TrendingUp className="w-3 h-3" />
-                                      In Progress
-                                    </div>
-                                  </SelectItem>
-                                  <SelectItem value="completed">
-                                    <div className="flex items-center gap-2">
-                                      <CheckCircle className="w-3 h-3" />
-                                      Completed
-                                    </div>
-                                  </SelectItem>
-                                  <SelectItem value="rejected">
-                                    <div className="flex items-center gap-2">
-                                      <XCircle className="w-3 h-3" />
-                                      Rejected
-                                    </div>
-                                  </SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center justify-end gap-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="border-gray-300 text-gray-900 hover:bg-gray-50"
-                                onClick={() => {
-                                  setSelectedTask(task);
-                                  setShowDetails(true);
-                                }}
-                              >
-                                <Eye className="w-4 h-4 mr-1" />
-                                View
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="border-blue-200 text-blue-600 hover:bg-blue-50"
-                                onClick={() => openFeedbackDialog(task)}
-                              >
-                                <MessageSquare className="w-4 h-4" />
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="border-purple-200 text-purple-600 hover:bg-purple-50"
-                                onClick={() =>
-                                  router.push(
-                                    `/group-chat?submissionId=${task._id}`
-                                  )
-                                }
-                              >
-                                <MessageCircle className="w-4 h-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
               </div>
             )}
           </CardContent>
@@ -864,6 +1124,12 @@ export default function EmployeeTasksPage() {
                     <p className="text-gray-600">
                       {selectedTask.formId?.title}
                     </p>
+                    {selectedTask.depId && (
+                      <div className="flex items-center gap-2 mt-2 text-sm text-gray-700">
+                        <Building className="w-4 h-4" />
+                        <span>Department: {selectedTask.depId.name}</span>
+                      </div>
+                    )}
                   </div>
                   <div className="flex flex-col items-end gap-2">
                     <Badge
@@ -877,6 +1143,102 @@ export default function EmployeeTasksPage() {
                     </span>
                   </div>
                 </div>
+              </div>
+
+              {/* Stakeholders Section */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Manager Details Card */}
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="p-2 bg-purple-50 rounded-lg">
+                        <UserCog className="w-5 h-5 text-purple-600" />
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-gray-900">Manager</h4>
+                        <Badge className="text-sm text-white bg-green-900">Task Submitted By</Badge>
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <User className="w-4 h-4 text-gray-400" />
+                        <span className="font-medium text-gray-900">Name:</span>
+                        <span className="text-blue-900">{selectedTask.submittedBy?.firstName} {selectedTask.submittedBy?.lastName}</span>
+                      </div>
+                      {selectedTask.submittedBy?.email && (
+                        <div className="flex items-center gap-2">
+                          <Mail className="w-4 h-4 text-gray-400" />
+                          <span className="font-medium text-gray-900">Email:</span>
+                          <span className="text-blue-900">{selectedTask.submittedBy.email}</span>
+                        </div>
+                      )}
+                      {selectedTask.managerComments && (
+                        <div className="mt-3 pt-3 border-t">
+                          <div className="flex items-center gap-2 mb-2">
+                            <MessageSquare className="w-4 h-4 text-purple-500" />
+                            <span className="font-medium text-gray-900">Manager Comments</span>
+                          </div>
+                          <p className="text-sm text-gray-900 italic">
+                            "{selectedTask.managerComments}"
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Team Lead Details Card */}
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="p-2 bg-orange-50 rounded-lg">
+                        <Shield className="w-5 h-5 text-orange-600" />
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-gray-900">Team Lead</h4>
+                        <Badge className="text-sm text-white bg-green-900">Task Supervisor</Badge>
+                      </div>
+                    </div>
+                    {selectedTask.assignedTo?.length > 0 ? (
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <User className="w-4 h-4 text-gray-400" />
+                          <span className="font-medium text-gray-900">Name:</span>
+                          <span className="text-blue-900">{selectedTask.assignedTo[0]?.firstName} {selectedTask.assignedTo[0]?.lastName}</span>
+                        </div>
+                        {selectedTask.assignedTo[0]?.email && (
+                          <div className="flex items-center gap-2">
+                            <Mail className="w-4 h-4 text-gray-400" />
+                            <span className="font-medium text-gray-900">Email:</span>
+                            <span className="text-blue-900">{selectedTask.assignedTo[0].email}</span>
+                          </div>
+                        )}
+                        {selectedTask.assignedTo[0]?.department && (
+                          <div className="flex items-center gap-2">
+                            <Building className="w-4 h-4 text-gray-400" />
+                            <span className="font-medium">Department:</span>
+                            <span>{selectedTask.assignedTo[0].department}</span>
+                          </div>
+                        )}
+                        {selectedTask.teamLeadFeedback && (
+                          <div className="mt-3 pt-3 border-t">
+                            <div className="flex items-center gap-2 mb-2">
+                              <MessageSquare className="w-4 h-4 text-orange-500" />
+                              <span className="font-medium text-gray-900">Team Lead Feedback</span>
+                            </div>
+                            <p className="text-sm text-gray-600 italic">
+                              "{selectedTask.teamLeadFeedback}"
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="text-center py-4">
+                        <p className="text-gray-500 text-sm">No Team Lead Assigned</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
               </div>
 
               {/* Status Overview */}
@@ -906,7 +1268,7 @@ export default function EmployeeTasksPage() {
                   <CardContent className="p-4">
                     <div className="flex items-center gap-3">
                       <div className="p-2 bg-purple-50 rounded-lg">
-                        <User className="w-5 h-5 text-purple-600" />
+                        <Shield className="w-5 h-5 text-purple-600" />
                       </div>
                       <div>
                         <p className="text-sm font-medium text-gray-700">
@@ -1035,9 +1397,177 @@ export default function EmployeeTasksPage() {
         </DialogContent>
       </Dialog>
 
+      {/* Manager Details Modal */}
+      <Dialog open={showManagerDetails} onOpenChange={setShowManagerDetails}>
+        <DialogContent className="max-w-md bg-white text-gray-900">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserCog className="w-5 h-5 text-purple-600" />
+              Manager Details
+            </DialogTitle>
+            <DialogDescription>
+              Complete information about the manager
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedTask && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-4">
+                <Avatar className="w-16 h-16 border-2 border-purple-200">
+                  <AvatarFallback className="bg-gradient-to-r from-purple-500 to-pink-600 text-white text-lg">
+                    {selectedTask.submittedBy?.firstName?.[0]}
+                    {selectedTask.submittedBy?.lastName?.[0]}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <h3 className="font-bold text-gray-900">
+                    {selectedTask.submittedBy?.firstName} {selectedTask.submittedBy?.lastName}
+                  </h3>
+                  <p className="text-purple-600 font-medium">Manager</p>
+                </div>
+              </div>
+
+              <Separator />
+
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-sm text-gray-500">Email</Label>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Mail className="w-4 h-4 text-gray-400" />
+                      <span className="font-medium truncate">
+                        {selectedTask.submittedBy?.email || "N/A"}
+                      </span>
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="text-sm text-gray-500">Phone</Label>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Phone className="w-4 h-4 text-gray-400" />
+                      <span className="font-medium">
+                        {selectedTask.submittedBy?.phone || "N/A"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {selectedTask.managerComments && (
+                  <div className="bg-purple-50 border border-purple-200 rounded-lg p-3">
+                    <Label className="text-sm text-gray-500 block mb-2">Manager Comments</Label>
+                    <p className="text-purple-800 italic">
+                      "{selectedTask.managerComments}"
+                    </p>
+                  </div>
+                )}
+
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Info className="w-4 h-4 text-blue-600" />
+                    <span className="font-medium text-blue-900">Manager Role</span>
+                  </div>
+                  <p className="text-sm text-blue-700">
+                    This manager submitted the task and will receive notifications about task updates.
+                    They have full visibility into task progress and your performance.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Team Lead Details Modal */}
+      <Dialog open={showTeamLeadDetails} onOpenChange={setShowTeamLeadDetails}>
+        <DialogContent className="max-w-md bg-white text-gray-900">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Shield className="w-5 h-5 text-orange-600" />
+              Team Lead Details
+            </DialogTitle>
+            <DialogDescription>
+              Information about your team lead supervisor
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedTask && selectedTask.assignedTo?.length > 0 ? (
+            <div className="space-y-4">
+              <div className="flex items-center gap-4">
+                <Avatar className="w-16 h-16 border-2 border-orange-200">
+                  <AvatarFallback className="bg-gradient-to-r from-orange-500 to-amber-600 text-white text-lg">
+                    {selectedTask.assignedTo[0]?.firstName?.[0]}
+                    {selectedTask.assignedTo[0]?.lastName?.[0]}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <h3 className="font-bold text-gray-900">
+                    {selectedTask.assignedTo[0]?.firstName} {selectedTask.assignedTo[0]?.lastName}
+                  </h3>
+                  <p className="text-orange-600 font-medium">Team Lead</p>
+                </div>
+              </div>
+
+              <Separator />
+
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-sm text-gray-500">Email</Label>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Mail className="w-4 h-4 text-gray-400" />
+                      <span className="font-medium truncate">
+                        {selectedTask.assignedTo[0]?.email || "N/A"}
+                      </span>
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="text-sm text-gray-500">Department</Label>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Building className="w-4 h-4 text-gray-400" />
+                      <span className="font-medium">
+                        {selectedTask.assignedTo[0]?.department || "N/A"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {selectedTask.teamLeadFeedback && (
+                  <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
+                    <Label className="text-sm text-gray-500 block mb-2">Team Lead Feedback</Label>
+                    <p className="text-orange-800 italic">
+                      "{selectedTask.teamLeadFeedback}"
+                    </p>
+                  </div>
+                )}
+
+                <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Info className="w-4 h-4 text-green-600" />
+                    <span className="font-medium text-green-900">Team Lead Role</span>
+                  </div>
+                  <p className="text-sm text-green-700">
+                    Your team lead supervises this task, provides guidance, and reviews your work.
+                    They can update task status and provide feedback on your performance.
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Users className="w-10 h-10 text-gray-400" />
+              </div>
+              <h3 className="font-semibold text-gray-900 mb-2">No Team Lead Assigned</h3>
+              <p className="text-gray-600">
+                This task does not have a team lead assigned yet.
+              </p>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       {/* Feedback Dialog */}
       <Dialog open={showFeedbackDialog} onOpenChange={setShowFeedbackDialog}>
-        <DialogContent className="sm:max-w-md bg-white">
+        <DialogContent className="sm:max-w-md bg-white text-gray-900">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <MessageSquare className="w-5 h-5 text-blue-600" />

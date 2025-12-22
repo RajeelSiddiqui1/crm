@@ -5,8 +5,10 @@ import { authOptions } from "@/lib/auth";
 import FormSubmission from "@/models/FormSubmission";
 import Manager from "@/models/Manager";
 import TeamLead from "@/models/TeamLead";
+import Department from "@/models/Department";
 import { sendNotification } from "@/lib/sendNotification";
 import { sendMail } from "@/lib/mail";
+import From from "@/models/Form"
 
 // Temporary Email Template
 export function employeeFeedbackMailTemplate(receiverName, employeeName, clientName, link) {
@@ -167,8 +169,16 @@ export async function GET(request) {
       "assignedEmployees.employeeId": session.user.id,
     })
       .populate("formId", "title description")
-      .populate("assignedEmployees.employeeId", "firstName lastName email")
-      .populate("submittedBy", "firstName lastName") // Added this
+      .populate("depId", "name description") // ✅ Department populated
+      .populate("submittedBy", "firstName lastName email phone department") // ✅ Manager details
+      .populate("assignedTo", "firstName lastName email phone department") // ✅ Team Lead details
+      .populate("multipleManagerShared", "firstName lastName email phone")
+      .populate("multipleTeamLeadShared", "firstName lastName email department")
+      .populate({
+        path: "assignedEmployees.employeeId",
+        select: "firstName lastName email department position phone"
+      })
+      .populate("employeeFeedbacks.employeeId", "firstName lastName email")
       .sort({ createdAt: -1 });
 
     const filteredSubmissions = submissions.map((submission) => {
@@ -183,19 +193,24 @@ export async function GET(request) {
 
       return {
         _id: submission._id,
-        clinetName: submission.clinetName, // ✅ Fixed: clientName included
+        clinetName: submission.clinetName,
         formId: submission.formId,
-        submittedBy: submission.submittedBy,
-        assignedTo: submission.assignedTo,
+        depId: submission.depId, // ✅ Department included
+        submittedBy: submission.submittedBy, // ✅ Manager details
+        assignedTo: submission.assignedTo, // ✅ Team Lead details
+        multipleManagerShared: submission.multipleManagerShared,
+        multipleTeamLeadShared: submission.multipleTeamLeadShared,
         formData: submission.formData,
         status: submission.status,
         status2: submission.status2,
+        adminStatus: submission.adminStatus,
         managerComments: submission.managerComments,
-        teamLeadFeedback: submission.teamLeadFeedback,
+        teamLeadFeedback: submission.teamLeadFeedback, // ✅ Team Lead Feedback
         employeeStatus: employeeAssignment?.status || "pending",
-        employeeFeedback: employeeFeedback?.feedback || "", // ✅ Added employee feedback
+        employeeFeedback: employeeFeedback?.feedback || "",
         assignedAt: employeeAssignment?.assignedAt,
         completedAt: employeeAssignment?.completedAt,
+        claimedAt: submission.claimedAt,
         createdAt: submission.createdAt,
         updatedAt: submission.updatedAt,
       };
@@ -209,4 +224,3 @@ export async function GET(request) {
     });
   }
 }
-

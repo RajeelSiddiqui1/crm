@@ -77,6 +77,7 @@ import {
   UserPlus,
   Target,
   BarChart3,
+  ArrowBigRight,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -863,6 +864,22 @@ export default function TeamleadReceivedTasksPage() {
                                   </div>
                                 )}
                               </div>
+                            </TableCell>
+                            <TableCell>
+                               <Link
+                              href={`/shared-task-chat?sharedTaskId=${task._id}`}
+                            >
+                              <Button
+                                className="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white text-xs h-7 px-2 rounded-md shadow-sm transition"
+                                size="sm"
+                              >
+                                <Eye className="w-3 h-3" />
+                                Chat
+                                <ArrowBigRight className="w-3 h-3" />
+                              </Button>
+                            </Link>
+
+                          
                             </TableCell>
                             <TableCell>
                               <div className="flex items-center gap-2">

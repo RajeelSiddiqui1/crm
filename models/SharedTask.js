@@ -39,6 +39,10 @@ const sharedTaskSchema = new mongoose.Schema(
       ref: "Employee",
     },
 
+    sharedOperationManager: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Manager",
+    },
     sharedOperationTeamlead: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "TeamLead",

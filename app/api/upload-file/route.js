@@ -1,50 +1,31 @@
-// app/api/upload-file/route.js
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import cloudinary from "@/lib/cloudinary";
 
 export async function POST(req) {
   try {
-    const session = await getServerSession(authOptions);
-    
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const { file, filename, fileType, folder = 'chat_attachments' } = await req.json();
+    const { file, filename, fileType, folder } = await req.json();
 
     if (!file) {
-      return NextResponse.json({ error: "File data required" }, { status: 400 });
-    }
-
-    // Determine resource type based on file type
-    let resourceType = "auto";
-    if (fileType.startsWith('image/')) {
-      resourceType = "image";
-    } else if (fileType.startsWith('video/')) {
-      resourceType = "video";
-    } else if (fileType.startsWith('audio/')) {
-      resourceType = "video"; // Cloudinary treats audio as video
+      return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
 
     // Upload to Cloudinary
-    const uploadResponse = await cloudinary.uploader.upload(
+    const result = await cloudinary.uploader.upload(
       `data:${fileType};base64,${file}`,
       {
-        resource_type: resourceType,
-        folder: folder,
-        filename_override: filename,
-        use_filename: true
+        folder: folder || 'chat_attachments',
+        resource_type: 'auto',
+        public_id: `${Date.now()}_${filename}`,
+        overwrite: true
       }
     );
 
     return NextResponse.json({
       success: true,
-      secure_url: uploadResponse.secure_url,
-      public_id: uploadResponse.public_id,
-      format: uploadResponse.format,
-      bytes: uploadResponse.bytes
+      secure_url: result.secure_url,
+      public_id: result.public_id,
+      format: result.format,
+      bytes: result.bytes
     });
 
   } catch (error) {

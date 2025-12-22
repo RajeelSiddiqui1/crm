@@ -38,6 +38,7 @@ import {
   RefreshCw,
   Flag,
   Search,
+  ArrowBigRight,
 } from "lucide-react";
 import axios from "axios";
 import Link from "next/link";
@@ -114,10 +115,11 @@ export default function EmployeeReceivedTasksPage() {
   };
 
   // Filter tasks based on search
-  const filteredTasks = receivedTasks.filter(task =>
-    task.taskTitle?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    task.originalTaskId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    task.status?.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredTasks = receivedTasks.filter(
+    (task) =>
+      task.taskTitle?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      task.originalTaskId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      task.status?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   if (status === "loading" || loading) {
@@ -136,8 +138,12 @@ export default function EmployeeReceivedTasksPage() {
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
           <AlertCircle className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-gray-800 mb-2">Access Denied</h2>
-          <p className="text-gray-600">You need to be logged in as Employee to access this page.</p>
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">
+            Access Denied
+          </h2>
+          <p className="text-gray-600">
+            You need to be logged in as Employee to access this page.
+          </p>
         </div>
       </div>
     );
@@ -152,13 +158,21 @@ export default function EmployeeReceivedTasksPage() {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
           <div className="flex items-center gap-4">
             <Link href="/employee/dashboard">
-              <Button variant="outline" size="icon" className="rounded-full border-gray-300 hover:bg-gray-100 text-gray-700">
+              <Button
+                variant="outline"
+                size="icon"
+                className="rounded-full border-gray-300 hover:bg-gray-100 text-gray-700"
+              >
                 <ArrowLeft className="w-4 h-4" />
               </Button>
             </Link>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">My Assigned Tasks</h1>
-              <p className="text-gray-700 mt-2">Tasks assigned to you by your teamlead</p>
+              <h1 className="text-3xl font-bold text-gray-900">
+                My Assigned Tasks
+              </h1>
+              <p className="text-gray-700 mt-2">
+                Tasks assigned to you by your teamlead
+              </p>
             </div>
           </div>
 
@@ -169,7 +183,9 @@ export default function EmployeeReceivedTasksPage() {
               className="border-gray-300 text-gray-700 hover:bg-gray-100"
               disabled={loading}
             >
-              <RefreshCw className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`} />
+              <RefreshCw
+                className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`}
+              />
               Refresh
             </Button>
           </div>
@@ -181,8 +197,12 @@ export default function EmployeeReceivedTasksPage() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-700">Total Tasks</p>
-                  <p className="text-2xl font-bold text-gray-900">{receivedTasks.length}</p>
+                  <p className="text-sm font-medium text-gray-700">
+                    Total Tasks
+                  </p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {receivedTasks.length}
+                  </p>
                 </div>
                 <FileText className="w-8 h-8 text-blue-600" />
               </div>
@@ -195,7 +215,7 @@ export default function EmployeeReceivedTasksPage() {
                 <div>
                   <p className="text-sm font-medium text-gray-700">Pending</p>
                   <p className="text-2xl font-bold text-yellow-600">
-                    {receivedTasks.filter(t => t.status === 'pending').length}
+                    {receivedTasks.filter((t) => t.status === "pending").length}
                   </p>
                 </div>
                 <Clock className="w-8 h-8 text-yellow-600" />
@@ -207,9 +227,14 @@ export default function EmployeeReceivedTasksPage() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-700">In Progress</p>
+                  <p className="text-sm font-medium text-gray-700">
+                    In Progress
+                  </p>
                   <p className="text-2xl font-bold text-blue-600">
-                    {receivedTasks.filter(t => t.status === 'in_progress').length}
+                    {
+                      receivedTasks.filter((t) => t.status === "in_progress")
+                        .length
+                    }
                   </p>
                 </div>
                 <AlertCircle className="w-8 h-8 text-blue-600" />
@@ -223,7 +248,11 @@ export default function EmployeeReceivedTasksPage() {
                 <div>
                   <p className="text-sm font-medium text-gray-700">Completed</p>
                   <p className="text-2xl font-bold text-green-600">
-                    {receivedTasks.filter(t => t.status === 'completed' || t.status === 'signed').length}
+                    {
+                      receivedTasks.filter(
+                        (t) => t.status === "completed" || t.status === "signed"
+                      ).length
+                    }
                   </p>
                 </div>
                 <CheckCircle className="w-8 h-8 text-green-600" />
@@ -254,13 +283,19 @@ export default function EmployeeReceivedTasksPage() {
           <CardHeader className="bg-white border-b border-gray-200">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <div>
-                <CardTitle className="text-xl font-bold text-gray-900">Assigned Tasks</CardTitle>
+                <CardTitle className="text-xl font-bold text-gray-900">
+                  Assigned Tasks
+                </CardTitle>
                 <CardDescription className="text-gray-700">
                   {filteredTasks.length} of {receivedTasks.length} tasks
                 </CardDescription>
               </div>
-              <Badge variant="outline" className="bg-gray-100 text-gray-800 border-gray-300">
-                {receivedTasks.length} task{receivedTasks.length !== 1 ? "s" : ""}
+              <Badge
+                variant="outline"
+                className="bg-gray-100 text-gray-800 border-gray-300"
+              >
+                {receivedTasks.length} task
+                {receivedTasks.length !== 1 ? "s" : ""}
               </Badge>
             </div>
           </CardHeader>
@@ -269,13 +304,14 @@ export default function EmployeeReceivedTasksPage() {
               <div className="text-center py-12">
                 <FileText className="w-16 h-16 mx-auto text-gray-400 mb-4" />
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  {receivedTasks.length === 0 ? "No Tasks Assigned" : "No Tasks Found"}
+                  {receivedTasks.length === 0
+                    ? "No Tasks Assigned"
+                    : "No Tasks Found"}
                 </h3>
                 <p className="text-gray-700 max-w-md mx-auto">
-                  {receivedTasks.length === 0 
+                  {receivedTasks.length === 0
                     ? "You haven't been assigned any tasks yet. Check back later for updates."
-                    : "No tasks match your search criteria."
-                  }
+                    : "No tasks match your search criteria."}
                 </p>
               </div>
             ) : (
@@ -283,14 +319,30 @@ export default function EmployeeReceivedTasksPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="text-gray-900 font-semibold">Task Title</TableHead>
-                      <TableHead className="text-gray-900 font-semibold">Task ID</TableHead>
-                      <TableHead className="text-gray-900 font-semibold">Assigned By</TableHead>
-                      <TableHead className="text-gray-900 font-semibold">Status</TableHead>
-                      <TableHead className="text-gray-900 font-semibold">Priority</TableHead>
-                      <TableHead className="text-gray-900 font-semibold">Due Date</TableHead>
-                      <TableHead className="text-gray-900 font-semibold">Assigned Date</TableHead>
-                      <TableHead className="text-gray-900 font-semibold">Actions</TableHead>
+                      <TableHead className="text-gray-900 font-semibold">
+                        Task Title
+                      </TableHead>
+                      <TableHead className="text-gray-900 font-semibold">
+                        Task ID
+                      </TableHead>
+                      <TableHead className="text-gray-900 font-semibold">
+                        Assigned By
+                      </TableHead>
+                      <TableHead className="text-gray-900 font-semibold">
+                        Status
+                      </TableHead>
+                      <TableHead className="text-gray-900 font-semibold">
+                        Priority
+                      </TableHead>
+                      <TableHead className="text-gray-900 font-semibold">
+                        Due Date
+                      </TableHead>
+                      <TableHead className="text-gray-900 font-semibold">
+                        Assigned Date
+                      </TableHead>
+                      <TableHead className="text-gray-900 font-semibold">
+                        Actions
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -306,25 +358,34 @@ export default function EmployeeReceivedTasksPage() {
                             )}
                           </div>
                         </TableCell>
-                        <TableCell className="text-sm text-gray-700">{task.originalTaskId}</TableCell>
+                        <TableCell className="text-sm text-gray-700">
+                          {task.originalTaskId}
+                        </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
                             <User className="w-4 h-4 text-gray-600" />
                             <div>
                               <p className="text-gray-900 font-medium">
-                                {task.sharedTeamlead?.firstName} {task.sharedTeamlead?.lastName}
+                                {task.sharedTeamlead?.firstName}{" "}
+                                {task.sharedTeamlead?.lastName}
                               </p>
                               <p className="text-xs text-gray-600">Teamlead</p>
                             </div>
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Badge className={`${getStatusColor(task.status)} border`}>
-                            {task.status.replace('_', ' ')}
+                          <Badge
+                            className={`${getStatusColor(task.status)} border`}
+                          >
+                            {task.status.replace("_", " ")}
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          <Badge className={`${getPriorityColor(task.priority)} border`}>
+                          <Badge
+                            className={`${getPriorityColor(
+                              task.priority
+                            )} border`}
+                          >
                             {task.priority}
                           </Badge>
                         </TableCell>
@@ -344,6 +405,18 @@ export default function EmployeeReceivedTasksPage() {
                               >
                                 <Eye className="w-4 h-4 mr-1" />
                                 View
+                              </Button>
+                            </Link>
+                            <Link
+                              href={`/shared-task-chat?sharedTaskId=${task._id}`}
+                            >
+                              <Button
+                                className="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white text-xs h-7 px-2 rounded-md shadow-sm transition"
+                                size="sm"
+                              >
+                                <Eye className="w-3 h-3" />
+                                Chat
+                                <ArrowBigRight className="w-3 h-3" />
                               </Button>
                             </Link>
                           </div>

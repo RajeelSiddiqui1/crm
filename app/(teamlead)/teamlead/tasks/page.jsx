@@ -110,6 +110,21 @@ export default function TeamLeadSubmissionsPage() {
     }
   };
 
+  function getEmployeeStatusVariant(status) {
+    switch (status) {
+      case "pending":
+        return "bg-yellow-100 text-yellow-800";
+      case "in_progress":
+        return "bg-blue-100 text-blue-800";
+      case "completed":
+        return "bg-green-100 text-green-800";
+      case "rejected":
+        return "bg-red-100 text-red-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
+  }
+
   const getstatus2Icon = (status2) => {
     switch (status2) {
       case "completed":
@@ -126,6 +141,21 @@ export default function TeamLeadSubmissionsPage() {
     }
   };
 
+  function getEmployeeStatusIcon(status) {
+    switch (status) {
+      case "pending":
+        return "⏳"; // clock
+      case "in_progress":
+        return "⚙️"; // gear
+      case "completed":
+        return "✅"; // check
+      case "rejected":
+        return "❌"; // cross
+      default:
+        return "ℹ️";
+    }
+  }
+
   const filteredSubmissions = submissions.filter((submission) => {
     const matchesSearch =
       submission.formId?.title
@@ -138,7 +168,6 @@ export default function TeamLeadSubmissionsPage() {
 
     return matchesSearch && matchesstatus2;
   });
-
 
   const getStatusBadgeClass = (status) => {
     switch (status) {
@@ -156,7 +185,6 @@ export default function TeamLeadSubmissionsPage() {
         return "bg-gray-100 text-gray-800 border border-gray-300";
     }
   };
-
 
   const formatDate = (dateString) => {
     if (!dateString) return "N/A";
@@ -216,8 +244,9 @@ export default function TeamLeadSubmissionsPage() {
               size="sm"
             >
               <RefreshCw
-                className={`w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 ${fetching ? "animate-spin" : ""
-                  }`}
+                className={`w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 ${
+                  fetching ? "animate-spin" : ""
+                }`}
               />
               {fetching ? "Refreshing..." : "Refresh"}
             </Button>
@@ -245,14 +274,15 @@ export default function TeamLeadSubmissionsPage() {
             >
               <CardContent className="p-3 text-center">
                 <div
-                  className={`text-lg sm:text-xl font-bold ${stat.color === "gray"
-                    ? "text-gray-900"
-                    : stat.color === "amber"
+                  className={`text-lg sm:text-xl font-bold ${
+                    stat.color === "gray"
+                      ? "text-gray-900"
+                      : stat.color === "amber"
                       ? "text-amber-600"
                       : stat.color === "blue"
-                        ? "text-blue-600"
-                        : "text-green-600"
-                    }`}
+                      ? "text-blue-600"
+                      : "text-green-600"
+                  }`}
                 >
                   {stat.value}
                 </div>
@@ -293,7 +323,7 @@ export default function TeamLeadSubmissionsPage() {
                     <SelectValue placeholder="Filter status2" />
                   </SelectTrigger>
                   <SelectContent className="bg-white border border-gray-200 text-gray-900">
-                    <SelectItem value="all">All status2</SelectItem>
+                    <SelectItem value="all">All status</SelectItem>
                     <SelectItem value="pending">Pending</SelectItem>
                     <SelectItem value="in_progress">In Progress</SelectItem>
                     <SelectItem value="completed">Completed</SelectItem>
@@ -365,10 +395,10 @@ export default function TeamLeadSubmissionsPage() {
                               {submission.status2 === "completed"
                                 ? "Done"
                                 : submission.status2 === "in_progress"
-                                  ? "Progress"
-                                  : submission.status2 === "pending"
-                                    ? "Pending"
-                                    : submission.status2.slice(0, 3)}
+                                ? "Progress"
+                                : submission.status2 === "pending"
+                                ? "Pending"
+                                : submission.status2.slice(0, 3)}
                             </span>
                           </Badge>
                         </div>
@@ -421,6 +451,9 @@ export default function TeamLeadSubmissionsPage() {
                           Manager
                         </TableHead>
                         <TableHead className="font-semibold text-gray-700 text-sm py-3 w-[100px]">
+                          Employee Status
+                        </TableHead>
+                        <TableHead className="font-semibold text-gray-700 text-sm py-3 w-[100px]">
                           Your Status
                         </TableHead>
 
@@ -435,6 +468,7 @@ export default function TeamLeadSubmissionsPage() {
                           key={submission._id}
                           className="group hover:bg-gray-50 transition-colors duration-150 border-b border-gray-100"
                         >
+                          {/* Client Name */}
                           <TableCell className="py-3">
                             <div className="flex items-center gap-3">
                               <Avatar className="border border-gray-200 w-10 h-10">
@@ -446,11 +480,11 @@ export default function TeamLeadSubmissionsPage() {
                                 <div className="font-semibold text-gray-900 text-sm group-hover:text-gray-700 transition-colors truncate">
                                   {submission.clinetName || "No Client"}
                                 </div>
-
-
                               </div>
                             </div>
                           </TableCell>
+
+                          {/* Submitted By */}
                           <TableCell className="py-3">
                             <div className="flex items-center gap-2">
                               <Avatar className="w-6 h-6">
@@ -471,14 +505,38 @@ export default function TeamLeadSubmissionsPage() {
                               </div>
                             </div>
                           </TableCell>
+
+                          {/* Status */}
                           <TableCell className="py-3">
                             <Badge
-                              className={`${getStatusBadgeClass(submission.status)} capitalize px-3 py-1 text-xs font-semibold`}
+                              className={`${getStatusBadgeClass(
+                                submission.status
+                              )} capitalize px-3 py-1 text-xs font-semibold`}
                             >
                               {submission.status.replace("_", " ")}
                             </Badge>
                           </TableCell>
+                          <TableCell className="py-3 flex flex-col gap-1">
+                            {submission.assignedEmployees?.length > 0 ? (
+                              submission.assignedEmployees.map((emp) => (
+                                <Badge
+                                  key={emp.employeeId.toString()}
+                                  className={`${getEmployeeStatusVariant(
+                                    emp.status
+                                  )} border flex items-center gap-1 px-2 py-1 font-medium text-xs`}
+                                >
+                                  {getEmployeeStatusIcon(emp.status)}
+                                  {emp.status.replace("_", " ")}
+                                </Badge>
+                              ))
+                            ) : (
+                              <span className="text-xs text-gray-500">
+                                No Employees Assigned
+                              </span>
+                            )}
+                          </TableCell>
 
+                          {/* Status2 */}
                           <TableCell className="py-3">
                             <Badge
                               className={`${getstatus2Variant(
@@ -490,17 +548,10 @@ export default function TeamLeadSubmissionsPage() {
                             </Badge>
                           </TableCell>
 
-                          <TableCell>
-                            <Button
-                              onClick={() => setIsShareModalOpen(true)}
-                              className="bg-purple-600 hover:bg-purple-700 text-white"
-                            >
-                              <Share2 className="w-4 h-4 mr-2" />
-                              Share with Team Leads
-                            </Button>
-                          </TableCell>
+                          {/* Assigned Employees Status */}
+                          
 
-
+                          {/* Actions */}
                           <TableCell className="py-3 flex gap-2 flex-wrap">
                             <Link
                               href={`/group-chat?submissionId=${submission._id}`}
@@ -536,7 +587,7 @@ export default function TeamLeadSubmissionsPage() {
           </CardContent>
         </Card>
       </div>
-        <ShareTaskModal
+      <ShareTaskModal
         submissionId={submissionId}
         isOpen={isShareModalOpen}
         onClose={() => setIsShareModalOpen(false)}
@@ -545,6 +596,5 @@ export default function TeamLeadSubmissionsPage() {
         }}
       />
     </div>
-    
   );
 }

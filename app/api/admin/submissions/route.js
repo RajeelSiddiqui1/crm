@@ -2,7 +2,7 @@ import { getServerSession } from "next-auth";
 import FormSubmission from "@/models/FormSubmission";
 import { authOptions } from "@/lib/auth";
 import dbConnect from "@/lib/db";
-
+import Form from "@/models/Form";
 
 export async function GET(request) {
   try {

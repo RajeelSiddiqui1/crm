@@ -1,100 +1,37 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
 import cloudinary from "@/lib/cloudinary";
 
 export async function POST(req) {
   try {
-    const session = await getServerSession(authOptions);
+    const { audio, folder } = await req.json();
 
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!audio) {
+      return NextResponse.json({ error: "No audio provided" }, { status: 400 });
     }
 
-    let audioBase64;
-    let folder = 'chat_voice_messages';
-
-    // Handle JSON request
-    if (req.headers.get('content-type')?.includes('application/json')) {
-      const body = await req.json();
-      audioBase64 = body.audio;
-      folder = body.folder || folder;
-    }
-
-    // Handle FormData request
-    else if (req.headers.get('content-type')?.includes('multipart/form-data')) {
-      const formData = await req.formData();
-      const file = formData.get('audio');
-      folder = formData.get('folder') || folder;
-
-      if (file && file.arrayBuffer) {
-        const buffer = await file.arrayBuffer();
-        audioBase64 = Buffer.from(buffer).toString('base64');
-      }
-    }
-
-    if (!audioBase64) {
-      return NextResponse.json({ error: "Audio data required" }, { status: 400 });
-    }
-
-    // Clean base64 string (remove any prepended data URL)
-    audioBase64 = audioBase64.replace(/^data:audio\/\w+;base64,/, '');
-
-    // Upload to Cloudinary as raw to support all audio formats
-    const uploadResponse = await cloudinary.uploader.upload(
-      `data:audio/wav;base64,${audioBase64}`,
+    // Upload to Cloudinary
+    const result = await cloudinary.uploader.upload(
+      `data:audio/webm;base64,${audio}`,
       {
-        resource_type: "raw",
-        folder: folder,
-        public_id: `voice_${Date.now()}`
+        folder: folder || 'chat_voice_messages',
+        resource_type: 'auto',
+        public_id: `voice_${Date.now()}`,
+        overwrite: true
       }
     );
 
     return NextResponse.json({
       success: true,
-      secure_url: uploadResponse.secure_url,
-      public_id: uploadResponse.public_id,
-      duration: uploadResponse.duration || null
+      secure_url: result.secure_url,
+      public_id: result.public_id,
+      format: result.format,
+      bytes: result.bytes
     });
 
   } catch (error) {
     console.error("Error uploading audio:", error);
     return NextResponse.json(
       { error: "Failed to upload audio" },
-      { status: 500 }
-    );
-  }
-}
-
-// Delete audio from Cloudinary
-export async function DELETE(req) {
-  try {
-    const session = await getServerSession(authOptions);
-
-    if (!session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const { public_id } = await req.json();
-
-    if (!public_id) {
-      return NextResponse.json({ error: "Public ID required" }, { status: 400 });
-    }
-
-    const result = await cloudinary.uploader.destroy(public_id, {
-      resource_type: "raw"
-    });
-
-    if (result.result !== 'ok') {
-      return NextResponse.json({ error: "Failed to delete audio" }, { status: 500 });
-    }
-
-    return NextResponse.json({ success: true, message: "Audio deleted successfully" });
-
-  } catch (error) {
-    console.error("Error deleting audio:", error);
-    return NextResponse.json(
-      { error: "Failed to delete audio" },
       { status: 500 }
     );
   }

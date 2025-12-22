@@ -58,6 +58,7 @@ import {
   ChevronDown,
   ChevronUp,
   Search,
+  ArrowBigRight,
 } from "lucide-react";
 import axios from "axios";
 import Link from "next/link";
@@ -591,6 +592,19 @@ export default function ManagerReceivedTasksPage() {
                                 Full Details
                               </Button>
                             </Link>
+                            <Link
+                              href={`/shared-task-chat?sharedTaskId=${task._id}`}
+                            >
+                              <Button
+                                className="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white text-xs h-7 px-2 rounded-md shadow-sm transition"
+                                size="sm"
+                              >
+                                <Eye className="w-3 h-3" />
+                                Chat
+                                <ArrowBigRight className="w-3 h-3" />
+                              </Button>
+                            </Link>
+
                           </div>
                         </TableCell>
                       </TableRow>

@@ -13,7 +13,6 @@ import {
   CardHeader,
   CardTitle,
   CardDescription,
-  CardFooter,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -51,6 +50,21 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import {
   ChevronLeft,
   ChevronRight,
   FileText,
@@ -75,29 +89,45 @@ import {
   ExternalLink,
   Search,
   Building,
-  MapPin,
   Eye,
   MoreVertical,
   Download,
-  Share2,
   Copy,
   Bell,
   Star,
-  TrendingUp,
   BarChart3,
   FolderOpen,
   Shield,
   Activity,
   Target,
   Award,
-  Flag,
   Zap,
-  Lightbulb,
   ThumbsUp,
   AlertTriangle,
   Info,
   HelpCircle,
   Menu,
+  Globe,
+  Share2,
+  Users2,
+  UserPlus,
+  FileSpreadsheet,
+  History,
+  ClipboardCheck,
+  TrendingUp,
+  PieChart,
+  Filter,
+  SortAsc,
+  ArrowUpRight,
+  CalendarDays,
+  MapPin,
+  CreditCard,
+  FileCode,
+  Tag,
+  Hash,
+  Lock,
+  Unlock,
+  Sparkles,
 } from "lucide-react";
 import axios from "axios";
 
@@ -108,6 +138,9 @@ export default function TeamLeadTaskDetailPage() {
   const taskId = params.id;
 
   const [task, setTask] = useState(null);
+  const [managerDetails, setManagerDetails] = useState(null);
+  const [teamLeads, setTeamLeads] = useState([]);
+  const [currentTeamLead, setCurrentTeamLead] = useState(null);
   const [employees, setEmployees] = useState([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
@@ -119,11 +152,24 @@ export default function TeamLeadTaskDetailPage() {
   const [showAssignDialog, setShowAssignDialog] = useState(false);
   const [newStatus, setNewStatus] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
-  const [activeTab, setActiveTab] = useState("details");
+  const [activeTab, setActiveTab] = useState("overview");
   const [progress, setProgress] = useState(0);
   const [employeeToRemove, setEmployeeToRemove] = useState(null);
   const [showRemoveDialog, setShowRemoveDialog] = useState(false);
+  const [showManagerModal, setShowManagerModal] = useState(false);
+  const [showTeamLeadsModal, setShowTeamLeadsModal] = useState(false);
+  const [employeeFeedback, setEmployeeFeedback] = useState({});
+  const [showFeedbackDialog, setShowFeedbackDialog] = useState(false);
+  const [selectedEmployeeForFeedback, setSelectedEmployeeForFeedback] =
+    useState(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [stats, setStats] = useState({
+    totalEmployees: 0,
+    completed: 0,
+    inProgress: 0,
+    pending: 0,
+    rejected: 0,
+  });
 
   useEffect(() => {
     if (status === "loading") return;
@@ -131,13 +177,14 @@ export default function TeamLeadTaskDetailPage() {
       router.push("/teamleadlogin");
       return;
     }
-    fetchTask();
+    fetchTaskDetails();
     fetchAllEmployees();
   }, [session, status, router, taskId]);
 
   useEffect(() => {
     if (task) {
       calculateProgress();
+      calculateStats();
     }
   }, [task]);
 
@@ -153,12 +200,34 @@ export default function TeamLeadTaskDetailPage() {
     setProgress(Math.round((completed / total) * 100));
   };
 
-  const fetchTask = async () => {
+  const calculateStats = () => {
+    if (!task?.assignedEmployees) return;
+
+    const stats = {
+      totalEmployees: task.assignedEmployees.length,
+      completed: task.assignedEmployees.filter((e) => e.status === "completed")
+        .length,
+      inProgress: task.assignedEmployees.filter(
+        (e) => e.status === "in_progress"
+      ).length,
+      pending: task.assignedEmployees.filter((e) => e.status === "pending")
+        .length,
+      rejected: task.assignedEmployees.filter((e) => e.status === "rejected")
+        .length,
+    };
+
+    setStats(stats);
+  };
+
+  const fetchTaskDetails = async () => {
     try {
       setLoading(true);
       const response = await axios.get(`/api/teamlead/tasks/${taskId}`);
       if (response.status === 200) {
         setTask(response.data.task);
+        setManagerDetails(response.data.managerDetails);
+        setTeamLeads(response.data.teamLeads || []);
+        setCurrentTeamLead(response.data.currentTeamLead);
         setNewStatus(response.data.task.status2);
       }
     } catch (error) {
@@ -277,6 +346,50 @@ export default function TeamLeadTaskDetailPage() {
       toast.error(error.response?.data?.error || "Failed to remove employee");
     } finally {
       setRemoving(false);
+    }
+  };
+
+  const handleEmployeeStatusChange = async (employeeId, newStatus) => {
+    try {
+      const response = await axios.put(`/api/teamlead/tasks/${taskId}`, {
+        employeeId,
+        employeeStatus: newStatus,
+      });
+      if (response.status === 200) {
+        toast.success("Employee status updated!");
+        setTask(response.data.task);
+      }
+    } catch (error) {
+      console.error("Update employee status error:", error);
+      toast.error("Failed to update employee status");
+    }
+  };
+
+  const handleSubmitFeedback = async () => {
+    if (
+      !selectedEmployeeForFeedback ||
+      !employeeFeedback[selectedEmployeeForFeedback._id]
+    )
+      return;
+
+    try {
+      const response = await axios.put(`/api/teamlead/tasks/${taskId}`, {
+        employeeId: selectedEmployeeForFeedback._id,
+        employeeFeedback: employeeFeedback[selectedEmployeeForFeedback._id],
+      });
+      if (response.status === 200) {
+        toast.success("Feedback submitted!");
+        setEmployeeFeedback((prev) => ({
+          ...prev,
+          [selectedEmployeeForFeedback._id]: "",
+        }));
+        setSelectedEmployeeForFeedback(null);
+        setShowFeedbackDialog(false);
+        fetchTaskDetails();
+      }
+    } catch (error) {
+      console.error("Submit feedback error:", error);
+      toast.error("Failed to submit feedback");
     }
   };
 
@@ -445,7 +558,7 @@ export default function TeamLeadTaskDetailPage() {
                 </Button>
                 <Button
                   variant="outline"
-                  onClick={fetchTask}
+                  onClick={fetchTaskDetails}
                   className="w-full text-sm md:text-base"
                 >
                   <RefreshCw className="w-4 h-4 mr-2" />
@@ -475,6 +588,7 @@ export default function TeamLeadTaskDetailPage() {
         }}
       />
 
+      {/* Header */}
       <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-200 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16 md:h-20">
@@ -512,7 +626,7 @@ export default function TeamLeadTaskDetailPage() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={fetchTask}
+                      onClick={fetchTaskDetails}
                       className="gap-2 text-gray-900 bg-white hidden sm:flex"
                     >
                       <RefreshCw
@@ -530,12 +644,11 @@ export default function TeamLeadTaskDetailPage() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={fetchTask}
-                className="gap-2 text-gray-900 bg-white sm:hidden"
+                onClick={() => setShowAssignDialog(true)}
+                className="gap-2 text-gray-900 bg-white"
               >
-                <RefreshCw
-                  className={`w-4 h-4 ${loading ? "animate-spin" : ""}`}
-                />
+                <UserPlus className="w-4 h-4" />
+                <span className="hidden md:inline">Assign</span>
               </Button>
 
               <DropdownMenu>
@@ -546,7 +659,7 @@ export default function TeamLeadTaskDetailPage() {
                     className="gap-2 text-gray-900 bg-white"
                   >
                     <MoreVertical className="w-4 h-4" />
-                    <span className="hidden md:inline">Actions</span>
+                    <span className="hidden md:inline">More</span>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
@@ -568,11 +681,18 @@ export default function TeamLeadTaskDetailPage() {
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
-                    onClick={() => setShowAssignDialog(true)}
+                    onClick={() => setShowManagerModal(true)}
                     className="cursor-pointer"
                   >
-                    <Users className="w-4 h-4 mr-2" />
-                    Assign Employees
+                    <User className="w-4 h-4 mr-2" />
+                    View Manager Details
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => setShowTeamLeadsModal(true)}
+                    className="cursor-pointer"
+                  >
+                    <Users2 className="w-4 h-4 mr-2" />
+                    View Team Leads
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -581,7 +701,9 @@ export default function TeamLeadTaskDetailPage() {
         </div>
       </header>
 
+      {/* Main Content */}
       <main className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-4 md:py-6">
+        {/* Breadcrumb */}
         <nav className="flex items-center gap-1 md:gap-2 mb-4 md:mb-6 text-xs md:text-sm overflow-x-auto pb-2">
           <Button
             variant="ghost"
@@ -607,10 +729,12 @@ export default function TeamLeadTaskDetailPage() {
         </nav>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
+          {/* Left Column - Main Content */}
           <div className="lg:col-span-2 space-y-4 md:space-y-6">
+            {/* Task Header Card */}
             <Card className="border-0 shadow-lg bg-gradient-to-r from-white to-gray-50">
               <CardContent className="p-4 md:p-6">
-                <div className="flex flex-col gap-4">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-2 mb-3">
                       <Badge
@@ -630,16 +754,27 @@ export default function TeamLeadTaskDetailPage() {
                         <Target className="w-3 h-3 mr-1" />
                         {getTaskPriority()} Priority
                       </Badge>
+                      {task.depId && (
+                        <Badge variant="outline" className="text-xs md:text-sm">
+                          <Building className="w-3 h-3 mr-1" />
+                          {task.depId.name}
+                        </Badge>
+                      )}
                     </div>
                     <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 mb-2 break-words">
-                      Clinet Name: <span className="text-blue-600">{task.clinetName || "No Clinet"}</span>
+                      Client:{" "}
+                      <span className="text-blue-600">
+                        {task.clinetName || "No Client"}
+                      </span>
                     </h1>
-                    
+                    <h2 className="text-lg md:text-xl font-semibold text-gray-700 mb-3">
+                      {task.formId?.title || "Untitled Form"}
+                    </h2>
+
                     <div className="flex flex-wrap items-center gap-3 text-xs md:text-sm">
                       <div className="flex items-center gap-1 md:gap-2 text-gray-500">
                         <Calendar className="w-3 h-3 md:w-4 md:h-4" />
-                        <span className="hidden sm:inline">Created:</span>{" "}
-                        {formatDate(task.createdAt)}
+                        Created: {formatDate(task.createdAt)}
                       </div>
                       <div className="flex items-center gap-1 md:gap-2 text-gray-500">
                         <User className="w-3 h-3 md:w-4 md:h-4" />
@@ -649,16 +784,13 @@ export default function TeamLeadTaskDetailPage() {
                       {task.completedAt && (
                         <div className="flex items-center gap-1 md:gap-2 text-emerald-600">
                           <CheckCircle className="w-3 h-3 md:w-4 md:h-4" />
-                          <span className="hidden sm:inline">
-                            Completed:
-                          </span>{" "}
-                          {formatDate(task.completedAt)}
+                          Completed: {formatDate(task.completedAt)}
                         </div>
                       )}
                     </div>
                   </div>
 
-                  <div className="flex-shrink-0">
+                  <div className="flex items-center gap-2">
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -676,23 +808,33 @@ export default function TeamLeadTaskDetailPage() {
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowManagerModal(true)}
+                      className="text-gray-900 bg-white"
+                    >
+                      <User className="w-4 h-4 mr-2" />
+                      Manager
+                    </Button>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
+            {/* Tabs */}
             <Tabs
               value={activeTab}
               onValueChange={setActiveTab}
               className="w-full"
             >
-              <TabsList className="grid w-full grid-cols-3 bg-gray-100 p-1 rounded-lg">
+              <TabsList className="grid w-full grid-cols-4 bg-gray-100 p-1 rounded-lg">
                 <TabsTrigger
-                  value="details"
+                  value="overview"
                   className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md text-gray-900 text-xs md:text-sm"
                 >
-                  <FileText className="w-3 h-3 md:w-4 md:h-4 mr-1 md:mr-2" />
-                  <span className="truncate">Form Details</span>
+                  <BarChart3 className="w-3 h-3 md:w-4 md:h-4 mr-1 md:mr-2" />
+                  <span className="truncate">Overview</span>
                 </TabsTrigger>
                 <TabsTrigger
                   value="team"
@@ -704,6 +846,13 @@ export default function TeamLeadTaskDetailPage() {
                   </span>
                 </TabsTrigger>
                 <TabsTrigger
+                  value="details"
+                  className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md text-gray-900 text-xs md:text-sm"
+                >
+                  <FileText className="w-3 h-3 md:w-4 md:h-4 mr-1 md:mr-2" />
+                  <span className="truncate">Details</span>
+                </TabsTrigger>
+                <TabsTrigger
                   value="updates"
                   className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md text-gray-900 text-xs md:text-sm"
                 >
@@ -712,13 +861,90 @@ export default function TeamLeadTaskDetailPage() {
                 </TabsTrigger>
               </TabsList>
 
+              {/* Overview Tab */}
               <TabsContent
-                value="details"
+                value="overview"
                 className="space-y-4 md:space-y-6 pt-4 md:pt-6"
               >
+                {/* Stats Cards */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+                  <Card className="border-0 shadow-sm bg-gradient-to-br from-emerald-50 to-green-50">
+                    <CardContent className="p-4 md:p-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-emerald-700">
+                            Completed
+                          </p>
+                          <p className="text-2xl md:text-3xl font-bold text-emerald-900 mt-1">
+                            {stats.completed}
+                          </p>
+                        </div>
+                        <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-emerald-100 flex items-center justify-center">
+                          <CheckCircle className="w-5 h-5 md:w-6 md:h-6 text-emerald-600" />
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="border-0 shadow-sm bg-gradient-to-br from-blue-50 to-cyan-50">
+                    <CardContent className="p-4 md:p-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-blue-700">
+                            In Progress
+                          </p>
+                          <p className="text-2xl md:text-3xl font-bold text-blue-900 mt-1">
+                            {stats.inProgress}
+                          </p>
+                        </div>
+                        <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-blue-100 flex items-center justify-center">
+                          <Clock className="w-5 h-5 md:w-6 md:h-6 text-blue-600" />
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="border-0 shadow-sm bg-gradient-to-br from-amber-50 to-orange-50">
+                    <CardContent className="p-4 md:p-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-amber-700">
+                            Pending
+                          </p>
+                          <p className="text-2xl md:text-3xl font-bold text-amber-900 mt-1">
+                            {stats.pending}
+                          </p>
+                        </div>
+                        <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-amber-100 flex items-center justify-center">
+                          <AlertCircle className="w-5 h-5 md:w-6 md:h-6 text-amber-600" />
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="border-0 shadow-sm bg-gradient-to-br from-rose-50 to-red-50">
+                    <CardContent className="p-4 md:p-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-rose-700">
+                            Rejected
+                          </p>
+                          <p className="text-2xl md:text-3xl font-bold text-rose-900 mt-1">
+                            {stats.rejected}
+                          </p>
+                        </div>
+                        <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-rose-100 flex items-center justify-center">
+                          <XCircle className="w-5 h-5 md:w-6 md:h-6 text-rose-600" />
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Progress Section */}
                 <Card className="border-0 shadow-sm bg-white">
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-base md:text-lg">
+                    <CardTitle className="flex items-center gap-2 text-base md:text-lg text-gray-900">
                       <TrendingUp className="w-4 h-4 md:w-5 md:h-5 text-blue-600" />
                       Progress Overview
                     </CardTitle>
@@ -728,44 +954,98 @@ export default function TeamLeadTaskDetailPage() {
                       <div>
                         <div className="flex justify-between items-center mb-2">
                           <span className="text-sm font-medium text-gray-700">
-                            Task Completion
+                            Overall Completion
                           </span>
                           <span className="text-sm font-semibold text-gray-900">
                             {progress}%
                           </span>
                         </div>
-                        <Progress value={progress} className="h-2" />
+                        <Progress value={progress} className="h-3" />
                       </div>
 
-                      <div className="grid grid-cols-3 gap-2 md:gap-4">
-                        <div className="text-center p-3 md:p-4 bg-emerald-50 rounded-lg">
-                          <div className="text-lg md:text-2xl font-bold text-emerald-700">
-                            {task.assignedEmployees?.filter(
-                              (e) => e.status === "completed"
-                            ).length || 0}
-                          </div>
-                          <div className="text-xs md:text-sm text-emerald-600">
-                            Completed
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <h4 className="font-medium text-gray-700">
+                            Team Performance
+                          </h4>
+                          <div className="space-y-2">
+                            {[
+                              "completed",
+                              "in_progress",
+                              "pending",
+                              "rejected",
+                            ].map((status) => {
+                              const count = stats[status] || 0;
+                              const percentage =
+                                stats.totalEmployees > 0
+                                  ? Math.round(
+                                      (count / stats.totalEmployees) * 100
+                                    )
+                                  : 0;
+
+                              return (
+                                <div
+                                  key={status}
+                                  className="flex items-center justify-between"
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <div
+                                      className={`w-3 h-3 rounded-full ${
+                                        status === "completed"
+                                          ? "bg-emerald-500"
+                                          : status === "in_progress"
+                                          ? "bg-blue-500"
+                                          : status === "pending"
+                                          ? "bg-amber-500"
+                                          : "bg-rose-500"
+                                      }`}
+                                    ></div>
+                                    <span className="text-sm text-gray-600 capitalize">
+                                      {status.replace("_", " ")}
+                                    </span>
+                                  </div>
+                                  <span className="font-semibold text-gray-900">
+                                    {count} ({percentage}%)
+                                  </span>
+                                </div>
+                              );
+                            })}
                           </div>
                         </div>
-                        <div className="text-center p-3 md:p-4 bg-blue-50 rounded-lg">
-                          <div className="text-lg md:text-2xl font-bold text-blue-700">
-                            {task.assignedEmployees?.filter(
-                              (e) => e.status === "in_progress"
-                            ).length || 0}
-                          </div>
-                          <div className="text-xs md:text-sm text-blue-600">
-                            In Progress
-                          </div>
-                        </div>
-                        <div className="text-center p-3 md:p-4 bg-amber-50 rounded-lg">
-                          <div className="text-lg md:text-2xl font-bold text-amber-700">
-                            {task.assignedEmployees?.filter(
-                              (e) => e.status === "pending"
-                            ).length || 0}
-                          </div>
-                          <div className="text-xs md:text-sm text-amber-600">
-                            Pending
+
+                        <div className="space-y-2">
+                          <h4 className="font-medium text-gray-700">
+                            Task Information
+                          </h4>
+                          <div className="space-y-2 text-sm">
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">
+                                Total Employees
+                              </span>
+                              <span className="font-medium text-blue-900">
+                                {stats.totalEmployees}
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Department</span>
+                              <span className="font-medium text-blue-900">
+                                {task.depId?.name || "N/A"}
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Form Type</span>
+                              <span className="font-medium text-blue-900">
+                                {task.formId?.title || "N/A"}
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">
+                                Last Updated
+                              </span>
+                              <span className="font-medium text-blue-900">
+                                {formatRelativeDate(task.updatedAt)}
+                              </span>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -773,61 +1053,61 @@ export default function TeamLeadTaskDetailPage() {
                   </CardContent>
                 </Card>
 
+                {/* Quick Actions */}
                 <Card className="border-0 shadow-sm bg-white">
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-base md:text-lg">
-                      <FolderOpen className="w-4 h-4 md:w-5 md:h-5 text-purple-600" />
-                      Form Submission Data
+                    <CardTitle className="text-base md:text-lg text-gray-900">
+                      Quick Actions
                     </CardTitle>
-                    <CardDescription className="text-gray-600 text-sm md:text-base">
-                      All information submitted by the manager
-                    </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-4">
-                      {task.formData &&
-                        Object.entries(task.formData).map(([key, value]) => (
-                          <div
-                            key={key}
-                            className="border border-gray-200 rounded-lg md:rounded-xl p-4 md:p-5 bg-white hover:shadow-md transition-shadow"
-                          >
-                            <div className="flex items-center gap-2 mb-2 md:mb-3">
-                              <div className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-blue-500"></div>
-                              <Label className="text-gray-700 font-bold text-sm md:text-base break-words">
-                                {key.replace(/([A-Z])/g, " $1").trim()}
-                              </Label>
-                            </div>
-                            <div className="text-gray-800">
-                              {typeof value === "object" &&
-                              !Array.isArray(value) ? (
-                                <pre className="text-xs md:text-sm overflow-x-auto whitespace-pre-wrap bg-gray-50 p-3 md:p-4 rounded-lg">
-                                  {JSON.stringify(value, null, 2)}
-                                </pre>
-                              ) : Array.isArray(value) ? (
-                                <div className="flex flex-wrap gap-2">
-                                  {value.map((item, index) => (
-                                    <Badge
-                                      key={index}
-                                      className="bg-gradient-to-r from-blue-100 to-cyan-100 text-blue-800 border-0 shadow-sm text-xs md:text-sm"
-                                    >
-                                      <Check className="w-2.5 h-2.5 md:w-3 md:h-3 mr-1" />
-                                      {item}
-                                    </Badge>
-                                  ))}
-                                </div>
-                              ) : (
-                                <div className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 md:px-4 md:py-3 text-gray-800 text-sm md:text-base break-words">
-                                  {value?.toString() || "Not provided"}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        ))}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                      <Button
+                        variant="outline"
+                        className="flex flex-col h-auto py-4 gap-2"
+                        onClick={() => setShowAssignDialog(true)}
+                      >
+                        <UserPlus className="w-5 h-5 text-emerald-600" />
+                        <span className="text-sm text-gray-900">
+                          Assign Employee
+                        </span>
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="flex flex-col h-auto py-4 gap-2"
+                        onClick={() => setActiveTab("updates")}
+                      >
+                        <Send className="w-5 h-5 text-blue-600" />
+                        <span className="text-sm text-gray-900">
+                          Update Status
+                        </span>
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="flex flex-col h-auto py-4 gap-2"
+                        onClick={() => setShowManagerModal(true)}
+                      >
+                        <User className="w-5 h-5 text-purple-600" />
+                        <span className="text-sm text-gray-900">
+                          Manager Info
+                        </span>
+                      </Button>
+                      <Button
+                        variant="outline"
+                        className="flex flex-col h-auto py-4 gap-2"
+                        onClick={() => setShowTeamLeadsModal(true)}
+                      >
+                        <Users2 className="w-5 h-5 text-orange-600" />
+                        <span className="text-sm text-gray-900">
+                          Team Leads
+                        </span>
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>
               </TabsContent>
 
+              {/* Team Tab */}
               <TabsContent
                 value="team"
                 className="space-y-4 md:space-y-6 pt-4 md:pt-6"
@@ -858,116 +1138,111 @@ export default function TeamLeadTaskDetailPage() {
 
                   <CardContent>
                     {task.assignedEmployees?.length > 0 ? (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {task.assignedEmployees.map((assignment) => {
-                          const employee = assignment.employeeId;
+                      <div className="space-y-3">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          {task.assignedEmployees.map((assignment) => {
+                            const employee = assignment.employeeId;
 
-                          return (
-                            <div
-                              key={assignment._id}
-                              className="relative border border-gray-200 rounded-xl p-4 bg-white hover:shadow-md transition-all group"
-                            >
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="absolute top-2 right-2 w-8 h-8 opacity-0 group-hover:opacity-100 bg-gray-100 hover:bg-gray-200 text-gray-600"
-                                  >
-                                    <MoreVertical className="w-4 h-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent
-                                  align="end"
-                                  className="w-48"
-                                >
-                                  <DropdownMenuItem
-                                    onClick={() => {
-                                      setEmployeeToRemove(employee);
-                                      setShowRemoveDialog(true);
-                                    }}
-                                    className="text-rose-600 cursor-pointer text-sm"
-                                  >
-                                    <Trash2 className="w-4 h-4 mr-2" />
-                                    Remove from Task
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
+                            return (
+                              <Card
+                                key={assignment._id}
+                                className="border hover:shadow-md transition-all"
+                              >
+                                <CardContent className="p-4">
+                                  <div className="flex items-start justify-between">
+                                    <div className="flex items-start gap-3 flex-1 min-w-0">
+                                      <Avatar className="w-10 h-10 border">
+                                        <AvatarFallback className="bg-gradient-to-r from-emerald-500 to-green-600 text-white">
+                                          {employee?.firstName?.[0]}
+                                          {employee?.lastName?.[0]}
+                                        </AvatarFallback>
+                                      </Avatar>
+                                      <div className="min-w-0 flex-1">
+                                        <div className="flex items-center justify-between mb-1">
+                                          <p className="font-semibold text-gray-900 truncate">
+                                            {employee?.firstName}{" "}
+                                            {employee?.lastName}
+                                          </p>
+                                          <DropdownMenu className="bg-white">
+                                            <DropdownMenuTrigger asChild>
+                                              <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-8 w-8"
+                                              >
+                                                <MoreVertical className="w-4 h-4" />
+                                              </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end">
+                                              <DropdownMenuItem
+                                                onClick={() => {
+                                                  setEmployeeToRemove(employee);
+                                                  setShowRemoveDialog(true);
+                                                }}
+                                                className="text-rose-600"
+                                              >
+                                                <Trash2 className="w-4 h-4 mr-2" />
+                                                Remove
+                                              </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                          </DropdownMenu>
+                                        </div>
+                                        <p className="text-sm text-gray-500 truncate mb-2">
+                                          {employee?.email}
+                                        </p>
+                                        <div className="flex flex-wrap gap-2">
+                                          <Badge
+                                            className={`${getEmployeeStatusColor(
+                                              assignment.status
+                                            )} text-xs`}
+                                          >
+                                            {assignment.status.replace(
+                                              "_",
+                                              " "
+                                            )}
+                                          </Badge>
+                                          {employee?.department && (
+                                            <Badge
+                                              variant="outline"
+                                              className="text-xs"
+                                            >
+                                              {employee.department}
+                                            </Badge>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
 
-                              <div className="flex justify-between items-start mb-3">
-                                <div className="flex items-center gap-3 min-w-0">
-                                  <Avatar className="w-12 h-12 border border-gray-200 shadow-sm">
-                                    <AvatarFallback className="bg-emerald-600 text-white font-semibold">
-                                      {employee?.firstName?.[0]}
-                                      {employee?.lastName?.[0]}
-                                    </AvatarFallback>
-                                  </Avatar>
-
-                                  <div className="min-w-0">
-                                    <p className="font-semibold text-gray-900 truncate">
-                                      {employee?.firstName} {employee?.lastName}
-                                    </p>
-                                    <p className="text-sm text-gray-500 truncate">
-                                      {employee?.email}
-                                    </p>
-
-                                    {(employee?.department ||
-                                      employee?.position) && (
-                                      <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1 text-xs text-gray-600">
-                                        {employee?.department && (
-                                          <span className="flex items-center gap-1">
-                                            <Building className="w-3 h-3" />
-                                            {employee.department}
-                                          </span>
+                                  <div className="mt-3 pt-3 border-t">
+                                    <div className="flex items-center justify-between text-sm">
+                                      <span className="text-gray-500">
+                                        Assigned:
+                                      </span>
+                                      <span className="font-medium text-green-900">
+                                        {formatRelativeDate(
+                                          assignment.assignedAt
                                         )}
-                                        {employee?.position && (
-                                          <span className="flex items-center gap-1">
-                                            <Briefcase className="w-3 h-3" />
-                                            {employee.position}
-                                          </span>
-                                        )}
+                                      </span>
+                                    </div>
+                                    {assignment.completedAt && (
+                                      <div className="flex items-center justify-between text-sm mt-1">
+                                        <span className="text-emerald-600">
+                                          Completed:
+                                        </span>
+                                        <span className="font-medium text-gray-900">
+                                          {formatRelativeDate(
+                                            assignment.completedAt
+                                          )}
+                                        </span>
                                       </div>
                                     )}
                                   </div>
-                                </div>
-
-                                <Badge
-                                  className={`${getEmployeeStatusColor(
-                                    assignment.status
-                                  )} text-xs font-medium capitalize`}
-                                >
-                                  {assignment.status.replace("_", " ")}
-                                </Badge>
-                              </div>
-
-                              <div className="space-y-2 text-sm">
-                                <div className="flex justify-between text-gray-600">
-                                  <span className="flex items-center gap-1">
-                                    <Calendar className="w-3 h-3" />
-                                    Assigned
-                                  </span>
-                                  <span className="font-medium">
-                                    {formatRelativeDate(assignment.assignedAt)}
-                                  </span>
-                                </div>
-
-                                {assignment.completedAt && (
-                                  <div className="flex justify-between text-emerald-600">
-                                    <span className="flex items-center gap-1">
-                                      <CheckCircle className="w-3 h-3" />
-                                      Completed
-                                    </span>
-                                    <span className="font-medium">
-                                      {formatRelativeDate(
-                                        assignment.completedAt
-                                      )}
-                                    </span>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })}
+                                </CardContent>
+                              </Card>
+                            );
+                          })}
+                        </div>
                       </div>
                     ) : (
                       <div className="text-center py-12">
@@ -993,13 +1268,137 @@ export default function TeamLeadTaskDetailPage() {
                 </Card>
               </TabsContent>
 
+              {/* Details Tab */}
+              <TabsContent
+                value="details"
+                className="space-y-4 md:space-y-6 pt-4 md:pt-6"
+              >
+                <Card className="border-0 shadow-sm bg-white">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-base md:text-lg text-gray-900">
+                      <FileText className="w-4 h-4 md:w-5 md:h-5 text-purple-600" />
+                      Form Submission Data
+                    </CardTitle>
+                    <CardDescription className="text-gray-600 text-sm md:text-base">
+                      All information submitted by the manager
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4 text-gray-900 bg-gray-50 p-4 md:p-6 rounded-lg border-white border">
+                      {task.formData ? (
+                        Object.entries(task.formData).map(([key, value]) => (
+                          <div
+                            key={key}
+                            className="border rounded-lg p-4 hover:shadow-sm transition-shadow"
+                          >
+                            <Label className="text-gray-700 font-medium block mb-2">
+                              {key.replace(/([A-Z])/g, " $1").trim()}
+                            </Label>
+                            <div className="mt-1">
+                              {typeof value === "object" &&
+                              !Array.isArray(value) ? (
+                                <pre className="text-sm bg-gray-50 p-3 rounded overflow-x-auto">
+                                  {JSON.stringify(value, null, 2)}
+                                </pre>
+                              ) : Array.isArray(value) ? (
+                                <div className="flex flex-wrap gap-2">
+                                  {value.map((item, index) => (
+                                    <Badge key={index} variant="secondary">
+                                      {item}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              ) : (
+                                <div className="bg-gray-50 border rounded px-3 py-2">
+                                  {value?.toString() || "Not provided"}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-center py-8 text-gray-500">
+                          No form data available
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card className="border-0 shadow-sm bg-white">
+                  <CardHeader>
+                    <CardTitle className="text-base md:text-lg text-gray-900">
+                      Employee Feedback
+                    </CardTitle>
+                    <CardDescription className="text-sm text-gray-600">
+                      Feedback submitted by employees
+                    </CardDescription>
+                  </CardHeader>
+
+                  <CardContent>
+                    {task.employeeFeedbacks?.length > 0 ? (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {task.employeeFeedbacks.map((fb) => (
+                          <div
+                            key={fb._id}
+                            className="border rounded-lg p-4 bg-gray-50 hover:shadow-sm transition"
+                          >
+                            {/* Employee Info */}
+                            <p className="font-medium text-gray-800">
+                              {fb.employeeId?.firstName}{" "}
+                              {fb.employeeId?.lastName}
+                            </p>
+                            <p className="text-sm text-gray-500">
+                              {fb.employeeId?.email}
+                            </p>
+
+                            {/* Feedback text */}
+                            <div className="mt-3 bg-white border rounded p-3 text-sm text-gray-700">
+                              {fb.feedback || "No feedback provided"}
+                            </div>
+
+                            {/* Date */}
+                            <p className="text-xs text-gray-400 mt-2">
+                              Submitted on{" "}
+                              {new Date(fb.submittedAt).toLocaleString()}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-6 text-gray-500">
+                        No employee feedback available
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+                {task.managerComments && (
+                  <Card className="border-0 shadow-sm bg-white">
+                    <CardHeader>
+                      <CardTitle className="text-base md:text-lg text-gray-900">
+                        Manager Comment
+                      </CardTitle>
+                      <CardDescription className="text-sm text-gray-600">
+                        Comment added by manager
+                      </CardDescription>
+                    </CardHeader>
+
+                    <CardContent>
+                      <div className="bg-gray-50 border rounded-lg p-4 text-gray-800 text-sm">
+                        {task.managerComments}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </TabsContent>
+
+              {/* Updates Tab */}
               <TabsContent
                 value="updates"
                 className="space-y-4 md:space-y-6 pt-4 md:pt-6"
               >
                 <Card className="border-0 shadow-sm bg-white">
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-base md:text-lg">
+                    <CardTitle className="flex items-center gap-2 text-base md:text-lg text-gray-900">
                       <MessageSquare className="w-4 h-4 md:w-5 md:h-5 text-blue-600" />
                       Update Task Status
                     </CardTitle>
@@ -1078,6 +1477,12 @@ export default function TeamLeadTaskDetailPage() {
                             All assigned employees (
                             {task.assignedEmployees?.length || 0})
                           </li>
+                          {teamLeads.length > 0 && (
+                            <li className="flex items-center gap-2">
+                              <Users2 className="w-3 h-3" />
+                              Other Team Leads ({teamLeads.length - 1})
+                            </li>
+                          )}
                         </ul>
                       </div>
 
@@ -1103,25 +1508,24 @@ export default function TeamLeadTaskDetailPage() {
                   </CardContent>
                 </Card>
 
+                {/* Recent Activity */}
                 {task.teamLeadFeedback && (
                   <Card className="border-0 shadow-sm bg-white">
                     <CardHeader>
-                      <CardTitle className="flex items-center gap-2 text-base md:text-lg">
-                        <Activity className="w-4 h-4 md:w-5 md:h-5 text-purple-600" />
+                      <CardTitle className="flex items-center gap-2 text-base md:text-lg text-gray-900">
+                        <History className="w-4 h-4 md:w-5 md:h-5 text-purple-600" />
                         Recent Activity
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-4">
                         <div className="flex items-start gap-3">
-                          <div className="flex-shrink-0">
-                            <Avatar className="w-8 h-8 md:w-10 md:h-10 border-2 border-white shadow">
-                              <AvatarFallback className="bg-gradient-to-r from-purple-500 to-pink-600 text-white text-sm">
-                                {session?.user?.firstName?.[0]}
-                                {session?.user?.lastName?.[0]}
-                              </AvatarFallback>
-                            </Avatar>
-                          </div>
+                          <Avatar className="w-8 h-8 md:w-10 md:h-10 border-2 border-white shadow">
+                            <AvatarFallback className="bg-gradient-to-r from-purple-500 to-pink-600 text-white text-sm">
+                              {session?.user?.firstName?.[0]}
+                              {session?.user?.lastName?.[0]}
+                            </AvatarFallback>
+                          </Avatar>
                           <div className="flex-1 min-w-0">
                             <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-1 gap-1">
                               <span className="font-semibold text-gray-900 text-sm md:text-base truncate">
@@ -1160,184 +1564,232 @@ export default function TeamLeadTaskDetailPage() {
             </Tabs>
           </div>
 
+          {/* Right Column - Sidebar */}
           <div className="space-y-4 md:space-y-6">
+            {/* Current TeamLead Card */}
+            <Card className="border-0 shadow-sm bg-white">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-gray-900 text-base md:text-lg">
+                  <Shield className="w-4 h-4 md:w-5 md:h-5 text-blue-600" />
+                  Your Details
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-3">
+                  <Avatar className="w-12 h-12 md:w-14 md:h-14 border-2 border-white shadow-lg">
+                    <AvatarFallback className="bg-gradient-to-r from-blue-500 to-cyan-600 text-white text-lg">
+                      {currentTeamLead?.firstName?.[0]}
+                      {currentTeamLead?.lastName?.[0]}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-bold text-gray-900 text-sm md:text-base truncate">
+                      {currentTeamLead?.firstName} {currentTeamLead?.lastName}
+                    </p>
+                    <p className="text-xs md:text-sm text-gray-500 truncate">
+                      {currentTeamLead?.email}
+                    </p>
+                    <p className="text-xs text-blue-600 font-medium mt-1">
+                      Team Lead
+                    </p>
+                    {currentTeamLead?.department && (
+                      <div className="flex items-center gap-1 text-xs text-gray-600 mt-1">
+                        <Building className="w-3 h-3" />
+                        <span className="truncate">
+                          {currentTeamLead.department.name}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="mt-4 space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-600">Role:</span>
+                    <Badge className="bg-blue-100 text-blue-800">
+                      Team Lead
+                    </Badge>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-600">Tasks Assigned:</span>
+                    <span className="font-semibold text-gray-900">
+                      {teamLeads.length}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-600">Access Level:</span>
+                    <Badge variant="outline" className="text-green-600">
+                      <Check className="w-3 h-3 mr-1" />
+                      Full Access
+                    </Badge>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Task Info Card */}
             <Card className="border-0 shadow-sm bg-white">
               <CardHeader>
                 <CardTitle className="text-base md:text-lg text-gray-900">
-                  Quick Stats
+                  Task Information
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3 md:space-y-4">
-                <div className="space-y-2 md:space-y-3">
+              <CardContent className="space-y-3">
+                <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-gray-600 text-sm md:text-base">
-                      Task ID
-                    </span>
-                    <code className="text-xs md:text-sm bg-gray-100 px-2 py-1 rounded font-mono text-gray-800">
+                    <span className="text-gray-600 text-sm">Task ID</span>
+                    <code className="text-xs bg-gray-100 px-2 py-1 rounded font-mono bg-blue-900 text-blue-900">
                       {task._id.slice(-8)}
                     </code>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-gray-600 text-sm md:text-base">
-                      Priority
-                    </span>
+                    <span className="text-gray-600 text-sm">Priority</span>
                     <Badge
                       className={`${getPriorityColor(
                         getTaskPriority()
-                      )} text-white text-xs md:text-sm`}
+                      )} text-white text-xs `}
                     >
                       {getTaskPriority()}
                     </Badge>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-gray-600 text-sm md:text-base">
-                      Last Updated
+                    <span className="text-gray-600 text-sm">Department</span>
+                    <span className="font-medium text-sm text-blue-900">
+                      {task.depId?.name || "N/A"}
                     </span>
-                    <span className="font-medium text-gray-900 text-sm md:text-base">
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-600 text-sm">Form Type</span>
+                    <span className="font-medium text-sm truncate max-w-[120px] text-blue-900">
+                      {task.formId?.title || "N/A"}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-600 text-sm">Created</span>
+                    <span className="font-medium text-sm text-blue-900">
+                      {formatDate(task.createdAt)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-600 text-sm">Last Updated</span>
+                    <span className="font-medium text-sm text-blue-900">
                       {formatRelativeDate(task.updatedAt)}
                     </span>
                   </div>
                 </div>
                 <Separator />
-                <div className="text-center">
-                  <Button
-                    variant="outline"
-                    className="w-full text-gray-700 hover:text-gray-900 text-sm md:text-base"
-                    onClick={() => setActiveTab("updates")}
-                  >
-                    <Activity className="w-4 h-4 mr-2" />
-                    Update Status
-                  </Button>
-                </div>
+                <Button
+                  variant="outline"
+                  className="w-full text-gray-700 hover:text-gray-900 text-sm"
+                  onClick={() => setActiveTab("updates")}
+                >
+                  <Activity className="w-4 h-4 mr-2" />
+                  Update Status
+                </Button>
               </CardContent>
             </Card>
 
+            {/* Manager Preview Card */}
             <Card className="border-0 shadow-sm bg-white">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-gray-900 text-base md:text-lg">
-                  <User className="w-4 h-4 md:w-5 md:h-5 text-blue-600" />
+                  <User className="w-4 h-4 md:w-5 md:h-5 text-purple-600" />
                   Submitted By
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="flex items-center gap-3">
                   <Avatar className="w-10 h-10 md:w-12 md:h-12 border-2 border-white shadow">
-                    <AvatarFallback className="bg-gradient-to-r from-blue-500 to-cyan-600 text-white text-sm">
+                    <AvatarFallback className="bg-gradient-to-r from-purple-500 to-pink-600 text-white">
                       {task.submittedBy?.firstName?.[0]}
                       {task.submittedBy?.lastName?.[0]}
                     </AvatarFallback>
                   </Avatar>
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <p className="font-semibold text-gray-900 text-sm md:text-base truncate">
                       {task.submittedBy?.firstName} {task.submittedBy?.lastName}
                     </p>
                     <p className="text-xs md:text-sm text-gray-500 truncate">
                       {task.submittedBy?.email}
                     </p>
-                    <p className="text-xs text-gray-400 mt-1">Manager</p>
+                    <p className="text-xs text-purple-600 font-medium mt-1">
+                      Manager
+                    </p>
                   </div>
                 </div>
-                <div className="mt-3 md:mt-4 space-y-1 md:space-y-2">
-                  {task.submittedBy?.phone && (
-                    <div className="flex items-center gap-2 text-xs md:text-sm text-gray-600">
-                      <Phone className="w-3 h-3 md:w-4 md:h-4" />
-                      <span className="truncate">{task.submittedBy.phone}</span>
-                    </div>
-                  )}
-                  <div className="flex items-center gap-2 text-xs md:text-sm text-gray-600">
-                    <Calendar className="w-3 h-3 md:w-4 md:h-4" />
-                    Submitted: {formatDate(task.createdAt)}
-                  </div>
-                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full mt-3 text-gray-600 hover:text-gray-900"
+                  onClick={() => setShowManagerModal(true)}
+                >
+                  <Eye className="w-4 h-4 mr-2" />
+                  View Full Details
+                </Button>
               </CardContent>
             </Card>
 
-            {task.assignedEmployees && task.assignedEmployees.length > 0 && (
+            {/* Team Leads Preview Card */}
+            {teamLeads.length > 0 && (
               <Card className="border-0 shadow-sm bg-white">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2 text-gray-900 text-base md:text-lg">
-                    <BarChart3 className="w-4 h-4 md:w-5 md:h-5 text-green-600" />
-                    Team Performance
+                    <Users2 className="w-4 h-4 md:w-5 md:h-5 text-orange-600" />
+                    Team Leads ({teamLeads.length})
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-2 md:space-y-3">
-                    {["completed", "in_progress", "pending", "rejected"].map(
-                      (status) => {
-                        const count = task.assignedEmployees.filter(
-                          (emp) => emp.status === status
-                        ).length;
-                        if (count === 0) return null;
-
-                        return (
-                          <div
-                            key={status}
-                            className="flex items-center justify-between"
-                          >
-                            <div className="flex items-center gap-2">
-                              <div
-                                className={`w-1.5 h-1.5 md:w-2 md:h-2 rounded-full ${
-                                  status === "completed"
-                                    ? "bg-emerald-500"
-                                    : status === "in_progress"
-                                    ? "bg-blue-500"
-                                    : status === "pending"
-                                    ? "bg-amber-500"
-                                    : "bg-rose-500"
-                                }`}
-                              ></div>
-                              <span className="text-sm text-gray-600 capitalize">
-                                {status.replace("_", " ")}
-                              </span>
-                            </div>
-                            <span className="font-semibold text-gray-900">
-                              {count}
-                            </span>
-                          </div>
-                        );
-                      }
+                  <div className="space-y-3">
+                    {teamLeads.slice(0, 3).map((teamLead) => (
+                      <div
+                        key={teamLead._id}
+                        className="flex items-center gap-2"
+                      >
+                        <Avatar className="w-8 h-8">
+                          <AvatarFallback className="bg-gradient-to-r from-orange-500 to-amber-600 text-white text-xs">
+                            {teamLead.firstName?.[0]}
+                            {teamLead.lastName?.[0]}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium text-gray-900 truncate">
+                            {teamLead.firstName} {teamLead.lastName}
+                          </p>
+                          <p className="text-xs text-gray-500 truncate">
+                            {teamLead.email}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                    {teamLeads.length > 3 && (
+                      <div className="text-center pt-2 border-t">
+                        <p className="text-sm text-gray-500">
+                          +{teamLeads.length - 3} more team leads
+                        </p>
+                      </div>
                     )}
                   </div>
-                  <div className="mt-3 md:mt-4 pt-3 md:pt-4 border-t border-gray-200">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">
-                        Total Assigned
-                      </span>
-                      <span className="font-bold text-gray-900">
-                        {task.assignedEmployees.length}
-                      </span>
-                    </div>
-                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full mt-3 text-gray-600 hover:text-gray-900"
+                    onClick={() => setShowTeamLeadsModal(true)}
+                  >
+                    <Eye className="w-4 h-4 mr-2" />
+                    View All Team Leads
+                  </Button>
                 </CardContent>
               </Card>
             )}
 
-            <Card className="border-0 shadow-sm bg-white">
-              <CardContent className="pt-4 md:pt-6">
-                <div className="text-center">
-                  <div className="inline-flex items-center justify-center w-10 h-10 md:w-12 md:h-12 rounded-full bg-blue-100 mb-3">
-                    <HelpCircle className="w-5 h-5 md:w-6 md:h-6 text-blue-600" />
-                  </div>
-                  <h4 className="font-semibold text-gray-900 mb-2 text-sm md:text-base">
-                    Need Help?
-                  </h4>
-                  <p className="text-xs md:text-sm text-gray-600 mb-4">
-                    Having issues with this task?
-                  </p>
-                  <Button
-                    variant="outline"
-                    className="w-full text-gray-700 hover:text-gray-900 text-sm md:text-base"
-                  >
-                    <MessageSquare className="w-4 h-4 mr-2" />
-                    Contact Support
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+            {/* Help Card */}
+           
           </div>
         </div>
       </main>
 
+      {/* Modals and Dialogs */}
+
+      {/* Assign Employees Dialog */}
       <Dialog open={showAssignDialog} onOpenChange={setShowAssignDialog}>
         <DialogContent className="max-w-2xl bg-white text-gray-900 border-0 shadow-2xl mx-4 md:mx-auto">
           <DialogHeader>
@@ -1539,6 +1991,7 @@ export default function TeamLeadTaskDetailPage() {
         </DialogContent>
       </Dialog>
 
+      {/* Remove Employee Dialog */}
       <Dialog open={showRemoveDialog} onOpenChange={setShowRemoveDialog}>
         <DialogContent className="max-w-md bg-white text-gray-900 border-0 shadow-2xl mx-4 md:mx-auto">
           <DialogHeader>
@@ -1626,6 +2079,285 @@ export default function TeamLeadTaskDetailPage() {
         </DialogContent>
       </Dialog>
 
+      {/* Manager Details Modal */}
+      <Dialog open={showManagerModal} onOpenChange={setShowManagerModal}>
+        <DialogContent className="max-w-lg bg-white text-gray-900 border-0 shadow-2xl mx-4 md:mx-auto">
+          <DialogHeader>
+            <DialogTitle className="text-xl md:text-2xl font-bold flex items-center gap-2">
+              <User className="w-5 h-5 md:w-6 md:h-6 text-purple-600" />
+              Manager Details
+            </DialogTitle>
+            <DialogDescription className="text-gray-600 text-sm md:text-base">
+              Complete information about the manager who submitted this task
+            </DialogDescription>
+          </DialogHeader>
+
+          {managerDetails && (
+            <div className="space-y-4 md:space-y-6">
+              <div className="flex flex-col items-center text-center mb-4">
+                <Avatar className="w-20 h-20 md:w-24 md:h-24 border-4 border-white shadow-xl mb-4">
+                  <AvatarFallback className="bg-gradient-to-r from-purple-500 to-pink-600 text-white text-2xl">
+                    {managerDetails.firstName?.[0]}
+                    {managerDetails.lastName?.[0]}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <h3 className="text-xl md:text-2xl font-bold text-gray-900">
+                    {managerDetails.firstName} {managerDetails.lastName}
+                  </h3>
+                  <p className="text-purple-600 font-medium">Manager</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+                <div className="space-y-1">
+                  <Label className="text-gray-600 text-sm">Email</Label>
+                  <div className="flex items-center gap-2 p-2 bg-gray-50 rounded">
+                    <Mail className="w-4 h-4 text-gray-400" />
+                    <span className="text-gray-900">
+                      {managerDetails.email}
+                    </span>
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-gray-600 text-sm">Phone</Label>
+                  <div className="flex items-center gap-2 p-2 bg-gray-50 rounded">
+                    <Phone className="w-4 h-4 text-gray-400" />
+                    <span className="text-gray-900">
+                      {managerDetails.phone || "N/A"}
+                    </span>
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-gray-600 text-sm">Department</Label>
+                  <div className="flex items-center gap-2 p-2 bg-gray-50 rounded">
+                    <Building className="w-4 h-4 text-gray-400" />
+                    <span className="text-gray-900">
+                      {managerDetails.department?.name || "N/A"}
+                    </span>
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-gray-600 text-sm">
+                    Task Submitted
+                  </Label>
+                  <div className="flex items-center gap-2 p-2 bg-gray-50 rounded">
+                    <Calendar className="w-4 h-4 text-gray-400" />
+                    <span className="text-gray-900">
+                      {formatDate(task?.createdAt)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 md:p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Info className="w-4 h-4 md:w-5 md:h-5 text-purple-600" />
+                  <span className="font-medium text-purple-900">
+                    Manager Role
+                  </span>
+                </div>
+                <p className="text-sm text-purple-700">
+                  This manager submitted the task and will receive notifications
+                  about task updates, status changes, and completion. They have
+                  full visibility into task progress.
+                </p>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              onClick={() => setShowManagerModal(false)}
+              className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg text-sm md:text-base"
+            >
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Team Leads Modal */}
+      <Dialog open={showTeamLeadsModal} onOpenChange={setShowTeamLeadsModal}>
+        <DialogContent className="max-w-2xl bg-white text-gray-900 border-0 shadow-2xl mx-4 md:mx-auto">
+          <DialogHeader>
+            <DialogTitle className="text-xl md:text-2xl font-bold flex items-center gap-2">
+              <Users2 className="w-5 h-5 md:w-6 md:h-6 text-orange-600" />
+              All Team Leads ({teamLeads.length})
+            </DialogTitle>
+            <DialogDescription className="text-gray-600 text-sm md:text-base">
+              Team leads who have access to this task
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+              {teamLeads.map((teamLead) => (
+                <Card
+                  key={teamLead._id}
+                  className="border hover:shadow-md transition-all"
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-3">
+                      <Avatar className="w-12 h-12 border-2 border-white shadow">
+                        <AvatarFallback className="bg-gradient-to-r from-orange-500 to-amber-600 text-white">
+                          {teamLead.firstName?.[0]}
+                          {teamLead.lastName?.[0]}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between mb-1">
+                          <p className="font-bold text-gray-900 truncate">
+                            {teamLead.firstName} {teamLead.lastName}
+                          </p>
+                          {teamLead._id === currentTeamLead?._id && (
+                            <Badge className="bg-blue-100 text-blue-800 text-xs">
+                              You
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-sm text-gray-500 truncate">
+                          {teamLead.email}
+                        </p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Badge variant="outline" className="text-xs">
+                            Team Lead
+                          </Badge>
+                          {teamLead.department && (
+                            <Badge variant="outline" className="text-xs">
+                              {teamLead.department}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mt-3 pt-3 border-t">
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <div>
+                          <span className="text-gray-500">Phone:</span>
+                          <p className="font-medium">
+                            {teamLead.phone || "N/A"}
+                          </p>
+                        </div>
+                        <div>
+                          <span className="text-gray-500">Access:</span>
+                          <p className="font-medium text-green-600">Full</p>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 md:p-4">
+              <div className="flex items-center gap-2">
+                <Info className="w-4 h-4 md:w-5 md:h-5 text-orange-600" />
+                <div>
+                  <p className="font-medium text-orange-900">
+                    Team Lead Access
+                  </p>
+                  <p className="text-sm text-orange-700 mt-1">
+                    All team leads listed here can view, update, and manage this
+                    task. They can assign employees, update status, and
+                    communicate with the manager.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              onClick={() => setShowTeamLeadsModal(false)}
+              className="w-full bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 text-white shadow-lg text-sm md:text-base"
+            >
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Employee Feedback Dialog */}
+      <Dialog open={showFeedbackDialog} onOpenChange={setShowFeedbackDialog}>
+        <DialogContent className="max-w-md bg-white text-gray-900 border-0 shadow-2xl mx-4 md:mx-auto">
+          <DialogHeader>
+            <DialogTitle className="text-lg md:text-xl font-bold flex items-center gap-2">
+              <MessageSquare className="w-4 h-4 md:w-5 md:h-5 text-blue-600" />
+              Give Feedback to Employee
+            </DialogTitle>
+            <DialogDescription className="text-gray-600 text-sm md:text-base">
+              Provide feedback that will be visible to the employee and manager
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedEmployeeForFeedback && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <Avatar className="w-10 h-10">
+                  <AvatarFallback className="bg-gradient-to-r from-blue-500 to-cyan-600 text-white">
+                    {selectedEmployeeForFeedback.firstName?.[0]}
+                    {selectedEmployeeForFeedback.lastName?.[0]}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <p className="font-semibold text-gray-900">
+                    {selectedEmployeeForFeedback.firstName}{" "}
+                    {selectedEmployeeForFeedback.lastName}
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    {selectedEmployeeForFeedback.email}
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Your Feedback</Label>
+                <Textarea
+                  placeholder="Enter your feedback here..."
+                  value={
+                    employeeFeedback[selectedEmployeeForFeedback._id] || ""
+                  }
+                  onChange={(e) =>
+                    setEmployeeFeedback({
+                      ...employeeFeedback,
+                      [selectedEmployeeForFeedback._id]: e.target.value,
+                    })
+                  }
+                  rows={4}
+                  className="border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+                />
+                <p className="text-xs text-gray-500">
+                  This feedback will be saved and visible to the employee and
+                  manager.
+                </p>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="gap-2 flex-col sm:flex-row">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowFeedbackDialog(false);
+                setSelectedEmployeeForFeedback(null);
+              }}
+              className="w-full sm:w-auto"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSubmitFeedback}
+              className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700"
+            >
+              <Send className="w-4 h-4 mr-2" />
+              Submit Feedback
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Floating Action Button */}
       <div className="fixed bottom-4 right-4 md:bottom-6 md:right-6 z-50">
         <TooltipProvider>
           <Tooltip>

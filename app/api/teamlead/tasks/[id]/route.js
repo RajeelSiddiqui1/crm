@@ -3,14 +3,17 @@ import { getServerSession } from "next-auth/next";
 import dbConnect from "@/lib/db";
 import FormSubmission from "@/models/FormSubmission";
 import Employee from "@/models/Employee";
+import Department from "@/models/Department";
 import TeamLead from "@/models/TeamLead";
 import Manager from "@/models/Manager";
+import Form from "@/models/Form";
 import { authOptions } from "@/lib/auth";
 import { sendMail } from "@/lib/mail";
 import { sendTaskStatusUpdateMail } from "@/helper/emails/teamlead/task-status-update";
 import { sendEmployeeTaskAssignmentMail } from "@/helper/emails/teamlead/assignedEmployee";
 import { sendEmployeeRemovedFromTaskMail } from "@/helper/emails/teamlead/remove-employee-from-task";
 import { sendNotification } from "@/lib/sendNotification";
+import mongoose from "mongoose";
 
 // GET specific task by ID
 export async function GET(req, { params }) {
@@ -32,16 +35,26 @@ export async function GET(req, { params }) {
       );
     }
 
-    // Find task with all details
+    // Find task with all populated details
     const task = await FormSubmission.findById(id)
       .populate("formId", "title description fields")
-      .populate("submittedBy", "firstName lastName email phone")
-      .populate("assignedTo", "firstName lastName email")
-      .populate(
-        "assignedEmployees.employeeId",
-        "firstName lastName email department position phone"
-      )
-      .populate("multipleTeamLeadAssigned", "firstName lastName email")
+      .populate("depId", "name description")
+      .populate("submittedBy", "firstName lastName email phone department")
+      .populate("sharedBy", "firstName lastName email phone")
+      .populate("multipleManagerShared", "firstName lastName email phone department")
+      .populate("assignedTo", "firstName lastName email phone department")
+      .populate("multipleTeamLeadAssigned", "firstName lastName email phone department")
+      .populate("multipleTeamLeadShared", "firstName lastName email phone department")
+      .populate("sharedByTeamlead", "firstName lastName email phone department")
+      .populate({
+        path: "assignedEmployees.employeeId",
+        select: "firstName lastName email department position phone profileImage",
+        populate: {
+          path: "depId",
+          select: "name"
+        }
+      })
+      .populate("employeeFeedbacks.employeeId", "firstName lastName email")
       .lean();
 
     if (!task) {
@@ -49,20 +62,54 @@ export async function GET(req, { params }) {
     }
 
     // Check if teamlead has access to this task
-    const hasAccess =
+    const hasAccess = 
       task.assignedTo?.some(
         (assigned) => assigned._id.toString() === teamLead._id.toString()
       ) ||
       task.multipleTeamLeadAssigned?.some(
         (tl) => tl._id.toString() === teamLead._id.toString()
+      ) ||
+      task.multipleTeamLeadShared?.some(
+        (tl) => tl._id.toString() === teamLead._id.toString()
       );
-
 
     if (!hasAccess) {
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
 
-    return NextResponse.json({ task }, { status: 200 });
+    // Get manager details (submittedBy)
+    let managerDetails = null;
+    if (task.submittedBy) {
+      const manager = await Manager.findById(task.submittedBy._id)
+        .populate("departments", "name")
+        .lean();
+      managerDetails = manager;
+    }
+
+    // Get all teamleads who have access to this task
+    const allTeamLeads = [
+      ...(task.assignedTo || []),
+      ...(task.multipleTeamLeadAssigned || []),
+      ...(task.multipleTeamLeadShared || [])
+    ];
+
+    // Remove duplicates
+    const uniqueTeamLeads = Array.from(
+      new Map(allTeamLeads.map(tl => [tl._id.toString(), tl])).values()
+    );
+
+    // Get current teamlead's details
+    const currentTeamLeadDetails = await TeamLead.findById(teamLead._id)
+      .populate("depId", "name")
+      .lean();
+
+    return NextResponse.json({ 
+      task,
+      managerDetails,
+      teamLeads: uniqueTeamLeads,
+      currentTeamLead: currentTeamLeadDetails
+    }, { status: 200 });
+
   } catch (error) {
     console.error("GET task details error:", error);
     return NextResponse.json(
