@@ -445,13 +445,13 @@ export default function TeamLeadSubmissionsPage() {
                           Task Details
                         </TableHead>
                         <TableHead className="font-semibold text-gray-700 text-sm py-3 w-[150px]">
-                          Submitted By
+                          Manager
                         </TableHead>
                         <TableHead className="font-semibold text-gray-700 text-sm py-3 w-[100px]">
                           Manager
                         </TableHead>
                         <TableHead className="font-semibold text-gray-700 text-sm py-3 w-[100px]">
-                          Employee Status
+                         Assigned Employee & Status
                         </TableHead>
                         <TableHead className="font-semibold text-gray-700 text-sm py-3 w-[100px]">
                           Your Status
@@ -520,13 +520,21 @@ export default function TeamLeadSubmissionsPage() {
                             {submission.assignedEmployees?.length > 0 ? (
                               submission.assignedEmployees.map((emp) => (
                                 <Badge
-                                  key={emp.employeeId.toString()}
+                                  key={emp.employeeId?._id?.toString()}
                                   className={`${getEmployeeStatusVariant(
                                     emp.status
-                                  )} border flex items-center gap-1 px-2 py-1 font-medium text-xs`}
+                                  )} border flex items-center gap-2 px-2 py-1 font-medium text-xs`}
                                 >
                                   {getEmployeeStatusIcon(emp.status)}
-                                  {emp.status.replace("_", " ")}
+
+                                  <span>
+                                    {emp.employeeId?.firstName}{" "}
+                                    {emp.employeeId?.lastName}
+                                  </span>
+
+                                  <span className="opacity-70">
+                                    ({emp.status.replace("_", " ")})
+                                  </span>
                                 </Badge>
                               ))
                             ) : (
@@ -549,7 +557,6 @@ export default function TeamLeadSubmissionsPage() {
                           </TableCell>
 
                           {/* Assigned Employees Status */}
-                          
 
                           {/* Actions */}
                           <TableCell className="py-3 flex gap-2 flex-wrap">
