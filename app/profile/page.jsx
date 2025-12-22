@@ -498,7 +498,7 @@ export default function ProfilePage() {
                           onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                           className="focus:border-green-500 focus:ring-2 focus:ring-green-200 h-10 sm:h-11"
                           required
-                          disabled={session.user.role === "Employee"} // Employee email change nahi kar sakta
+                          // Employee email change nahi kar sakta
                         />
                       </div>
 
