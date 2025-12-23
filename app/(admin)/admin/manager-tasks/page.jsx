@@ -725,7 +725,7 @@ export default function AdminManagerTasksPage() {
                             </div>
                             <div>
                               <CardTitle className="text-lg font-bold text-gray-900 line-clamp-1">
-                                {submission.formId?.title || "Unknown Form"}
+                                {submission.clinetName || "Untitled Form"}
                               </CardTitle>
                               <CardDescription className="flex items-center gap-1 mt-1 text-gray-600">
                                 <User className="w-3.5 h-3.5 text-gray-500" />
@@ -845,7 +845,7 @@ export default function AdminManagerTasksPage() {
                                 </div>
                                 <div>
                                   <div className="font-semibold text-gray-900">
-                                    {submission.clientName || "Unknown Form"}
+                                    {submission.clinetName || "Unknown Form"}
                                   </div>
                                   <div className="flex items-center gap-1 text-sm text-gray-600">
                                     <User className="w-3 h-3 text-gray-500" />
