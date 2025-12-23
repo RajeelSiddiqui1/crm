@@ -28,16 +28,36 @@ export async function GET(req) {
     const submissions = await FormSubmission.find({
       $or: [
         { assignedTo: teamLead._id },
-        { multipleTeamLeadAssigned: teamLead._id }
+        { multipleTeamLeadAssigned: teamLead._id },
+        { multipleTeamLeadShared: teamLead._id }
       ]
     })
       .populate("formId", "title description")
       .populate("submittedBy", "firstName lastName email")
       .populate("assignedEmployees.employeeId", "firstName lastName")
+      .populate("sharedByTeamlead", "firstName lastName email") // Add sharedBy
+      .populate("multipleTeamLeadShared", "firstName lastName email") // Add shared list
       .sort({ createdAt: -1 })
       .lean();
 
-    return NextResponse.json(submissions, { status: 200 });
+    // Add isShared flag to each submission
+    const enrichedSubmissions = submissions.map(submission => {
+      const isDirectlyAssigned = submission.assignedTo?.some(
+        tl => tl.toString() === teamLead._id.toString()
+      );
+      const isShared = submission.multipleTeamLeadShared?.some(
+        tl => tl._id?.toString() === teamLead._id.toString()
+      );
+      
+      return {
+        ...submission,
+        isSharedWithMe: isShared && !isDirectlyAssigned,
+        sharedBy: submission.sharedByTeamlead,
+        isOriginalAssigned: isDirectlyAssigned
+      };
+    });
+
+    return NextResponse.json(enrichedSubmissions, { status: 200 });
   } catch (error) {
     console.error("GET TeamLead submissions error:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });

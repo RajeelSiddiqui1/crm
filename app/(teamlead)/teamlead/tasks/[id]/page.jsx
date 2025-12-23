@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import ShareTaskDialog from "@/components/teamlead/ShareTaskDialog";
 import {
   Card,
   CardContent,
@@ -160,6 +161,8 @@ export default function TeamLeadTaskDetailPage() {
   const [showTeamLeadsModal, setShowTeamLeadsModal] = useState(false);
   const [employeeFeedback, setEmployeeFeedback] = useState({});
   const [showFeedbackDialog, setShowFeedbackDialog] = useState(false);
+  const [showShareDialog, setShowShareDialog] = useState(false);
+
   const [selectedEmployeeForFeedback, setSelectedEmployeeForFeedback] =
     useState(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -645,10 +648,31 @@ export default function TeamLeadTaskDetailPage() {
                 variant="outline"
                 size="sm"
                 onClick={() => setShowAssignDialog(true)}
-                className="gap-2 text-gray-900 bg-white"
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg border-gray-300 bg-white text-gray-900 font-medium shadow-sm hover:shadow-md hover:bg-gray-50 transition-all duration-200"
               >
-                <UserPlus className="w-4 h-4" />
-                <span className="hidden md:inline">Assign</span>
+                <UserPlus className="w-4 h-4 text-orange-600" />
+                <span className="hidden md:inline">Assign Employee</span>
+              </Button>
+
+              {/* Share Team Lead Button */}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowShareDialog(true)}
+                disabled={
+                  !task?.assignedTo?.some(
+                    (tl) => tl._id === currentTeamLead?._id
+                  )
+                }
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border-gray-300 bg-white text-gray-900 font-medium shadow-sm transition-all duration-200 
+      ${
+        task?.assignedTo?.some((tl) => tl._id === currentTeamLead?._id)
+          ? "hover:shadow-md hover:bg-gray-50"
+          : "opacity-50 cursor-not-allowed"
+      }`}
+              >
+                <UserPlus className="w-4 h-4 text-blue-600" />
+                <span className="hidden md:inline">Share Team Lead</span>
               </Button>
 
               <DropdownMenu>
@@ -828,38 +852,119 @@ export default function TeamLeadTaskDetailPage() {
               onValueChange={setActiveTab}
               className="w-full"
             >
-              <TabsList className="grid w-full grid-cols-4 bg-gray-100 p-1 rounded-lg">
-                <TabsTrigger
-                  value="overview"
-                  className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md text-gray-900 text-xs md:text-sm"
-                >
-                  <BarChart3 className="w-3 h-3 md:w-4 md:h-4 mr-1 md:mr-2" />
-                  <span className="truncate">Overview</span>
-                </TabsTrigger>
-                <TabsTrigger
-                  value="team"
-                  className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md text-gray-900 text-xs md:text-sm"
-                >
-                  <Users className="w-3 h-3 md:w-4 md:h-4 mr-1 md:mr-2" />
-                  <span className="truncate">
-                    Team ({task.assignedEmployees?.length || 0})
-                  </span>
-                </TabsTrigger>
-                <TabsTrigger
-                  value="details"
-                  className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md text-gray-900 text-xs md:text-sm"
-                >
-                  <FileText className="w-3 h-3 md:w-4 md:h-4 mr-1 md:mr-2" />
-                  <span className="truncate">Details</span>
-                </TabsTrigger>
-                <TabsTrigger
-                  value="updates"
-                  className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md text-gray-900 text-xs md:text-sm"
-                >
-                  <Activity className="w-3 h-3 md:w-4 md:h-4 mr-1 md:mr-2" />
-                  <span className="truncate">Updates</span>
-                </TabsTrigger>
-              </TabsList>
+         <TabsList className="grid grid-cols-5 p-1 rounded-lg bg-gray-100 gap-1">
+    {/* Overview Tab */}
+    <TabsTrigger
+      value="overview"
+      className={`
+        rounded-md 
+        text-gray-600 
+        text-xs md:text-sm 
+        font-medium
+        transition-all duration-200
+        hover:bg-gray-200
+        data-[state=active]:bg-blue-500
+        data-[state=active]:text-white
+        data-[state=active]:shadow-md
+        px-3 py-2
+        flex items-center justify-center gap-1 md:gap-2
+        whitespace-nowrap
+      `}
+    >
+      <BarChart3 className="w-3 h-3 md:w-4 md:h-4 data-[state=active]:text-white text-gray-700" />
+      <span className="truncate">Overview</span>
+    </TabsTrigger>
+
+    {/* Team Tab */}
+    <TabsTrigger
+      value="team"
+      className={`
+        rounded-md 
+        text-gray-600 
+        text-xs md:text-sm 
+        font-medium
+        transition-all duration-200
+        hover:bg-gray-200
+        data-[state=active]:bg-green-500
+        data-[state=active]:text-white
+        data-[state=active]:shadow-md
+        px-3 py-2
+        flex items-center justify-center gap-1 md:gap-2
+        whitespace-nowrap
+      `}
+    >
+      <Users className="w-3 h-3 md:w-4 md:h-4 data-[state=active]:text-white text-gray-700" />
+      <span className="truncate">
+        Team ({task.assignedEmployees?.length || 0})
+      </span>
+    </TabsTrigger>
+
+    {/* Details Tab */}
+    <TabsTrigger
+      value="details"
+      className={`
+        rounded-md 
+        text-gray-600 
+        text-xs md:text-sm 
+        font-medium
+        transition-all duration-200
+        hover:bg-gray-200
+        data-[state=active]:bg-purple-500
+        data-[state=active]:text-white
+        data-[state=active]:shadow-md
+        px-3 py-2
+        flex items-center justify-center gap-1 md:gap-2
+        whitespace-nowrap
+      `}
+    >
+      <FileText className="w-3 h-3 md:w-4 md:h-4 data-[state=active]:text-white text-gray-700" />
+      <span className="truncate">Details</span>
+    </TabsTrigger>
+
+    {/* Updates Tab */}
+    <TabsTrigger
+      value="updates"
+      className={`
+        rounded-md 
+        text-gray-600 
+        text-xs md:text-sm 
+        font-medium
+        transition-all duration-200
+        hover:bg-gray-200
+        data-[state=active]:bg-yellow-500
+        data-[state=active]:text-white
+        data-[state=active]:shadow-md
+        px-3 py-2
+        flex items-center justify-center gap-1 md:gap-2
+        whitespace-nowrap
+      `}
+    >
+      <Activity className="w-3 h-3 md:w-4 md:h-4 data-[state=active]:text-white text-gray-700" />
+      <span className="truncate">Updates</span>
+    </TabsTrigger>
+
+    {/* Shared Teamlead Tab */}
+    <TabsTrigger
+      value="shared-teamlead"
+      className={`
+        rounded-md 
+        text-gray-600 
+        text-xs md:text-sm 
+        font-medium
+        transition-all duration-200
+        hover:bg-gray-200
+        data-[state=active]:bg-red-500
+        data-[state=active]:text-white
+        data-[state=active]:shadow-md
+        px-3 py-2
+        flex items-center justify-center gap-1 md:gap-2
+        whitespace-nowrap
+      `}
+    >
+      <Activity className="w-3 h-3 md:w-4 md:h-4 data-[state=active]:text-white text-gray-700" />
+      <span className="truncate">Teamlead Shared</span>
+    </TabsTrigger>
+  </TabsList>
 
               {/* Overview Tab */}
               <TabsContent
@@ -1074,6 +1179,27 @@ export default function TeamLeadTaskDetailPage() {
                       </Button>
                       <Button
                         variant="outline"
+                        className="flex flex-col h-auto py-4 gap-2 "
+                        onClick={() => setShowShareDialog(true)}
+                        disabled={
+                          !task?.assignedTo?.some(
+                            (tl) => tl._id === currentTeamLead?._id
+                          )
+                        }
+                      >
+                        <Share2 className="w-4 h-4 text-purple-400" />
+                        <span className="hidden md:inline text-sm text-gray-900">
+                          Share with Teamlead
+                        </span>
+                        {task?.sharedTasksCount > 0 && (
+                          <Badge className="ml-1 bg-blue-100 text-blue-800">
+                            {task.sharedTasksCount}
+                          </Badge>
+                        )}
+                      </Button>
+
+                      <Button
+                        variant="outline"
                         className="flex flex-col h-auto py-4 gap-2"
                         onClick={() => setActiveTab("updates")}
                       >
@@ -1082,16 +1208,7 @@ export default function TeamLeadTaskDetailPage() {
                           Update Status
                         </span>
                       </Button>
-                      <Button
-                        variant="outline"
-                        className="flex flex-col h-auto py-4 gap-2"
-                        onClick={() => setShowManagerModal(true)}
-                      >
-                        <User className="w-5 h-5 text-purple-600" />
-                        <span className="text-sm text-gray-900">
-                          Manager Info
-                        </span>
-                      </Button>
+
                       <Button
                         variant="outline"
                         className="flex flex-col h-auto py-4 gap-2"
@@ -1266,8 +1383,115 @@ export default function TeamLeadTaskDetailPage() {
                     )}
                   </CardContent>
                 </Card>
+              
               </TabsContent>
 
+<TabsContent
+                value="shared-teamlead"
+                className="space-y-4 md:space-y-6 pt-4 md:pt-6"
+              >
+
+                  {task.multipleTeamLeadShared?.length > 0 && (
+                  <Card className="bg-white border border-gray-200 shadow-sm hover:shadow-md transition">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <CardTitle className="text-base md:text-lg font-semibold text-gray-900">
+                            Team Leads Assigned
+                          </CardTitle>
+                          <CardDescription className="text-sm text-gray-500">
+                            Team leads who have access to this task
+                          </CardDescription>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <div className="px-3 py-1.5 rounded-full bg-orange-50 text-orange-600 text-xs font-medium">
+                            <Users2 className="w-4 h-4 inline mr-1" />
+                            {task.sharedTasksCount ||
+                              task.multipleTeamLeadShared?.length ||
+                              0}
+                          </div>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setShowShareDialog(true)}
+                            className="text-blue-600 border-blue-200 hover:bg-blue-50"
+                          >
+                            <Share2 className="w-4 h-4 mr-1" />
+                            Manage
+                          </Button>
+                        </div>
+                      </div>
+                    </CardHeader>
+
+                    <CardContent className="pt-0">
+                      {task.multipleTeamLeadShared?.length > 0 ? (
+                        <div className="space-y-3">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            {task.multipleTeamLeadShared.map((tl) => (
+                              <div
+                                key={tl._id}
+                                className="flex items-center justify-between p-3 rounded-lg border border-gray-100 bg-gradient-to-r from-white to-orange-50 hover:border-orange-200 transition"
+                              >
+                                <div className="flex items-center gap-3">
+                                  {/* Avatar */}
+                                  <div className="w-9 h-9 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center font-semibold text-sm">
+                                    {tl.firstName?.[0]}
+                                    {tl.lastName?.[0]}
+                                  </div>
+
+                                  {/* Info */}
+                                  <div className="flex-1">
+                                    <p className="text-sm font-medium text-gray-800">
+                                      {tl.firstName} {tl.lastName}
+                                    </p>
+                                    <p className="text-xs text-gray-500">
+                                      {tl.email}
+                                    </p>
+                                    <Badge className="text-xs bg-blue-900 text-white">
+                                      {tl.depId
+                                        ? tl.depId.name
+                                        : "No Department"}
+                                    </Badge>
+                                  </div>
+                                </div>
+
+                                {/* Status Badge */}
+                                {tl._id === task.sharedByTeamlead?._id ? (
+                                  <Badge className="bg-blue-500/10 text-blue-600 border border-blue-200">
+                                    Sharer
+                                  </Badge>
+                                ) : (
+                                  <Badge className="bg-orange-500/10 text-orange-600 border border-orange-200">
+                                    Shared
+                                  </Badge>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+
+                          {/* Shared by info */}
+                          {task.sharedByTeamlead && (
+                            <div className="flex items-center gap-2 text-xs text-gray-500 pt-2 border-t">
+                              <User className="w-3.5 h-3.5 text-blue-500" />
+                              Shared by{" "}
+                              <span className="font-medium text-gray-700">
+                                {task.sharedByTeamlead.firstName}{" "}
+                                {task.sharedByTeamlead.lastName}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-center py-8 text-sm text-gray-400">
+                          <Users2 className="w-4 h-4 mr-2" />
+                          No team leads shared yet
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+              </TabsContent>
               {/* Details Tab */}
               <TabsContent
                 value="details"
@@ -1782,7 +2006,6 @@ export default function TeamLeadTaskDetailPage() {
             )}
 
             {/* Help Card */}
-           
           </div>
         </div>
       </main>
@@ -2133,7 +2356,11 @@ export default function TeamLeadTaskDetailPage() {
                   <div className="flex items-center gap-2 p-2 bg-gray-50 rounded">
                     <Building className="w-4 h-4 text-gray-400" />
                     <span className="text-gray-900">
-                      {managerDetails.department?.name || "N/A"}
+                      {managerDetails.departments?.length > 0
+                        ? managerDetails.departments
+                            .map((dep) => dep.name)
+                            .join(", ")
+                        : "N/A"}
                     </span>
                   </div>
                 </div>
@@ -2148,20 +2375,6 @@ export default function TeamLeadTaskDetailPage() {
                     </span>
                   </div>
                 </div>
-              </div>
-
-              <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 md:p-4">
-                <div className="flex items-center gap-2 mb-2">
-                  <Info className="w-4 h-4 md:w-5 md:h-5 text-purple-600" />
-                  <span className="font-medium text-purple-900">
-                    Manager Role
-                  </span>
-                </div>
-                <p className="text-sm text-purple-700">
-                  This manager submitted the task and will receive notifications
-                  about task updates, status changes, and completion. They have
-                  full visibility into task progress.
-                </p>
               </div>
             </div>
           )}
@@ -2179,7 +2392,11 @@ export default function TeamLeadTaskDetailPage() {
 
       {/* Team Leads Modal */}
       <Dialog open={showTeamLeadsModal} onOpenChange={setShowTeamLeadsModal}>
-        <DialogContent className="max-w-2xl bg-white text-gray-900 border-0 shadow-2xl mx-4 md:mx-auto">
+        <DialogContent
+          className="max-w-2xl bg-white text-gray-900 border-0 shadow-2xl
+    mx-4 md:mx-auto max-h-[85vh] flex flex-col"
+        >
+          {/* HEADER */}
           <DialogHeader>
             <DialogTitle className="text-xl md:text-2xl font-bold flex items-center gap-2">
               <Users2 className="w-5 h-5 md:w-6 md:h-6 text-orange-600" />
@@ -2190,7 +2407,8 @@ export default function TeamLeadTaskDetailPage() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4">
+          {/* BODY (SCROLL HERE) */}
+          <div className="flex-1 overflow-y-auto pr-1 space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
               {teamLeads.map((teamLead) => (
                 <Card
@@ -2205,6 +2423,7 @@ export default function TeamLeadTaskDetailPage() {
                           {teamLead.lastName?.[0]}
                         </AvatarFallback>
                       </Avatar>
+
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center justify-between mb-1">
                           <p className="font-bold text-gray-900 truncate">
@@ -2216,32 +2435,43 @@ export default function TeamLeadTaskDetailPage() {
                             </Badge>
                           )}
                         </div>
+
                         <p className="text-sm text-gray-500 truncate">
                           {teamLead.email}
                         </p>
+
                         <div className="flex items-center gap-2 mt-1">
-                          <Badge variant="outline" className="text-xs">
+                          <Badge
+                            variant="outline"
+                            className="text-xs bg-blue-900 text-white"
+                          >
                             Team Lead
                           </Badge>
                           {teamLead.department && (
                             <Badge variant="outline" className="text-xs">
-                              {teamLead.department}
+                              {teamLead.depId.name}
                             </Badge>
                           )}
                         </div>
                       </div>
                     </div>
-                    <div className="mt-3 pt-3 border-t">
-                      <div className="grid grid-cols-2 gap-2 text-xs">
-                        <div>
-                          <span className="text-gray-500">Phone:</span>
-                          <p className="font-medium">
+                    <div className="mt-4 pt-4 border-t border-gray-200">
+                      <div className="grid grid-cols-2 gap-4 text-sm md:text-xs">
+                        <div className="flex flex-col">
+                          <span className="text-gray-400 font-medium">
+                            Phone
+                          </span>
+                          <p className="mt-1 font-semibold text-gray-900">
                             {teamLead.phone || "N/A"}
                           </p>
                         </div>
-                        <div>
-                          <span className="text-gray-500">Access:</span>
-                          <p className="font-medium text-green-600">Full</p>
+                        <div className="flex flex-col">
+                          <span className="text-gray-400 font-medium">
+                            Access
+                          </span>
+                          <p className="mt-1 font-semibold text-green-600">
+                            Full
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -2250,6 +2480,7 @@ export default function TeamLeadTaskDetailPage() {
               ))}
             </div>
 
+            {/* INFO BOX */}
             <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 md:p-4">
               <div className="flex items-center gap-2">
                 <Info className="w-4 h-4 md:w-5 md:h-5 text-orange-600" />
@@ -2259,18 +2490,19 @@ export default function TeamLeadTaskDetailPage() {
                   </p>
                   <p className="text-sm text-orange-700 mt-1">
                     All team leads listed here can view, update, and manage this
-                    task. They can assign employees, update status, and
-                    communicate with the manager.
+                    task.
                   </p>
                 </div>
               </div>
             </div>
           </div>
 
-          <DialogFooter>
+          {/* FOOTER (STICKY FEEL) */}
+          <DialogFooter className="pt-3">
             <Button
               onClick={() => setShowTeamLeadsModal(false)}
-              className="w-full bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 text-white shadow-lg text-sm md:text-base"
+              className="w-full bg-gradient-to-r from-orange-600 to-amber-600
+        hover:from-orange-700 hover:to-amber-700 text-white shadow-lg"
             >
               Close
             </Button>
@@ -2356,7 +2588,17 @@ export default function TeamLeadTaskDetailPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
+      <ShareTaskDialog
+        taskId={taskId}
+        taskTitle={task?.formId?.title || task?.clinetName || "Untitled"}
+        open={showShareDialog}
+        onOpenChange={setShowShareDialog}
+        onSuccess={() => {
+          fetchTaskDetails(); // Refresh task details
+          // Optional: show success toast
+          toast.success("Task shared successfully!");
+        }}
+      />
       {/* Floating Action Button */}
       <div className="fixed bottom-4 right-4 md:bottom-6 md:right-6 z-50">
         <TooltipProvider>

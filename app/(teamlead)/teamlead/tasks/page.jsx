@@ -41,11 +41,15 @@ import {
   AlertCircle,
   Eye,
   Loader2,
+  User,
   RefreshCw,
+    Share2,
+  X,
+  MessageSquare,
+  Users2,
   Users,
   Plus,
   ArrowRight,
-  Share2,
 } from "lucide-react";
 import axios from "axios";
 import Link from "next/link";
@@ -109,6 +113,34 @@ export default function TeamLeadSubmissionsPage() {
         return "bg-gray-50 text-gray-700 border-gray-200";
     }
   };
+
+
+  const handleUnshareTask = async (taskId) => {
+  if (!confirm("Are you sure you want to remove your access to this shared task?")) {
+    return;
+  }
+
+  try {
+    const response = await axios.post(`/api/teamlead/tasks/share/${taskId}`, {
+      removeTeamLeadId: currentTeamLead._id,
+    });
+
+    if (response.status === 200) {
+      toast.success("Task access removed successfully");
+      fetchSubmissions(); // Refresh the list
+    }
+  } catch (error) {
+    console.error("Error removing task access:", error);
+    toast.error(error.response?.data?.error || "Failed to remove access");
+  }
+};
+
+// Share task function
+const handleShareTask = (submission) => {
+  // You can open a dialog or navigate to task details for sharing
+  router.push(`/teamlead/tasks/${submission._id}?share=true`);
+};
+
 
   function getEmployeeStatusVariant(status) {
     switch (status) {
@@ -444,19 +476,22 @@ export default function TeamLeadSubmissionsPage() {
                         <TableHead className="font-semibold text-gray-700 text-sm py-3 w-[250px]">
                           Task Details
                         </TableHead>
-                        <TableHead className="font-semibold text-gray-700 text-sm py-3 w-[150px]">
-                          Manager
+                       
+                        <TableHead className="font-semibold text-gray-700 text-sm py-3 w-[100px]">
+                          Status
                         </TableHead>
                         <TableHead className="font-semibold text-gray-700 text-sm py-3 w-[100px]">
-                          Manager
+                          Shared By
+                        </TableHead>
+                        <TableHead className="font-semibold text-gray-700 text-sm py-3 w-[120px]">
+                          Shared Status
                         </TableHead>
                         <TableHead className="font-semibold text-gray-700 text-sm py-3 w-[100px]">
-                         Assigned Employee & Status
+                          Assigned Employees & Status
                         </TableHead>
                         <TableHead className="font-semibold text-gray-700 text-sm py-3 w-[100px]">
                           Your Status
                         </TableHead>
-
                         <TableHead className="font-semibold text-gray-700 text-sm py-3 w-[100px]">
                           Actions
                         </TableHead>
@@ -466,45 +501,49 @@ export default function TeamLeadSubmissionsPage() {
                       {filteredSubmissions.map((submission) => (
                         <TableRow
                           key={submission._id}
-                          className="group hover:bg-gray-50 transition-colors duration-150 border-b border-gray-100"
+                          className={`group hover:bg-gray-50 transition-colors duration-150 border-b border-gray-100 ${
+                            submission.isSharedWithMe ? "bg-blue-50/30" : ""
+                          }`}
                         >
-                          {/* Client Name */}
+                          {/* Client Name - With Shared Indicator */}
                           <TableCell className="py-3">
                             <div className="flex items-center gap-3">
                               <Avatar className="border border-gray-200 w-10 h-10">
-                                <AvatarFallback className="bg-blue-100 text-blue-600 font-semibold">
-                                  <FileText className="w-4 h-4" />
+                                <AvatarFallback
+                                  className={`${
+                                    submission.isSharedWithMe
+                                      ? "bg-gradient-to-r from-blue-100 to-cyan-100 text-blue-600"
+                                      : "bg-gradient-to-r from-blue-100 to-indigo-100 text-blue-600"
+                                  } font-semibold`}
+                                >
+                                  {submission.isSharedWithMe ? (
+                                    <Share2 className="w-4 h-4" />
+                                  ) : (
+                                    <FileText className="w-4 h-4" />
+                                  )}
                                 </AvatarFallback>
                               </Avatar>
                               <div className="min-w-0 flex-1">
-                                <div className="font-semibold text-gray-900 text-sm group-hover:text-gray-700 transition-colors truncate">
-                                  {submission.clinetName || "No Client"}
+                                <div className="flex items-center gap-2">
+                                  <div className="font-semibold text-gray-900 text-sm group-hover:text-gray-700 transition-colors truncate">
+                                    {submission.clinetName || "No Client"}
+                                  </div>
+                                  {submission.isSharedWithMe && (
+                                    <Badge className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white text-xs px-2 py-0.5">
+                                      <Share2 className="w-3 h-3 mr-1" />
+                                      Shared
+                                    </Badge>
+                                  )}
+                                </div>
+                                <div className="text-xs text-gray-500 mt-1">
+                                  {submission.formId?.title || "Untitled Form"}
                                 </div>
                               </div>
                             </div>
                           </TableCell>
 
                           {/* Submitted By */}
-                          <TableCell className="py-3">
-                            <div className="flex items-center gap-2">
-                              <Avatar className="w-6 h-6">
-                                <AvatarFallback className="text-xs bg-gray-100 text-gray-600">
-                                  {submission.submittedBy?.firstName?.[0] ||
-                                    "U"}
-                                </AvatarFallback>
-                              </Avatar>
-                              <div>
-                                <div className="text-sm font-medium text-gray-900">
-                                  {submission.submittedBy?.firstName ||
-                                    "Unknown"}{" "}
-                                  {submission.submittedBy?.lastName || ""}
-                                </div>
-                                <div className="text-xs text-gray-500 truncate max-w-[120px]">
-                                  {submission.submittedBy?.email || "N/A"}
-                                </div>
-                              </div>
-                            </div>
-                          </TableCell>
+                         
 
                           {/* Status */}
                           <TableCell className="py-3">
@@ -516,35 +555,109 @@ export default function TeamLeadSubmissionsPage() {
                               {submission.status.replace("_", " ")}
                             </Badge>
                           </TableCell>
-                          <TableCell className="py-3 flex flex-col gap-1">
-                            {submission.assignedEmployees?.length > 0 ? (
-                              submission.assignedEmployees.map((emp) => (
-                                <Badge
-                                  key={emp.employeeId?._id?.toString()}
-                                  className={`${getEmployeeStatusVariant(
-                                    emp.status
-                                  )} border flex items-center gap-2 px-2 py-1 font-medium text-xs`}
-                                >
-                                  {getEmployeeStatusIcon(emp.status)}
 
-                                  <span>
-                                    {emp.employeeId?.firstName}{" "}
-                                    {emp.employeeId?.lastName}
-                                  </span>
-
-                                  <span className="opacity-70">
-                                    ({emp.status.replace("_", " ")})
-                                  </span>
-                                </Badge>
-                              ))
+                          {/* Shared By - Shows who shared the task */}
+                          <TableCell className="py-3">
+                            {submission.isSharedWithMe ? (
+                              <div className="flex items-center gap-2">
+                                <Avatar className="w-6 h-6">
+                                  <AvatarFallback className="text-xs bg-orange-100 text-orange-600">
+                                    {submission.sharedBy?.firstName?.[0] || "S"}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div>
+                                  <div className="text-sm font-medium text-gray-900">
+                                    {submission.sharedBy?.firstName ||
+                                      "Unknown"}{" "}
+                                    {submission.sharedBy?.lastName || ""}
+                                  </div>
+                                  <div className="text-xs text-gray-500">
+                                    {submission.sharedBy?.email
+                                      ? "Shared by"
+                                      : "N/A"}
+                                  </div>
+                                </div>
+                              </div>
+                            ) : submission.isOriginalAssigned ? (
+                              <Badge className="bg-green-100 text-green-800 border border-green-200 text-xs">
+                                <User className="w-3 h-3 mr-1" />
+                                Directly Assigned
+                              </Badge>
                             ) : (
-                              <span className="text-xs text-gray-500">
-                                No Employees Assigned
-                              </span>
+                              <span className="text-xs text-gray-400">N/A</span>
                             )}
                           </TableCell>
 
-                          {/* Status2 */}
+                          {/* Shared Status - Shows how many team leads it's shared with */}
+                          <TableCell className="py-3">
+                            {submission.multipleTeamLeadShared?.length > 0 && (
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-1">
+                                  <Badge className="bg-blue-100 text-blue-800 border border-blue-200 text-xs">
+                                    <Users2 className="w-3 h-3 mr-1" />
+                                    Shared with{" "}
+                                    {submission.multipleTeamLeadShared
+                                      ?.length || 0}
+                                  </Badge>
+                                </div>
+                                {submission.multipleTeamLeadShared
+                                  ?.slice(0, 2)
+                                  .map((tl, index) => (
+                                    <div
+                                      key={index}
+                                      className="text-xs text-gray-500 truncate"
+                                    >
+                                      • {tl.firstName} {tl.lastName}
+                                    </div>
+                                  ))}
+                                {submission.multipleTeamLeadShared?.length >
+                                  2 && (
+                                  <div className="text-xs text-gray-400">
+                                    +
+                                    {submission.multipleTeamLeadShared.length -
+                                      2}{" "}
+                                    more
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </TableCell>
+
+                          {/* Assigned Employees Status */}
+                          <TableCell className="py-3 flex flex-col gap-1">
+                            {submission.assignedEmployees?.length > 0 ? (
+                              submission.assignedEmployees
+                                .slice(0, 2)
+                                .map((emp) => (
+                                  <Badge
+                                    key={emp.employeeId?._id?.toString()}
+                                    className={`${getEmployeeStatusVariant(
+                                      emp.status
+                                    )} border flex items-center gap-2 px-2 py-1 font-medium text-xs`}
+                                  >
+                                    {getEmployeeStatusIcon(emp.status)}
+                                    <span>
+                                      {emp.employeeId?.firstName}{" "}
+                                      {emp.employeeId?.lastName}
+                                    </span>
+                                    <span className="opacity-70">
+                                      ({emp.status.replace("_", " ")})
+                                    </span>
+                                  </Badge>
+                                ))
+                            ) : (
+                              <span className="text-xs text-gray-500">
+                                No Employees
+                              </span>
+                            )}
+                            {submission.assignedEmployees?.length > 2 && (
+                              <div className="text-xs text-blue-600">
+                                +{submission.assignedEmployees.length - 2} more
+                              </div>
+                            )}
+                          </TableCell>
+
+                          {/* Your Status (status2) */}
                           <TableCell className="py-3">
                             <Badge
                               className={`${getstatus2Variant(
@@ -556,33 +669,73 @@ export default function TeamLeadSubmissionsPage() {
                             </Badge>
                           </TableCell>
 
-                          {/* Assigned Employees Status */}
-
-                          {/* Actions */}
+                          {/* Actions - Different buttons for shared vs assigned */}
                           <TableCell className="py-3 flex gap-2 flex-wrap">
-                            <Link
-                              href={`/group-chat?submissionId=${submission._id}`}
-                            >
-                              <Button
-                                className="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white text-xs h-7 px-2 rounded-md shadow-sm transition"
-                                size="sm"
-                              >
-                                <Eye className="w-3 h-3" />
-                                Chat
-                                <ArrowRight className="w-3 h-3" />
-                              </Button>
-                            </Link>
+                            {submission.isSharedWithMe ? (
+                              <>
+                                <Link
+                                  href={`/group-chat?submissionId=${submission._id}`}
+                                >
+                                  <Button
+                                    className="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white text-xs h-7 px-2 rounded-md shadow-sm transition"
+                                    size="sm"
+                                  >
+                                    <MessageSquare className="w-3 h-3" />
+                                    Chat
+                                  </Button>
+                                </Link>
 
-                            <Link href={`/teamlead/tasks/${submission._id}`}>
-                              <Button
-                                className="flex items-center gap-1 bg-green-600 hover:bg-green-700 text-white text-xs h-7 px-2 rounded-md shadow-sm transition"
-                                size="sm"
-                              >
-                                <Eye className="w-3 h-3" />
-                                Task Details
-                                <ArrowRight className="w-3 h-3" />
-                              </Button>
-                            </Link>
+                                <Link
+                                  href={`/teamlead/tasks/${submission._id}`}
+                                >
+                                  <Button
+                                    className="flex items-center gap-1 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-700 hover:to-blue-700 text-white text-xs h-7 px-2 rounded-md shadow-sm transition"
+                                    size="sm"
+                                  >
+                                    <Eye className="w-3 h-3" />
+                                    View
+                                  </Button>
+                                </Link>
+
+                                
+                              </>
+                            ) : (
+                              <>
+                                <Link
+                                  href={`/group-chat?submissionId=${submission._id}`}
+                                >
+                                  <Button
+                                    className="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white text-xs h-7 px-2 rounded-md shadow-sm transition"
+                                    size="sm"
+                                  >
+                                    <MessageSquare className="w-3 h-3" />
+                                    Chat
+                                  </Button>
+                                </Link>
+
+                                <Link
+                                  href={`/teamlead/tasks/${submission._id}`}
+                                >
+                                  <Button
+                                    className="flex items-center gap-1 bg-green-600 hover:bg-green-700 text-white text-xs h-7 px-2 rounded-md shadow-sm transition"
+                                    size="sm"
+                                  >
+                                    <Eye className="w-3 h-3" />
+                                    Manage
+                                  </Button>
+                                </Link>
+
+                                <Button
+                                  variant="outline"
+                                  className="flex items-center gap-1 border-green-200 text-green-600 hover:bg-green-50 text-xs h-7 px-2 rounded-md"
+                                  size="sm"
+                                  onClick={() => handleShareTask(submission)}
+                                >
+                                  <Share2 className="w-3 h-3" />
+                                  Share
+                                </Button>
+                              </>
+                            )}
                           </TableCell>
                         </TableRow>
                       ))}

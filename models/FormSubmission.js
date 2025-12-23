@@ -48,7 +48,7 @@ const formSubmissionSchema = new mongoose.Schema(
     ],
      sharedByTeamlead:{
        type: mongoose.Schema.Types.ObjectId,
-        ref: "Teamlead"
+        ref: "TeamLead"
     },
     assignedTo: [{
       type: mongoose.Schema.Types.ObjectId,
