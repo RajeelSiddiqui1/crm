@@ -4,6 +4,7 @@ import dbConnect from "@/lib/db";
 import FormSubmission from "@/models/FormSubmission";
 import TeamLead from "@/models/TeamLead";
 import { authOptions } from "@/lib/auth";
+import Form from "@/models/Form";
 
 export async function GET(req) {
   try {
