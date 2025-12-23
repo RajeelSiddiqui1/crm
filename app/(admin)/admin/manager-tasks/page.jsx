@@ -79,8 +79,10 @@ import {
   Filter,
   ChevronsLeft,
   ChevronsRight,
+  ArrowRight,
 } from "lucide-react";
 import axios from "axios";
+import Link from "next/link";
 
 export default function AdminManagerTasksPage() {
   const { data: session, status } = useSession();
@@ -894,7 +896,7 @@ export default function AdminManagerTasksPage() {
                                 </Button>
                               </div>
                                 <Link
-                              href={`/group-chat?submissionId=${task._id}`}
+                              href={`/group-chat?submissionId=${submission._id}`}
                             >
                               <Button
                                 className="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white text-xs h-7 px-2 rounded-md shadow-sm transition mt-2"
