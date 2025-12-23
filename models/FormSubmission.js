@@ -137,7 +137,61 @@ const formSubmissionSchema = new mongoose.Schema(
      sharedTasksCount: {
       type: Number,
       default: 0
-    }
+    },
+      teamLeadFeedbackReplies: [
+      {
+        employeeId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Employee",
+          required: true,
+        },
+        reply: {
+          type: String,
+          required: true,
+        },
+        repliedAt: {
+          type: Date,
+          default: Date.now,
+        },
+        // اگر کسی خاص فیڈ بیک کا جواب ہے تو
+        feedbackId: {
+          type: String, // یا ObjectId اگر آپ علیحدہ کولکشن بناتے ہیں
+        }
+      }
+    ],
+
+    // ایمپلائی کے فیڈ بیک پر کمنٹس (دوسرے ایمپلائی یا ٹیم لیڈز)
+    feedbackComments: [
+      {
+        commentBy: {
+          type: mongoose.Schema.Types.ObjectId,
+          refPath: "feedbackComments.commenterModel",
+          required: true,
+        },
+        commenterModel: {
+          type: String,
+          enum: ["Employee", "TeamLead", "Manager"],
+          required: true,
+        },
+        commentOnEmployeeId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Employee",
+          required: true,
+        },
+        comment: {
+          type: String,
+          required: true,
+        },
+        createdAt: {
+          type: Date,
+          default: Date.now,
+        },
+        // اگر کسی خاص فیڈ بیک کا جواب ہے
+        feedbackId: {
+          type: mongoose.Schema.Types.ObjectId,
+        }
+      }
+    ]
   },
   { timestamps: true }
 );

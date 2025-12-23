@@ -893,6 +893,18 @@ export default function AdminManagerTasksPage() {
                                   View
                                 </Button>
                               </div>
+                                <Link
+                              href={`/group-chat?submissionId=${task._id}`}
+                            >
+                              <Button
+                                className="flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white text-xs h-7 px-2 rounded-md shadow-sm transition mt-2"
+                                size="sm"
+                              >
+                                <Eye className="w-3 h-3" />
+                                Chat
+                                <ArrowRight className="w-3 h-3" />
+                              </Button>
+                            </Link>
                             </TableCell>
                           </TableRow>
                         ))}
