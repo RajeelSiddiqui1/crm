@@ -765,9 +765,7 @@ export default function EmployeeTasksPage() {
                       <TableHead className="text-gray-700 font-semibold">
                         Your Status
                       </TableHead>
-                      <TableHead className="text-gray-700 font-semibold">
-                        Feedbacks
-                      </TableHead>
+                      
                       <TableHead className="text-gray-700 font-semibold text-right">
                         Actions
                       </TableHead>
@@ -866,33 +864,7 @@ export default function EmployeeTasksPage() {
                                 </Select>
                               </div>
                             </TableCell>
-                            <TableCell>
-                              <div className="flex flex-col gap-1">
-                                {task.teamLeadFeedbacksCount > 0 ? (
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="text-orange-600 border-orange-200 hover:bg-orange-50 justify-start"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      openTeamLeadFeedbacks(task);
-                                    }}
-                                  >
-                                    <MessageSquare className="w-4 h-4 mr-2" />
-                                    {task.teamLeadFeedbacksCount} Feedback
-                                    {task.teamLeadFeedbacksCount !== 1 ? "s" : ""}
-                                  </Button>
-                                ) : (
-                                  <span className="text-sm text-gray-500">No feedback</span>
-                                )}
-                                {task.employeeFeedback && (
-                                  <div className="text-xs text-blue-600 flex items-center gap-1">
-                                    <CheckCircle className="w-3 h-3" />
-                                    You have submitted feedback
-                                  </div>
-                                )}
-                              </div>
-                            </TableCell>
+                            
                             <TableCell>
                               <div className="flex items-center justify-end gap-2">
                                 <Button
