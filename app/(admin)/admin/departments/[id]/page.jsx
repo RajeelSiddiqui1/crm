@@ -152,6 +152,7 @@ import {
   FileBarChart,
   LineChart,
   Code,
+  ViewIcon,
 } from "lucide-react";
 import axios from "axios";
 import { Toaster } from "@/components/ui/sonner";
@@ -2197,10 +2198,18 @@ export default function DepartmentTasksPage() {
               <DialogFooter className="pt-6 border-t border-gray-200 gap-3">
                 <Button 
                   variant="outline" 
-                  onClick={() => setShowDetails(false)}
+                  onClick={() => router.push(`/admin/manager-tasks/${selectedTask._id}`)}
                   className="border-gray-300 text-gray-700 hover:bg-gray-50 rounded-xl"
                 >
-                  Close
+                  <ViewIcon className="w-4 h-4 mr-2 text-purple-600 " />
+                  Full details
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => setShowDetails(false)}
+                  className="border-purple-300 text-purple-700 hover:bg-gray-50 rounded-xl "
+                >
+                  view
                 </Button>
                 {selectedTask.type === 'submission' && session.user.role === "Admin" && (
                   <Button 

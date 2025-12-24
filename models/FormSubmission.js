@@ -3,16 +3,16 @@ import mongoose from "mongoose";
 
 const formSubmissionSchema = new mongoose.Schema(
   {
-    clinetName:{
-      type:String,
-      required:false
+    clinetName: {
+      type: String,
+      required: false
     },
     formId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Form",
       required: true,
     },
-    depId:{
+    depId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Department",
     },
@@ -28,9 +28,9 @@ const formSubmissionSchema = new mongoose.Schema(
         default: [],
       },
     ],
-    sharedBy:{
-       type: mongoose.Schema.Types.ObjectId,
-        ref: "Manager"
+    sharedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Manager"
     },
     multipleTeamLeadAssigned: [
       {
@@ -39,16 +39,16 @@ const formSubmissionSchema = new mongoose.Schema(
         default: [],
       },
     ],
-     multipleTeamLeadShared: [
+    multipleTeamLeadShared: [
       {
         type: mongoose.Schema.Types.ObjectId,
         ref: "TeamLead",
         default: [],
       },
     ],
-     sharedByTeamlead:{
-       type: mongoose.Schema.Types.ObjectId,
-        ref: "TeamLead"
+    sharedByTeamlead: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "TeamLead"
     },
     assignedTo: [{
       type: mongoose.Schema.Types.ObjectId,
@@ -82,7 +82,7 @@ const formSubmissionSchema = new mongoose.Schema(
         },
       },
     ],
-       employeeFeedbacks: [
+    employeeFeedbacks: [
       {
         employeeId: {
           type: mongoose.Schema.Types.ObjectId,
@@ -97,6 +97,45 @@ const formSubmissionSchema = new mongoose.Schema(
           type: Date,
           default: Date.now,
         },
+      }
+    ],
+    teamLeadFeedbacks: [
+      {
+        teamLeadId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "TeamLead",
+          required: true,
+        },
+        feedback: {
+          type: String,
+          required: true,
+        },
+        submittedAt: {
+          type: Date,
+          default: Date.now,
+        },
+        replies: [
+          {
+            repliedBy: {
+              type: mongoose.Schema.Types.ObjectId,
+              required: true,
+              refPath: 'teamLeadFeedbacks.replies.repliedByModel'
+            },
+            repliedByModel: {
+              type: String,
+              required: true,
+              enum: ['Employee', 'TeamLead']
+            },
+            reply: {
+              type: String,
+              required: true
+            },
+            repliedAt: {
+              type: Date,
+              default: Date.now
+            }
+          }
+        ]
       }
     ],
     formData: {
@@ -118,11 +157,6 @@ const formSubmissionSchema = new mongoose.Schema(
       enum: ["pending", "approved", "rejected"],
       default: "pending",
     },
-
-    teamLeadFeedback: {
-      type: String,
-      default: "",
-    },
     managerComments: {
       type: String,
       default: "",
@@ -134,64 +168,10 @@ const formSubmissionSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "AdminTask",
     },
-     sharedTasksCount: {
+    sharedTasksCount: {
       type: Number,
       default: 0
     },
-      teamLeadFeedbackReplies: [
-      {
-        employeeId: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "Employee",
-          required: true,
-        },
-        reply: {
-          type: String,
-          required: true,
-        },
-        repliedAt: {
-          type: Date,
-          default: Date.now,
-        },
-        // اگر کسی خاص فیڈ بیک کا جواب ہے تو
-        feedbackId: {
-          type: String, // یا ObjectId اگر آپ علیحدہ کولکشن بناتے ہیں
-        }
-      }
-    ],
-
-    // ایمپلائی کے فیڈ بیک پر کمنٹس (دوسرے ایمپلائی یا ٹیم لیڈز)
-    feedbackComments: [
-      {
-        commentBy: {
-          type: mongoose.Schema.Types.ObjectId,
-          refPath: "feedbackComments.commenterModel",
-          required: true,
-        },
-        commenterModel: {
-          type: String,
-          enum: ["Employee", "TeamLead", "Manager"],
-          required: true,
-        },
-        commentOnEmployeeId: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "Employee",
-          required: true,
-        },
-        comment: {
-          type: String,
-          required: true,
-        },
-        createdAt: {
-          type: Date,
-          default: Date.now,
-        },
-        // اگر کسی خاص فیڈ بیک کا جواب ہے
-        feedbackId: {
-          type: mongoose.Schema.Types.ObjectId,
-        }
-      }
-    ]
   },
   { timestamps: true }
 );

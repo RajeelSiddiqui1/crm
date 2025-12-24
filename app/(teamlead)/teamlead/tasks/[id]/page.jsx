@@ -1,3 +1,4 @@
+// app/teamlead/tasks/[id]/page.js
 "use client";
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
@@ -8,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import ShareTaskDialog from "@/components/teamlead/ShareTaskDialog";
+import FeedbackSystem from "@/components/teamlead/FeedbackSystem";
 import {
   Card,
   CardContent,
@@ -129,6 +131,9 @@ import {
   Lock,
   Unlock,
   Sparkles,
+  MessageCircle,
+  Reply,
+  Edit,
 } from "lucide-react";
 import axios from "axios";
 
@@ -162,6 +167,9 @@ export default function TeamLeadTaskDetailPage() {
   const [employeeFeedback, setEmployeeFeedback] = useState({});
   const [showFeedbackDialog, setShowFeedbackDialog] = useState(false);
   const [showShareDialog, setShowShareDialog] = useState(false);
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [newFeedback, setNewFeedback] = useState("");
+  const [submittingFeedback, setSubmittingFeedback] = useState(false);
 
   const [selectedEmployeeForFeedback, setSelectedEmployeeForFeedback] =
     useState(null);
@@ -267,6 +275,33 @@ export default function TeamLeadTaskDetailPage() {
     }
   };
 
+  const handleAddFeedback = async () => {
+    if (!newFeedback.trim()) {
+      toast.error("Please enter feedback");
+      return;
+    }
+
+    setSubmittingFeedback(true);
+    try {
+      const response = await axios.post(
+        `/api/teamlead/tasks/${taskId}/feedback`,
+        { feedback: newFeedback }
+      );
+
+      if (response.status === 201) {
+        toast.success("Feedback added successfully!");
+        setNewFeedback("");
+        setShowFeedbackModal(false);
+        fetchTaskDetails(); // Refresh task data
+      }
+    } catch (error) {
+      console.error("Add feedback error:", error);
+      toast.error(error.response?.data?.error || "Failed to add feedback");
+    } finally {
+      setSubmittingFeedback(false);
+    }
+  };
+
   const handleStatusUpdate = async () => {
     if (!task || !newStatus) return;
     setUpdating(true);
@@ -349,50 +384,6 @@ export default function TeamLeadTaskDetailPage() {
       toast.error(error.response?.data?.error || "Failed to remove employee");
     } finally {
       setRemoving(false);
-    }
-  };
-
-  const handleEmployeeStatusChange = async (employeeId, newStatus) => {
-    try {
-      const response = await axios.put(`/api/teamlead/tasks/${taskId}`, {
-        employeeId,
-        employeeStatus: newStatus,
-      });
-      if (response.status === 200) {
-        toast.success("Employee status updated!");
-        setTask(response.data.task);
-      }
-    } catch (error) {
-      console.error("Update employee status error:", error);
-      toast.error("Failed to update employee status");
-    }
-  };
-
-  const handleSubmitFeedback = async () => {
-    if (
-      !selectedEmployeeForFeedback ||
-      !employeeFeedback[selectedEmployeeForFeedback._id]
-    )
-      return;
-
-    try {
-      const response = await axios.put(`/api/teamlead/tasks/${taskId}`, {
-        employeeId: selectedEmployeeForFeedback._id,
-        employeeFeedback: employeeFeedback[selectedEmployeeForFeedback._id],
-      });
-      if (response.status === 200) {
-        toast.success("Feedback submitted!");
-        setEmployeeFeedback((prev) => ({
-          ...prev,
-          [selectedEmployeeForFeedback._id]: "",
-        }));
-        setSelectedEmployeeForFeedback(null);
-        setShowFeedbackDialog(false);
-        fetchTaskDetails();
-      }
-    } catch (error) {
-      console.error("Submit feedback error:", error);
-      toast.error("Failed to submit feedback");
     }
   };
 
@@ -643,6 +634,16 @@ export default function TeamLeadTaskDetailPage() {
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowFeedbackModal(true)}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg border-gray-300 bg-white text-gray-900 font-medium shadow-sm hover:shadow-md hover:bg-gray-50 transition-all duration-200"
+              >
+                <MessageSquare className="w-4 h-4 text-blue-600" />
+                <span className="hidden md:inline">Add Feedback</span>
+              </Button>
 
               <Button
                 variant="outline"
@@ -943,9 +944,9 @@ export default function TeamLeadTaskDetailPage() {
       <span className="truncate">Updates</span>
     </TabsTrigger>
 
-    {/* Shared Teamlead Tab */}
+    {/* Feedback Tab */}
     <TabsTrigger
-      value="shared-teamlead"
+      value="feedback"
       className={`
         rounded-md 
         text-gray-600 
@@ -953,7 +954,7 @@ export default function TeamLeadTaskDetailPage() {
         font-medium
         transition-all duration-200
         hover:bg-gray-200
-        data-[state=active]:bg-red-500
+        data-[state=active]:bg-indigo-500
         data-[state=active]:text-white
         data-[state=active]:shadow-md
         px-3 py-2
@@ -961,8 +962,10 @@ export default function TeamLeadTaskDetailPage() {
         whitespace-nowrap
       `}
     >
-      <Activity className="w-3 h-3 md:w-4 md:h-4 data-[state=active]:text-white text-gray-700" />
-      <span className="truncate">Teamlead Shared</span>
+      <MessageSquare className="w-3 h-3 md:w-4 md:h-4 data-[state=active]:text-white text-gray-700" />
+      <span className="truncate">
+        Feedback ({task.teamLeadFeedbacks?.length || 0})
+      </span>
     </TabsTrigger>
   </TabsList>
 
@@ -1179,23 +1182,13 @@ export default function TeamLeadTaskDetailPage() {
                       </Button>
                       <Button
                         variant="outline"
-                        className="flex flex-col h-auto py-4 gap-2 "
-                        onClick={() => setShowShareDialog(true)}
-                        disabled={
-                          !task?.assignedTo?.some(
-                            (tl) => tl._id === currentTeamLead?._id
-                          )
-                        }
+                        className="flex flex-col h-auto py-4 gap-2"
+                        onClick={() => setShowFeedbackModal(true)}
                       >
-                        <Share2 className="w-4 h-4 text-purple-400" />
-                        <span className="hidden md:inline text-sm text-gray-900">
-                          Share with Teamlead
+                        <MessageSquare className="w-5 h-5 text-blue-600" />
+                        <span className="text-sm text-gray-900">
+                          Add Feedback
                         </span>
-                        {task?.sharedTasksCount > 0 && (
-                          <Badge className="ml-1 bg-blue-100 text-blue-800">
-                            {task.sharedTasksCount}
-                          </Badge>
-                        )}
                       </Button>
 
                       <Button
@@ -1203,7 +1196,7 @@ export default function TeamLeadTaskDetailPage() {
                         className="flex flex-col h-auto py-4 gap-2"
                         onClick={() => setActiveTab("updates")}
                       >
-                        <Send className="w-5 h-5 text-blue-600" />
+                        <Send className="w-5 h-5 text-amber-600" />
                         <span className="text-sm text-gray-900">
                           Update Status
                         </span>
@@ -1214,7 +1207,7 @@ export default function TeamLeadTaskDetailPage() {
                         className="flex flex-col h-auto py-4 gap-2"
                         onClick={() => setShowTeamLeadsModal(true)}
                       >
-                        <Users2 className="w-5 h-5 text-orange-600" />
+                        <Users2 className="w-5 h-5 text-purple-600" />
                         <span className="text-sm text-gray-900">
                           Team Leads
                         </span>
@@ -1383,115 +1376,8 @@ export default function TeamLeadTaskDetailPage() {
                     )}
                   </CardContent>
                 </Card>
-              
               </TabsContent>
 
-<TabsContent
-                value="shared-teamlead"
-                className="space-y-4 md:space-y-6 pt-4 md:pt-6"
-              >
-
-                  {task.multipleTeamLeadShared?.length > 0 && (
-                  <Card className="bg-white border border-gray-200 shadow-sm hover:shadow-md transition">
-                    <CardHeader className="pb-3">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <CardTitle className="text-base md:text-lg font-semibold text-gray-900">
-                            Team Leads Assigned
-                          </CardTitle>
-                          <CardDescription className="text-sm text-gray-500">
-                            Team leads who have access to this task
-                          </CardDescription>
-                        </div>
-
-                        <div className="flex items-center gap-2">
-                          <div className="px-3 py-1.5 rounded-full bg-orange-50 text-orange-600 text-xs font-medium">
-                            <Users2 className="w-4 h-4 inline mr-1" />
-                            {task.sharedTasksCount ||
-                              task.multipleTeamLeadShared?.length ||
-                              0}
-                          </div>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setShowShareDialog(true)}
-                            className="text-blue-600 border-blue-200 hover:bg-blue-50"
-                          >
-                            <Share2 className="w-4 h-4 mr-1" />
-                            Manage
-                          </Button>
-                        </div>
-                      </div>
-                    </CardHeader>
-
-                    <CardContent className="pt-0">
-                      {task.multipleTeamLeadShared?.length > 0 ? (
-                        <div className="space-y-3">
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            {task.multipleTeamLeadShared.map((tl) => (
-                              <div
-                                key={tl._id}
-                                className="flex items-center justify-between p-3 rounded-lg border border-gray-100 bg-gradient-to-r from-white to-orange-50 hover:border-orange-200 transition"
-                              >
-                                <div className="flex items-center gap-3">
-                                  {/* Avatar */}
-                                  <div className="w-9 h-9 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center font-semibold text-sm">
-                                    {tl.firstName?.[0]}
-                                    {tl.lastName?.[0]}
-                                  </div>
-
-                                  {/* Info */}
-                                  <div className="flex-1">
-                                    <p className="text-sm font-medium text-gray-800">
-                                      {tl.firstName} {tl.lastName}
-                                    </p>
-                                    <p className="text-xs text-gray-500">
-                                      {tl.email}
-                                    </p>
-                                    <Badge className="text-xs bg-blue-900 text-white">
-                                      {tl.depId
-                                        ? tl.depId.name
-                                        : "No Department"}
-                                    </Badge>
-                                  </div>
-                                </div>
-
-                                {/* Status Badge */}
-                                {tl._id === task.sharedByTeamlead?._id ? (
-                                  <Badge className="bg-blue-500/10 text-blue-600 border border-blue-200">
-                                    Sharer
-                                  </Badge>
-                                ) : (
-                                  <Badge className="bg-orange-500/10 text-orange-600 border border-orange-200">
-                                    Shared
-                                  </Badge>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-
-                          {/* Shared by info */}
-                          {task.sharedByTeamlead && (
-                            <div className="flex items-center gap-2 text-xs text-gray-500 pt-2 border-t">
-                              <User className="w-3.5 h-3.5 text-blue-500" />
-                              Shared by{" "}
-                              <span className="font-medium text-gray-700">
-                                {task.sharedByTeamlead.firstName}{" "}
-                                {task.sharedByTeamlead.lastName}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        <div className="flex items-center justify-center py-8 text-sm text-gray-400">
-                          <Users2 className="w-4 h-4 mr-2" />
-                          No team leads shared yet
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                )}
-              </TabsContent>
               {/* Details Tab */}
               <TabsContent
                 value="details"
@@ -1733,57 +1619,72 @@ export default function TeamLeadTaskDetailPage() {
                 </Card>
 
                 {/* Recent Activity */}
-                {task.teamLeadFeedback && (
+                {task.teamLeadFeedbacks?.length > 0 && (
                   <Card className="border-0 shadow-sm bg-white">
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2 text-base md:text-lg text-gray-900">
                         <History className="w-4 h-4 md:w-5 md:h-5 text-purple-600" />
-                        Recent Activity
+                        Recent Feedback Activity
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-4">
-                        <div className="flex items-start gap-3">
-                          <Avatar className="w-8 h-8 md:w-10 md:h-10 border-2 border-white shadow">
-                            <AvatarFallback className="bg-gradient-to-r from-purple-500 to-pink-600 text-white text-sm">
-                              {session?.user?.firstName?.[0]}
-                              {session?.user?.lastName?.[0]}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-1 gap-1">
-                              <span className="font-semibold text-gray-900 text-sm md:text-base truncate">
-                                {session?.user?.firstName}{" "}
-                                {session?.user?.lastName}
-                              </span>
-                              <span className="text-xs md:text-sm text-gray-500">
-                                {formatRelativeDate(task.updatedAt)}
-                              </span>
+                        {task.teamLeadFeedbacks.slice(0, 3).map((fb) => {
+                          const teamLead = teamLeads.find(
+                            (tl) => tl._id === fb.teamLeadId
+                          );
+                          return (
+                            <div key={fb._id} className="flex items-start gap-3">
+                              <Avatar className="w-8 h-8 md:w-10 md:h-10 border-2 border-white shadow">
+                                <AvatarFallback className="bg-gradient-to-r from-purple-500 to-pink-600 text-white text-sm">
+                                  {teamLead?.firstName?.[0]}
+                                  {teamLead?.lastName?.[0]}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-1 gap-1">
+                                  <span className="font-semibold text-gray-900 text-sm md:text-base truncate">
+                                    {teamLead?.firstName} {teamLead?.lastName}
+                                  </span>
+                                  <span className="text-xs md:text-sm text-gray-500">
+                                    {formatRelativeDate(fb.submittedAt)}
+                                  </span>
+                                </div>
+                                <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 md:p-4">
+                                  <p className="text-gray-800 text-sm md:text-base">
+                                    {fb.feedback}
+                                  </p>
+                                </div>
+                                {fb.replies?.length > 0 && (
+                                  <div className="mt-2 ml-4 pl-4 border-l-2 border-gray-200">
+                                    <p className="text-xs text-gray-500 mb-1">
+                                      {fb.replies.length} replies
+                                    </p>
+                                  </div>
+                                )}
+                              </div>
                             </div>
-                            <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 md:p-4">
-                              <p className="text-gray-800 text-sm md:text-base">
-                                {task.teamLeadFeedback}
-                              </p>
-                            </div>
-                            <div className="flex flex-wrap items-center gap-2 mt-2 text-xs md:text-sm text-gray-500">
-                              <span className="flex items-center gap-1">
-                                <Shield className="w-3 h-3" />
-                                Team Lead
-                              </span>
-                              <Badge
-                                className={`${getStatusVariant(
-                                  task.status2
-                                )} text-xs`}
-                              >
-                                Status: {task.status2}
-                              </Badge>
-                            </div>
-                          </div>
-                        </div>
+                          );
+                        })}
                       </div>
                     </CardContent>
                   </Card>
                 )}
+              </TabsContent>
+
+              {/* Feedback Tab */}
+              <TabsContent
+                value="feedback"
+                className="space-y-4 md:space-y-6 pt-4 md:pt-6"
+              >
+                {/* Feedback System Component */}
+                <FeedbackSystem
+                  taskId={taskId}
+                  feedbacks={task.teamLeadFeedbacks || []}
+                  teamLeads={teamLeads}
+                  currentTeamLead={currentTeamLead}
+                  onFeedbackAdded={fetchTaskDetails}
+                />
               </TabsContent>
             </Tabs>
           </div>
@@ -1901,14 +1802,24 @@ export default function TeamLeadTaskDetailPage() {
                   </div>
                 </div>
                 <Separator />
-                <Button
-                  variant="outline"
-                  className="w-full text-gray-700 hover:text-gray-900 text-sm"
-                  onClick={() => setActiveTab("updates")}
-                >
-                  <Activity className="w-4 h-4 mr-2" />
-                  Update Status
-                </Button>
+                <div className="space-y-2">
+                  <Button
+                    variant="outline"
+                    className="w-full text-gray-700 hover:text-gray-900 text-sm"
+                    onClick={() => setActiveTab("updates")}
+                  >
+                    <Activity className="w-4 h-4 mr-2" />
+                    Update Status
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="w-full text-gray-700 hover:text-gray-900 text-sm"
+                    onClick={() => setShowFeedbackModal(true)}
+                  >
+                    <MessageSquare className="w-4 h-4 mr-2" />
+                    Add Feedback
+                  </Button>
+                </div>
               </CardContent>
             </Card>
 
@@ -2005,12 +1916,138 @@ export default function TeamLeadTaskDetailPage() {
               </Card>
             )}
 
-            {/* Help Card */}
+            {/* Feedback Stats Card */}
+            {task.teamLeadFeedbacks?.length > 0 && (
+              <Card className="border-0 shadow-sm bg-white">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-gray-900 text-base md:text-lg">
+                    <MessageSquare className="w-4 h-4 md:w-5 md:h-5 text-indigo-600" />
+                    Feedback Stats
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600">Total Feedback</span>
+                      <Badge className="bg-indigo-100 text-indigo-800">
+                        {task.teamLeadFeedbacks.length}
+                      </Badge>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600">Total Replies</span>
+                      <Badge className="bg-green-100 text-green-800">
+                        {task.teamLeadFeedbacks.reduce(
+                          (acc, fb) => acc + (fb.replies?.length || 0),
+                          0
+                        )}
+                      </Badge>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600">Your Feedback</span>
+                      <Badge className="bg-blue-100 text-blue-800">
+                        {
+                          task.teamLeadFeedbacks.filter(
+                            (fb) => fb.teamLeadId === currentTeamLead?._id
+                          ).length
+                        }
+                      </Badge>
+                    </div>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full mt-3 text-gray-600 hover:text-gray-900"
+                    onClick={() => setActiveTab("feedback")}
+                  >
+                    <MessageSquare className="w-4 h-4 mr-2" />
+                    View All Feedback
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </div>
       </main>
 
       {/* Modals and Dialogs */}
+
+      {/* Add Feedback Dialog */}
+      <Dialog open={showFeedbackModal} onOpenChange={setShowFeedbackModal}>
+        <DialogContent className="max-w-2xl bg-white text-gray-900 border-0 shadow-2xl mx-4 md:mx-auto">
+          <DialogHeader>
+            <DialogTitle className="text-xl md:text-2xl font-bold flex items-center gap-2">
+              <MessageSquare className="w-5 h-5 md:w-6 md:h-6 text-blue-600" />
+              Add Team Lead Feedback
+            </DialogTitle>
+            <DialogDescription className="text-gray-600 text-sm md:text-base">
+              Your feedback will be visible to the manager and all assigned employees.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 md:space-y-6">
+            <div className="space-y-2">
+              <Label className="text-gray-700 font-semibold">Your Feedback</Label>
+              <Textarea
+                placeholder="Enter your feedback, comments, or suggestions here..."
+                value={newFeedback}
+                onChange={(e) => setNewFeedback(e.target.value)}
+                rows={6}
+                className="border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 min-h-[150px] text-gray-700"
+              />
+              <p className="text-xs text-gray-500">
+                This feedback will be saved and notifications will be sent to relevant stakeholders.
+              </p>
+            </div>
+
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 md:p-4">
+              <div className="flex items-center gap-2">
+                <Bell className="w-4 h-4 md:w-5 md:h-5 text-blue-600" />
+                <div>
+                  <p className="font-medium text-blue-900">Notifications</p>
+                  <p className="text-sm text-blue-700 mt-1">
+                    Notifications will be sent to:
+                  </p>
+                  <ul className="mt-1 text-sm text-blue-700 space-y-1">
+                    <li>• Manager: {task.submittedBy?.firstName} {task.submittedBy?.lastName}</li>
+                    <li>• All assigned employees ({task.assignedEmployees?.length || 0})</li>
+                    <li>• Other team leads with access</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 md:gap-3 flex-col sm:flex-row">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowFeedbackModal(false);
+                setNewFeedback("");
+              }}
+              className="border-gray-700 text-gray-700 hover:bg-gray-700 hover:text-white w-full sm:w-auto sm:flex-1 text-sm md:text-base"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleAddFeedback}
+              disabled={submittingFeedback || !newFeedback.trim()}
+              className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg w-full sm:w-auto sm:flex-1 text-sm md:text-base"
+            >
+              {submittingFeedback ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Submitting...
+                </>
+              ) : (
+                <>
+                  <Send className="w-4 h-4 mr-2" />
+                  Submit Feedback
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Assign Employees Dialog */}
       <Dialog open={showAssignDialog} onOpenChange={setShowAssignDialog}>
@@ -2510,97 +2547,36 @@ export default function TeamLeadTaskDetailPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Employee Feedback Dialog */}
-      <Dialog open={showFeedbackDialog} onOpenChange={setShowFeedbackDialog}>
-        <DialogContent className="max-w-md bg-white text-gray-900 border-0 shadow-2xl mx-4 md:mx-auto">
-          <DialogHeader>
-            <DialogTitle className="text-lg md:text-xl font-bold flex items-center gap-2">
-              <MessageSquare className="w-4 h-4 md:w-5 md:h-5 text-blue-600" />
-              Give Feedback to Employee
-            </DialogTitle>
-            <DialogDescription className="text-gray-600 text-sm md:text-base">
-              Provide feedback that will be visible to the employee and manager
-            </DialogDescription>
-          </DialogHeader>
-
-          {selectedEmployeeForFeedback && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                <Avatar className="w-10 h-10">
-                  <AvatarFallback className="bg-gradient-to-r from-blue-500 to-cyan-600 text-white">
-                    {selectedEmployeeForFeedback.firstName?.[0]}
-                    {selectedEmployeeForFeedback.lastName?.[0]}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <p className="font-semibold text-gray-900">
-                    {selectedEmployeeForFeedback.firstName}{" "}
-                    {selectedEmployeeForFeedback.lastName}
-                  </p>
-                  <p className="text-sm text-gray-500">
-                    {selectedEmployeeForFeedback.email}
-                  </p>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Your Feedback</Label>
-                <Textarea
-                  placeholder="Enter your feedback here..."
-                  value={
-                    employeeFeedback[selectedEmployeeForFeedback._id] || ""
-                  }
-                  onChange={(e) =>
-                    setEmployeeFeedback({
-                      ...employeeFeedback,
-                      [selectedEmployeeForFeedback._id]: e.target.value,
-                    })
-                  }
-                  rows={4}
-                  className="border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
-                />
-                <p className="text-xs text-gray-500">
-                  This feedback will be saved and visible to the employee and
-                  manager.
-                </p>
-              </div>
-            </div>
-          )}
-
-          <DialogFooter className="gap-2 flex-col sm:flex-row">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setShowFeedbackDialog(false);
-                setSelectedEmployeeForFeedback(null);
-              }}
-              className="w-full sm:w-auto"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleSubmitFeedback}
-              className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700"
-            >
-              <Send className="w-4 h-4 mr-2" />
-              Submit Feedback
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
       <ShareTaskDialog
         taskId={taskId}
         taskTitle={task?.formId?.title || task?.clinetName || "Untitled"}
         open={showShareDialog}
         onOpenChange={setShowShareDialog}
         onSuccess={() => {
-          fetchTaskDetails(); // Refresh task details
-          // Optional: show success toast
+          fetchTaskDetails();
           toast.success("Task shared successfully!");
         }}
       />
-      {/* Floating Action Button */}
-      <div className="fixed bottom-4 right-4 md:bottom-6 md:right-6 z-50">
+
+      {/* Floating Action Buttons */}
+      <div className="fixed bottom-4 right-4 md:bottom-6 md:right-6 z-50 flex flex-col gap-3">
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                onClick={() => setShowFeedbackModal(true)}
+                size="lg"
+                className="rounded-full w-12 h-12 md:w-14 md:h-14 shadow-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white"
+              >
+                <MessageSquare className="w-5 h-5 md:w-6 md:h-6" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="left">
+              <p>Add Feedback</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>

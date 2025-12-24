@@ -779,7 +779,7 @@ export default function AdminManagerTasksPage() {
 
                       <CardFooter className="flex gap-2 pt-4 border-t border-gray-200">
                         <Button
-                          onClick={() => handleView(submission)}
+                          onClick={() => router.push(`/admin/manager-tasks/${submission._id}`)}
                           className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
                           size="sm"
                         >
@@ -888,7 +888,11 @@ export default function AdminManagerTasksPage() {
                             <TableCell className="text-right">
                               <div className="flex justify-end gap-2">
                                 <Button
-                                  onClick={() => handleView(submission)}
+                                   onClick={() =>
+                                  router.push(
+                                    `/admin/manager-tasks/${submission._id}`
+                                  )
+                                }
                                   size="sm"
                                   className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
                                 >

@@ -41,20 +41,39 @@ export async function GET(req, { params }) {
       .populate("depId", "name description")
       .populate("submittedBy", "firstName lastName email phone department")
       .populate("sharedBy", "firstName lastName email phone")
-      .populate("multipleManagerShared", "firstName lastName email phone department")
+      .populate(
+        "multipleManagerShared",
+        "firstName lastName email phone department"
+      )
       .populate("assignedTo", "firstName lastName email phone department")
-      .populate("multipleTeamLeadAssigned", "firstName lastName email phone department")
-      .populate("multipleTeamLeadShared", "firstName lastName email phone department")
+      .populate(
+        "multipleTeamLeadAssigned",
+        "firstName lastName email phone department"
+      )
+      .populate(
+        "multipleTeamLeadShared",
+        "firstName lastName email phone department"
+      )
       .populate("sharedByTeamlead", "firstName lastName email phone department")
       .populate({
         path: "assignedEmployees.employeeId",
-        select: "firstName lastName email department position phone profileImage",
+        select:
+          "firstName lastName email department position phone profileImage",
         populate: {
           path: "depId",
-          select: "name"
-        }
+          select: "name",
+        },
       })
       .populate("employeeFeedbacks.employeeId", "firstName lastName email")
+      .populate({
+        path: "teamLeadFeedbacks.teamLeadId",
+        select: "firstName lastName email department",
+      })
+      .populate({
+        path: "teamLeadFeedbacks.replies.repliedBy",
+        select: "firstName lastName email",
+      })
+
       .lean();
 
     if (!task) {
@@ -62,7 +81,7 @@ export async function GET(req, { params }) {
     }
 
     // Check if teamlead has access to this task
-    const hasAccess = 
+    const hasAccess =
       task.assignedTo?.some(
         (assigned) => assigned._id.toString() === teamLead._id.toString()
       ) ||
@@ -90,12 +109,12 @@ export async function GET(req, { params }) {
     const allTeamLeads = [
       ...(task.assignedTo || []),
       ...(task.multipleTeamLeadAssigned || []),
-      ...(task.multipleTeamLeadShared || [])
+      ...(task.multipleTeamLeadShared || []),
     ];
 
     // Remove duplicates
     const uniqueTeamLeads = Array.from(
-      new Map(allTeamLeads.map(tl => [tl._id.toString(), tl])).values()
+      new Map(allTeamLeads.map((tl) => [tl._id.toString(), tl])).values()
     );
 
     // Get current teamlead's details
@@ -103,13 +122,15 @@ export async function GET(req, { params }) {
       .populate("depId", "name")
       .lean();
 
-    return NextResponse.json({ 
-      task,
-      managerDetails,
-      teamLeads: uniqueTeamLeads,
-      currentTeamLead: currentTeamLeadDetails
-    }, { status: 200 });
-
+    return NextResponse.json(
+      {
+        task,
+        managerDetails,
+        teamLeads: uniqueTeamLeads,
+        currentTeamLead: currentTeamLeadDetails,
+      },
+      { status: 200 }
+    );
   } catch (error) {
     console.error("GET task details error:", error);
     return NextResponse.json(

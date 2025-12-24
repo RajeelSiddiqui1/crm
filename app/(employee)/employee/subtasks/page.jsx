@@ -363,43 +363,59 @@ export default function EmployeeSubtasksPage() {
                                 {/* Left Column */}
                                 <div className="lg:col-span-2 space-y-8">
                                     {/* Status Update Section */}
-                                    <Card className="border border-gray-200/50 shadow-lg rounded-xl overflow-hidden">
-                                        <CardHeader className="bg-gradient-to-r from-gray-50 to-white border-b border-gray-100">
-                                            <div className="flex items-center gap-3">
-                                                <div className="p-2 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg">
-                                                    <TrendingUp className="w-5 h-5 text-white" />
-                                                </div>
-                                                <CardTitle className="text-xl font-bold text-gray-900">
-                                                    Update Task Status
-                                                </CardTitle>
-                                            </div>
-                                        </CardHeader>
-                                        <CardContent className="p-6">
-                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                                {[
-                                                    { status: "pending", label: "Pending", icon: <AlertCircle /> },
-                                                    { status: "in_progress", label: "In Progress", icon: <Clock /> },
-                                                    { status: "completed", label: "Completed", icon: <CheckCircle /> }
-                                                ].map((item) => (
-                                                    <Button
-                                                        key={item.status}
-                                                        disabled={loading || selectedSubtask.status === item.status}
-                                                        variant={selectedSubtask.status === item.status ? "default" : "outline"}
-                                                        className={`h-24 flex flex-col gap-2 transition-all duration-300 ${selectedSubtask.status === item.status
-                                                            ? `bg-gradient-to-r ${item.status === 'completed' ? 'from-emerald-500 to-green-600' : item.status === 'in_progress' ? 'from-blue-500 to-cyan-600' : 'from-amber-500 to-orange-600'} text-white border-0 shadow-lg`
-                                                            : 'border-2 hover:scale-105 hover:shadow-lg'
-                                                            }`}
-                                                        onClick={() => updateSubtaskStatus(item.status)}
-                                                    >
-                                                        <div className="text-2xl">{item.icon}</div>
-                                                        <span className="font-semibold capitalize">
-                                                            {item.label}
-                                                        </span>
-                                                    </Button>
-                                                ))}
-                                            </div>
-                                        </CardContent>
-                                    </Card>
+                                   <Card className="border-2 border-gray-300 shadow-xl rounded-xl overflow-hidden bg-white">
+  <CardHeader className="bg-gradient-to-r from-gray-100 to-white border-b-2 border-gray-300">
+    <div className="flex items-center gap-3">
+      <div className="p-2 bg-gradient-to-r from-blue-600 to-indigo-700 rounded-lg shadow-md">
+        <TrendingUp className="w-5 h-5 text-white" />
+      </div>
+      <CardTitle className="text-xl font-bold text-gray-900">
+        Update Task Status
+      </CardTitle>
+    </div>
+  </CardHeader>
+
+  <CardContent className="p-6">
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {[
+        { status: "pending", label: "Pending", icon: <AlertCircle /> },
+        { status: "in_progress", label: "In Progress", icon: <Clock /> },
+        { status: "completed", label: "Completed", icon: <CheckCircle /> }
+      ].map((item) => {
+        const isActive = selectedSubtask.status === item.status;
+
+        return (
+          <Button
+            key={item.status}
+            disabled={loading || isActive}
+            variant="outline"
+            onClick={() => updateSubtaskStatus(item.status)}
+            className={`h-24 flex flex-col gap-2 font-semibold transition-all duration-300
+              ${isActive
+                ? `bg-gradient-to-r
+                    ${item.status === 'completed'
+                      ? 'from-emerald-600 to-green-700'
+                      : item.status === 'in_progress'
+                      ? 'from-blue-600 to-cyan-700'
+                      : 'from-amber-600 to-orange-700'}
+                    text-white border-0 shadow-xl`
+                : 'bg-gray-50 text-gray-900 border-2 border-gray-800 hover:bg-gray-100 hover:scale-105 hover:shadow-xl'
+              }
+            `}
+          >
+            <div className={`${isActive ? 'text-white' : 'text-gray-900'} text-2xl`}>
+              {item.icon}
+            </div>
+            <span className="capitalize">
+              {item.label}
+            </span>
+          </Button>
+        );
+      })}
+    </div>
+  </CardContent>
+</Card>
+
 
                                     {/* Task Details */}
                                     <Card className="border border-gray-200/50 shadow-lg rounded-xl overflow-hidden">

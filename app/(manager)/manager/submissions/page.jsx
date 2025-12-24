@@ -41,12 +41,7 @@ import {
   DialogFooter,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Search,
   FileText,
@@ -108,6 +103,7 @@ import {
   Lock as LockIcon,
   ChevronDown,
   MoreVertical,
+  ViewIcon,
 } from "lucide-react";
 import axios from "axios";
 
@@ -153,9 +149,10 @@ export default function ManagerSubmissionsPage() {
   const fetchSubmissions = async () => {
     try {
       setFetching(true);
-      const endpoint = viewType === 'my'
-        ? '/api/manager/submissions'
-        : '/api/manager/submissions/shared';
+      const endpoint =
+        viewType === "my"
+          ? "/api/manager/submissions"
+          : "/api/manager/submissions/shared";
 
       const response = await axios.get(endpoint);
       if (response.status === 200) {
@@ -171,7 +168,7 @@ export default function ManagerSubmissionsPage() {
 
   const fetchManagers = async () => {
     try {
-      const response = await axios.get('/api/manager/managers');
+      const response = await axios.get("/api/manager/managers");
       if (response.status === 200) {
         setManagers(response.data.managers || []);
       }
@@ -183,15 +180,17 @@ export default function ManagerSubmissionsPage() {
   const handleShareSubmission = (submission) => {
     setSelectedShareSubmission(submission);
     // Pre-select already shared managers
-    const alreadyShared = submission.multipleManagerShared?.map(m => m._id?.toString() || m) || [];
+    const alreadyShared =
+      submission.multipleManagerShared?.map((m) => m._id?.toString() || m) ||
+      [];
     setSelectedManagers(alreadyShared);
     setShowShareDialog(true);
   };
 
   const handleManagerToggle = (managerId) => {
-    setSelectedManagers(prev => {
+    setSelectedManagers((prev) => {
       if (prev.includes(managerId)) {
-        return prev.filter(id => id !== managerId);
+        return prev.filter((id) => id !== managerId);
       } else {
         return [...prev, managerId];
       }
@@ -203,10 +202,13 @@ export default function ManagerSubmissionsPage() {
 
     setShareLoading(true);
     try {
-      const response = await axios.put(`/api/manager/submissions/${selectedShareSubmission._id}/share`, {
-        managerIds: selectedManagers,
-        sharedBy: session.user.id
-      });
+      const response = await axios.put(
+        `/api/manager/submissions/${selectedShareSubmission._id}/share`,
+        {
+          managerIds: selectedManagers,
+          sharedBy: session.user.id,
+        }
+      );
 
       if (response.status === 200) {
         toast.success("Submission shared successfully!");
@@ -224,7 +226,9 @@ export default function ManagerSubmissionsPage() {
 
   const handleRemoveSharedManager = async (submissionId, managerId) => {
     try {
-      const response = await axios.delete(`/api/manager/submissions/${submissionId}/share/${managerId}`);
+      const response = await axios.delete(
+        `/api/manager/submissions/${submissionId}/share/${managerId}`
+      );
 
       if (response.status === 200) {
         toast.success("Manager removed from sharing");
@@ -395,28 +399,29 @@ export default function ManagerSubmissionsPage() {
     }
   };
 
- const getTeamLeadFullName = (teamLeads) => {
-  if (!teamLeads || (Array.isArray(teamLeads) && teamLeads.length === 0)) {
-    return "Unassigned";
-  }
+  const getTeamLeadFullName = (teamLeads) => {
+    if (!teamLeads || (Array.isArray(teamLeads) && teamLeads.length === 0)) {
+      return "Unassigned";
+    }
 
-  // Agar array hai
-  if (Array.isArray(teamLeads)) {
-    return teamLeads
-      .map((tl) => {
-        if (tl.firstName && tl.lastName) return `${tl.firstName} ${tl.lastName}`;
-        if (tl.name) return tl.name;
-        return tl.email || "Unknown Team Lead";
-      })
-      .join(", "); // comma separated
-  }
+    // Agar array hai
+    if (Array.isArray(teamLeads)) {
+      return teamLeads
+        .map((tl) => {
+          if (tl.firstName && tl.lastName)
+            return `${tl.firstName} ${tl.lastName}`;
+          if (tl.name) return tl.name;
+          return tl.email || "Unknown Team Lead";
+        })
+        .join(", "); // comma separated
+    }
 
-  // Single object
-  if (teamLeads.firstName && teamLeads.lastName) return `${teamLeads.firstName} ${teamLeads.lastName}`;
-  if (teamLeads.name) return teamLeads.name;
-  return teamLeads.email || "Unknown Team Lead";
-};
-
+    // Single object
+    if (teamLeads.firstName && teamLeads.lastName)
+      return `${teamLeads.firstName} ${teamLeads.lastName}`;
+    if (teamLeads.name) return teamLeads.name;
+    return teamLeads.email || "Unknown Team Lead";
+  };
 
   const getTeamLeadEmail = (teamLead) => {
     if (!teamLead) return "";
@@ -662,7 +667,8 @@ export default function ManagerSubmissionsPage() {
 
   const getSharingStatus = (submission) => {
     const currentManagerId = session?.user?.id;
-    const isOwner = submission.submittedBy?._id === currentManagerId ||
+    const isOwner =
+      submission.submittedBy?._id === currentManagerId ||
       submission.submittedBy?.toString() === currentManagerId;
     const isSharedWithMe = !isOwner && submission.sharedBy;
     const sharedCount = submission.multipleManagerShared?.length || 0;
@@ -671,7 +677,7 @@ export default function ManagerSubmissionsPage() {
       isOwner,
       isSharedWithMe,
       sharedCount,
-      sharedBy: submission.sharedBy
+      sharedBy: submission.sharedBy,
     };
   };
 
@@ -879,14 +885,17 @@ export default function ManagerSubmissionsPage() {
                 <div className="flex items-center gap-2">
                   <Share2 className="w-4 h-4 text-green-600" />
                   <span className="text-sm font-medium text-gray-700">
-                    Shared with {sharingStatus.sharedCount} manager{sharingStatus.sharedCount !== 1 ? 's' : ''}
+                    Shared with {sharingStatus.sharedCount} manager
+                    {sharingStatus.sharedCount !== 1 ? "s" : ""}
                   </span>
                 </div>
                 <button
-                  onClick={() => setShowSharedList(prev => ({
-                    ...prev,
-                    [submission._id]: !prev[submission._id]
-                  }))}
+                  onClick={() =>
+                    setShowSharedList((prev) => ({
+                      ...prev,
+                      [submission._id]: !prev[submission._id],
+                    }))
+                  }
                   className="text-xs text-blue-600 hover:text-blue-800"
                 >
                   {showSharedList[submission._id] ? "Hide" : "Show"}
@@ -896,18 +905,25 @@ export default function ManagerSubmissionsPage() {
               {showSharedList[submission._id] && (
                 <div className="space-y-2 pl-6">
                   {submission.multipleManagerShared?.map((manager) => (
-                    <div key={manager._id} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+                    <div
+                      key={manager._id}
+                      className="flex items-center justify-between p-2 bg-gray-50 rounded-lg"
+                    >
                       <div className="flex items-center gap-2">
                         <Avatar className="h-6 w-6">
                           <AvatarFallback className="text-xs bg-green-900 text-white">
-                            {manager.firstName?.charAt(0) || manager.email?.charAt(0) || "M"}
+                            {manager.firstName?.charAt(0) ||
+                              manager.email?.charAt(0) ||
+                              "M"}
                           </AvatarFallback>
                         </Avatar>
                         <div>
                           <div className="text-sm font-medium bg-white text-gray-900">
                             {getManagerFullName(manager)}
                           </div>
-                          <div className="text-xs text-gray-500">{manager.email}</div>
+                          <div className="text-xs text-gray-500">
+                            {manager.email}
+                          </div>
                         </div>
                       </div>
                       <Button
@@ -916,7 +932,10 @@ export default function ManagerSubmissionsPage() {
                         className="h-6 w-6 p-0 text-black hover:bg-red-100 hover:text-red-600"
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleRemoveSharedManager(submission._id, manager._id);
+                          handleRemoveSharedManager(
+                            submission._id,
+                            manager._id
+                          );
                         }}
                       >
                         <UserMinus className="w-3 h-3" />
@@ -941,12 +960,13 @@ export default function ManagerSubmissionsPage() {
             </div>
           )}
 
-
           {/* Team Lead Assignment */}
           <div className="pt-2 border-t border-gray-100">
             <div className="flex items-center gap-2">
               <StatusIcon className="w-4 h-4" />
-              <Badge className={`${claimStatus.color} border text-xs px-2 py-1`}>
+              <Badge
+                className={`${claimStatus.color} border text-xs px-2 py-1`}
+              >
                 {claimStatus.message}
               </Badge>
             </div>
@@ -959,9 +979,13 @@ export default function ManagerSubmissionsPage() {
   const filteredSubmissions = submissions.filter((submission) => {
     const matchesSearch =
       submission.clinetName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      submission.formId?.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      submission.formId?.title
+        ?.toLowerCase()
+        .includes(searchTerm.toLowerCase()) ||
       submission.status?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      getSubmissionDepartment(submission).name.toLowerCase().includes(searchTerm.toLowerCase());
+      getSubmissionDepartment(submission)
+        .name.toLowerCase()
+        .includes(searchTerm.toLowerCase());
 
     const matchesStatus =
       statusFilter === "all" || submission.status === statusFilter;
@@ -1003,9 +1027,13 @@ export default function ManagerSubmissionsPage() {
   };
 
   const sharingStats = {
-    owned: submissions.filter(s => getSharingStatus(s).isOwner).length,
-    sharedWithMe: submissions.filter(s => getSharingStatus(s).isSharedWithMe).length,
-    totalShared: submissions.reduce((sum, s) => sum + (getSharingStatus(s).sharedCount || 0), 0),
+    owned: submissions.filter((s) => getSharingStatus(s).isOwner).length,
+    sharedWithMe: submissions.filter((s) => getSharingStatus(s).isSharedWithMe)
+      .length,
+    totalShared: submissions.reduce(
+      (sum, s) => sum + (getSharingStatus(s).sharedCount || 0),
+      0
+    ),
   };
 
   if (status === "loading") {
@@ -1056,7 +1084,7 @@ export default function ManagerSubmissionsPage() {
               </div>
               <div>
                 <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-indigo-700 bg-clip-text text-transparent">
-                  {viewType === 'my' ? 'My Submissions' : 'Shared with Me'}
+                  {viewType === "my" ? "My Submissions" : "Shared with Me"}
                 </h1>
                 <p className="text-gray-600 mt-2 text-lg">
                   Track and manage your form submissions
@@ -1084,14 +1112,20 @@ export default function ManagerSubmissionsPage() {
         <div className="mb-8">
           <Tabs value={viewType} onValueChange={setViewType} className="w-full">
             <TabsList className="grid grid-cols-2 w-full max-w-md">
-              <TabsTrigger value="my" className="flex items-center gap-2 bg-white text-gray-900">
+              <TabsTrigger
+                value="my"
+                className="flex items-center gap-2 bg-white text-gray-900"
+              >
                 <User className="w-4 h-4" />
                 My Submissions
                 <Badge variant="secondary" className="ml-2">
                   {sharingStats.owned}
                 </Badge>
               </TabsTrigger>
-              <TabsTrigger value="shared" className="flex items-center gap-2 bg-white text-gray-900">
+              <TabsTrigger
+                value="shared"
+                className="flex items-center gap-2 bg-white text-gray-900"
+              >
                 <Share2 className="w-4 h-4" />
                 Shared with Me
                 <Badge variant="secondary " className="ml-2 ">
@@ -1215,7 +1249,9 @@ export default function ManagerSubmissionsPage() {
               <div>
                 <CardTitle className="text-2xl font-bold text-gray-900 flex items-center gap-3">
                   <ClipboardCheck className="w-7 h-7 text-blue-600" />
-                  {viewType === 'my' ? 'My Submission Management' : 'Shared Submissions Management'}
+                  {viewType === "my"
+                    ? "My Submission Management"
+                    : "Shared Submissions Management"}
                 </CardTitle>
                 <CardDescription className="text-gray-600 text-base">
                   {filteredSubmissions.length} submission
@@ -1333,10 +1369,13 @@ export default function ManagerSubmissionsPage() {
                           <TableCell className="py-5">
                             <div className="flex items-center gap-4">
                               <Avatar className="border-2 border-white shadow-lg shadow-blue-500/20 group-hover:shadow-xl group-hover:shadow-blue-600/30 transition-all duration-300 size-12">
-                                <AvatarFallback className={`${sharingStatus.isOwner
-                                  ? "bg-gradient-to-r from-blue-500 to-indigo-600"
-                                  : "bg-gradient-to-r from-green-500 to-emerald-600"
-                                  } text-white font-bold text-sm`}>
+                                <AvatarFallback
+                                  className={`${
+                                    sharingStatus.isOwner
+                                      ? "bg-gradient-to-r from-blue-500 to-indigo-600"
+                                      : "bg-gradient-to-r from-green-500 to-emerald-600"
+                                  } text-white font-bold text-sm`}
+                                >
                                   {sharingStatus.isOwner ? "O" : "S"}
                                 </AvatarFallback>
                               </Avatar>
@@ -1381,23 +1420,26 @@ export default function ManagerSubmissionsPage() {
                                   {submission.status2.replace("_", " ")}
                                 </Badge>
                               </div>
-                              {submission.assignedEmployees?.map((emp, index) => (
-                                <div
-                                  key={emp.employeeId?._id || index}
-                                  className="flex items-center gap-2"
-                                >
-                                  <Users className="w-4 h-4 text-purple-600" />
-                                  <Badge
-                                    className={`${getStatusVariant(
-                                      emp.status
-                                    )} border flex items-center gap-1 px-2 py-1 text-xs font-medium transition-colors`}
+                              {submission.assignedEmployees?.map(
+                                (emp, index) => (
+                                  <div
+                                    key={emp.employeeId?._id || index}
+                                    className="flex items-center gap-2"
                                   >
-                                    {getStatusIcon(emp.status)}
-                                    {getEmployeeFullName(emp.employeeId)}:{" "}
-                                    {emp.status.replace("_", " ")}
-                                  </Badge>
-                                </div>
-                              ))}
+                                    <Users className="w-4 h-4 text-purple-600" />
+                                    <Badge
+                                      className={`${getStatusVariant(
+                                        emp.status
+                                      )} border flex items-center gap-1 px-2 py-1 text-xs font-medium transition-colors`}
+                                    >
+                                      {getStatusIcon(emp.status)}
+                                      {getEmployeeFullName(
+                                        emp.employeeId
+                                      )}: {emp.status.replace("_", " ")}
+                                    </Badge>
+                                  </div>
+                                )
+                              )}
                             </div>
                           </TableCell>
 
@@ -1469,7 +1511,9 @@ export default function ManagerSubmissionsPage() {
                           <TableCell className="py-5">
                             <div className="flex flex-col gap-2">
                               <Button
-                                onClick={() => viewSubmissionDetails(submission)}
+                                onClick={() =>
+                                  viewSubmissionDetails(submission)
+                                }
                                 variant="outline"
                                 size="sm"
                                 className="border-blue-200 text-blue-700 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-800 transition-all duration-200 justify-start"
@@ -1477,9 +1521,24 @@ export default function ManagerSubmissionsPage() {
                                 <Eye className="w-4 h-4 mr-2" />
                                 View Details
                               </Button>
+                              <Button
+                                onClick={() =>
+                                  router.push(
+                                    `/manager/submissions/detail/${submission._id}`
+                                  )
+                                }
+                                variant="outline"
+                                size="sm"
+                                className="border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-800 transition-all duration-200 justify-start"
+                              >
+                                <ViewIcon className="w-4 h-4 mr-2" />
+                                Full Details{" "}
+                              </Button>
                               {sharingStatus.isOwner && (
                                 <Button
-                                  onClick={() => handleShareSubmission(submission)}
+                                  onClick={() =>
+                                    handleShareSubmission(submission)
+                                  }
                                   variant="outline"
                                   size="sm"
                                   className="border-green-200 text-green-700 hover:bg-green-50 hover:border-green-300 hover:text-green-800 transition-all duration-200 justify-start"
@@ -1490,7 +1549,11 @@ export default function ManagerSubmissionsPage() {
                               )}
                               {sharingStatus.isOwner && (
                                 <Button
-                                  onClick={() => router.push(`/manager/submissions/${submission._id}`)}
+                                  onClick={() =>
+                                    router.push(
+                                      `/manager/submissions/${submission._id}`
+                                    )
+                                  }
                                   variant="outline"
                                   size="sm"
                                   className="border-yellow-200 text-yellow-700 hover:bg-yellow-50 hover:border-yellow-300 hover:text-yellow-800 transition-all duration-200 justify-start"
@@ -1498,7 +1561,6 @@ export default function ManagerSubmissionsPage() {
                                   <Edit className="w-4 h-4 mr-2" />
                                   Edit
                                 </Button>
-
                               )}
                               <Button
                                 onClick={() =>
@@ -1547,7 +1609,8 @@ export default function ManagerSubmissionsPage() {
                 Share Submission
               </DialogTitle>
               <DialogDescription>
-                Select managers to share this submission with. They'll be able to view and manage this submission.
+                Select managers to share this submission with. They'll be able
+                to view and manage this submission.
               </DialogDescription>
             </DialogHeader>
 
@@ -1572,16 +1635,19 @@ export default function ManagerSubmissionsPage() {
                     {managers.map((manager) => (
                       <div
                         key={manager._id}
-                        className={`flex items-center justify-between p-3 border rounded-lg cursor-pointer transition-all duration-200 ${selectedManagers.includes(manager._id)
-                          ? "border-blue-300 bg-blue-50"
-                          : "border-gray-200 hover:bg-gray-50"
-                          }`}
+                        className={`flex items-center justify-between p-3 border rounded-lg cursor-pointer transition-all duration-200 ${
+                          selectedManagers.includes(manager._id)
+                            ? "border-blue-300 bg-blue-50"
+                            : "border-gray-200 hover:bg-gray-50"
+                        }`}
                         onClick={() => handleManagerToggle(manager._id)}
                       >
                         <div className="flex items-center gap-3">
                           <Avatar className="h-8 w-8">
                             <AvatarFallback className="bg-blue-100 text-blue-600 text-sm">
-                              {manager.firstName?.charAt(0) || manager.email?.charAt(0) || "M"}
+                              {manager.firstName?.charAt(0) ||
+                                manager.email?.charAt(0) ||
+                                "M"}
                             </AvatarFallback>
                           </Avatar>
                           <div>
@@ -1607,7 +1673,8 @@ export default function ManagerSubmissionsPage() {
 
             <DialogFooter className="sm:justify-between">
               <div className="text-sm text-gray-500">
-                {selectedManagers.length} manager{selectedManagers.length !== 1 ? 's' : ''} selected
+                {selectedManagers.length} manager
+                {selectedManagers.length !== 1 ? "s" : ""} selected
               </div>
               <div className="flex gap-2">
                 <Button
@@ -2039,7 +2106,6 @@ export default function ManagerSubmissionsPage() {
             </Card>
           </div>
         )}
-
       </div>
 
       <style jsx>{`
