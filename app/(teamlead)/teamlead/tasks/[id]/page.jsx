@@ -1548,54 +1548,7 @@ export default function TeamLeadTaskDetailPage() {
                         ))}
                       </div>
 
-                      <div className="space-y-2 md:space-y-3">
-                        <Label className="text-gray-700 font-medium text-sm md:text-base">
-                          Add Feedback / Comments
-                        </Label>
-                        <Textarea
-                          placeholder="Enter your feedback, instructions, or comments here..."
-                          value={feedback}
-                          onChange={(e) => setFeedback(e.target.value)}
-                          rows={3}
-                          className="border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all text-gray-700 text-sm md:text-base min-h-[100px]"
-                        />
-                        <p className="text-xs md:text-sm text-gray-500">
-                          This feedback will be sent to the manager and all
-                          assigned employees.
-                        </p>
-                      </div>
-
-                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 md:p-4">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Bell className="w-4 h-4 text-blue-600" />
-                          <span className="font-medium text-blue-900 text-sm md:text-base">
-                            Notifications
-                          </span>
-                        </div>
-                        <p className="text-xs md:text-sm text-blue-700">
-                          When you update the status, notifications will be sent
-                          to:
-                        </p>
-                        <ul className="mt-2 space-y-1 text-xs md:text-sm text-blue-700">
-                          <li className="flex items-center gap-2">
-                            <User className="w-3 h-3" />
-                            Manager: {task.submittedBy?.firstName}{" "}
-                            {task.submittedBy?.lastName}
-                          </li>
-                          <li className="flex items-center gap-2">
-                            <Users className="w-3 h-3" />
-                            All assigned employees (
-                            {task.assignedEmployees?.length || 0})
-                          </li>
-                          {teamLeads.length > 0 && (
-                            <li className="flex items-center gap-2">
-                              <Users2 className="w-3 h-3" />
-                              Other Team Leads ({teamLeads.length - 1})
-                            </li>
-                          )}
-                        </ul>
-                      </div>
-
+                      
                       <Button
                         onClick={handleStatusUpdate}
                         disabled={updating || newStatus === task.status2}
