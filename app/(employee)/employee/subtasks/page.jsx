@@ -183,6 +183,40 @@ export default function EmployeeSubtasksPage() {
         }
     };
 
+    const breakTextSmartly = (
+  text,
+  minChars = 8,
+  maxChars = 13
+) => {
+  let lines = [];
+  let currentLine = "";
+
+  const words = text.split(" ");
+
+  for (let word of words) {
+    // Agar word add karne se max exceed ho raha hai
+    if ((currentLine + " " + word).trim().length > maxChars) {
+      lines.push(currentLine.trim());
+      currentLine = word;
+    } else {
+      currentLine += (currentLine ? " " : "") + word;
+    }
+
+    // Agar minimum chars cross ho gaye → soft break allow
+    if (currentLine.length >= minChars && currentLine.length <= maxChars) {
+      lines.push(currentLine.trim());
+      currentLine = "";
+    }
+  }
+
+  if (currentLine.trim()) {
+    lines.push(currentLine.trim());
+  }
+
+  return lines.join("\n");
+};
+
+
     const getStatusVariant = (status) => {
         const variants = {
             completed: "bg-gradient-to-r from-emerald-500 to-green-500 text-white border-emerald-400",
@@ -768,7 +802,8 @@ export default function EmployeeSubtasksPage() {
                 </Card>
 
                 {/* Subtasks Table */}
-                <Card className="bg-white border border-gray-200/50 shadow-2xl rounded-2xl overflow-hidden">
+               <Card className="bg-white border border-gray-200/50 shadow-2xl rounded-2xl overflow-hidden">
+
                     <CardHeader className="bg-gradient-to-r from-white to-blue-50/30 border-b border-gray-100">
                         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
                             <div>
@@ -873,9 +908,10 @@ export default function EmployeeSubtasksPage() {
                                                             </div>
                                                             <div className="flex-1 min-w-0">
                                                                 <div className="flex items-center gap-2 mb-1">
-                                                                    <h4 className="font-bold text-gray-900 text-lg truncate group-hover:text-blue-800 transition-colors">
-                                                                        {subtask.title}
-                                                                    </h4>
+                                                                    <h4 className="font-bold text-gray-900 text-lg whitespace-pre-line group-hover:text-blue-800 transition-colors">
+  {breakTextSmartly(subtask.title)}
+</h4>
+
                                                                     {subtask.attachments?.length > 0 && (
                                                                         <Badge variant="outline" className="border-blue-200 text-blue-800 text-xs">
                                                                             {subtask.attachments.length} file{subtask.attachments.length > 1 ? 's' : ''}
