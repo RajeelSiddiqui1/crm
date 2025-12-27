@@ -153,14 +153,15 @@ export async function PUT(request) {
 }
 
 
+
+
+
 export async function GET(request) {
   try {
     const session = await getServerSession(authOptions);
 
     if (!session || session.user.role !== "Employee") {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-      });
+      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
     }
 
     await dbConnect();
@@ -169,43 +170,49 @@ export async function GET(request) {
       "assignedEmployees.employeeId": session.user.id,
     })
       .populate("formId", "title description")
-      .populate("depId", "name description") // ✅ Department populated
-      .populate("submittedBy", "firstName lastName email phone department") // ✅ Manager details
-      .populate("assignedTo", "firstName lastName email phone department") // ✅ Team Lead details
+      .populate("depId", "name description")
+      .populate("submittedBy", "firstName lastName email phone department")
+      .populate("assignedTo", "firstName lastName email phone department")
       .populate("multipleManagerShared", "firstName lastName email phone")
       .populate("multipleTeamLeadShared", "firstName lastName email department")
       .populate({
         path: "assignedEmployees.employeeId",
-        select: "firstName lastName email department position phone"
+        select: "firstName lastName email department position phone",
       })
       .populate("employeeFeedbacks.employeeId", "firstName lastName email")
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const userId = session.user.id.toString();
 
     const filteredSubmissions = submissions.map((submission) => {
       const employeeAssignment = submission.assignedEmployees.find(
-        (emp) => emp.employeeId._id.toString() === session.user.id
+        (emp) =>
+          emp.employeeId?._id?.toString() === userId ||
+          emp.employeeId?.toString() === userId
       );
 
-      // Find employee's feedback from feedback array
       const employeeFeedback = submission.employeeFeedbacks?.find(
-        (fb) => fb.employeeId.toString() === session.user.id
+        (fb) =>
+          fb.employeeId?._id?.toString() === userId ||
+          fb.employeeId?.toString() === userId
       );
 
       return {
         _id: submission._id,
-        clinetName: submission.clinetName,
-        formId: submission.formId,
-        depId: submission.depId, // ✅ Department included
-        submittedBy: submission.submittedBy, // ✅ Manager details
-        assignedTo: submission.assignedTo, // ✅ Team Lead details
-        multipleManagerShared: submission.multipleManagerShared,
-        multipleTeamLeadShared: submission.multipleTeamLeadShared,
-        formData: submission.formData,
+        clinetName: submission.clinetName || "Unnamed Client",
+        formId: submission.formId || { title: "Untitled Form", description: "" },
+        depId: submission.depId || { name: "No Department" },
+        submittedBy: submission.submittedBy || { firstName: "Unknown", lastName: "Manager" },
+        assignedTo: submission.assignedTo || [],
+        multipleManagerShared: submission.multipleManagerShared || [],
+        multipleTeamLeadShared: submission.multipleTeamLeadShared || [],
+        formData: submission.formData || {},
         status: submission.status,
         status2: submission.status2,
         adminStatus: submission.adminStatus,
         managerComments: submission.managerComments,
-        teamLeadFeedback: submission.teamLeadFeedback, // ✅ Team Lead Feedback
+        teamLeadFeedback: submission.teamLeadFeedback || [],
         employeeStatus: employeeAssignment?.status || "pending",
         employeeFeedback: employeeFeedback?.feedback || "",
         assignedAt: employeeAssignment?.assignedAt,
@@ -219,8 +226,9 @@ export async function GET(request) {
     return new Response(JSON.stringify(filteredSubmissions), { status: 200 });
   } catch (error) {
     console.error("Error fetching employee tasks:", error);
-    return new Response(JSON.stringify({ error: "Failed to fetch tasks" }), {
-      status: 500,
-    });
+    return new Response(
+      JSON.stringify({ error: "Failed to fetch tasks", message: error.message }),
+      { status: 500 }
+    );
   }
 }

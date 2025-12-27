@@ -135,48 +135,39 @@ export default function EmployeeTasksPage() {
     fetchTasks();
   }, [session, status, router, refreshKey]);
 
-  const fetchTasks = async () => {
-    try {
-      setFetching(true);
-      const response = await axios.get("/api/employee/tasks");
-      if (response.status === 200) {
-        const processedTasks = response.data.map(task => ({
-          ...task,
-          clinetName: task.clinetName || "Unnamed Client",
-          employeeStatus: task.assignedEmployees?.find(
-            assignment => assignment.employeeId?._id?.toString() === session.user.id
-          )?.status || "pending",
-          assignedAt: task.createdAt || new Date(),
-          completedAt: task.assignedEmployees?.find(
-            assignment => assignment.employeeId?._id?.toString() === session.user.id
-          )?.completedAt,
-          employeeFeedback: task.employeeFeedbacks?.find(
-            fb => fb.employeeId?._id?.toString() === session.user.id
-          )?.feedback,
-          teamLeadFeedback: task.teamLeadFeedbacks?.[0]?.feedback,
-          managerComments: task.managerComments,
-          formData: task.formData || {},
-          currentAssignment: task.assignedEmployees?.find(
-            assignment => assignment.employeeId?._id?.toString() === session.user.id
-          ),
-          // ٹیم لیڈ فیڈ بیک ڈیٹا
-          teamLeadFeedbacks: task.teamLeadFeedbacks || [],
-          teamLeadFeedbacksCount: task.teamLeadFeedbacks?.length || 0
-        }));
-        setTasks(processedTasks || []);
-      }
-    } catch (error) {
-      console.error("Error fetching tasks:", error);
-      if (error.response?.status === 401) {
-        toast.error("Session expired. Please login again");
-        router.push("/login");
-      } else {
-        toast.error(error.response?.data?.error || "Failed to fetch tasks");
-      }
-    } finally {
-      setFetching(false);
+ const fetchTasks = async () => {
+  try {
+    setFetching(true);
+
+    const response = await axios.get("/api/employee/tasks");
+    if (response.status === 200) {
+      const processedTasks = response.data.map((task) => ({
+        ...task,
+        clinetName: task.clinetName || "Unnamed Client",
+        employeeStatus: task.employeeStatus || "pending",
+        employeeFeedback: task.employeeFeedback || "",
+        assignedAt: task.assignedAt,
+        completedAt: task.completedAt,
+        teamLeadFeedbacks: task.teamLeadFeedback || [],
+        teamLeadFeedbacksCount: task.teamLeadFeedback?.length || 0,
+      }));
+
+      setTasks(processedTasks);
     }
-  };
+  } catch (error) {
+    console.error("Error fetching tasks:", error);
+    if (error.response?.status === 401) {
+      toast.error("Session expired. Please login again");
+      router.push("/login");
+    } else {
+      toast.error(error.response?.data?.error || "Failed to fetch tasks");
+    }
+  } finally {
+    setFetching(false);
+  }
+};
+
+
 
   const handleStatusUpdate = async (taskId, newStatus, feedback = "") => {
     setLoading(true);
@@ -325,6 +316,8 @@ export default function EmployeeTasksPage() {
   };
 
   const getStatusVariant = (status) => {
+    if (!status) status = "pending";
+    
     switch (status) {
       case "completed":
       case "approved":
@@ -820,43 +813,52 @@ export default function EmployeeTasksPage() {
                             </TableCell>
                             <TableCell>
                               <div className="flex items-center gap-2">
+                                {/* Status Badge */}
                                 <Badge
-                                  className={`${statusVariant.bg} ${statusVariant.text} ${statusVariant.border} border flex items-center gap-1 px-3 py-1`}
+                                  className={`${statusVariant.bg} ${statusVariant.text} ${statusVariant.border}
+                                            border flex items-center gap-1 px-3 py-1 rounded-full capitalize`}
                                 >
                                   {statusVariant.icon}
                                   {task.employeeStatus.replace("_", " ")}
                                 </Badge>
+
+                                {/* Quick Status Update */}
                                 <Select
+                                  value={task.employeeStatus}
                                   onValueChange={(value) =>
                                     handleQuickStatusUpdate(task._id, value)
                                   }
                                   disabled={loading}
                                 >
-                                  <SelectTrigger className="w-28 h-8 border-gray-300 bg-white text-gray-900 hover:bg-gray-50">
-                                    <SelectValue placeholder="Update" className="text-gray-900" />
+                                  <SelectTrigger className="w-32 h-8 bg-white border-gray-300 text-gray-900 hover:bg-gray-50">
+                                    <SelectValue placeholder="Update" />
                                   </SelectTrigger>
+
                                   <SelectContent className="bg-white text-gray-900 border border-gray-200 shadow-lg">
                                     <SelectItem value="pending">
                                       <div className="flex items-center gap-2">
-                                        <Clock className="w-3 h-3" />
+                                        <Clock className="w-3 h-3 text-yellow-500" />
                                         Pending
                                       </div>
                                     </SelectItem>
+
                                     <SelectItem value="in_progress">
                                       <div className="flex items-center gap-2">
-                                        <TrendingUp className="w-3 h-3" />
+                                        <TrendingUp className="w-3 h-3 text-blue-500" />
                                         In Progress
                                       </div>
                                     </SelectItem>
+
                                     <SelectItem value="completed">
                                       <div className="flex items-center gap-2">
-                                        <CheckCircle className="w-3 h-3" />
+                                        <CheckCircle className="w-3 h-3 text-green-500" />
                                         Completed
                                       </div>
                                     </SelectItem>
+
                                     <SelectItem value="rejected">
                                       <div className="flex items-center gap-2">
-                                        <XCircle className="w-3 h-3" />
+                                        <XCircle className="w-3 h-3 text-red-500" />
                                         Rejected
                                       </div>
                                     </SelectItem>
@@ -923,7 +925,9 @@ export default function EmployeeTasksPage() {
                                         <div className="flex items-center gap-2">
                                           <User className="w-4 h-4 text-gray-400" />
                                           <span className="font-medium text-gray-900">Name:</span>
-                                          <span className="text-blue-900">{task.submittedBy?.firstName} {task.submittedBy?.lastName}</span>
+                                          <span className="text-blue-900">
+                                            {task.submittedBy?.firstName} {task.submittedBy?.lastName}
+                                          </span>
                                         </div>
                                         {task.submittedBy?.email && (
                                           <div className="flex items-center gap-2">
@@ -936,7 +940,7 @@ export default function EmployeeTasksPage() {
                                           <div className="flex items-center gap-2">
                                             <Phone className="w-4 h-4 text-gray-400" />
                                             <span className="font-medium text-gray-900">Phone:</span>
-                                            <span className="text-blue-90">{task.submittedBy.phone}</span>
+                                            <span className="text-blue-900">{task.submittedBy.phone}</span>
                                           </div>
                                         )}
                                         {task.managerComments && (
@@ -963,7 +967,9 @@ export default function EmployeeTasksPage() {
                                           <div className="flex items-center gap-2">
                                             <User className="w-4 h-4 text-gray-400" />
                                             <span className="font-medium text-gray-900">Name:</span>
-                                            <span className="text-blue-900">{task.assignedTo[0]?.firstName} {task.assignedTo[0]?.lastName}</span>
+                                            <span className="text-blue-900">
+                                              {task.assignedTo[0]?.firstName} {task.assignedTo[0]?.lastName}
+                                            </span>
                                           </div>
                                           {task.assignedTo[0]?.email && (
                                             <div className="flex items-center gap-2">
@@ -1212,6 +1218,13 @@ export default function EmployeeTasksPage() {
                           <Mail className="w-4 h-4 text-gray-400" />
                           <span className="font-medium text-gray-900">Email:</span>
                           <span className="text-blue-900">{selectedTask.submittedBy.email}</span>
+                        </div>
+                      )}
+                      {selectedTask.submittedBy?.phone && (
+                        <div className="flex items-center gap-2">
+                          <Phone className="w-4 h-4 text-gray-400" />
+                          <span className="font-medium text-gray-900">Phone:</span>
+                          <span className="text-blue-900">{selectedTask.submittedBy.phone}</span>
                         </div>
                       )}
                       {selectedTask.managerComments && (

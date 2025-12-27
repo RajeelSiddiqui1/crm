@@ -95,6 +95,7 @@ export default function Sidebar() {
       { href: "/manager/employeeform", label: "Employee Forms", icon: "EmployeeForms" },
       { href: "/manager/submissions", label: "Submissions", icon: "Submissions" },
       { href: "/manager/subtasks", label: "Subtasks", icon: "Subtasks" },
+      { href: "/manager/assigned-subtask", label: "Your Subtasks", icon: "Subtasks" },
       { href: "/manager/received-tasks", label: "Shared Tasks", icon: "SharedTasks" },
       { href: "/manager/operation-manager-task", label: "Operation Tasks", icon: "OperationTasks" },
     ],

@@ -32,6 +32,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+    AlertDialog,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import {
   Search,
   FileText,
   User,
@@ -53,12 +60,16 @@ import {
   Paperclip,
   Edit,
   Trash2,
+  Building,
+  Target,
+  BarChart3,
+  ViewIcon
 } from "lucide-react";
 import axios from "axios";
 import Link from "next/link";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogTitle, AlertDialogTrigger } from "@radix-ui/react-alert-dialog";
-import { AlertDialogFooter, AlertDialogHeader } from "@/components/ui/alert-dialog";
-import { sub } from "date-fns";
+import {  AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription } from "@radix-ui/react-alert-dialog";
+
+import { format } from "date-fns";
 
 export default function AllSubtasksPage() {
   const { data: session, status } = useSession();
@@ -71,6 +82,12 @@ export default function AllSubtasksPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedSubtask, setSelectedSubtask] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Check if current team lead has the specific depId for leads tracking
+  const shouldShowLeadsField = () => {
+    if (!session?.user?.depId) return false;
+    return session.user.depId === "694161a12ab0b6a3ab0e0788";
+  };
 
   useEffect(() => {
     if (status === "loading") return;
@@ -88,7 +105,8 @@ export default function AllSubtasksPage() {
       setFetching(true);
       const response = await axios.get("/api/teamlead/subtasks");
       if (response.status === 200) {
-        setSubtasks(response.data.subtasks || response.data || []);
+        const subtasksData = response.data.subtasks || response.data || [];
+        setSubtasks(subtasksData);
       }
     } catch (error) {
       console.error("Error fetching subtasks:", error);
@@ -108,24 +126,24 @@ export default function AllSubtasksPage() {
     setSelectedSubtask(null);
   };
 
-  const handleDelete = async () => {
+  const handleDelete = async (subtaskId) => {
     if (isDeleting) return;
 
     setIsDeleting(true);
     try {
       const response = await axios.delete(
-        `/api/teamlead/subtasks/${subtask._id}`
+        `/api/teamlead/subtasks/${subtaskId}`
       );
 
       if (response.status === 200) {
         toast.success("Subtask deleted successfully!");
-        setTimeout(() => {
-          router.push("/teamlead/subtasks");
-        }, 1000);
+        // Remove from state
+        setSubtasks(prev => prev.filter(sub => sub._id !== subtaskId));
       }
     } catch (error) {
       console.error("Error deleting subtask:", error);
       toast.error(error.response?.data?.error || "Failed to delete subtask");
+    } finally {
       setIsDeleting(false);
     }
   };
@@ -173,13 +191,36 @@ export default function AllSubtasksPage() {
     }
   };
 
+  const getAssigneeTypeColor = (type) => {
+    switch (type) {
+      case "employee":
+        return "bg-blue-100 text-blue-800 border-blue-200";
+      case "manager":
+        return "bg-purple-100 text-purple-800 border-purple-200";
+      default:
+        return "bg-gray-100 text-gray-800 border-gray-200";
+    }
+  };
+
+  const getAssigneeTypeIcon = (type) => {
+    switch (type) {
+      case "employee":
+        return <Users className="w-3 h-3" />;
+      case "manager":
+        return <Building className="w-3 h-3" />;
+      default:
+        return <Users className="w-3 h-3" />;
+    }
+  };
+
   const filteredSubtasks = subtasks.filter((subtask) => {
     const matchesSearch =
       subtask.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       subtask.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       subtask.submissionId?.title
         ?.toLowerCase()
-        .includes(searchTerm.toLowerCase());
+        .includes(searchTerm.toLowerCase()) ||
+      subtask.teamLeadName?.toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesStatus =
       statusFilter === "all" || subtask.status === statusFilter;
@@ -213,6 +254,52 @@ export default function AllSubtasksPage() {
     in_progress: subtasks.filter((s) => s.status === "in_progress").length,
     completed: subtasks.filter((s) => s.status === "completed").length,
     rejected: subtasks.filter((s) => s.status === "rejected").length,
+  };
+
+  const calculateLeadsProgress = (subtask) => {
+    if (!subtask.hasLeadsTarget) {
+      return {
+        hasLeads: false,
+        completed: 0,
+        total: 0,
+        percentage: 0
+      };
+    }
+
+    const totalLeads = subtask.totalLeadsRequired || 0;
+    const completedLeads = subtask.leadsCompleted || 0;
+    const percentage = totalLeads > 0 ? Math.round((completedLeads / totalLeads) * 100) : 0;
+
+    return {
+      hasLeads: true,
+      completed: completedLeads,
+      total: totalLeads,
+      percentage: percentage
+    };
+  };
+
+  const getEmployeeDisplayName = (employee) => {
+    if (typeof employee === 'object' && employee !== null) {
+      if (employee.firstName && employee.lastName) {
+        return `${employee.firstName} ${employee.lastName}`;
+      }
+      if (employee.name) {
+        return employee.name;
+      }
+    }
+    return "Unknown Employee";
+  };
+
+  const getManagerDisplayName = (manager) => {
+    if (typeof manager === 'object' && manager !== null) {
+      if (manager.firstName && manager.lastName) {
+        return `${manager.firstName} ${manager.lastName}`;
+      }
+      if (manager.name) {
+        return manager.name;
+      }
+    }
+    return "Unknown Manager";
   };
 
   if (status === "loading") {
@@ -318,6 +405,45 @@ export default function AllSubtasksPage() {
                     </Card>
                   </div>
 
+                  {/* Leads Progress */}
+                  {selectedSubtask.hasLeadsTarget && (
+                    <Card className="border border-gray-200 shadow-sm bg-white">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-lg flex items-center gap-2 text-black">
+                          <Target className="w-5 h-5 text-green-600" />
+                          Leads Progress
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-3">
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-black">Total Leads:</span>
+                            <span className="font-bold text-black">
+                              {selectedSubtask.totalLeadsRequired || 0}
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-black">Completed Leads:</span>
+                            <span className="font-bold text-green-600">
+                              {selectedSubtask.leadsCompleted || 0}
+                            </span>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-2">
+                            <div 
+                              className="bg-green-600 h-2 rounded-full" 
+                              style={{ 
+                                width: `${calculateLeadsProgress(selectedSubtask).percentage}%` 
+                              }}
+                            ></div>
+                          </div>
+                          <div className="text-center text-sm text-gray-600">
+                            {calculateLeadsProgress(selectedSubtask).percentage}% Complete
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
                   {/* Timeline */}
                   <Card className="border border-gray-200 shadow-sm bg-white">
                     <CardHeader className="pb-3">
@@ -377,17 +503,17 @@ export default function AllSubtasksPage() {
                   </Card>
                 </div>
 
-                {/* Right Column - Employees and Details */}
+                {/* Right Column - Assignees and Details */}
                 <div className="space-y-6">
                   {/* Assigned Employees */}
                   <Card className="border border-gray-200 shadow-sm bg-white">
                     <CardHeader className="pb-3">
                       <CardTitle className="text-lg flex items-center gap-2 text-black">
-                        <Users className="w-5 h-5 text-purple-600" />
+                        <Users className="w-5 h-5 text-blue-600" />
                         Assigned Employees
                         <Badge
                           variant="secondary"
-                          className="ml-2 bg-gray-100 text-black"
+                          className="ml-2 bg-blue-100 text-blue-800"
                         >
                           {selectedSubtask.assignedEmployees?.length || 0}
                         </Badge>
@@ -400,24 +526,28 @@ export default function AllSubtasksPage() {
                           selectedSubtask.assignedEmployees.map(
                             (emp, index) => (
                               <div
-                                key={emp.employeeId._id}
-                                className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200"
+                                key={emp.employeeId?._id || emp.employeeId || index}
+                                className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-200"
                               >
                                 <div className="flex items-center gap-3">
                                   <Avatar className="w-10 h-10 border-2 border-white shadow-sm">
-                                    <AvatarFallback className="bg-gradient-to-r from-blue-500 to-purple-600 text-white font-semibold">
-                                      {emp.employeeId.firstName?.[0]}
-                                      {emp.employeeId.lastName?.[0]}
+                                    <AvatarFallback className="bg-gradient-to-r from-blue-500 to-cyan-600 text-white font-semibold">
+                                      {getEmployeeDisplayName(emp.employeeId)[0]}
+                                      {getEmployeeDisplayName(emp.employeeId).split(' ')[1]?.[0]}
                                     </AvatarFallback>
                                   </Avatar>
                                   <div>
                                     <div className="font-medium text-black">
-                                      {emp.employeeId.firstName}{" "}
-                                      {emp.employeeId.lastName}
+                                      {getEmployeeDisplayName(emp.employeeId)}
                                     </div>
                                     <div className="text-sm text-gray-700">
                                       {emp.email}
                                     </div>
+                                    {selectedSubtask.hasLeadsTarget && emp.leadsAssigned && (
+                                      <div className="text-xs text-gray-600 mt-1">
+                                        Leads: {emp.leadsCompleted || 0}/{emp.leadsAssigned}
+                                      </div>
+                                    )}
                                   </div>
                                 </div>
                                 <Badge className={getStatusVariant(emp.status)}>
@@ -429,6 +559,66 @@ export default function AllSubtasksPage() {
                         ) : (
                           <div className="text-center py-4 text-gray-700">
                             No employees assigned
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Assigned Managers */}
+                  <Card className="border border-gray-200 shadow-sm bg-white">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-lg flex items-center gap-2 text-black">
+                        <Building className="w-5 h-5 text-purple-600" />
+                        Assigned Managers
+                        <Badge
+                          variant="secondary"
+                          className="ml-2 bg-purple-100 text-purple-800"
+                        >
+                          {selectedSubtask.assignedManagers?.length || 0}
+                        </Badge>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        {selectedSubtask.assignedManagers &&
+                        selectedSubtask.assignedManagers.length > 0 ? (
+                          selectedSubtask.assignedManagers.map(
+                            (mgr, index) => (
+                              <div
+                                key={mgr.managerId?._id || mgr.managerId || index}
+                                className="flex items-center justify-between p-3 bg-purple-50 rounded-lg border border-purple-200"
+                              >
+                                <div className="flex items-center gap-3">
+                                  <Avatar className="w-10 h-10 border-2 border-white shadow-sm">
+                                    <AvatarFallback className="bg-gradient-to-r from-purple-500 to-pink-600 text-white font-semibold">
+                                      {getManagerDisplayName(mgr.managerId)[0]}
+                                      {getManagerDisplayName(mgr.managerId).split(' ')[1]?.[0]}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <div>
+                                    <div className="font-medium text-black">
+                                      {getManagerDisplayName(mgr.managerId)}
+                                    </div>
+                                    <div className="text-sm text-gray-700">
+                                      {mgr.email}
+                                    </div>
+                                    {selectedSubtask.hasLeadsTarget && mgr.leadsAssigned && (
+                                      <div className="text-xs text-gray-600 mt-1">
+                                        Leads: {mgr.leadsCompleted || 0}/{mgr.leadsAssigned}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                                <Badge className={getStatusVariant(mgr.status)}>
+                                  {mgr.status.replace("_", " ")}
+                                </Badge>
+                              </div>
+                            )
+                          )
+                        ) : (
+                          <div className="text-center py-4 text-gray-700">
+                            No managers assigned
                           </div>
                         )}
                       </div>
@@ -498,20 +688,25 @@ export default function AllSubtasksPage() {
 
             {/* Modal Footer */}
             <div className="border-t border-gray-200 bg-gray-50 px-6 py-4">
-              <div className="flex justify-end gap-3">
-                <Button
-                  variant="outline"
-                  onClick={closeModal}
-                  className="border-gray-300 text-black hover:bg-gray-100"
-                >
-                  Close
-                </Button>
-                <Link href={`/teamlead/subtasks/${selectedSubtask._id}`}>
-                  <Button className="bg-blue-600 hover:bg-blue-700 text-white">
-                    Open Full Details
-                    <ArrowRight className="w-4 h-4 ml-2" />
+              <div className="flex justify-between items-center">
+                <div className="text-sm text-gray-600">
+                  Created by: {selectedSubtask.teamLeadName || "Unknown Team Lead"}
+                </div>
+                <div className="flex justify-end gap-3">
+                  <Button
+                    variant="outline"
+                    onClick={closeModal}
+                    className="border-gray-300 text-black hover:bg-gray-100"
+                  >
+                    Close
                   </Button>
-                </Link>
+                  <Link href={`/teamlead/subtasks/edit/${selectedSubtask._id}`}>
+                    <Button className="bg-blue-600 hover:bg-blue-700 text-white">
+                      Edit Subtask
+                      <Edit className="w-4 h-4 ml-2" />
+                    </Button>
+                  </Link>
+                </div>
               </div>
             </div>
           </div>
@@ -538,6 +733,7 @@ export default function AllSubtasksPage() {
               className="border-blue-200 text-blue-700 hover:bg-blue-50"
               disabled={fetching}
             >
+              <Plus className="w-4 h-4 mr-2" />
               Create Subtask
             </Button>
 
@@ -555,7 +751,7 @@ export default function AllSubtasksPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 mb-8">
           <Card className="bg-white border-0 shadow-lg">
             <CardContent className="p-4 text-center">
               <div className="text-2xl font-bold text-black">
@@ -586,6 +782,17 @@ export default function AllSubtasksPage() {
                 {statusStats.completed}
               </div>
               <div className="text-sm text-gray-700">Completed</div>
+            </CardContent>
+          </Card>
+          <Card className="bg-white border-0 shadow-lg">
+            <CardContent className="p-4 text-center">
+              <div className="text-2xl font-bold text-indigo-600">
+                {subtasks.filter(s => s.hasLeadsTarget).length}
+              </div>
+              <div className="text-sm text-gray-700 flex items-center justify-center gap-1">
+                <Target className="w-4 h-4" />
+                Lead Tracking
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -654,6 +861,15 @@ export default function AllSubtasksPage() {
                       ? "Get started by creating your first subtask from a submission."
                       : "Try adjusting your search terms to find what you're looking for."}
                   </p>
+                  {subtasks.length === 0 && (
+                    <Button
+                      onClick={() => router.push("/teamlead/subtasks/create")}
+                      className="bg-blue-600 hover:bg-blue-700 text-white"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Create Your First Subtask
+                    </Button>
+                  )}
                 </div>
               </div>
             ) : (
@@ -664,22 +880,34 @@ export default function AllSubtasksPage() {
                       <TableHead className="font-bold text-black text-sm uppercase tracking-wide py-4">
                         Subtask Details
                       </TableHead>
-                     
-                    
                       <TableHead className="font-bold text-black text-sm uppercase tracking-wide py-4">
-                        Assigned Employees Status
+                        Assigned To
                       </TableHead>
                       <TableHead className="font-bold text-black text-sm uppercase tracking-wide py-4">
-                         Employees Status
+                        Lead Target
                       </TableHead>
-                      
+                      <TableHead className="font-bold text-black text-sm uppercase tracking-wide py-4">
+                        Status
+                      </TableHead>
+                      <TableHead className="font-bold text-black text-sm uppercase tracking-wide py-4">
+                        Priority
+                      </TableHead>
+                      <TableHead className="font-bold text-black text-sm uppercase tracking-wide py-4">
+                        Timeline
+                      </TableHead>
                       <TableHead className="font-bold text-black text-sm uppercase tracking-wide py-4">
                         Actions
                       </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredSubtasks.map((subtask) => (
+                    {filteredSubtasks.map((subtask) => {
+                      const leadsProgress = calculateLeadsProgress(subtask);
+                      const totalAssignees = 
+                        (subtask.assignedEmployees?.length || 0) + 
+                        (subtask.assignedManagers?.length || 0);
+                      
+                      return (
                       <TableRow
                         key={subtask._id}
                         className="group hover:bg-gradient-to-r hover:from-blue-50/80 hover:to-indigo-50/80 transition-all duration-300 border-b border-gray-100/50"
@@ -687,67 +915,124 @@ export default function AllSubtasksPage() {
                         <TableCell className="py-4">
                           <div className="flex items-center gap-4">
                             <Avatar className="border-2 border-white shadow-lg shadow-blue-500/20 group-hover:shadow-xl group-hover:shadow-blue-600/30 transition-all duration-300">
-                              <AvatarFallback className="bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold">
-                                <FileText className="w-4 h-4" />
+                              <AvatarFallback className={`${subtask.hasLeadsTarget ? 'bg-gradient-to-r from-green-500 to-emerald-600' : 'bg-gradient-to-r from-blue-500 to-cyan-600'} text-white font-bold`}>
+                                {subtask.hasLeadsTarget ? (
+                                  <Target className="w-4 h-4" />
+                                ) : (
+                                  <FileText className="w-4 h-4" />
+                                )}
                               </AvatarFallback>
                             </Avatar>
                             <div>
                               <div className="font-bold text-black text-lg group-hover:text-blue-700 transition-colors duration-200">
                                 {subtask.title}
+                                {subtask.hasLeadsTarget && (
+                                  <Badge className="ml-2 bg-green-100 text-green-800 text-xs">
+                                    <Target className="w-3 h-3 mr-1" />
+                                    Leads
+                                  </Badge>
+                                )}
                               </div>
                               <div className="text-sm text-gray-700 line-clamp-2">
                                 {subtask.description}
                               </div>
-                              {subtask.assignedEmployees &&
-                                subtask.assignedEmployees.length > 0 && (
-                                  <div className="flex items-center gap-1 mt-1">
-                                    <Users className="w-3 h-3 text-gray-500" />
-                                    <span className="text-xs text-gray-700">
-                                      {subtask.assignedEmployees.length}{" "}
-                                      employee(s)
-                                    </span>
-                                  </div>
-                                )}
+                              <div className="flex items-center gap-2 mt-1">
+                                <span className="text-xs text-gray-600">
+                                  Created by: {subtask.teamLeadName}
+                                </span>
+                              </div>
                             </div>
                           </div>
                         </TableCell>
-                       
-                       <TableCell className="py-4">
-                          <div className="flex flex-col gap-1">
-                            {subtask.assignedEmployees &&
-                            subtask.assignedEmployees.length > 0 ? (
-                              subtask.assignedEmployees
-                                .slice(0, 3)
-                                .map((emp, index) => (
-                                  <div
-                                    key={emp.employeeId._id}
-                                    className="flex items-center gap-2"
-                                  >
-                                    <Avatar className="w-6 h-6">
-                                      <AvatarFallback className="text-xs bg-blue-100 text-blue-600">
-                                        {emp.employeeId.firstName?.[0]}
-                                        {emp.employeeId.lastName?.[0]}
-                                      </AvatarFallback>
-                                    </Avatar>
-                                    <span className="text-xs text-black">
-                                      {emp.employeeId.firstName}{" "}
-                                      {emp.employeeId.lastName}
-                                    </span>
-                                  </div>
-                                ))
-                            ) : (
-                              <span className="text-xs text-gray-700">
-                                No employees assigned
+                        
+                        <TableCell className="py-4">
+                          <div className="space-y-2">
+                            {/* Employees */}
+                            {subtask.assignedEmployees && subtask.assignedEmployees.length > 0 && (
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-1 text-xs text-gray-600">
+                                  <Users className="w-3 h-3" />
+                                  <span>Employees ({subtask.assignedEmployees.length})</span>
+                                </div>
+                                <div className="flex flex-wrap gap-1">
+                                  {subtask.assignedEmployees.slice(0, 2).map((emp, index) => (
+                                    <Badge 
+                                      key={emp.employeeId?._id || emp.employeeId || index}
+                                      className="text-xs bg-blue-100 text-blue-800 border-blue-200"
+                                      variant="outline"
+                                    >
+                                      {getEmployeeDisplayName(emp.employeeId).split(' ')[0]}
+                                    </Badge>
+                                  ))}
+                                  {subtask.assignedEmployees.length > 2 && (
+                                    <Badge className="text-xs bg-gray-100 text-gray-800">
+                                      +{subtask.assignedEmployees.length - 2}
+                                    </Badge>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Managers */}
+                            {subtask.assignedManagers && subtask.assignedManagers.length > 0 && (
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-1 text-xs text-gray-600">
+                                  <Building className="w-3 h-3" />
+                                  <span>Managers ({subtask.assignedManagers.length})</span>
+                                </div>
+                                <div className="flex flex-wrap gap-1">
+                                  {subtask.assignedManagers.slice(0, 2).map((mgr, index) => (
+                                    <Badge 
+                                      key={mgr.managerId?._id || mgr.managerId || index}
+                                      className="text-xs bg-purple-100 text-purple-800 border-purple-200"
+                                      variant="outline"
+                                    >
+                                      {getManagerDisplayName(mgr.managerId).split(' ')[0]}
+                                    </Badge>
+                                  ))}
+                                  {subtask.assignedManagers.length > 2 && (
+                                    <Badge className="text-xs bg-gray-100 text-gray-800">
+                                      +{subtask.assignedManagers.length - 2}
+                                    </Badge>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+
+                            {totalAssignees === 0 && (
+                              <span className="text-xs text-gray-500 italic">
+                                No assignees
                               </span>
                             )}
-                            {subtask.assignedEmployees &&
-                              subtask.assignedEmployees.length > 3 && (
-                                <span className="text-xs text-gray-700">
-                                  +{subtask.assignedEmployees.length - 3} more
-                                </span>
-                              )}
                           </div>
                         </TableCell>
+
+                        <TableCell className="py-4">
+                          {leadsProgress.hasLeads ? (
+                            <div className="space-y-1">
+                              <div className="flex justify-between text-xs">
+                                <span className="text-gray-600">Leads:</span>
+                                <span className="font-medium">
+                                  {leadsProgress.completed}/{leadsProgress.total}
+                                </span>
+                              </div>
+                              <div className="w-full bg-gray-200 rounded-full h-1.5">
+                                <div 
+                                  className="bg-green-500 h-1.5 rounded-full" 
+                                  style={{ width: `${leadsProgress.percentage}%` }}
+                                ></div>
+                              </div>
+                              <div className="text-xs text-center text-gray-600">
+                                {leadsProgress.percentage}%
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-gray-500 italic">
+                              No lead target
+                            </span>
+                          )}
+                        </TableCell>
+
                         <TableCell className="py-4">
                           <Badge
                             className={`${getStatusVariant(
@@ -758,52 +1043,68 @@ export default function AllSubtasksPage() {
                             {subtask.status.replace("_", " ")}
                           </Badge>
                         </TableCell>
+
+                        <TableCell className="py-4">
+                          <Badge
+                            className={`${getPriorityVariant(
+                              subtask.priority
+                            )} border flex items-center gap-1 px-3 py-1.5 font-medium`}
+                          >
+                            {subtask.priority}
+                          </Badge>
+                        </TableCell>
+
+                        <TableCell className="py-4">
+                          <div className="space-y-1">
+                            <div className="text-xs text-gray-600 flex items-center">
+                              <Calendar className="w-3 h-3 inline mr-1 " />
+                              {formatDate(subtask.startDate)}
+                            </div>
+                            <div className="text-xs text-gray-600">
+                              {subtask.startTime} - {subtask.endTime}
+                            </div>
+                          </div>
+                        </TableCell>
                         
-                       
                         <TableCell className="py-4">
                           <div className="flex gap-2">
-
-                            <Link
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => openModal(subtask)}
+                              className="border-blue-200 text-blue-700 hover:bg-blue-50 hover:border-blue-300 transition-all duration-200"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </Button>
+                            
+                              <Link
                               href={`/teamlead/subtask-employee/view/${subtask._id}`}
                             >
                               <Button
-                                variant="outline"
+                                variant="ghost"
                                 size="sm"
-                                className="border-green-200 text-blue-700 hover:bg-green-50 hover:border-green-300 transition-all duration-200"
+                                className="border-purple-200 text-purple-700 hover:bg-purple-50 hover:border-purple-300 transition-all duration-200"
                               >
-                                <Eye className="w-4 h-4 mr-2" />
-                                View
+                                <ViewIcon className="w-4 h-4" />
+                                View Full
                               </Button>
                             </Link>
+
                             <Link
-                              href={`/teamlead/subtask-employee/${subtask._id}`}
+                              href={`/teamlead/subtask-employee/edit/${subtask._id}`}
                             >
                               <Button
-                                variant="outline"
+                                variant="ghost"
                                 size="sm"
                                 className="border-green-200 text-green-700 hover:bg-green-50 hover:border-green-300 transition-all duration-200"
                               >
-                                <Edit className="w-4 h-4 mr-2" />
-                                Edit
+                                <Edit className="w-4 h-4" />
                               </Button>
-                            </Link>
-                            
-                            <Link
-                              href={`/teamlead/subtasks/${subtask._id}`}
-                            >
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="border-green-200 text-blue-700 hover:bg-green-50 hover:border-green-300 transition-all duration-200"
-                              >
-                                <Eye className="w-4 h-4 mr-2" />
-                                View Employeetask
-                              </Button>
-                            </Link>
+                            </Link>   
                           </div>
                         </TableCell>
                       </TableRow>
-                    ))}
+                    )})}
                   </TableBody>
                 </Table>
               </div>

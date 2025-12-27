@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import Subtask from "@/models/Subtask";
 import FormSubmission from "@/models/FormSubmission";
 import Employee from "@/models/Employee";
+import Manager from "@/models/Manager";
 import { authOptions } from "@/lib/auth";
 import dbConnect from "@/lib/db";
 import { sendNotification } from "@/lib/sendNotification";
@@ -19,15 +20,20 @@ export async function GET(req) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const subtasks = await Subtask.find({teamLeadId: session.user.id})
+    const subtasks = await Subtask.find({ teamLeadId: session.user.id })
       .populate("submissionId", "title description")
       .populate({
         path: "assignedEmployees.employeeId",
+        select: "firstName lastName email",
+      })
+      .populate({
+        path: "assignedManagers.managerId",
         select: "firstName lastName email",
       });
 
     return NextResponse.json({ subtasks }, { status: 200 });
   } catch (error) {
+    console.error("GET Subtask Error:", error);
     return NextResponse.json(
       { error: "Failed to fetch subtasks" },
       { status: 500 }
@@ -50,18 +56,19 @@ export async function POST(request) {
       title,
       description,
       submissionId,
-      assignedEmployees,
+      assignedEmployees = [],
+      assignedManagers = [],
       startDate,
       endDate,
       startTime,
       endTime,
       priority,
-      leadsRequired, // <-- lead number aa raha hai idhar se
+      totalLeadsRequired,
       teamLeadId,
+      hasLeadsTarget = false,
     } = body;
 
-    console.log("Leads Required:", teamLeadId);
-    // submission optional
+    // Submission optional
     let submission = null;
     if (submissionId) {
       submission = await FormSubmission.findById(submissionId);
@@ -78,22 +85,70 @@ export async function POST(request) {
 
     const depId = teamLead.depId;
 
-    const employees = await Employee.find({
-      _id: { $in: assignedEmployees.map((emp) => emp.employeeId) },
-    });
+    // Validate employees if assigned
+    if (assignedEmployees.length > 0) {
+      const employees = await Employee.find({
+        _id: { $in: assignedEmployees.map((emp) => emp.employeeId) },
+      });
 
-    if (employees.length !== assignedEmployees.length) {
+      if (employees.length !== assignedEmployees.length) {
+        return NextResponse.json(
+          { error: "Some employees not found" },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Validate managers if assigned
+    if (assignedManagers.length > 0) {
+      const managers = await Manager.find({
+        _id: { $in: assignedManagers.map((mgr) => mgr.managerId) },
+      });
+
+      if (managers.length !== assignedManagers.length) {
+        return NextResponse.json(
+          { error: "Some managers not found" },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Ensure at least one assignee
+    if (assignedEmployees.length === 0 && assignedManagers.length === 0) {
       return NextResponse.json(
-        { error: "Some employees not found" },
+        { error: "Please assign at least one employee or manager" },
         { status: 400 }
       );
     }
 
-    // Lead name for emails/notifications
     const leadName = `${teamLead.firstName} ${teamLead.lastName}`;
+    const leadValue = totalLeadsRequired ? totalLeadsRequired.toString() : "1";
 
-    // FIX: lead number ko string form me save karna
-    const leadValue = leadsRequired ? leadsRequired.toString() : "1";
+    // Calculate leads distribution
+    const totalAssignees = assignedEmployees.length + assignedManagers.length;
+    const leadsPerAssignee = hasLeadsTarget && totalLeadsRequired && totalAssignees > 0 
+      ? Math.ceil(totalLeadsRequired / totalAssignees)
+      : 0;
+
+    // Prepare assigned employees data
+    const employeeAssignments = assignedEmployees.map((emp) => ({
+      employeeId: emp.employeeId,
+      email: emp.email,
+      name: emp.name || "",
+      status: "pending",
+      leadsCompleted: 0,
+      leadsAssigned: hasLeadsTarget ? leadsPerAssignee : 0,
+    }));
+
+    // Prepare assigned managers data
+    const managerAssignments = assignedManagers.map((mgr) => ({
+      managerId: mgr.managerId,
+      email: mgr.email,
+      name: mgr.name || "",
+      status: "pending",
+      leadsCompleted: 0,
+      leadsAssigned: hasLeadsTarget ? leadsPerAssignee : 0,
+    }));
 
     const subtask = new Subtask({
       title,
@@ -101,64 +156,101 @@ export async function POST(request) {
       submissionId: submission ? submission._id : null,
       teamLeadId: teamLead._id,
       depId,
-      assignedEmployees: assignedEmployees.map((emp) => ({
-        employeeId: emp.employeeId,
-        email: emp.email,
-        status: "pending",
-        leadsCompleted: 0,
-        leadsAssigned: emp.leadsAssigned || 0,
-      })),
+      assignedEmployees: employeeAssignments,
+      assignedManagers: managerAssignments,
       startDate,
       endDate,
       startTime,
       endTime,
       priority: priority || "medium",
-      lead: leadValue, // <-- FINAL FIX HERE
-      teamLeadName: leadName, // keep for frontend display
+      lead: leadValue,
+      totalLeadsRequired: hasLeadsTarget ? totalLeadsRequired : 0,
+      hasLeadsTarget,
+      teamLeadName: leadName,
     });
-    console.log("Created Subtask:", subtask);
+
     await subtask.save();
 
     const populatedSubtask = await Subtask.findById(subtask._id)
       .populate("submissionId", "title description")
-      .populate("assignedEmployees.employeeId", "firstName lastName email");
+      .populate("assignedEmployees.employeeId", "firstName lastName email")
+      .populate("assignedManagers.managerId", "firstName lastName email");
 
-    console.log(populatedSubtask)
-
-    // Notifications + Mails (parallel)
-    for (const emp of employees) {
-      sendNotification({
-        senderId: teamLead._id,
-        senderModel: "Employee",
-        senderName: leadName,
-        receiverId: emp._id,
-        receiverModel: "Employee",
-        type: "new_subtask",
-        title: "New Subtask Assigned",
-        message: `You have been assigned a new subtask: "${title}".`,
-        link: `/employee/subtasks/${subtask._id}`,
-        referenceId: subtask._id,
-        referenceModel: "Subtask",
+    // Send notifications and emails to assigned employees
+    if (assignedEmployees.length > 0) {
+      const employees = await Employee.find({
+        _id: { $in: assignedEmployees.map((emp) => emp.employeeId) },
       });
 
-      if (emp.email) {
-        const html = createdSubtaskMailTemplate(
-          emp.firstName,
-          title,
-          description,
-          leadName,
-          startDate,
-          endDate
-        );
-        sendMail(emp.email, "New Subtask Assigned", html);
+      for (const emp of employees) {
+        sendNotification({
+          senderId: teamLead._id,
+          senderModel: "TeamLead",
+          senderName: leadName,
+          receiverId: emp._id,
+          receiverModel: "Employee",
+          type: "new_subtask",
+          title: "New Subtask Assigned",
+          message: `You have been assigned a new subtask: "${title}".`,
+          link: `/employee/subtasks/${subtask._id}`,
+          referenceId: subtask._id,
+          referenceModel: "Subtask",
+        });
+
+        if (emp.email) {
+          const html = createdSubtaskMailTemplate(
+            emp.firstName,
+            title,
+            description,
+            leadName,
+            startDate,
+            endDate
+          );
+          sendMail(emp.email, "New Subtask Assigned", html);
+        }
+      }
+    }
+
+    // Send notifications and emails to assigned managers
+    if (assignedManagers.length > 0) {
+      const managers = await Manager.find({
+        _id: { $in: assignedManagers.map((mgr) => mgr.managerId) },
+      });
+
+      for (const mgr of managers) {
+        sendNotification({
+          senderId: teamLead._id,
+          senderModel: "TeamLead",
+          senderName: leadName,
+          receiverId: mgr._id,
+          receiverModel: "Manager",
+          type: "new_subtask",
+          title: "New Subtask Assigned",
+          message: `You have been assigned a new subtask: "${title}".`,
+          link: `/manager/subtasks/${subtask._id}`,
+          referenceId: subtask._id,
+          referenceModel: "Subtask",
+        });
+
+        if (mgr.email) {
+          const html = createdSubtaskMailTemplate(
+            mgr.firstName,
+            title,
+            description,
+            leadName,
+            startDate,
+            endDate
+          );
+          sendMail(mgr.email, "New Subtask Assigned", html);
+        }
       }
     }
 
     return NextResponse.json(populatedSubtask, { status: 201 });
   } catch (error) {
-    console.log("POST Subtask Error:", error);
+    console.error("POST Subtask Error:", error);
     return NextResponse.json(
-      { error: "Failed to create subtask" },
+      { error: error.message || "Failed to create subtask" },
       { status: 500 }
     );
   }

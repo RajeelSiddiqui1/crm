@@ -349,7 +349,7 @@ export default function ManagerEmployeeTaskPage() {
       <div className="max-w-7xl mx-auto">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
           <div className="flex items-center gap-4">
-            <Link href="/manager/dashboard">
+            <Link href="/manager/subtasks">
               <Button
                 variant="outline"
                 size="icon"
