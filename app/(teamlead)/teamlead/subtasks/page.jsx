@@ -924,23 +924,21 @@ export default function AllSubtasksPage() {
                               </AvatarFallback>
                             </Avatar>
                             <div>
-                              <div className="font-bold text-black text-lg group-hover:text-blue-700 transition-colors duration-200">
-                                {subtask.title}
-                                {subtask.hasLeadsTarget && (
-                                  <Badge className="ml-2 bg-green-100 text-green-800 text-xs">
-                                    <Target className="w-3 h-3 mr-1" />
-                                    Leads
-                                  </Badge>
-                                )}
-                              </div>
-                              <div className="text-sm text-gray-700 line-clamp-2">
-                                {subtask.description}
-                              </div>
-                              <div className="flex items-center gap-2 mt-1">
-                                <span className="text-xs text-gray-600">
-                                  Created by: {subtask.teamLeadName}
-                                </span>
-                              </div>
+                             <div className="font-bold text-black text-lg group-hover:text-blue-700 transition-colors duration-200 break-words">
+  {subtask.title.split(' ').map((word, idx) => (
+    <span key={idx} className="inline-block mr-1">
+      {word}
+    </span>
+  ))}
+  {subtask.hasLeadsTarget && (
+    <Badge className="ml-2 bg-green-100 text-green-800 text-xs">
+      <Target className="w-3 h-3 mr-1" />
+      Leads
+    </Badge>
+  )}
+</div>
+
+                            
                             </div>
                           </div>
                         </TableCell>
@@ -961,7 +959,7 @@ export default function AllSubtasksPage() {
                                       className="text-xs bg-blue-100 text-blue-800 border-blue-200"
                                       variant="outline"
                                     >
-                                      {getEmployeeDisplayName(emp.employeeId).split(' ')[0]}
+                                      {getEmployeeDisplayName(emp.employeeId)}
                                     </Badge>
                                   ))}
                                   {subtask.assignedEmployees.length > 2 && (
@@ -987,7 +985,7 @@ export default function AllSubtasksPage() {
                                       className="text-xs bg-purple-100 text-purple-800 border-purple-200"
                                       variant="outline"
                                     >
-                                      {getManagerDisplayName(mgr.managerId).split(' ')[0]}
+                                      {getManagerDisplayName(mgr.managerId)}
                                     </Badge>
                                   ))}
                                   {subtask.assignedManagers.length > 2 && (
