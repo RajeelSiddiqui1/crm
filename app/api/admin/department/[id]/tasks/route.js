@@ -19,73 +19,53 @@ export async function GET(req, { params }) {
 
     const depObjectId = new mongoose.Types.ObjectId(id);
 
-    // Parallel fetching
     const [adminTasks, subtasks, submissions] = await Promise.all([
-      // Admin Tasks
-      AdminTask.find({ departments: { $in: [depObjectId] } })
+      AdminTask.find({
+        departments: { $in: [depObjectId] },
+      })
         .populate({
-          path: "managers",
+          path: "managers.managerId",
           select: "firstName lastName email profilePic",
+          match: { _id: { $ne: null } }, // only valid ObjectIds
+        })
+        .populate({
+          path: "teamleads.teamleadId",
+          select: "firstName lastName email profilePic",
+          match: { _id: { $ne: null } },
+        })
+        .populate({
+          path: "employees.employeeId",
+          select: "firstName lastName email profilePic",
+          match: { _id: { $ne: null } },
         })
         .populate({
           path: "sharedBYManager",
           select: "firstName lastName email profilePic",
         })
-        .populate({
-          path: "submittedBy",
-          select: "firstName lastName email profilePic",
-        })
-        .sort({ createdAt: -1 })
         .lean(),
 
-      // Subtasks
       Subtask.find({ depId: depObjectId })
         .populate({
           path: "teamLeadId",
           select: "firstName lastName email profilePic",
+          match: { _id: { $ne: null } },
         })
         .populate({
           path: "assignedEmployees.employeeId",
           select: "firstName lastName email profilePic",
+          match: { _id: { $ne: null } },
         })
-        .sort({ createdAt: -1 })
         .lean(),
 
-      // Form Submissions
       FormSubmission.find({ depId: depObjectId })
-        .populate({
-          path: "formId",
-          select: "title description fields depId",
-          populate: {
-            path: "depId",
-            select: "name _id",
-          },
-        })
         .populate({
           path: "submittedBy",
           select: "firstName lastName email profilePic role",
         })
         .populate({
-          path: "multipleManagerShared",
-          select: "firstName lastName email profilePic",
-        })
-        .populate({
-          path: "sharedBy",
-          select: "firstName lastName email profilePic",
-        })
-        .populate({
-          path: "assignedTo",
-          select: "firstName lastName email profilePic",
-        })
-        .populate({
-          path: "multipleTeamLeadAssigned",
-          select: "firstName lastName email profilePic",
-        })
-        .populate({
           path: "assignedEmployees.employeeId",
           select: "firstName lastName email profilePic",
         })
-        .sort({ createdAt: -1 })
         .lean(),
     ]);
 
@@ -108,23 +88,34 @@ export async function GET(req, { params }) {
         adminStatus: submission.adminStatus || "pending",
         overallStatus: overallStatus,
         // Add status timestamps if available
-        managerUpdatedAt: submission.status === "approved" || submission.status === "rejected" ? submission.updatedAt : null,
-        teamLeadUpdatedAt: submission.status2 === "completed" || submission.status2 === "rejected" ? submission.updatedAt : null,
-        adminUpdatedAt: submission.adminStatus === "approved" || submission.adminStatus === "rejected" ? submission.updatedAt : null,
+        managerUpdatedAt:
+          submission.status === "approved" || submission.status === "rejected"
+            ? submission.updatedAt
+            : null,
+        teamLeadUpdatedAt:
+          submission.status2 === "completed" ||
+          submission.status2 === "rejected"
+            ? submission.updatedAt
+            : null,
+        adminUpdatedAt:
+          submission.adminStatus === "approved" ||
+          submission.adminStatus === "rejected"
+            ? submission.updatedAt
+            : null,
       };
 
       return {
         _id: submission._id,
         clinetName: submission.clinetName || "N/A",
-        
+
         // Separate status fields
         status: submission.status, // Manager status
         status2: submission.status2, // Team lead status
         adminStatus: submission.adminStatus, // Admin status
-        
+
         // Hierarchy object for convenience
         statusHierarchy,
-        
+
         form: submission.formId
           ? {
               _id: submission.formId._id,
@@ -189,7 +180,7 @@ export async function GET(req, { params }) {
         teamLeadFeedback: submission.teamLeadFeedback,
         managerComments: submission.managerComments,
         completedAt: submission.completedAt,
-        
+
         timestamps: {
           createdAt: submission.createdAt,
           updatedAt: submission.updatedAt,
@@ -214,9 +205,14 @@ export async function GET(req, { params }) {
     });
 
     const totalSubmissions = transformedSubmissions.length;
-    const completionRate = totalSubmissions > 0 
-      ? Math.round(((submissionStatuses.completed + submissionStatuses.approved) / totalSubmissions) * 100)
-      : 0;
+    const completionRate =
+      totalSubmissions > 0
+        ? Math.round(
+            ((submissionStatuses.completed + submissionStatuses.approved) /
+              totalSubmissions) *
+              100
+          )
+        : 0;
 
     return NextResponse.json(
       {
