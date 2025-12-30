@@ -41,7 +41,7 @@ export const sendEmployeeReplyMail = ({
           
           <p>Click the button below to view the full conversation:</p>
           <p style="text-align: center;">
-            <a href="${process.env.NEXTAUTH_URL}/teamlead/tasks/${taskId}" class="button">View Task Details</a>
+            <a href="https://www.mhcirclesolutions.com/teamlead/tasks/${taskId}" class="button">View Task Details</a>
           </p>
           
           <div style="background: #fef3c7; border: 1px solid #fbbf24; padding: 15px; border-radius: 5px; margin-top: 20px;">

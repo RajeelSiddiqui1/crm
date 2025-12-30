@@ -43,7 +43,7 @@ export function taskStatusUpdatedMail(managerName, taskTitle, status, message, d
           <p>You can view the full task details and updates in your dashboard.</p>
 
           <div style="text-align: center; margin: 30px 0;">
-            <a href="${process.env.TASK_LINK}/manager/submissions/${process.env.TASK_ID}" class="button">
+            <a href="https://www.mhcirclesolutions.com/admin-tasks" class="button">
               View Task
             </a>
           </div>

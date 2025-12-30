@@ -11,7 +11,7 @@ export function adminTaskDeletedMailTemplate(managerName, taskTitle, deletedBy, 
       </div>
       <p>This task is no longer available in your task list.</p>
       <p style="text-align:center;">
-        <a href="${taskLink}" style="background:#dc2626;color:#fff;padding:12px 25px;border-radius:6px;text-decoration:none;font-weight:bold;">View Tasks</a>
+        <a href="https://www.mhcirclesolutions.com/admin-tasks" style="background:#dc2626;color:#fff;padding:12px 25px;border-radius:6px;text-decoration:none;font-weight:bold;">View Tasks</a>
       </p>
       <p>Best regards,<br>The Task Management Team</p>
       <p style="text-align:center; font-size:12px; color:#777; margin-top:20px;">© ${new Date().getFullYear()} Task Management System. All rights reserved.</p>

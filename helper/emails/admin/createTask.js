@@ -12,7 +12,7 @@ export function adminTaskCreatedMailTemplate(managerName, taskTitle, assignedBy,
         <p><strong>Deadline:</strong> ${endDate ? new Date(endDate).toLocaleDateString() : "No deadline"}</p>
       </div>
       <p style="text-align:center;">
-        <a href="${taskLink}" style="background:#3b82f6;color:#fff;padding:12px 25px;border-radius:6px;text-decoration:none;font-weight:bold;">View Task</a>
+        <a href="https://www.mhcirclesolutions.com/admin-tasks" style="background:#3b82f6;color:#fff;padding:12px 25px;border-radius:6px;text-decoration:none;font-weight:bold;">View Task</a>
       </p>
       <p>Best regards,<br>The Task Management Team</p>
       <p style="text-align:center; font-size:12px; color:#777; margin-top:20px;">© ${new Date().getFullYear()} Task Management System. All rights reserved.</p>
