@@ -5,7 +5,7 @@ const formSubmissionSchema = new mongoose.Schema(
   {
     clinetName: {
       type: String,
-      required: false
+      required: false,
     },
     formId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -20,7 +20,7 @@ const formSubmissionSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Manager",
       required: true,
-    },   
+    },
     multipleManagerShared: [
       {
         type: mongoose.Schema.Types.ObjectId,
@@ -30,15 +30,15 @@ const formSubmissionSchema = new mongoose.Schema(
     ],
     sharedBy: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Manager"
+      ref: "Manager",
     },
     multipleTeamLeadAssigned: [
       {
         type: mongoose.Schema.Types.ObjectId,
         ref: "TeamLead",
-        default: [],
       },
     ],
+
     multipleTeamLeadShared: [
       {
         type: mongoose.Schema.Types.ObjectId,
@@ -48,12 +48,14 @@ const formSubmissionSchema = new mongoose.Schema(
     ],
     sharedByTeamlead: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "TeamLead"
-    },
-    assignedTo: [{
-      type: mongoose.Schema.Types.ObjectId,
       ref: "TeamLead",
-    }],
+    },
+    assignedTo: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "TeamLead",
+      },
+    ],
     claimedAt: {
       type: Date,
     },
@@ -97,7 +99,7 @@ const formSubmissionSchema = new mongoose.Schema(
           type: Date,
           default: Date.now,
         },
-      }
+      },
     ],
     teamLeadFeedbacks: [
       {
@@ -119,24 +121,24 @@ const formSubmissionSchema = new mongoose.Schema(
             repliedBy: {
               type: mongoose.Schema.Types.ObjectId,
               required: true,
-              refPath: 'teamLeadFeedbacks.replies.repliedByModel'
+              refPath: "teamLeadFeedbacks.replies.repliedByModel",
             },
             repliedByModel: {
               type: String,
               required: true,
-              enum: ['Employee', 'TeamLead']
+              enum: ["Employee", "TeamLead"],
             },
             reply: {
               type: String,
-              required: true
+              required: true,
             },
             repliedAt: {
               type: Date,
-              default: Date.now
-            }
-          }
-        ]
-      }
+              default: Date.now,
+            },
+          },
+        ],
+      },
     ],
     formData: {
       type: Map,
@@ -170,7 +172,7 @@ const formSubmissionSchema = new mongoose.Schema(
     },
     sharedTasksCount: {
       type: Number,
-      default: 0
+      default: 0,
     },
   },
   { timestamps: true }
