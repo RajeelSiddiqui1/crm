@@ -43,33 +43,19 @@ const adminTaskSchema = Schema(
     },
     managers: [
       {
-        managerId: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "Manager",
-          required: true,
-        },
-        status: {
-          type: String,
-          enum: ["pending", "in-progress", "completed", "overdue"],
-          default: "pending",
-        },
-        assignedAt: {
-          type: Date,
-          default: Date.now,
-        },
-        completedAt: {
-          type: Date,
-        },
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Manager",
       },
     ],
-
     submittedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Admin",
       required: false,
     },
-    departments: [
-      { type: mongoose.Schema.Types.ObjectId, ref: "Department", default: [] },
+    departments:[
+    {   type: mongoose.Schema.Types.ObjectId,
+      ref: "Admin",
+      default: []}
     ],
     isLate: {
       type: Boolean,
@@ -91,7 +77,7 @@ const adminTaskSchema = Schema(
     audioPublicId: {
       type: String,
       required: false,
-    },
+    }
   },
   {
     timestamps: true,

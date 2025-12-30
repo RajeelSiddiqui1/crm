@@ -153,6 +153,7 @@ import {
   LineChart,
   Code,
   ViewIcon,
+  User,
 } from "lucide-react";
 import axios from "axios";
 import { Toaster } from "@/components/ui/sonner";
@@ -161,6 +162,7 @@ import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
+import UserTaskStats from "@/components/admin/UserTaskStats";
 
 export default function DepartmentTasksPage() {
   const { data: session, status } = useSession();
@@ -203,6 +205,11 @@ export default function DepartmentTasksPage() {
   const [activeFilters, setActiveFilters] = useState([]);
   const [sortBy, setSortBy] = useState("createdAt");
   const [sortOrder, setSortOrder] = useState("desc");
+  const [data, setData] = useState({
+    managers: [],
+    teamLeads: [],
+    employees: [],
+  });
 
   useEffect(() => {
     if (status === "loading") return;
@@ -214,6 +221,7 @@ export default function DepartmentTasksPage() {
 
     fetchDepartmentData();
     fetchTasksData();
+    taskData();
   }, [session, status, router, departmentId]);
 
   useEffect(() => {
@@ -232,21 +240,97 @@ export default function DepartmentTasksPage() {
       if (response.data.success) {
         setDepartmentData(response.data.data);
       } else {
-        toast.error(response.data.message || "Failed to load department details");
+        toast.error(
+          response.data.message || "Failed to load department details"
+        );
       }
     } catch (error) {
       console.error("Error fetching department:", error);
       toast.error(
-        error.response?.data?.message ||
-        "Failed to load department details"
+        error.response?.data?.message || "Failed to load department details"
       );
     }
   };
 
+ const taskData = async () => {
+    try {
+      setLoading(true);
+      const res = await axios.get(
+        `/api/admin/department/${departmentId}/user-tasks`
+      );
+      if (res.data) {
+        setData(res.data);
+      } else {
+        toast.error("No data returned from API");
+      }
+    } catch (error) {
+      console.error("Error fetching tasks:", error);
+      toast.error("Failed to load department tasks");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+const renderStats = (user, stats, type) => {
+  // Define colors based on type
+  let gradientBg;
+  switch (type) {
+    case "manager":
+      gradientBg = "from-blue-400 to-cyan-400";
+      break;
+    case "teamLead":
+      gradientBg = "from-green-400 to-emerald-400";
+      break;
+    case "employee":
+      gradientBg = "from-purple-400 to-pink-400";
+      break;
+    default:
+      gradientBg = "from-gray-400 to-gray-500";
+  }
+
+  return (
+    <div
+      key={user._id}
+      className="bg-white p-5 rounded-2xl shadow-lg flex flex-col justify-between hover:shadow-xl transition-shadow duration-300"
+    >
+      {/* Header with gradient accent */}
+      <div className={`w-full h-2 rounded-t-lg mb-3 bg-gradient-to-r ${gradientBg}`}></div>
+
+      <div className="flex flex-col gap-2">
+        <h3 className="text-gray-800 font-semibold text-lg">
+          {user.firstName} {user.lastName}
+        </h3>
+        <p className="text-gray-500 text-sm">
+          Pending: <span className="font-medium text-orange-500">{stats.pending}</span> |{" "}
+          In Progress: <span className="font-medium text-blue-500">{stats.inProgress}</span> |{" "}
+          Completed: <span className="font-medium text-green-500">{stats.completed}</span>
+        </p>
+      </div>
+
+      {/* Footer badges (optional) */}
+      <div className="mt-3 flex gap-2">
+        {stats.pending > 0 && (
+          <span className="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-full">Pending</span>
+        )}
+        {stats.inProgress > 0 && (
+          <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">In Progress</span>
+        )}
+        {stats.completed > 0 && (
+          <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">Completed</span>
+        )}
+      </div>
+    </div>
+  );
+};
+
+
+
   const fetchTasksData = async () => {
     try {
       setFetching(true);
-      const response = await axios.get(`/api/admin/department/${departmentId}/tasks`);
+      const response = await axios.get(
+        `/api/admin/department/${departmentId}/tasks`
+      );
       if (response.data.success) {
         setTasksData(response.data);
         toast.success("Data refreshed successfully");
@@ -260,12 +344,12 @@ export default function DepartmentTasksPage() {
   };
 
   const getStatusVariant = (status, type = "default") => {
-    if (!status || typeof status !== 'string') {
-      return type === "badge" 
+    if (!status || typeof status !== "string") {
+      return type === "badge"
         ? "bg-gray-100 text-gray-800 border-gray-200 hover:bg-gray-200"
         : "text-gray-700";
     }
-    
+
     const statusLower = status.toLowerCase();
     switch (statusLower) {
       case "completed":
@@ -295,10 +379,10 @@ export default function DepartmentTasksPage() {
   };
 
   const getStatusIcon = (status, size = "w-4 h-4") => {
-    if (!status || typeof status !== 'string') {
+    if (!status || typeof status !== "string") {
       return <AlertCircle className={size} />;
     }
-    
+
     const statusLower = status.toLowerCase();
     switch (statusLower) {
       case "completed":
@@ -318,10 +402,10 @@ export default function DepartmentTasksPage() {
   };
 
   const getPriorityVariant = (priority) => {
-    if (!priority || typeof priority !== 'string') {
+    if (!priority || typeof priority !== "string") {
       return "bg-gray-100 text-gray-800 border border-gray-200";
     }
-    
+
     const priorityLower = priority.toLowerCase();
     switch (priorityLower) {
       case "high":
@@ -336,10 +420,10 @@ export default function DepartmentTasksPage() {
   };
 
   const getPriorityIcon = (priority) => {
-    if (!priority || typeof priority !== 'string') {
+    if (!priority || typeof priority !== "string") {
       return <Zap className="w-4 h-4 text-gray-500" />;
     }
-    
+
     const priorityLower = priority.toLowerCase();
     switch (priorityLower) {
       case "high":
@@ -354,7 +438,11 @@ export default function DepartmentTasksPage() {
   };
 
   const getInitials = (firstName = "", lastName = "") => {
-    return `${firstName?.charAt(0) || ''}${lastName?.charAt(0) || ''}`.toUpperCase() || "U";
+    return (
+      `${firstName?.charAt(0) || ""}${
+        lastName?.charAt(0) || ""
+      }`.toUpperCase() || "U"
+    );
   };
 
   const formatDate = (dateString) => {
@@ -421,7 +509,9 @@ export default function DepartmentTasksPage() {
   };
 
   const handleExport = () => {
-    toast.success(`Exporting ${selectedItems.length} items as ${exportFormat.toUpperCase()}`);
+    toast.success(
+      `Exporting ${selectedItems.length} items as ${exportFormat.toUpperCase()}`
+    );
     setShowExportDialog(false);
     setSelectedItems([]);
   };
@@ -429,15 +519,21 @@ export default function DepartmentTasksPage() {
   const handleStatusUpdate = async (submissionId, newStatus, type) => {
     try {
       setLoading(true);
-      const endpoint = type === 'manager' ? 'manager' : 
-                      type === 'teamlead' ? 'teamlead' : 
-                      'admin';
-      
-      const response = await axios.put(`/api/submissions/${submissionId}/status`, {
-        status: newStatus,
-        type: endpoint,
-        feedback: feedback || undefined,
-      });
+      const endpoint =
+        type === "manager"
+          ? "manager"
+          : type === "teamlead"
+          ? "teamlead"
+          : "admin";
+
+      const response = await axios.put(
+        `/api/submissions/${submissionId}/status`,
+        {
+          status: newStatus,
+          type: endpoint,
+          feedback: feedback || undefined,
+        }
+      );
 
       if (response.data.success) {
         toast.success(`Status updated to ${newStatus}`);
@@ -455,15 +551,18 @@ export default function DepartmentTasksPage() {
 
   const renderStatusBadge = (status, type = "default") => {
     const statusText = status || "Unknown";
-    const badgeText = String(statusText).replace('_', ' ').toLowerCase();
-    
+    const badgeText = String(statusText).replace("_", " ").toLowerCase();
+
     return (
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
-            <Badge 
-              variant="outline" 
-              className={`${getStatusVariant(status, "badge")} px-3 py-1.5 rounded-full gap-2 transition-all duration-200 hover:scale-105`}
+            <Badge
+              variant="outline"
+              className={`${getStatusVariant(
+                status,
+                "badge"
+              )} px-3 py-1.5 rounded-full gap-2 transition-all duration-200 hover:scale-105`}
             >
               {getStatusIcon(status)}
               <span className="font-medium capitalize text-sm tracking-wide">
@@ -472,9 +571,15 @@ export default function DepartmentTasksPage() {
             </Badge>
           </TooltipTrigger>
           <TooltipContent>
-            <p className="text-sm">{type === "manager" ? "Manager Status" : 
-                                 type === "teamlead" ? "Team Lead Status" : 
-                                 type === "admin" ? "Admin Status" : "Overall Status"}</p>
+            <p className="text-sm">
+              {type === "manager"
+                ? "Manager Status"
+                : type === "teamlead"
+                ? "Team Lead Status"
+                : type === "admin"
+                ? "Admin Status"
+                : "Overall Status"}
+            </p>
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
@@ -484,7 +589,11 @@ export default function DepartmentTasksPage() {
   const renderPriorityBadge = (priority) => {
     const priorityText = priority || "Unknown";
     return (
-      <Badge className={`${getPriorityVariant(priority)} px-3 py-1.5 rounded-full gap-2 transition-all duration-200 hover:scale-105`}>
+      <Badge
+        className={`${getPriorityVariant(
+          priority
+        )} px-3 py-1.5 rounded-full gap-2 transition-all duration-200 hover:scale-105`}
+      >
         {getPriorityIcon(priority)}
         <span className="font-medium text-sm uppercase tracking-wide">
           {String(priorityText)}
@@ -560,120 +669,136 @@ export default function DepartmentTasksPage() {
         <div className={`w-2 h-2 rounded-full ${getStatusColor(status)}`} />
         <span className="text-sm text-gray-600">{label}:</span>
         <span className="text-sm font-medium capitalize">
-          {String(status || "Not set").replace('_', ' ')}
+          {String(status || "Not set").replace("_", " ")}
         </span>
       </div>
     );
   };
 
   // Filter functions
-  const filteredAdminTasks = (tasksData.data?.adminTasks || []).filter((task) => {
-    const title = task?.title || "";
-    const clientName = task?.clientName || "";
-    const description = task?.description || "";
-    const status = task?.status || "";
-    const priority = task?.priority || "";
-    const createdAt = task?.createdAt || "";
-    
-    const matchesSearch =
-      title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      description.toLowerCase().includes(searchTerm.toLowerCase());
+  const filteredAdminTasks = (tasksData.data?.adminTasks || []).filter(
+    (task) => {
+      const title = task?.title || "";
+      const clientName = task?.clientName || "";
+      const description = task?.description || "";
+      const status = task?.status || "";
+      const priority = task?.priority || "";
+      const createdAt = task?.createdAt || "";
 
-    const matchesStatus =
-      statusFilter === "all" || status === statusFilter;
+      const matchesSearch =
+        title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        description.toLowerCase().includes(searchTerm.toLowerCase());
 
-    const matchesPriority =
-      priorityFilter === "all" || priority === priorityFilter;
+      const matchesStatus = statusFilter === "all" || status === statusFilter;
 
-    const matchesDate = () => {
-      if (dateFilter === "all") return true;
-      const taskDate = new Date(createdAt);
-      const now = new Date();
-      const diffDays = Math.floor((now - taskDate) / (1000 * 60 * 60 * 24));
-      
-      switch (dateFilter) {
-        case "today": return diffDays === 0;
-        case "week": return diffDays <= 7;
-        case "month": return diffDays <= 30;
-        default: return true;
-      }
-    };
+      const matchesPriority =
+        priorityFilter === "all" || priority === priorityFilter;
 
-    return matchesSearch && matchesStatus && matchesPriority && matchesDate();
-  });
+      const matchesDate = () => {
+        if (dateFilter === "all") return true;
+        const taskDate = new Date(createdAt);
+        const now = new Date();
+        const diffDays = Math.floor((now - taskDate) / (1000 * 60 * 60 * 24));
 
-  const filteredSubtasks = (tasksData.data?.subtasks || []).filter((subtask) => {
-    const title = subtask?.title || "";
-    const description = subtask?.description || "";
-    const status = subtask?.status || "";
-    const priority = subtask?.priority || "";
-    const createdAt = subtask?.createdAt || "";
-    
-    const matchesSearch =
-      title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      description.toLowerCase().includes(searchTerm.toLowerCase());
+        switch (dateFilter) {
+          case "today":
+            return diffDays === 0;
+          case "week":
+            return diffDays <= 7;
+          case "month":
+            return diffDays <= 30;
+          default:
+            return true;
+        }
+      };
 
-    const matchesStatus =
-      statusFilter === "all" || status === statusFilter;
+      return matchesSearch && matchesStatus && matchesPriority && matchesDate();
+    }
+  );
 
-    const matchesPriority =
-      priorityFilter === "all" || priority === priorityFilter;
+  const filteredSubtasks = (tasksData.data?.subtasks || []).filter(
+    (subtask) => {
+      const title = subtask?.title || "";
+      const description = subtask?.description || "";
+      const status = subtask?.status || "";
+      const priority = subtask?.priority || "";
+      const createdAt = subtask?.createdAt || "";
 
-    const matchesDate = () => {
-      if (dateFilter === "all") return true;
-      const taskDate = new Date(createdAt);
-      const now = new Date();
-      const diffDays = Math.floor((now - taskDate) / (1000 * 60 * 60 * 24));
-      
-      switch (dateFilter) {
-        case "today": return diffDays === 0;
-        case "week": return diffDays <= 7;
-        case "month": return diffDays <= 30;
-        default: return true;
-      }
-    };
+      const matchesSearch =
+        title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        description.toLowerCase().includes(searchTerm.toLowerCase());
 
-    return matchesSearch && matchesStatus && matchesPriority && matchesDate();
-  });
+      const matchesStatus = statusFilter === "all" || status === statusFilter;
 
-  const filteredSubmissions = (tasksData.data?.submissions || []).filter((submission) => {
-    const clientName = submission?.clinetName || "";
-    const formTitle = submission?.form?.title || "";
-    const overallStatus = submission?.statusHierarchy?.overallStatus || "";
-    const managerStatus = submission?.status || "";
-    const teamLeadStatus = submission?.status2 || "";
-    const adminStatus = submission?.adminStatus || "";
-    const createdAt = submission?.timestamps?.createdAt || "";
-    
-    const matchesSearch =
-      clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      formTitle.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      overallStatus.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesPriority =
+        priorityFilter === "all" || priority === priorityFilter;
 
-    const matchesStatus =
-      statusFilter === "all" || 
-      overallStatus === statusFilter ||
-      managerStatus === statusFilter ||
-      teamLeadStatus === statusFilter ||
-      adminStatus === statusFilter;
+      const matchesDate = () => {
+        if (dateFilter === "all") return true;
+        const taskDate = new Date(createdAt);
+        const now = new Date();
+        const diffDays = Math.floor((now - taskDate) / (1000 * 60 * 60 * 24));
 
-    const matchesDate = () => {
-      if (dateFilter === "all") return true;
-      const taskDate = new Date(createdAt);
-      const now = new Date();
-      const diffDays = Math.floor((now - taskDate) / (1000 * 60 * 60 * 24));
-      
-      switch (dateFilter) {
-        case "today": return diffDays === 0;
-        case "week": return diffDays <= 7;
-        case "month": return diffDays <= 30;
-        default: return true;
-      }
-    };
+        switch (dateFilter) {
+          case "today":
+            return diffDays === 0;
+          case "week":
+            return diffDays <= 7;
+          case "month":
+            return diffDays <= 30;
+          default:
+            return true;
+        }
+      };
 
-    return matchesSearch && matchesStatus && matchesDate();
-  });
+      return matchesSearch && matchesStatus && matchesPriority && matchesDate();
+    }
+  );
+
+  const filteredSubmissions = (tasksData.data?.submissions || []).filter(
+    (submission) => {
+      const clientName = submission?.clinetName || "";
+      const formTitle = submission?.form?.title || "";
+      const overallStatus = submission?.statusHierarchy?.overallStatus || "";
+      const managerStatus = submission?.status || "";
+      const teamLeadStatus = submission?.status2 || "";
+      const adminStatus = submission?.adminStatus || "";
+      const createdAt = submission?.timestamps?.createdAt || "";
+
+      const matchesSearch =
+        clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        formTitle.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        overallStatus.toLowerCase().includes(searchTerm.toLowerCase());
+
+      const matchesStatus =
+        statusFilter === "all" ||
+        overallStatus === statusFilter ||
+        managerStatus === statusFilter ||
+        teamLeadStatus === statusFilter ||
+        adminStatus === statusFilter;
+
+      const matchesDate = () => {
+        if (dateFilter === "all") return true;
+        const taskDate = new Date(createdAt);
+        const now = new Date();
+        const diffDays = Math.floor((now - taskDate) / (1000 * 60 * 60 * 24));
+
+        switch (dateFilter) {
+          case "today":
+            return diffDays === 0;
+          case "week":
+            return diffDays <= 7;
+          case "month":
+            return diffDays <= 30;
+          default:
+            return true;
+        }
+      };
+
+      return matchesSearch && matchesStatus && matchesDate();
+    }
+  );
 
   const clearAllFilters = () => {
     setSearchTerm("");
@@ -692,12 +817,18 @@ export default function DepartmentTasksPage() {
         <CardContent className="p-6">
           <div className="flex items-start justify-between mb-4">
             <div className="flex items-center gap-3">
-              <div className={`p-3 rounded-xl ${
-                isAdminTask ? "bg-blue-100" : 
-                isSubtask ? "bg-emerald-100" : 
-                "bg-purple-100"
-              }`}>
-                {isAdminTask && <FolderOpen className="w-5 h-5 text-blue-600" />}
+              <div
+                className={`p-3 rounded-xl ${
+                  isAdminTask
+                    ? "bg-blue-100"
+                    : isSubtask
+                    ? "bg-emerald-100"
+                    : "bg-purple-100"
+                }`}
+              >
+                {isAdminTask && (
+                  <FolderOpen className="w-5 h-5 text-blue-600" />
+                )}
                 {isSubtask && <FileText className="w-5 h-5 text-emerald-600" />}
                 {isSubmission && <Users className="w-5 h-5 text-purple-600" />}
               </div>
@@ -710,7 +841,6 @@ export default function DepartmentTasksPage() {
                 </p>
               </div>
             </div>
-          
           </div>
 
           <div className="space-y-4">
@@ -720,7 +850,9 @@ export default function DepartmentTasksPage() {
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
                     <Shield className="w-4 h-4 text-gray-400" />
-                    <span className="text-xs text-gray-500">Status Hierarchy</span>
+                    <span className="text-xs text-gray-500">
+                      Status Hierarchy
+                    </span>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {renderStatusBadge(task.status, "manager")}
@@ -744,24 +876,34 @@ export default function DepartmentTasksPage() {
                   <span className="text-xs text-gray-500">Assigned To</span>
                 </div>
                 <div className="flex -space-x-2">
-                  {isAdminTask && task.managers?.slice(0, 3).map((manager, idx) => (
-                    <Avatar key={idx} className="border-2 border-white h-8 w-8">
-                      <AvatarFallback className="text-xs bg-gradient-to-br from-blue-500 to-cyan-600 text-white">
-                        {getInitials(manager.firstName, manager.lastName)}
-                      </AvatarFallback>
-                    </Avatar>
-                  ))}
+                  {isAdminTask &&
+                    task.managers?.slice(0, 3).map((manager, idx) => (
+                      <Avatar
+                        key={idx}
+                        className="border-2 border-white h-8 w-8"
+                      >
+                        <AvatarFallback className="text-xs bg-gradient-to-br from-blue-500 to-cyan-600 text-white">
+                          {getInitials(manager.firstName, manager.lastName)}
+                        </AvatarFallback>
+                      </Avatar>
+                    ))}
                   {isSubtask && task.teamLeadId && (
                     <Avatar className="border-2 border-white h-8 w-8">
                       <AvatarFallback className="text-xs bg-gradient-to-br from-emerald-500 to-green-600 text-white">
-                        {getInitials(task.teamLeadId.firstName, task.teamLeadId.lastName)}
+                        {getInitials(
+                          task.teamLeadId.firstName,
+                          task.teamLeadId.lastName
+                        )}
                       </AvatarFallback>
                     </Avatar>
                   )}
                   {isSubmission && task.submittedBy && (
                     <Avatar className="border-2 border-white h-8 w-8">
                       <AvatarFallback className="text-xs bg-gradient-to-br from-purple-500 to-pink-600 text-white">
-                        {getInitials(task.submittedBy.firstName, task.submittedBy.lastName)}
+                        {getInitials(
+                          task.submittedBy.firstName,
+                          task.submittedBy.lastName
+                        )}
                       </AvatarFallback>
                     </Avatar>
                   )}
@@ -786,9 +928,13 @@ export default function DepartmentTasksPage() {
                     <Clock className="w-4 h-4" />
                     <span>Due Date</span>
                   </div>
-                  <span className={`font-medium ${
-                    new Date(task.endDate) < new Date() ? "text-rose-600" : "text-gray-900"
-                  }`}>
+                  <span
+                    className={`font-medium ${
+                      new Date(task.endDate) < new Date()
+                        ? "text-rose-600"
+                        : "text-gray-900"
+                    }`}
+                  >
                     {formatDate(task.endDate)}
                   </span>
                 </div>
@@ -818,11 +964,19 @@ export default function DepartmentTasksPage() {
       return (
         <div className="text-center py-12">
           <div className="mx-auto w-24 h-24 rounded-full bg-gray-100 flex items-center justify-center mb-6">
-            {type === "adminTask" && <FolderOpen className="w-12 h-12 text-gray-400" />}
-            {type === "subtask" && <FileText className="w-12 h-12 text-gray-400" />}
-            {type === "submission" && <Users className="w-12 h-12 text-gray-400" />}
+            {type === "adminTask" && (
+              <FolderOpen className="w-12 h-12 text-gray-400" />
+            )}
+            {type === "subtask" && (
+              <FileText className="w-12 h-12 text-gray-400" />
+            )}
+            {type === "submission" && (
+              <Users className="w-12 h-12 text-gray-400" />
+            )}
           </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">No items found</h3>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            No items found
+          </h3>
           <p className="text-gray-600">Try adjusting your search or filters</p>
         </div>
       );
@@ -846,13 +1000,13 @@ export default function DepartmentTasksPage() {
               <Skeleton className="h-4 w-96" />
             </div>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             {[1, 2, 3, 4].map((i) => (
               <Skeleton key={i} className="h-32 rounded-xl" />
             ))}
           </div>
-          
+
           <Skeleton className="h-96 w-full rounded-xl" />
         </div>
       </div>
@@ -884,7 +1038,7 @@ export default function DepartmentTasksPage() {
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
-            
+
             <div className="flex items-center gap-4">
               <div className="p-3 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl shadow-lg">
                 <Building2 className="w-7 h-7 text-white" />
@@ -894,21 +1048,23 @@ export default function DepartmentTasksPage() {
                   <h1 className="text-2xl md:text-3xl font-bold text-gray-900 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
                     {departmentData?.name || "Department"} Dashboard
                   </h1>
-                  <Badge variant="outline" className="bg-white border-blue-200 text-blue-700">
+                  <Badge
+                    variant="outline"
+                    className="bg-white border-blue-200 text-blue-700"
+                  >
                     <Activity className="w-3 h-3 mr-1" />
                     Active
                   </Badge>
                 </div>
                 <p className="text-gray-600 max-w-2xl">
-                  Monitor tasks, submissions, and performance analytics for {departmentData?.name || "the department"}
+                  Monitor tasks, submissions, and performance analytics for{" "}
+                  {departmentData?.name || "the department"}
                 </p>
               </div>
             </div>
           </div>
-          
-          <div className="flex flex-wrap gap-3">
-           
 
+          <div className="flex flex-wrap gap-3">
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -918,7 +1074,11 @@ export default function DepartmentTasksPage() {
                     className="border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 rounded-xl"
                     disabled={fetching}
                   >
-                    <RefreshCw className={`w-4 h-4 mr-2 ${fetching ? "animate-spin" : ""}`} />
+                    <RefreshCw
+                      className={`w-4 h-4 mr-2 ${
+                        fetching ? "animate-spin" : ""
+                      }`}
+                    />
                     {fetching ? "Refreshing..." : "Refresh"}
                   </Button>
                 </TooltipTrigger>
@@ -927,8 +1087,6 @@ export default function DepartmentTasksPage() {
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
-
-          
           </div>
         </div>
 
@@ -942,7 +1100,9 @@ export default function DepartmentTasksPage() {
                   <div className="text-3xl font-bold text-blue-600 mb-2">
                     {tasksData.counts?.adminTasks || 0}
                   </div>
-                  <div className="text-sm font-medium text-gray-900 mb-1">Admin Tasks</div>
+                  <div className="text-sm font-medium text-gray-900 mb-1">
+                    Admin Tasks
+                  </div>
                   <div className="text-xs text-blue-500 flex items-center gap-1">
                     <TrendingUp className="w-3 h-3" />
                     <span>Active monitoring</span>
@@ -956,11 +1116,23 @@ export default function DepartmentTasksPage() {
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-gray-600">Completion</span>
                   <span className="font-semibold text-gray-900">
-                    {Math.round((filteredAdminTasks.filter(t => t.status === 'completed').length / filteredAdminTasks.length) * 100) || 0}%
+                    {Math.round(
+                      (filteredAdminTasks.filter(
+                        (t) => t.status === "completed"
+                      ).length /
+                        filteredAdminTasks.length) *
+                        100
+                    ) || 0}
+                    %
                   </span>
                 </div>
-                <Progress 
-                  value={(filteredAdminTasks.filter(t => t.status === 'completed').length / filteredAdminTasks.length) * 100 || 0} 
+                <Progress
+                  value={
+                    (filteredAdminTasks.filter((t) => t.status === "completed")
+                      .length /
+                      filteredAdminTasks.length) *
+                      100 || 0
+                  }
                   className="h-2 mt-2"
                 />
               </div>
@@ -975,7 +1147,9 @@ export default function DepartmentTasksPage() {
                   <div className="text-3xl font-bold text-emerald-600 mb-2">
                     {tasksData.counts?.subtasks || 0}
                   </div>
-                  <div className="text-sm font-medium text-gray-900 mb-1">Subtasks</div>
+                  <div className="text-sm font-medium text-gray-900 mb-1">
+                    Subtasks
+                  </div>
                   <div className="text-xs text-emerald-500 flex items-center gap-1">
                     <Target className="w-3 h-3" />
                     <span>Team execution</span>
@@ -989,11 +1163,23 @@ export default function DepartmentTasksPage() {
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-gray-600">In Progress</span>
                   <span className="font-semibold text-gray-900">
-                    {Math.round((filteredSubtasks.filter(t => t.status === 'in_progress').length / filteredSubtasks.length) * 100) || 0}%
+                    {Math.round(
+                      (filteredSubtasks.filter(
+                        (t) => t.status === "in_progress"
+                      ).length /
+                        filteredSubtasks.length) *
+                        100
+                    ) || 0}
+                    %
                   </span>
                 </div>
-                <Progress 
-                  value={(filteredSubtasks.filter(t => t.status === 'in_progress').length / filteredSubtasks.length) * 100 || 0} 
+                <Progress
+                  value={
+                    (filteredSubtasks.filter((t) => t.status === "in_progress")
+                      .length /
+                      filteredSubtasks.length) *
+                      100 || 0
+                  }
                   className="h-2 mt-2"
                 />
               </div>
@@ -1008,10 +1194,14 @@ export default function DepartmentTasksPage() {
                   <div className="text-3xl font-bold text-purple-600 mb-2">
                     {tasksData.counts?.submissions || 0}
                   </div>
-                  <div className="text-sm font-medium text-gray-900 mb-1">Submissions</div>
+                  <div className="text-sm font-medium text-gray-900 mb-1">
+                    Submissions
+                  </div>
                   <div className="text-xs text-purple-500 flex items-center gap-1">
                     <ClipboardCheck className="w-3 h-3" />
-                    <span>{tasksData.stats?.completionRate || 0}% completion</span>
+                    <span>
+                      {tasksData.stats?.completionRate || 0}% completion
+                    </span>
                   </div>
                 </div>
                 <div className="p-4 bg-gradient-to-br from-purple-50 to-purple-100 rounded-2xl group-hover:scale-110 transition-transform duration-300">
@@ -1022,11 +1212,20 @@ export default function DepartmentTasksPage() {
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-gray-600">Approval Rate</span>
                   <span className="font-semibold text-gray-900">
-                    {Math.round((tasksData.stats?.submissionStatuses?.approved || 0) / (tasksData.counts?.submissions || 1) * 100)}%
+                    {Math.round(
+                      ((tasksData.stats?.submissionStatuses?.approved || 0) /
+                        (tasksData.counts?.submissions || 1)) *
+                        100
+                    )}
+                    %
                   </span>
                 </div>
-                <Progress 
-                  value={(tasksData.stats?.submissionStatuses?.approved || 0) / (tasksData.counts?.submissions || 1) * 100} 
+                <Progress
+                  value={
+                    ((tasksData.stats?.submissionStatuses?.approved || 0) /
+                      (tasksData.counts?.submissions || 1)) *
+                    100
+                  }
                   className="h-2 mt-2"
                 />
               </div>
@@ -1041,7 +1240,9 @@ export default function DepartmentTasksPage() {
                   <div className="text-3xl font-bold text-amber-600 mb-2">
                     {tasksData.stats?.submissionStatuses?.approved || 0}
                   </div>
-                  <div className="text-sm font-medium text-gray-900 mb-1">Approved</div>
+                  <div className="text-sm font-medium text-gray-900 mb-1">
+                    Approved
+                  </div>
                   <div className="text-xs text-amber-500 flex items-center gap-1">
                     <Award className="w-3 h-3" />
                     <span>Quality assurance</span>
@@ -1055,11 +1256,20 @@ export default function DepartmentTasksPage() {
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-gray-600">Rejection Rate</span>
                   <span className="font-semibold text-gray-900">
-                    {Math.round((tasksData.stats?.submissionStatuses?.rejected || 0) / (tasksData.counts?.submissions || 1) * 100)}%
+                    {Math.round(
+                      ((tasksData.stats?.submissionStatuses?.rejected || 0) /
+                        (tasksData.counts?.submissions || 1)) *
+                        100
+                    )}
+                    %
                   </span>
                 </div>
-                <Progress 
-                  value={(tasksData.stats?.submissionStatuses?.rejected || 0) / (tasksData.counts?.submissions || 1) * 100} 
+                <Progress
+                  value={
+                    ((tasksData.stats?.submissionStatuses?.rejected || 0) /
+                      (tasksData.counts?.submissions || 1)) *
+                    100
+                  }
                   className="h-2 mt-2 bg-rose-100 [&>div]:bg-rose-500"
                 />
               </div>
@@ -1079,10 +1289,11 @@ export default function DepartmentTasksPage() {
                   </h2>
                 </div>
                 <p className="text-gray-600 max-w-2xl">
-                  Monitor and manage all tasks, subtasks, and submissions with advanced filtering and search capabilities
+                  Monitor and manage all tasks, subtasks, and submissions with
+                  advanced filtering and search capabilities
                 </p>
               </div>
-              
+
               <div className="flex items-center gap-3">
                 <div className="flex gap-2">
                   <TooltipProvider className="text-gray-900">
@@ -1092,7 +1303,7 @@ export default function DepartmentTasksPage() {
                           variant={viewMode === "table" ? "default" : "outline"}
                           size="sm"
                           onClick={() => setViewMode("table")}
-                           className="border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 rounded-xl"
+                          className="border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 rounded-xl"
                         >
                           <List className="w-4 h-4" />
                         </Button>
@@ -1102,7 +1313,7 @@ export default function DepartmentTasksPage() {
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
-                  
+
                   <TooltipProvider className="text-gray-900">
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -1110,7 +1321,7 @@ export default function DepartmentTasksPage() {
                           variant={viewMode === "grid" ? "default" : "outline"}
                           size="sm"
                           onClick={() => setViewMode("grid")}
-                           className="border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 rounded-xl"
+                          className="border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 rounded-xl"
                         >
                           <Grid className="w-4 h-4" />
                         </Button>
@@ -1121,13 +1332,11 @@ export default function DepartmentTasksPage() {
                     </Tooltip>
                   </TooltipProvider>
                 </div>
-                
+
                 <Separator orientation="vertical" className="h-8" />
-                
-                
               </div>
             </div>
-            
+
             {/* Search and Filters Row */}
             <div className="mt-6  gap-4">
               <div className="relative">
@@ -1139,7 +1348,7 @@ export default function DepartmentTasksPage() {
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
-              
+
               {/* <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="border-gray-300 rounded-xl bg-white focus:ring-2 focus:ring-blue-500/20">
                   <div className="flex items-center gap-2">
@@ -1187,13 +1396,19 @@ export default function DepartmentTasksPage() {
                 </SelectContent>
               </Select> */}
             </div>
-            
+
             {/* Active Filters */}
             {activeFilters.length > 0 && (
               <div className="mt-4 flex flex-wrap items-center gap-3">
-                <div className="text-sm text-gray-500 font-medium">Active Filters:</div>
+                <div className="text-sm text-gray-500 font-medium">
+                  Active Filters:
+                </div>
                 {activeFilters.map((filter, idx) => (
-                  <Badge key={idx} variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                  <Badge
+                    key={idx}
+                    variant="outline"
+                    className="bg-blue-50 text-blue-700 border-blue-200"
+                  >
                     {filter}
                     <Button
                       variant="ghost"
@@ -1201,7 +1416,8 @@ export default function DepartmentTasksPage() {
                       className="h-4 w-4 p-0 ml-2 hover:bg-blue-100"
                       onClick={() => {
                         if (filter.includes("Status:")) setStatusFilter("all");
-                        else if (filter.includes("Priority:")) setPriorityFilter("all");
+                        else if (filter.includes("Priority:"))
+                          setPriorityFilter("all");
                         else if (filter.includes("Date:")) setDateFilter("all");
                         else if (filter.includes("Search:")) setSearchTerm("");
                       }}
@@ -1230,8 +1446,8 @@ export default function DepartmentTasksPage() {
             <CardContent className="p-0">
               <div className="border-b border-gray-200 px-6 py-4">
                 <TabsList className="grid grid-cols-3 bg-gray-100 p-1 rounded-xl">
-                  <TabsTrigger 
-                    value="adminTasks" 
+                  <TabsTrigger
+                    value="adminTasks"
                     className="data-[state=active]:bg-white data-[state=active]:text-blue-600 data-[state=active]:shadow-lg rounded-lg px-6 py-3 transition-all duration-200"
                   >
                     <div className="flex items-center gap-2">
@@ -1242,8 +1458,8 @@ export default function DepartmentTasksPage() {
                       </Badge>
                     </div>
                   </TabsTrigger>
-                  <TabsTrigger 
-                    value="subtasks" 
+                  <TabsTrigger
+                    value="subtasks"
                     className="data-[state=active]:bg-white data-[state=active]:text-emerald-600 data-[state=active]:shadow-lg rounded-lg px-6 py-3 transition-all duration-200"
                   >
                     <div className="flex items-center gap-2">
@@ -1254,8 +1470,8 @@ export default function DepartmentTasksPage() {
                       </Badge>
                     </div>
                   </TabsTrigger>
-                  <TabsTrigger 
-                    value="submissions" 
+                  <TabsTrigger
+                    value="submissions"
                     className="data-[state=active]:bg-white data-[state=active]:text-purple-600 data-[state=active]:shadow-lg rounded-lg px-6 py-3 transition-all duration-200"
                   >
                     <div className="flex items-center gap-2">
@@ -1338,18 +1554,33 @@ export default function DepartmentTasksPage() {
                                 Task Details
                               </div>
                             </TableHead>
-                            <TableHead className="font-bold text-blue-900">Client</TableHead>
-                            <TableHead className="font-bold text-blue-900">Managers</TableHead>
-                            <TableHead className="font-bold text-blue-900">Priority</TableHead>
-                            <TableHead className="font-bold text-blue-900">Status</TableHead>
-                            <TableHead className="font-bold text-blue-900">Timeline</TableHead>
-                            <TableHead className="font-bold text-blue-900">Actions</TableHead>
+                            <TableHead className="font-bold text-blue-900">
+                              Client
+                            </TableHead>
+                            <TableHead className="font-bold text-blue-900">
+                              Managers
+                            </TableHead>
+                            <TableHead className="font-bold text-blue-900">
+                              Priority
+                            </TableHead>
+                            <TableHead className="font-bold text-blue-900">
+                              Status
+                            </TableHead>
+                            <TableHead className="font-bold text-blue-900">
+                              Timeline
+                            </TableHead>
+                            <TableHead className="font-bold text-blue-900">
+                              Actions
+                            </TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {filteredAdminTasks.length === 0 ? (
                             <TableRow>
-                              <TableCell colSpan={7} className="text-center py-12">
+                              <TableCell
+                                colSpan={7}
+                                className="text-center py-12"
+                              >
                                 <div className="flex flex-col items-center gap-4 text-gray-500">
                                   <div className="p-4 bg-blue-50 rounded-full">
                                     <FolderOpen className="w-12 h-12 text-blue-400" />
@@ -1372,7 +1603,10 @@ export default function DepartmentTasksPage() {
                             </TableRow>
                           ) : (
                             filteredAdminTasks.map((task) => (
-                              <TableRow key={task._id} className="hover:bg-blue-50/50 transition-colors group">
+                              <TableRow
+                                key={task._id}
+                                className="hover:bg-blue-50/50 transition-colors group"
+                              >
                                 <TableCell>
                                   <div className="flex items-center gap-3">
                                     <div className="flex-shrink-0">
@@ -1393,29 +1627,45 @@ export default function DepartmentTasksPage() {
                                   </div>
                                 </TableCell>
                                 <TableCell>
-                                  <div className="font-medium text-gray-900">{task.clientName || "N/A"}</div>
+                                  <div className="font-medium text-gray-900">
+                                    {task.clientName || "N/A"}
+                                  </div>
                                 </TableCell>
                                 <TableCell>
                                   <div className="space-y-2">
-                                    {task.managers?.slice(0, 2).map((manager, idx) => (
-                                      <div key={idx}>
-                                        {renderUserAvatar(manager)}
-                                      </div>
-                                    ))}
+                                    {task.managers
+                                      ?.slice(0, 2)
+                                      .map((manager, idx) => (
+                                        <div key={idx}>
+                                          {renderUserAvatar(manager)}
+                                        </div>
+                                      ))}
                                     {task.managers?.length > 2 && (
-                                      <Badge variant="outline" className="text-xs bg-gray-50">
+                                      <Badge
+                                        variant="outline"
+                                        className="text-xs bg-gray-50"
+                                      >
                                         +{task.managers.length - 2} more
                                       </Badge>
                                     )}
                                   </div>
                                 </TableCell>
-                                <TableCell>{renderPriorityBadge(task.priority)}</TableCell>
-                                <TableCell>{renderStatusBadge(task.status)}</TableCell>
+                                <TableCell>
+                                  {renderPriorityBadge(task.priority)}
+                                </TableCell>
+                                <TableCell>
+                                  {renderStatusBadge(task.status)}
+                                </TableCell>
                                 <TableCell>
                                   <div className="text-sm space-y-1">
                                     <div className="flex items-center gap-2 text-gray-600">
                                       <Calendar className="w-3 h-3" />
-                                      <span>Due: {task.endDate ? formatDate(task.endDate) : "Not set"}</span>
+                                      <span>
+                                        Due:{" "}
+                                        {task.endDate
+                                          ? formatDate(task.endDate)
+                                          : "Not set"}
+                                      </span>
                                     </div>
                                     <div className="text-xs text-gray-500">
                                       Created: {getTimeAgo(task.createdAt)}
@@ -1430,7 +1680,12 @@ export default function DepartmentTasksPage() {
                                           <Button
                                             size="sm"
                                             variant="ghost"
-                                            onClick={() => handleViewDetails('adminTask', task)}
+                                            onClick={() =>
+                                              handleViewDetails(
+                                                "adminTask",
+                                                task
+                                              )
+                                            }
                                             className="text-gray-700 hover:text-blue-600 hover:bg-blue-50"
                                           >
                                             <Eye className="w-4 h-4" />
@@ -1499,18 +1754,33 @@ export default function DepartmentTasksPage() {
                                 Task Details
                               </div>
                             </TableHead>
-                            <TableHead className="font-bold text-emerald-900">Team Lead</TableHead>
-                            <TableHead className="font-bold text-emerald-900">Assigned Employees</TableHead>
-                            <TableHead className="font-bold text-emerald-900">Priority</TableHead>
-                            <TableHead className="font-bold text-emerald-900">Status</TableHead>
-                            <TableHead className="font-bold text-emerald-900">Timeline</TableHead>
-                            <TableHead className="font-bold text-emerald-900">Actions</TableHead>
+                            <TableHead className="font-bold text-emerald-900">
+                              Team Lead
+                            </TableHead>
+                            <TableHead className="font-bold text-emerald-900">
+                              Assigned Employees
+                            </TableHead>
+                            <TableHead className="font-bold text-emerald-900">
+                              Priority
+                            </TableHead>
+                            <TableHead className="font-bold text-emerald-900">
+                              Status
+                            </TableHead>
+                            <TableHead className="font-bold text-emerald-900">
+                              Timeline
+                            </TableHead>
+                            <TableHead className="font-bold text-emerald-900">
+                              Actions
+                            </TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {filteredSubtasks.length === 0 ? (
                             <TableRow>
-                              <TableCell colSpan={7} className="text-center py-12">
+                              <TableCell
+                                colSpan={7}
+                                className="text-center py-12"
+                              >
                                 <div className="flex flex-col items-center gap-4 text-gray-500">
                                   <div className="p-4 bg-emerald-50 rounded-full">
                                     <FileText className="w-12 h-12 text-emerald-400" />
@@ -1533,7 +1803,10 @@ export default function DepartmentTasksPage() {
                             </TableRow>
                           ) : (
                             filteredSubtasks.map((subtask) => (
-                              <TableRow key={subtask._id} className="hover:bg-emerald-50/50 transition-colors group">
+                              <TableRow
+                                key={subtask._id}
+                                className="hover:bg-emerald-50/50 transition-colors group"
+                              >
                                 <TableCell>
                                   <div className="flex items-center gap-3">
                                     <div className="flex-shrink-0">
@@ -1554,7 +1827,9 @@ export default function DepartmentTasksPage() {
                                   </div>
                                 </TableCell>
                                 <TableCell>
-                                  {subtask.teamLeadId ? renderUserAvatar(subtask.teamLeadId) : (
+                                  {subtask.teamLeadId ? (
+                                    renderUserAvatar(subtask.teamLeadId)
+                                  ) : (
                                     <div className="text-gray-400 text-sm">
                                       Not assigned
                                     </div>
@@ -1562,29 +1837,46 @@ export default function DepartmentTasksPage() {
                                 </TableCell>
                                 <TableCell>
                                   <div className="space-y-2">
-                                    {subtask.assignedEmployees?.slice(0, 2).map((emp, idx) => (
-                                      <div key={idx}>
-                                        {emp.employeeId ? renderUserAvatar(emp.employeeId) : (
-                                          <div className="text-gray-400 text-sm">
-                                            Not assigned
-                                          </div>
-                                        )}
-                                      </div>
-                                    ))}
+                                    {subtask.assignedEmployees
+                                      ?.slice(0, 2)
+                                      .map((emp, idx) => (
+                                        <div key={idx}>
+                                          {emp.employeeId ? (
+                                            renderUserAvatar(emp.employeeId)
+                                          ) : (
+                                            <div className="text-gray-400 text-sm">
+                                              Not assigned
+                                            </div>
+                                          )}
+                                        </div>
+                                      ))}
                                     {subtask.assignedEmployees?.length > 2 && (
-                                      <Badge variant="outline" className="text-xs bg-gray-50">
-                                        +{subtask.assignedEmployees.length - 2} more
+                                      <Badge
+                                        variant="outline"
+                                        className="text-xs bg-gray-50"
+                                      >
+                                        +{subtask.assignedEmployees.length - 2}{" "}
+                                        more
                                       </Badge>
                                     )}
                                   </div>
                                 </TableCell>
-                                <TableCell>{renderPriorityBadge(subtask.priority)}</TableCell>
-                                <TableCell>{renderStatusBadge(subtask.status)}</TableCell>
+                                <TableCell>
+                                  {renderPriorityBadge(subtask.priority)}
+                                </TableCell>
+                                <TableCell>
+                                  {renderStatusBadge(subtask.status)}
+                                </TableCell>
                                 <TableCell>
                                   <div className="text-sm space-y-1">
                                     <div className="flex items-center gap-2 text-gray-600">
                                       <Calendar className="w-3 h-3" />
-                                      <span>Due: {subtask.endDate ? formatDate(subtask.endDate) : "Not set"}</span>
+                                      <span>
+                                        Due:{" "}
+                                        {subtask.endDate
+                                          ? formatDate(subtask.endDate)
+                                          : "Not set"}
+                                      </span>
                                     </div>
                                     <div className="text-xs text-gray-500">
                                       Created: {getTimeAgo(subtask.createdAt)}
@@ -1599,7 +1891,12 @@ export default function DepartmentTasksPage() {
                                           <Button
                                             size="sm"
                                             variant="ghost"
-                                            onClick={() => handleViewDetails('subtask', subtask)}
+                                            onClick={() =>
+                                              handleViewDetails(
+                                                "subtask",
+                                                subtask
+                                              )
+                                            }
                                             className="text-gray-700 hover:text-emerald-600 hover:bg-emerald-50"
                                           >
                                             <Eye className="w-4 h-4" />
@@ -1652,19 +1949,36 @@ export default function DepartmentTasksPage() {
                                 Submission Details
                               </div>
                             </TableHead>
-                            <TableHead className="font-bold text-purple-900">Submitted By</TableHead>
-                            <TableHead className="font-bold text-purple-900">Manager Status</TableHead>
-                            <TableHead className="font-bold text-purple-900">Team Lead Status</TableHead>
-                            <TableHead className="font-bold text-purple-900">Admin Status</TableHead>
-                            <TableHead className="font-bold text-purple-900">Overall Status</TableHead>
-                            <TableHead className="font-bold text-purple-900">Timeline</TableHead>
-                            <TableHead className="font-bold text-purple-900">Actions</TableHead>
+                            <TableHead className="font-bold text-purple-900">
+                              Submitted By
+                            </TableHead>
+                            <TableHead className="font-bold text-purple-900">
+                              Manager Status
+                            </TableHead>
+                            <TableHead className="font-bold text-purple-900">
+                              Team Lead Status
+                            </TableHead>
+                            <TableHead className="font-bold text-purple-900">
+                              Admin Status
+                            </TableHead>
+                            <TableHead className="font-bold text-purple-900">
+                              Overall Status
+                            </TableHead>
+                            <TableHead className="font-bold text-purple-900">
+                              Timeline
+                            </TableHead>
+                            <TableHead className="font-bold text-purple-900">
+                              Actions
+                            </TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {filteredSubmissions.length === 0 ? (
                             <TableRow>
-                              <TableCell colSpan={8} className="text-center py-12">
+                              <TableCell
+                                colSpan={8}
+                                className="text-center py-12"
+                              >
                                 <div className="flex flex-col items-center gap-4 text-gray-500">
                                   <div className="p-4 bg-purple-50 rounded-full">
                                     <Users className="w-12 h-12 text-purple-400" />
@@ -1687,7 +2001,10 @@ export default function DepartmentTasksPage() {
                             </TableRow>
                           ) : (
                             filteredSubmissions.map((submission) => (
-                              <TableRow key={submission._id} className="hover:bg-purple-50/50 transition-colors group">
+                              <TableRow
+                                key={submission._id}
+                                className="hover:bg-purple-50/50 transition-colors group"
+                              >
                                 <TableCell>
                                   <div className="flex items-center gap-3">
                                     <div className="flex-shrink-0">
@@ -1708,29 +2025,51 @@ export default function DepartmentTasksPage() {
                                   </div>
                                 </TableCell>
                                 <TableCell>
-                                  {submission.submittedBy ? renderUserAvatar(submission.submittedBy) : (
-                                    <div className="text-gray-400 text-sm">Unknown</div>
+                                  {submission.submittedBy ? (
+                                    renderUserAvatar(submission.submittedBy)
+                                  ) : (
+                                    <div className="text-gray-400 text-sm">
+                                      Unknown
+                                    </div>
                                   )}
                                 </TableCell>
                                 <TableCell>
-                                  {renderStatusBadge(submission.status, "manager")}
+                                  {renderStatusBadge(
+                                    submission.status,
+                                    "manager"
+                                  )}
                                 </TableCell>
                                 <TableCell>
-                                  {renderStatusBadge(submission.status2, "teamlead")}
+                                  {renderStatusBadge(
+                                    submission.status2,
+                                    "teamlead"
+                                  )}
                                 </TableCell>
                                 <TableCell>
-                                  {renderStatusBadge(submission.adminStatus, "admin")}
+                                  {renderStatusBadge(
+                                    submission.adminStatus,
+                                    "admin"
+                                  )}
                                 </TableCell>
                                 <TableCell>
-                                  {renderStatusBadge(submission.statusHierarchy?.overallStatus, "overall")}
+                                  {renderStatusBadge(
+                                    submission.statusHierarchy?.overallStatus,
+                                    "overall"
+                                  )}
                                 </TableCell>
                                 <TableCell>
                                   <div className="text-sm space-y-1">
                                     <div className="text-gray-600">
-                                      Created: {getTimeAgo(submission?.timestamps?.createdAt)}
+                                      Created:{" "}
+                                      {getTimeAgo(
+                                        submission?.timestamps?.createdAt
+                                      )}
                                     </div>
                                     <div className="text-xs text-gray-500">
-                                      Updated: {getTimeAgo(submission?.timestamps?.updatedAt)}
+                                      Updated:{" "}
+                                      {getTimeAgo(
+                                        submission?.timestamps?.updatedAt
+                                      )}
                                     </div>
                                   </div>
                                 </TableCell>
@@ -1742,7 +2081,12 @@ export default function DepartmentTasksPage() {
                                           <Button
                                             size="sm"
                                             variant="ghost"
-                                            onClick={() => handleViewDetails('submission', submission)}
+                                            onClick={() =>
+                                              handleViewDetails(
+                                                "submission",
+                                                submission
+                                              )
+                                            }
                                             className="text-gray-700 hover:text-purple-600 hover:bg-purple-50"
                                           >
                                             <Eye className="w-4 h-4" />
@@ -1827,19 +2171,25 @@ export default function DepartmentTasksPage() {
                   Submission Status Distribution
                 </h3>
                 <div className="space-y-4">
-                  {Object.entries(tasksData.stats?.submissionStatuses || {}).map(([status, count]) => {
-                    const percentage = tasksData.counts?.submissions 
-                      ? Math.round((count / tasksData.counts.submissions) * 100) 
+                  {Object.entries(
+                    tasksData.stats?.submissionStatuses || {}
+                  ).map(([status, count]) => {
+                    const percentage = tasksData.counts?.submissions
+                      ? Math.round((count / tasksData.counts.submissions) * 100)
                       : 0;
-                    
+
                     return (
                       <div key={status} className="space-y-2">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
-                            <div className={`w-3 h-3 rounded-full ${getStatusVariant(status).split(' ')[0]}`} />
+                            <div
+                              className={`w-3 h-3 rounded-full ${
+                                getStatusVariant(status).split(" ")[0]
+                              }`}
+                            />
                             <div>
                               <span className="text-sm font-medium capitalize text-gray-900">
-                                {status.replace('_', ' ')}
+                                {status.replace("_", " ")}
                               </span>
                               <div className="text-xs text-gray-500">
                                 {count} submissions
@@ -1850,10 +2200,7 @@ export default function DepartmentTasksPage() {
                             {percentage}%
                           </div>
                         </div>
-                        <Progress 
-                          value={percentage} 
-                          className="h-2"
-                        />
+                        <Progress value={percentage} className="h-2" />
                       </div>
                     );
                   })}
@@ -1874,7 +2221,9 @@ export default function DepartmentTasksPage() {
                           <div className="text-2xl font-bold text-blue-600">
                             {tasksData.stats?.completionRate || 0}%
                           </div>
-                          <div className="text-sm text-gray-600">Completion Rate</div>
+                          <div className="text-sm text-gray-600">
+                            Completion Rate
+                          </div>
                         </div>
                         <div className="p-2 bg-blue-50 rounded-lg">
                           <Target className="w-5 h-5 text-blue-600" />
@@ -1887,9 +2236,17 @@ export default function DepartmentTasksPage() {
                       <div className="flex items-center justify-between">
                         <div>
                           <div className="text-2xl font-bold text-emerald-600">
-                            {Math.round((tasksData.stats?.submissionStatuses?.approved || 0) / (tasksData.counts?.submissions || 1) * 100)}%
+                            {Math.round(
+                              ((tasksData.stats?.submissionStatuses?.approved ||
+                                0) /
+                                (tasksData.counts?.submissions || 1)) *
+                                100
+                            )}
+                            %
                           </div>
-                          <div className="text-sm text-gray-600">Approval Rate</div>
+                          <div className="text-sm text-gray-600">
+                            Approval Rate
+                          </div>
                         </div>
                         <div className="p-2 bg-emerald-50 rounded-lg">
                           <CheckCircle className="w-5 h-5 text-emerald-600" />
@@ -1902,9 +2259,18 @@ export default function DepartmentTasksPage() {
                       <div className="flex items-center justify-between">
                         <div>
                           <div className="text-2xl font-bold text-amber-600">
-                            {Math.round((filteredAdminTasks.filter(t => t.status === 'in_progress').length / filteredAdminTasks.length) * 100) || 0}%
+                            {Math.round(
+                              (filteredAdminTasks.filter(
+                                (t) => t.status === "in_progress"
+                              ).length /
+                                filteredAdminTasks.length) *
+                                100
+                            ) || 0}
+                            %
                           </div>
-                          <div className="text-sm text-gray-600">In Progress Tasks</div>
+                          <div className="text-sm text-gray-600">
+                            In Progress Tasks
+                          </div>
                         </div>
                         <div className="p-2 bg-amber-50 rounded-lg">
                           <Activity className="w-5 h-5 text-amber-600" />
@@ -1919,7 +2285,9 @@ export default function DepartmentTasksPage() {
                           <div className="text-2xl font-bold text-purple-600">
                             {filteredSubmissions.length}
                           </div>
-                          <div className="text-sm text-gray-600">Active Submissions</div>
+                          <div className="text-sm text-gray-600">
+                            Active Submissions
+                          </div>
                         </div>
                         <div className="p-2 bg-purple-50 rounded-lg">
                           <Users className="w-5 h-5 text-purple-600" />
@@ -1942,17 +2310,17 @@ export default function DepartmentTasksPage() {
               <DialogHeader className="pb-6 border-b border-gray-200">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-4">
-                    {selectedTask.type === 'adminTask' && (
+                    {selectedTask.type === "adminTask" && (
                       <div className="p-3 bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl">
                         <FolderOpen className="w-6 h-6 text-blue-600" />
                       </div>
                     )}
-                    {selectedTask.type === 'subtask' && (
+                    {selectedTask.type === "subtask" && (
                       <div className="p-3 bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-xl">
                         <FileText className="w-6 h-6 text-emerald-600" />
                       </div>
                     )}
-                    {selectedTask.type === 'submission' && (
+                    {selectedTask.type === "submission" && (
                       <div className="p-3 bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl">
                         <Users className="w-6 h-6 text-purple-600" />
                       </div>
@@ -1962,16 +2330,17 @@ export default function DepartmentTasksPage() {
                         {selectedTask.title || selectedTask.clinetName}
                       </DialogTitle>
                       <DialogDescription className="text-gray-600 mt-1">
-                        {selectedTask.type === 'submission'
+                        {selectedTask.type === "submission"
                           ? selectedTask.form?.title
-                          : selectedTask.description || `Details for ${selectedTask.type}`}
+                          : selectedTask.description ||
+                            `Details for ${selectedTask.type}`}
                       </DialogDescription>
                     </div>
                   </div>
                   <div className="flex gap-2">
                     {renderStatusBadge(
-                      selectedTask.status || 
-                      selectedTask.statusHierarchy?.overallStatus
+                      selectedTask.status ||
+                        selectedTask.statusHierarchy?.overallStatus
                     )}
                   </div>
                 </div>
@@ -1988,23 +2357,45 @@ export default function DepartmentTasksPage() {
                           Status Overview
                         </h3>
                         <div className="space-y-4">
-                          {selectedTask.type === 'submission' ? (
+                          {selectedTask.type === "submission" ? (
                             <>
-                              {renderStatusIndicator(selectedTask.status, "Manager Status")}
-                              {renderStatusIndicator(selectedTask.status2, "Team Lead Status")}
-                              {renderStatusIndicator(selectedTask.adminStatus, "Admin Status")}
-                              {renderStatusIndicator(selectedTask.statusHierarchy?.overallStatus, "Overall Status")}
+                              {renderStatusIndicator(
+                                selectedTask.status,
+                                "Manager Status"
+                              )}
+                              {renderStatusIndicator(
+                                selectedTask.status2,
+                                "Team Lead Status"
+                              )}
+                              {renderStatusIndicator(
+                                selectedTask.adminStatus,
+                                "Admin Status"
+                              )}
+                              {renderStatusIndicator(
+                                selectedTask.statusHierarchy?.overallStatus,
+                                "Overall Status"
+                              )}
                             </>
                           ) : (
                             <>
-                              {renderStatusIndicator(selectedTask.status, "Status")}
+                              {renderStatusIndicator(
+                                selectedTask.status,
+                                "Status"
+                              )}
                               {selectedTask.priority && (
                                 <div className="flex items-center gap-2">
-                                  <div className={`w-2 h-2 rounded-full ${
-                                    selectedTask.priority === 'high' ? 'bg-rose-500' :
-                                    selectedTask.priority === 'medium' ? 'bg-amber-500' : 'bg-emerald-500'
-                                  }`} />
-                                  <span className="text-sm text-gray-600">Priority:</span>
+                                  <div
+                                    className={`w-2 h-2 rounded-full ${
+                                      selectedTask.priority === "high"
+                                        ? "bg-rose-500"
+                                        : selectedTask.priority === "medium"
+                                        ? "bg-amber-500"
+                                        : "bg-emerald-500"
+                                    }`}
+                                  />
+                                  <span className="text-sm text-gray-600">
+                                    Priority:
+                                  </span>
                                   <span className="text-sm font-medium uppercase">
                                     {selectedTask.priority}
                                   </span>
@@ -2025,26 +2416,37 @@ export default function DepartmentTasksPage() {
                         </h3>
                         <div className="space-y-4">
                           <div className="flex items-center justify-between">
-                            <span className="text-sm text-gray-600">Created</span>
+                            <span className="text-sm text-gray-600">
+                              Created
+                            </span>
                             <span className="font-medium text-gray-900">
-                              {formatDateTime(selectedTask.createdAt || selectedTask.timestamps?.createdAt)}
+                              {formatDateTime(
+                                selectedTask.createdAt ||
+                                  selectedTask.timestamps?.createdAt
+                              )}
                             </span>
                           </div>
                           {selectedTask.endDate && (
                             <div className="flex items-center justify-between">
-                              <span className="text-sm text-gray-600">Due Date</span>
-                              <span className={`font-medium ${
-                                new Date(selectedTask.endDate) < new Date() 
-                                  ? "text-rose-600" 
-                                  : "text-gray-900"
-                              }`}>
+                              <span className="text-sm text-gray-600">
+                                Due Date
+                              </span>
+                              <span
+                                className={`font-medium ${
+                                  new Date(selectedTask.endDate) < new Date()
+                                    ? "text-rose-600"
+                                    : "text-gray-900"
+                                }`}
+                              >
                                 {formatDateTime(selectedTask.endDate)}
                               </span>
                             </div>
                           )}
                           {selectedTask.completedAt && (
                             <div className="flex items-center justify-between">
-                              <span className="text-sm text-gray-600">Completed</span>
+                              <span className="text-sm text-gray-600">
+                                Completed
+                              </span>
                               <span className="font-medium text-emerald-600">
                                 {formatDateTime(selectedTask.completedAt)}
                               </span>
@@ -2056,7 +2458,7 @@ export default function DepartmentTasksPage() {
                   </div>
 
                   {/* Submission Specific Details */}
-                  {selectedTask.type === 'submission' && (
+                  {selectedTask.type === "submission" && (
                     <div className="space-y-6">
                       {/* Status Hierarchy */}
                       <Card className="border border-gray-200">
@@ -2074,11 +2476,18 @@ export default function DepartmentTasksPage() {
                                   <UserCheck className="w-5 h-5 text-blue-600" />
                                 </div>
                                 <div>
-                                  <div className="font-semibold text-gray-900">Manager</div>
-                                  <div className="text-sm text-gray-600">Approval Level</div>
+                                  <div className="font-semibold text-gray-900">
+                                    Manager
+                                  </div>
+                                  <div className="text-sm text-gray-600">
+                                    Approval Level
+                                  </div>
                                 </div>
                               </div>
-                              {renderStatusBadge(selectedTask.status, "manager")}
+                              {renderStatusBadge(
+                                selectedTask.status,
+                                "manager"
+                              )}
                             </div>
                             <div className="p-4 border border-emerald-200 rounded-xl bg-emerald-50">
                               <div className="flex items-center gap-3 mb-3">
@@ -2086,11 +2495,18 @@ export default function DepartmentTasksPage() {
                                   <Crown className="w-5 h-5 text-emerald-600" />
                                 </div>
                                 <div>
-                                  <div className="font-semibold text-gray-900">Team Lead</div>
-                                  <div className="text-sm text-gray-600">Review Level</div>
+                                  <div className="font-semibold text-gray-900">
+                                    Team Lead
+                                  </div>
+                                  <div className="text-sm text-gray-600">
+                                    Review Level
+                                  </div>
                                 </div>
                               </div>
-                              {renderStatusBadge(selectedTask.status2, "teamlead")}
+                              {renderStatusBadge(
+                                selectedTask.status2,
+                                "teamlead"
+                              )}
                             </div>
                             <div className="p-4 border border-purple-200 rounded-xl bg-purple-50">
                               <div className="flex items-center gap-3 mb-3">
@@ -2098,11 +2514,18 @@ export default function DepartmentTasksPage() {
                                   <ShieldCheck className="w-5 h-5 text-purple-600" />
                                 </div>
                                 <div>
-                                  <div className="font-semibold text-gray-900">Admin</div>
-                                  <div className="text-sm text-gray-600">Final Approval</div>
+                                  <div className="font-semibold text-gray-900">
+                                    Admin
+                                  </div>
+                                  <div className="text-sm text-gray-600">
+                                    Final Approval
+                                  </div>
                                 </div>
                               </div>
-                              {renderStatusBadge(selectedTask.adminStatus, "admin")}
+                              {renderStatusBadge(
+                                selectedTask.adminStatus,
+                                "admin"
+                              )}
                             </div>
                           </div>
                         </CardContent>
@@ -2112,16 +2535,22 @@ export default function DepartmentTasksPage() {
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <Card className="border border-gray-200">
                           <CardContent className="p-6">
-                            <h3 className="font-semibold text-gray-900 mb-4">Form Information</h3>
+                            <h3 className="font-semibold text-gray-900 mb-4">
+                              Form Information
+                            </h3>
                             <div className="space-y-3">
                               <div>
-                                <Label className="text-sm text-gray-600">Form Title</Label>
+                                <Label className="text-sm text-gray-600">
+                                  Form Title
+                                </Label>
                                 <div className="font-medium text-gray-900">
                                   {selectedTask.form?.title || "N/A"}
                                 </div>
                               </div>
                               <div>
-                                <Label className="text-sm text-gray-600">Department</Label>
+                                <Label className="text-sm text-gray-600">
+                                  Department
+                                </Label>
                                 <div className="font-medium text-gray-900">
                                   {selectedTask.form?.department?.name || "N/A"}
                                 </div>
@@ -2132,16 +2561,22 @@ export default function DepartmentTasksPage() {
 
                         <Card className="border border-gray-200">
                           <CardContent className="p-6">
-                            <h3 className="font-semibold text-gray-900 mb-4">Submission Details</h3>
+                            <h3 className="font-semibold text-gray-900 mb-4">
+                              Submission Details
+                            </h3>
                             <div className="space-y-3">
                               <div>
-                                <Label className="text-sm text-gray-600">Client Name</Label>
+                                <Label className="text-sm text-gray-600">
+                                  Client Name
+                                </Label>
                                 <div className="font-medium text-gray-900">
                                   {selectedTask.clinetName || "N/A"}
                                 </div>
                               </div>
                               <div>
-                                <Label className="text-sm text-gray-600">Submitted By</Label>
+                                <Label className="text-sm text-gray-600">
+                                  Submitted By
+                                </Label>
                                 <div className="font-medium text-gray-900">
                                   {selectedTask.submittedBy?.name || "N/A"}
                                 </div>
@@ -2154,7 +2589,9 @@ export default function DepartmentTasksPage() {
                   )}
 
                   {/* Assigned Users Section */}
-                  {(selectedTask.managers || selectedTask.teamLeadId || selectedTask.submittedBy) && (
+                  {(selectedTask.managers ||
+                    selectedTask.teamLeadId ||
+                    selectedTask.submittedBy) && (
                     <Card className="border border-gray-200">
                       <CardHeader>
                         <CardTitle className="flex items-center gap-2">
@@ -2164,27 +2601,34 @@ export default function DepartmentTasksPage() {
                       </CardHeader>
                       <CardContent>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          {selectedTask.managers && selectedTask.managers.length > 0 && (
-                            <div>
-                              <h4 className="font-semibold text-gray-900 mb-3">Managers</h4>
-                              <div className="space-y-3">
-                                {selectedTask.managers.map((manager, idx) => (
-                                  <div key={idx}>
-                                    {renderUserAvatar(manager)}
-                                  </div>
-                                ))}
+                          {selectedTask.managers &&
+                            selectedTask.managers.length > 0 && (
+                              <div>
+                                <h4 className="font-semibold text-gray-900 mb-3">
+                                  Managers
+                                </h4>
+                                <div className="space-y-3">
+                                  {selectedTask.managers.map((manager, idx) => (
+                                    <div key={idx}>
+                                      {renderUserAvatar(manager)}
+                                    </div>
+                                  ))}
+                                </div>
                               </div>
-                            </div>
-                          )}
+                            )}
                           {selectedTask.teamLeadId && (
                             <div>
-                              <h4 className="font-semibold text-gray-900 mb-3">Team Lead</h4>
+                              <h4 className="font-semibold text-gray-900 mb-3">
+                                Team Lead
+                              </h4>
                               {renderUserAvatar(selectedTask.teamLeadId)}
                             </div>
                           )}
                           {selectedTask.submittedBy && (
                             <div>
-                              <h4 className="font-semibold text-gray-900 mb-3">Submitted By</h4>
+                              <h4 className="font-semibold text-gray-900 mb-3">
+                                Submitted By
+                              </h4>
                               {renderUserAvatar(selectedTask.submittedBy)}
                             </div>
                           )}
@@ -2196,33 +2640,36 @@ export default function DepartmentTasksPage() {
               </ScrollArea>
 
               <DialogFooter className="pt-6 border-t border-gray-200 gap-3">
-                <Button 
-                  variant="outline" 
-                  onClick={() => router.push(`/admin/manager-tasks/${selectedTask._id}`)}
+                <Button
+                  variant="outline"
+                  onClick={() =>
+                    router.push(`/admin/manager-tasks/${selectedTask._id}`)
+                  }
                   className="border-gray-300 text-gray-700 hover:bg-gray-50 rounded-xl"
                 >
                   <ViewIcon className="w-4 h-4 mr-2 text-purple-600 " />
                   Full details
                 </Button>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   onClick={() => setShowDetails(false)}
                   className="border-purple-300 text-purple-700 hover:bg-gray-50 rounded-xl "
                 >
                   view
                 </Button>
-                {selectedTask.type === 'submission' && session.user.role === "Admin" && (
-                  <Button 
-                    onClick={() => {
-                      setShowDetails(false);
-                      setShowFeedbackDialog(true);
-                    }}
-                    className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 rounded-xl"
-                  >
-                    <CheckCircle className="w-4 h-4 mr-2" />
-                    Update Status
-                  </Button>
-                )}
+                {selectedTask.type === "submission" &&
+                  session.user.role === "Admin" && (
+                    <Button
+                      onClick={() => {
+                        setShowDetails(false);
+                        setShowFeedbackDialog(true);
+                      }}
+                      className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 rounded-xl"
+                    >
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                      Update Status
+                    </Button>
+                  )}
               </DialogFooter>
             </>
           )}
@@ -2238,7 +2685,8 @@ export default function DepartmentTasksPage() {
               Update Submission Status
             </DialogTitle>
             <DialogDescription>
-              Update the status for {selectedTask?.clinetName || "selected submission"}
+              Update the status for{" "}
+              {selectedTask?.clinetName || "selected submission"}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -2257,7 +2705,7 @@ export default function DepartmentTasksPage() {
             </div>
             <div>
               <Label className="text-sm font-medium">Feedback/Comments</Label>
-              <Textarea 
+              <Textarea
                 placeholder="Add any feedback or comments..."
                 className="mt-2 min-h-[100px]"
                 value={feedback}
@@ -2346,7 +2794,9 @@ export default function DepartmentTasksPage() {
                   <SelectValue placeholder="Select range" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="selected">Selected Items ({selectedItems.length})</SelectItem>
+                  <SelectItem value="selected">
+                    Selected Items ({selectedItems.length})
+                  </SelectItem>
                   <SelectItem value="current">Current View</SelectItem>
                   <SelectItem value="all">All Data</SelectItem>
                 </SelectContent>
@@ -2371,6 +2821,138 @@ export default function DepartmentTasksPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+ <div className="p-6 space-y-8 bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 min-h-screen">
+      {/* Header */}
+      <div className="bg-gradient-to-r from-purple-600 via-pink-600 to-orange-600 rounded-2xl p-6 shadow-2xl shadow-purple-500/20 mb-8">
+        
+        <div className="flex flex-wrap gap-4 mt-6">
+          <div className="bg-white/20 backdrop-blur-sm rounded-xl p-3 flex items-center gap-3">
+            <div className="p-2 bg-white/30 rounded-lg">
+              <Users className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <p className="text-white/80 text-sm">Total Members</p>
+              <p className="text-white text-xl font-bold">
+                {(data?.managers?.length || 0) + (data?.teamLeads?.length || 0) + (data?.employees?.length || 0)}
+              </p>
+            </div>
+          </div>
+          <div className="bg-white/20 backdrop-blur-sm rounded-xl p-3 flex items-center gap-3">
+            <div className="p-2 bg-white/30 rounded-lg">
+              <TrendingUp className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <p className="text-white/80 text-sm">Active Tasks</p>
+              <p className="text-white text-xl font-bold">
+                {data?.totalTasks || 0}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Managers Section */}
+      <section>
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <div className="p-3 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl">
+              <Crown className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h2 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
+                Managers
+              </h2>
+              <p className="text-gray-600">Leadership team overview</p>
+            </div>
+          </div>
+          <Badge className="bg-gradient-to-r from-blue-100 to-cyan-100 text-blue-800 border-blue-200 px-4 py-1">
+            {data?.managers?.length || 0} Managers
+          </Badge>
+        </div>
+        
+        {data?.managers?.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {data.managers.map(({ manager, stats }) => renderStats(manager, stats, 'manager'))}
+          </div>
+        ) : (
+          <div className="bg-gradient-to-r from-blue-50 to-cyan-50 border-2 border-dashed border-blue-200 rounded-2xl p-8 text-center">
+            <div className="w-20 h-20 mx-auto mb-4 text-blue-300">
+              <Crown className="w-full h-full" />
+            </div>
+            <h3 className="text-xl font-semibold text-blue-800 mb-2">No Managers Found</h3>
+            <p className="text-blue-600">Add managers to see their performance metrics</p>
+          </div>
+        )}
+      </section>
+
+      {/* Team Leads Section */}
+      <section>
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <div className="p-3 bg-gradient-to-br from-green-500 to-emerald-500 rounded-xl">
+              <Users className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h2 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent">
+                Team Leads
+              </h2>
+              <p className="text-gray-600">Team leadership performance</p>
+            </div>
+          </div>
+          <Badge className="bg-gradient-to-r from-green-100 to-emerald-100 text-green-800 border-green-200 px-4 py-1">
+            {data?.teamLeads?.length || 0} Team Leads
+          </Badge>
+        </div>
+        
+        {data?.teamLeads?.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {data.teamLeads.map(({ teamLead, stats }) => renderStats(teamLead, stats, 'teamLead'))}
+          </div>
+        ) : (
+          <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-dashed border-green-200 rounded-2xl p-8 text-center">
+            <div className="w-20 h-20 mx-auto mb-4 text-green-300">
+              <Users className="w-full h-full" />
+            </div>
+            <h3 className="text-xl font-semibold text-green-800 mb-2">No Team Leads Found</h3>
+            <p className="text-green-600">Add team leads to see their performance metrics</p>
+          </div>
+        )}
+      </section>
+
+      {/* Employees Section */}
+      <section>
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-3">
+            <div className="p-3 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl">
+              <User className="w-6 h-6 text-white" />
+            </div>
+            <div>
+              <h2 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                Employees
+              </h2>
+              <p className="text-gray-600">Individual contributor performance</p>
+            </div>
+          </div>
+          <Badge className="bg-gradient-to-r from-purple-100 to-pink-100 text-purple-800 border-purple-200 px-4 py-1">
+            {data?.employees?.length || 0} Employees
+          </Badge>
+        </div>
+        
+        {data?.employees?.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {data.employees.map(({ employee, stats }) => renderStats(employee, stats, 'employee'))}
+          </div>
+        ) : (
+          <div className="bg-gradient-to-r from-purple-50 to-pink-50 border-2 border-dashed border-purple-200 rounded-2xl p-8 text-center">
+            <div className="w-20 h-20 mx-auto mb-4 text-purple-300">
+              <User className="w-full h-full" />
+            </div>
+            <h3 className="text-xl font-semibold text-purple-800 mb-2">No Employees Found</h3>
+            <p className="text-purple-600">Add employees to see their performance metrics</p>
+          </div>
+        )}
+      </section>
+    </div>
     </div>
   );
 }

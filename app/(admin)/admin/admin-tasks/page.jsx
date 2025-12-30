@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import ManagerTask from "@/components/admin/ManagerTask";
 import TeamLeadAndEmployeeTask from "@/components/admin/TeamLeadAndEmployeeTask";
+import UserTaskStats from "@/components/admin/UserTaskStats";
 
 export default function Page() {
   const [view, setView] = useState(null); // "admin" | "task2"
@@ -83,6 +84,7 @@ export default function Page() {
 
       {view === "admin" && <ManagerTask />}
       {view === "task2" && <TeamLeadAndEmployeeTask />}
+     
 
     </div>
   );

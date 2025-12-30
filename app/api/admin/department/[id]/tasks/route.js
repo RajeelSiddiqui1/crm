@@ -24,20 +24,11 @@ export async function GET(req, { params }) {
         departments: { $in: [depObjectId] },
       })
         .populate({
-          path: "managers.managerId",
+          path: "managers",
           select: "firstName lastName email profilePic",
           match: { _id: { $ne: null } }, // only valid ObjectIds
         })
-        .populate({
-          path: "teamleads.teamleadId",
-          select: "firstName lastName email profilePic",
-          match: { _id: { $ne: null } },
-        })
-        .populate({
-          path: "employees.employeeId",
-          select: "firstName lastName email profilePic",
-          match: { _id: { $ne: null } },
-        })
+       
         .populate({
           path: "sharedBYManager",
           select: "firstName lastName email profilePic",

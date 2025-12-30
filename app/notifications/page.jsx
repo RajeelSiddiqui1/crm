@@ -9,7 +9,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Bell, CheckCircle, Clock, User, FileText, AlertCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 
-export default function NotificationsPage() {
+export default function NotificationsPage() { 
     const { data: session, status } = useSession();
     const router = useRouter();
     const [notifications, setNotifications] = useState([]);

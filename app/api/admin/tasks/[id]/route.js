@@ -4,6 +4,7 @@ import Manager from "@/models/Manager";
 import dbConnect from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import Department from "@/models/Department";
 import cloudinary from "@/lib/cloudinary";
 import { sendNotification } from "@/lib/sendNotification";
 import { sendMail } from "@/lib/mail";
