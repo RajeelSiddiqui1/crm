@@ -205,7 +205,7 @@ export async function PUT(req, { params }) {
               type: "task_removed",
               title: "Task Assignment Removed",
               message: `You have been removed from task "${task.formId?.title}"`,
-              link: `/employee/tasks/${task._id}`,
+              link: `/employee/tasks`,
               referenceId: task._id,
               referenceModel: "FormSubmission",
             });
@@ -240,7 +240,7 @@ export async function PUT(req, { params }) {
             type: "task_status_updated",
             title: "Task Status Updated",
             message: `Your submitted task "${task.formId?.title}" status updated from ${oldStatus} to ${status}.`,
-            link: `/manager/tasks/${task._id}`,
+            link: `/manager/submissions/detail/${task._id}`,
             referenceId: task._id,
             referenceModel: "FormSubmission",
           });

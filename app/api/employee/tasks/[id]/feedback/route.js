@@ -136,7 +136,7 @@ export async function POST(req, { params }) {
           type: "employee_feedback",
           title: "New Employee Feedback",
           message: `${employee.firstName} ${employee.lastName} submitted feedback on task "${task.formId?.title}"`,
-          link: `/manager/tasks/${task._id}`,
+          link: `/manager/submissions/detail/${task._id}`,
           referenceId: task._id,
           referenceModel: "FormSubmission",
         })
@@ -151,7 +151,7 @@ export async function POST(req, { params }) {
             <h3 style="margin: 0;">${task.formId?.title || "Task"}</h3>
             <p style="margin: 10px 0 0;"><strong>Feedback:</strong> ${feedback.trim()}</p>
           </div>
-          <a href="${process.env.NEXT_PUBLIC_DOMAIN}/manager/tasks/${task._id}" 
+          <a href="${process.env.NEXT_PUBLIC_DOMAIN}/manager/submissions/detail/${task._id}" 
              style="display: inline-block; padding: 10px 20px; background: #0070f3; color: white; text-decoration: none; border-radius: 5px; margin-top: 10px;">
             View Task Details
           </a>
@@ -330,7 +330,7 @@ export async function PUT(req, { params }) {
           type: "feedback_reply",
           title: "New Reply to Feedback",
           message: `${employee.firstName} ${employee.lastName} replied to team lead feedback on task "${task.formId?.title}"`,
-          link: `/manager/tasks/${task._id}`,
+          link: `/manager/submissions/detail/${task._id}`,
           referenceId: task._id,
           referenceModel: "FormSubmission",
         })
@@ -352,7 +352,7 @@ export async function PUT(req, { params }) {
               <p style="padding: 10px; background: #fff; border-left: 4px solid #10b981;">${reply.trim()}</p>
             </div>
           </div>
-          <a href="${process.env.NEXT_PUBLIC_DOMAIN}/manager/tasks/${task._id}" 
+          <a href="${process.env.NEXT_PUBLIC_DOMAIN}/manager/submissions/detail/${task._id}" 
              style="display: inline-block; padding: 10px 20px; background: #0070f3; color: white; text-decoration: none; border-radius: 5px; margin-top: 10px;">
             View Task Details
           </a>

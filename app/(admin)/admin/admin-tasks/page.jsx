@@ -56,7 +56,7 @@ export default function Page() {
           className="rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 p-6 text-left shadow-lg transition hover:scale-105"
         >
           <h2 className="text-2xl font-bold text-white">
-            TeamLead & Employee Tasks
+            Assigned To TeamLead & Employee
           </h2>
           <p className="text-white/90 mt-2">
             Total Tasks: <b>{task2Count}</b>
