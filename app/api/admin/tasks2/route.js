@@ -171,15 +171,65 @@ export async function GET(req) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    // -------- FETCH TASKS
-const tasks = await AdminTask2.find()
-  .populate("teamleads.teamleadId", "firstName lastName email")
-  .populate("employees.employeeId", "firstName lastName email")
-  .sort({ createdAt: -1 });
+    // -------- FETCH TASKS WITH STATUS TRACKING
+    const tasks = await AdminTask2.find()
+      .populate("submittedBy", "name email")             // Admin who created task
+      .populate("sharedBY", "firstName lastName email")   // Shared by (TeamLead/Employee)
+      .populate("sharedTo", "firstName lastName email")   // Shared to (TeamLead/Employee)
+      .populate("departments", "name description")       // Departments
+      .populate({
+        path: "teamleads.teamleadId",
+        select: "firstName lastName email department",
+        populate: {
+          path: "depId",
+          select: "name"
+        }
+      })
+      .populate({
+        path: "employees.employeeId",
+        select: "firstName lastName email department",
+        populate: {
+          path: "depId",
+          select: "name"
+        }
+      })
+      .sort({ createdAt: -1 })
+      .lean();
 
+    // Calculate statistics for each task
+    const tasksWithStats = tasks.map(task => {
+      const allAssignees = [
+        ...(task.teamleads || []),
+        ...(task.employees || [])
+      ];
+
+      const statusCounts = {
+        pending: 0,
+        in_progress: 0,
+        completed: 0,
+        overdue: 0
+      };
+
+      allAssignees.forEach(assignee => {
+        if (assignee.status && statusCounts[assignee.status] !== undefined) {
+          statusCounts[assignee.status]++;
+        }
+      });
+
+      return {
+        ...task,
+        stats: {
+          totalAssignees: allAssignees.length,
+          statusCounts,
+          completionPercentage: allAssignees.length > 0 
+            ? Math.round((statusCounts.completed / allAssignees.length) * 100)
+            : 0
+        }
+      };
+    });
 
     return NextResponse.json(
-      { success: true, tasks },
+      { success: true, tasks: tasksWithStats },
       { status: 200 }
     );
 
