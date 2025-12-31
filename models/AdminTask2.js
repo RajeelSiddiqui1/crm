@@ -25,8 +25,24 @@ const adminTaskSchema2 = new Schema(
 
     sharedBY: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Manager",
+      refPath: "sharedByModel",
     },
+
+    sharedByModel: {
+      type: String,
+      enum: ["TeamLead", "Employee"],
+    },
+
+    sharedTo: {
+      type: mongoose.Schema.Types.ObjectId,
+      refPath: "sharedToModel",
+    },
+
+    sharedToModel: {
+      type: String,
+      enum: ["TeamLead", "Employee"],
+    },
+
 
     teamleads: [
       {
@@ -36,7 +52,7 @@ const adminTaskSchema2 = new Schema(
         },
         status: {
           type: String,
-          enum: ["pending", "in-progress", "completed", "overdue"],
+          enum: ["pending", "in_progress", "completed", "overdue"],
           default: "pending",
         },
         assignedAt: {
@@ -55,7 +71,7 @@ const adminTaskSchema2 = new Schema(
         },
         status: {
           type: String,
-          enum: ["pending", "in-progress", "completed", "overdue"],
+          enum: ["pending", "in_progress", "completed", "overdue"],
           default: "pending",
         },
         assignedAt: {

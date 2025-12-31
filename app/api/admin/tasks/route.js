@@ -110,26 +110,12 @@ export async function POST(req) {
     await newTask.save();
 
     // -------------------------------
-    // SEND NOTIFICATIONS + EMAILS TO MANAGERS
+    // SEND NOTIFICATIONS + EMAILS TO MANAGERS (PARALLEL)
     // -------------------------------
     const taskLink = `${process.env.NEXT_PUBLIC_DOMAIN}/manager/admin-tasks`;
 
     await Promise.all(
-      managers.map(async manager => {
-        await sendNotification({
-          senderId: session.user.id,
-          senderModel: "Admin",
-          senderName: session.user.name || "Admin",
-          receiverId: manager._id,
-          receiverModel: "Manager",
-          type: "admin_task_created",
-          title: "New Admin Task",
-          message: `A new admin task "${title}" has been assigned to you.`,
-          link: taskLink,
-          referenceId: newTask._id,
-          referenceModel: "AdminTask",
-        });
-
+      managers.flatMap(manager => {
         const emailHtml = adminTaskCreatedMailTemplate(
           `${manager.firstName} ${manager.lastName}`,
           title,
@@ -139,7 +125,24 @@ export async function POST(req) {
           taskLink
         );
 
-        await sendMail(manager.email, "New Admin Task Assigned", emailHtml);
+        return [
+          // Notification
+          sendNotification({
+            senderId: session.user.id,
+            senderModel: "Admin",
+            senderName: session.user.name || "Admin",
+            receiverId: manager._id,
+            receiverModel: "Manager",
+            type: "admin_task_created",
+            title: "New Admin Task",
+            message: `A new admin task "${title}" has been assigned to you.`,
+            link: taskLink,
+            referenceId: newTask._id,
+            referenceModel: "AdminTask",
+          }),
+          // Email
+          sendMail(manager.email, "New Admin Task Assigned", emailHtml)
+        ];
       })
     );
 
