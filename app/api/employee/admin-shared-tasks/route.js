@@ -16,11 +16,11 @@ export async function GET() {
 
     const employeeId = session.user.id;
 
-    const tasks = await AdminTask2.find({
+    // Tasks shared TO this employee
+    const sharedToMe = await AdminTask2.find({
       $or: [
-        { "employees.employeeId": employeeId },
-        { "teamleads.teamleadId": employeeId },
-        { "sharedTo": employeeId }
+        { sharedTo: employeeId },
+        { "employees.employeeId": employeeId }
       ]
     })
       .populate({
@@ -36,6 +36,10 @@ export async function GET() {
         select: "name email profilePic",
       })
       .populate({
+        path: "sharedTo",
+        select: "name email profilePic",
+      })
+      .populate({
         path: "departments",
         select: "name",
       })
@@ -45,7 +49,40 @@ export async function GET() {
       })
       .sort({ createdAt: -1 });
 
-    return NextResponse.json(tasks, { status: 200 });
+    // Tasks shared BY this employee
+    const sharedByMe = await AdminTask2.find({
+      sharedBY: employeeId
+    })
+      .populate({
+        path: "teamleads.teamleadId",
+        select: "name email profilePic",
+      })
+      .populate({
+        path: "employees.employeeId",
+        select: "name email profilePic",
+      })
+      .populate({
+        path: "sharedBY",
+        select: "name email profilePic",
+      })
+      .populate({
+        path: "sharedTo",
+        select: "name email profilePic",
+      })
+      .populate({
+        path: "departments",
+        select: "name",
+      })
+      .populate({
+        path: "submittedBy",
+        select: "name email profilePic",
+      })
+      .sort({ createdAt: -1 });
+
+    return NextResponse.json({
+      sharedToMe,
+      sharedByMe
+    }, { status: 200 });
   } catch (error) {
     console.error(error);
     return NextResponse.json(

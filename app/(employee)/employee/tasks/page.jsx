@@ -1394,7 +1394,7 @@ export default function EmployeeTasksPage() {
 
               {/* Previous Feedback */}
               {selectedTask.employeeFeedback && (
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 my-2">
                   <div className="flex items-center gap-2 mb-2">
                     <MessageSquare className="w-5 h-5 text-blue-600" />
                     <h4 className="font-semibold text-blue-900">
@@ -1407,54 +1407,7 @@ export default function EmployeeTasksPage() {
                 </div>
               )}
 
-              {/* Update Section */}
-              <div className="border-t pt-6">
-                <h4 className="text-lg font-semibold text-gray-900 mb-4">
-                  Update Task Status
-                </h4>
-                <div className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="feedback">Add Feedback (Optional)</Label>
-                    <Textarea
-                      id="feedback"
-                      value={feedback}
-                      onChange={(e) => setFeedback(e.target.value)}
-                      placeholder="Enter your comments or feedback..."
-                      className="min-h-[100px] bg-white border-gray-300 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 text-gray-900"
-                    />
-                  </div>
-
-                  <div className="flex flex-wrap gap-3">
-                    {[
-                      { status: "pending", label: "Mark as Pending", color: "amber" },
-                      { status: "in_progress", label: "Start Progress", color: "blue" },
-                      { status: "completed", label: "Mark Completed", color: "emerald" },
-                      { status: "rejected", label: "Reject Task", color: "red" },
-                    ].map((action) => (
-                      <Button
-                        key={action.status}
-                        onClick={() =>
-                          handleStatusUpdate(
-                            selectedTask._id,
-                            action.status,
-                            feedback
-                          )
-                        }
-                        className={`
-                          ${action.color === 'amber' ? 'bg-amber-50 text-amber-700 hover:bg-amber-100 border-amber-200' : ''}
-                          ${action.color === 'blue' ? 'bg-blue-50 text-blue-700 hover:bg-blue-100 border-blue-200' : ''}
-                          ${action.color === 'emerald' ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border-emerald-200' : ''}
-                          ${action.color === 'red' ? 'bg-red-50 text-red-700 hover:bg-red-100 border-red-200' : ''}
-                          border font-medium
-                        `}
-                        disabled={loading}
-                      >
-                        {action.label}
-                      </Button>
-                    ))}
-                  </div>
-                </div>
-              </div>
+             
             </div>
           )}
         </DialogContent>

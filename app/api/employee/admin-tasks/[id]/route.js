@@ -10,6 +10,65 @@ import { sendMail } from "@/lib/mail";
 import adminTaskShared from "@/helper/emails/employee/adminTaskShared";
 import adminTaskStatus from "@/helper/emails/employee/adminTaskStatus";
 
+
+export async function GET(req, { params }) {
+  try {
+    await dbConnect();
+
+    const session = await getServerSession(authOptions);
+
+    if (!session || session.user.role !== "Employee") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const taskId = params.id;
+
+    const task = await AdminTask2.findById(taskId)
+      .populate({
+        path: "teamleads.teamleadId",
+        select: "name email profilePic firstName lastName",
+      })
+      .populate({
+        path: "employees.employeeId",
+        select: "name email profilePic firstName lastName",
+      })
+      .populate({
+        path: "sharedBY",
+        select: "name email profilePic firstName lastName",
+      })
+      .populate({
+        path: "departments",
+        select: "name",
+      })
+      .populate({
+        path: "submittedBy",
+        select: "name email profilePic",
+      });
+
+    if (!task) {
+      return NextResponse.json({ error: "Task not found" }, { status: 404 });
+    }
+
+    // Check if employee has access to this task
+    const employeeId = session.user.id;
+    const hasAccess = 
+      task.employees.some(e => e.employeeId?._id?.toString() === employeeId) ||
+      task.teamleads.some(t => t.teamleadId?._id?.toString() === employeeId) ||
+      task.sharedTo?.toString() === employeeId;
+
+    if (!hasAccess) {
+      return NextResponse.json({ error: "Access denied" }, { status: 403 });
+    }
+
+    return NextResponse.json(task, { status: 200 });
+  } catch (error) {
+    console.error("GET Task Details Error:", error);
+    return NextResponse.json(
+      { message: "Internal Server Error", error: error.message },
+      { status: 500 }
+    );
+  }
+}
 // --------------------
 // UPDATE STATUS ROUTE
 // --------------------
