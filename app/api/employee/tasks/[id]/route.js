@@ -172,7 +172,7 @@ export async function PUT(req, { params }) {
           type: "employee_status_update",
           title: "Employee Status Updated",
           message: `${employee.firstName} ${employee.lastName} updated task "${task.formId?.title}" status to ${status}`,
-          link: `/manager/submissions/${task._id}`,
+          link: `/manager/submissions/detail/${task._id}`,
           referenceId: task._id,
           referenceModel: "FormSubmission",
         })
