@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import AdminTask2 from "@/models/AdminTask2";
 import Employee from "@/models/Employee";
-import Department from "@/models/Department";
 import TeamLead from "@/models/TeamLead";
+import Department from "@/models/Department";
 import dbConnect from "@/lib/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
@@ -13,19 +13,19 @@ export async function GET() {
 
     const session = await getServerSession(authOptions);
 
-    if (!session || session.user.role !== "Employee") {
+    if (!session || session.user.role !== "TeamLead") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const employeeId = session.user.id;
+    const teamleadId = session.user.id;
 
-    console.log("Fetching tasks for employee:", employeeId);
+    console.log("Fetching tasks for teamlead:", teamleadId);
 
-    // Get tasks where employee is assigned or has access via sharing
+    // Get tasks where teamlead is assigned or has access via sharing
     const tasks = await AdminTask2.find({
       $or: [
-        { "employees.employeeId": employeeId },
-        { "shares.sharedTo": employeeId, "shares.sharedToModel": "Employee" }
+        { "teamleads.teamleadId": teamleadId },
+        { "shares.sharedTo": teamleadId, "shares.sharedToModel": "TeamLead" }
       ]
     })
       .populate({
@@ -51,7 +51,7 @@ export async function GET() {
       .lean()
       .sort({ createdAt: -1 });
 
-    console.log("Raw tasks found:", tasks.length);
+    console.log("Raw tasks found for teamlead:", tasks.length);
 
     // Manually populate shares
     const tasksWithPopulatedShares = await Promise.all(
@@ -105,11 +105,11 @@ export async function GET() {
       })
     );
 
-    console.log("Tasks with populated shares:", tasksWithPopulatedShares.length);
+    console.log("Tasks with populated shares for teamlead:", tasksWithPopulatedShares.length);
     
     return NextResponse.json(tasksWithPopulatedShares, { status: 200 });
   } catch (error) {
-    console.error("Error fetching tasks:", error);
+    console.error("Error fetching teamlead tasks:", error);
     return NextResponse.json(
       { message: "Internal Server Error", error: error.message },
       { status: 500 }

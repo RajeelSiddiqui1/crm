@@ -4,18 +4,18 @@ import AdminTask2 from "@/models/AdminTask2";
 import TeamLead from "@/models/TeamLead";
 import Employee from "@/models/Employee";
 import { getServerSession } from "next-auth";
+import Department from "@/models/Department";
 import { authOptions } from "@/lib/auth";
 import cloudinary from "@/lib/cloudinary";
 import { sendNotification } from "@/lib/sendNotification";
 import { sendMail } from "@/lib/mail";
-import Department from "@/models/Department";
 import { adminTaskCreatedMailTemplate } from "@/helper/emails/admin/createTask";
 
 export async function POST(req) {
   try {
     await dbConnect();
 
-    // ---------------- AUTH
+    // Authentication
     const session = await getServerSession(authOptions);
     if (!session || session.user.role !== "Admin") {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
@@ -27,53 +27,57 @@ export async function POST(req) {
       return NextResponse.json({ message: "Title is required" }, { status: 400 });
     }
 
+    // Get assigned users
     const teamleadIds = JSON.parse(formData.get("teamleadIds") || "[]");
     const employeeIds = JSON.parse(formData.get("employeeIds") || "[]");
 
-    const teamleads = teamleadIds.map(id => ({ teamleadId: id }));
-    const employees = employeeIds.map(id => ({ employeeId: id }));
-
-    // ---------------- FILE
+    // File upload
     let fileUrl = null, filePublicId = null, fileName = null, fileType = null;
     const file = formData.get("file");
-
+    
     if (file && file.size > 0) {
       const buffer = Buffer.from(await file.arrayBuffer());
       fileName = file.name;
       fileType = file.type;
-
+      
       const upload = await cloudinary.uploader.upload(
         `data:${file.type};base64,${buffer.toString("base64")}`,
         { folder: "admin_tasks/files", resource_type: "auto" }
       );
-
+      
       fileUrl = upload.secure_url;
       filePublicId = upload.public_id;
     }
 
-    // ---------------- AUDIO
+    // Audio upload
     let audioUrl = null, audioPublicId = null;
     const audio = formData.get("audio");
-
+    
     if (audio && audio.size > 0) {
       const buffer = Buffer.from(await audio.arrayBuffer());
       const upload = await cloudinary.uploader.upload(
         `data:${audio.type};base64,${buffer.toString("base64")}`,
         { folder: "admin_tasks/audio", resource_type: "video" }
       );
-
+      
       audioUrl = upload.secure_url;
       audioPublicId = upload.public_id;
     }
 
-    // ---------------- CREATE TASK
+    // Create task
     const task = await AdminTask2.create({
       title,
       clientName: formData.get("clientName"),
       priority: formData.get("priority") || "low",
       endDate: formData.get("endDate") || null,
-      teamleads,
-      employees,
+      teamleads: teamleadIds.map(id => ({ 
+        teamleadId: id,
+        status: "pending"
+      })),
+      employees: employeeIds.map(id => ({ 
+        employeeId: id,
+        status: "pending"
+      })),
       fileAttachments: fileUrl,
       fileName,
       fileType,
@@ -83,13 +87,11 @@ export async function POST(req) {
       submittedBy: session.user.id,
     });
 
-    // ---------------- FETCH USERS
+    // Send notifications
     const teamleadUsers = await TeamLead.find({ _id: { $in: teamleadIds } });
     const employeeUsers = await Employee.find({ _id: { $in: employeeIds } });
-
     const taskLink = `${process.env.NEXT_PUBLIC_DOMAIN}/teamlead/tasks`;
 
-    // ---------------- NOTIFICATIONS + EMAILS (PARALLEL)
     await Promise.all([
       ...teamleadUsers.map(async (tl) => {
         await sendNotification({
@@ -160,23 +162,18 @@ export async function POST(req) {
   }
 }
 
-
 export async function GET(req) {
   try {
     await dbConnect();
 
-    // -------- AUTH
     const session = await getServerSession(authOptions);
     if (!session || session.user.role !== "Admin") {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    // -------- FETCH TASKS WITH STATUS TRACKING
+    // Fetch all tasks with full details
     const tasks = await AdminTask2.find()
-      .populate("submittedBy", "name email")             // Admin who created task
-      .populate("sharedBY", "firstName lastName email")   // Shared by (TeamLead/Employee)
-      .populate("sharedTo", "firstName lastName email")   // Shared to (TeamLead/Employee)
-      .populate("departments", "name description")       // Departments
+      .populate("submittedBy", "name email")
       .populate({
         path: "teamleads.teamleadId",
         select: "firstName lastName email department",
@@ -196,7 +193,7 @@ export async function GET(req) {
       .sort({ createdAt: -1 })
       .lean();
 
-    // Calculate statistics for each task
+    // Calculate statistics
     const tasksWithStats = tasks.map(task => {
       const allAssignees = [
         ...(task.teamleads || []),

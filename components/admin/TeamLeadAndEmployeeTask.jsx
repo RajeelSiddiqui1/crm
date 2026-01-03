@@ -62,8 +62,15 @@ import {
   TrendingUp,
   BarChart3,
   Target,
-  Percent
+  Percent,
+  ArrowRight
 } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import axios from "axios";
 
 export default function TeamLeadAndEmployeeTask() {
@@ -271,6 +278,97 @@ export default function TeamLeadAndEmployeeTask() {
   const handleViewStatus = (task) => {
     setTaskForStatus(task);
     setStatusDialogOpen(true);
+  };
+
+  const handleCheckboxChange = (id, type, checked, isEdit = false) => {
+    const listName = type === 'teamlead' ? 'teamleadIds' : 'employeeIds';
+    const setter = isEdit ? setEditFormData : setFormData;
+    
+    setter(prev => {
+      const currentList = prev[listName] || [];
+      if (checked) {
+        return {
+          ...prev,
+          [listName]: [...currentList, id]
+        };
+      } else {
+        return {
+          ...prev,
+          [listName]: currentList.filter(itemId => itemId !== id)
+        };
+      }
+    });
+  };
+
+  const handleFileUpload = (e, isEdit = false) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error("File size exceeds 10MB limit");
+        return;
+      }
+      const setter = isEdit ? setEditFormData : setFormData;
+      const url = URL.createObjectURL(file);
+      setter(prev => ({ ...prev, file: file, fileAttachments: url }));
+      toast.success("File attached");
+    }
+  };
+
+  const removeFileAttachment = (isEdit = false) => {
+    const setter = isEdit ? setEditFormData : setFormData;
+    setter(prev => ({ ...prev, file: null, fileAttachments: "" }));
+    toast.success("File removed");
+  };
+
+  const handleSubmit = async (isEdit = false) => {
+    try {
+      setLoading(true);
+      const data = isEdit ? editFormData : formData;
+      const url = isEdit ? `/api/admin/tasks2/${selectedTask._id}` : "/api/admin/tasks2";
+      const method = isEdit ? "put" : "post";
+
+      const submitData = new FormData();
+      submitData.append("title", data.title);
+      submitData.append("clientName", data.clientName || "");
+      submitData.append("priority", data.priority);
+      submitData.append("endDate", data.endDate);
+      submitData.append("teamleadIds", JSON.stringify(data.teamleadIds));
+      submitData.append("employeeIds", JSON.stringify(data.employeeIds));
+
+      if (data.file) {
+        submitData.append("file", data.file);
+      }
+
+      // Handle audio
+      const currentAudioBlob = isEdit ? editAudioBlob : audioBlob;
+      if (currentAudioBlob) {
+        submitData.append("audio", currentAudioBlob, "task_audio.wav");
+      }
+
+      const response = await axios({
+        method,
+        url,
+        data: submitData,
+        headers: { "Content-Type": "multipart/form-data" }
+      });
+
+      if (response.data.success) {
+        toast.success(isEdit ? "Task updated successfully" : "Task created successfully");
+        fetchAllData();
+        if (isEdit) {
+          setEditDialogOpen(false);
+          clearEditRecording();
+        } else {
+          setCreateDialogOpen(false);
+          clearRecording();
+        }
+      }
+    } catch (error) {
+      console.error("Submit error:", error);
+      toast.error(isEdit ? "Failed to update task" : "Failed to create task");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleShareTask = (task) => {
@@ -825,11 +923,12 @@ export default function TeamLeadAndEmployeeTask() {
                         Task Details
                       </TableHead>
                       
+                      
                       <TableHead className="font-bold text-gray-900 text-sm uppercase tracking-wide py-4 px-6 whitespace-nowrap">
                         Status Overview
                       </TableHead>
                       <TableHead className="font-bold text-gray-900 text-sm uppercase tracking-wide py-4 px-6 whitespace-nowrap">
-                        Sharing Info
+                        Team Hierarchy
                       </TableHead>
                       <TableHead className="font-bold text-gray-900 text-sm uppercase tracking-wide py-4 px-6 whitespace-nowrap">
                         Priority & Due Date
@@ -879,6 +978,10 @@ export default function TeamLeadAndEmployeeTask() {
                         
                        
                         
+
+
+                      
+                        
                         <TableCell className="py-4 px-6">
                           <div className="space-y-2">
                             <div className="flex justify-between items-center">
@@ -914,48 +1017,160 @@ export default function TeamLeadAndEmployeeTask() {
                           </div>
                         </TableCell>
                         
-                        <TableCell className="py-4 px-6">
-                          <div className="space-y-2">
-                            {task.sharedBY && (
-                              <div className="text-sm">
-                                <div className="flex items-center gap-1 text-gray-600">
-                                  <Share2 className="w-3 h-3" />
-                                  <span className="font-medium">Shared By:</span>
-                                </div>
-                             <div className="flex items-center gap-2 mt-1">
-  <Avatar className="w-6 h-6">
-    <AvatarFallback className="bg-gradient-to-r from-blue-500 to-cyan-600 text-white text-xs">
-      {getDisplayName(task.sharedBY)?.[0]}
-    </AvatarFallback>
-  </Avatar>
-  <span className="text-xs font-medium text-gray-900">
-    {getDisplayName(task.sharedBY)}
-  </span>
-</div>
+                        <TableCell className="py-4 px-6 min-w-[300px]">
+                          <div className="space-y-2 max-h-48 overflow-y-auto custom-scrollbar p-1">
+                            {/* Initial Assignments */}
+                            {(task.teamleads?.length > 0 || task.employees?.length > 0) && (
+                              <div className="flex flex-col gap-2 mb-3">
+                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Initial Assignment</span>
+                                {task.teamleads?.map((tl, idx) => {
+                                  const detail = teamLeads.find(t => t._id === (tl.teamleadId?._id || tl.teamleadId));
+                                  return (
+                                    <div key={`init-tl-${idx}`} className="flex items-center gap-2 text-sm bg-blue-50/50 p-2 rounded-lg border border-blue-100 hover:border-blue-200 transition-colors">
+                                      <TooltipProvider delayDuration={0}>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <Avatar className="w-6 h-6 border bg-white">
+                                              <AvatarFallback className="bg-gray-200 text-gray-700 text-[10px] font-bold">AD</AvatarFallback>
+                                            </Avatar>
+                                          </TooltipTrigger>
+                                          <TooltipContent><p>Admin (Original Creator)</p></TooltipContent>
+                                        </Tooltip>
+                                      </TooltipProvider>
 
+                                      <ArrowRight className="w-3 h-3 text-blue-400 flex-shrink-0" />
+
+                                      <TooltipProvider delayDuration={0}>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <div className="flex items-center gap-2 flex-1 min-w-0">
+                                              <Avatar className="w-6 h-6 border">
+                                                <AvatarFallback className="bg-gradient-to-br from-purple-500 to-violet-600 text-white text-[10px] font-bold">
+                                                  {detail?.firstName?.[0] || "T"}
+                                                </AvatarFallback>
+                                              </Avatar>
+                                              <div className="flex flex-col truncate">
+                                                <span className="text-xs font-semibold text-gray-900 truncate">{getDisplayName(detail)}</span>
+                                                <span className="text-[10px] text-purple-600 font-medium capitalize">{tl.status?.replace('_', ' ')}</span>
+                                              </div>
+                                            </div>
+                                          </TooltipTrigger>
+                                          <TooltipContent>
+                                            <p className="font-semibold">{getDisplayName(detail)}</p>
+                                            <p className="text-xs opacity-75">Team Lead • Assigned by Admin</p>
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      </TooltipProvider>
+                                    </div>
+                                  );
+                                })}
+
+                                {task.employees?.map((emp, idx) => {
+                                  const detail = employees.find(e => e._id === (emp.employeeId?._id || emp.employeeId));
+                                  return (
+                                    <div key={`init-emp-${idx}`} className="flex items-center gap-2 text-sm bg-emerald-50/50 p-2 rounded-lg border border-emerald-100 hover:border-emerald-200 transition-colors">
+                                      <TooltipProvider delayDuration={0}>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <Avatar className="w-6 h-6 border bg-white">
+                                              <AvatarFallback className="bg-gray-200 text-gray-700 text-[10px] font-bold">AD</AvatarFallback>
+                                            </Avatar>
+                                          </TooltipTrigger>
+                                          <TooltipContent><p>Admin (Original Creator)</p></TooltipContent>
+                                        </Tooltip>
+                                      </TooltipProvider>
+
+                                      <ArrowRight className="w-3 h-3 text-emerald-400 flex-shrink-0" />
+
+                                      <TooltipProvider delayDuration={0}>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <div className="flex items-center gap-2 flex-1 min-w-0">
+                                              <Avatar className="w-6 h-6 border">
+                                                <AvatarFallback className="bg-gradient-to-br from-emerald-400 to-teal-500 text-white text-[10px] font-bold">
+                                                  {detail?.firstName?.[0] || "E"}
+                                                </AvatarFallback>
+                                              </Avatar>
+                                              <div className="flex flex-col truncate">
+                                                <span className="text-xs font-semibold text-gray-900 truncate">{getDisplayName(detail)}</span>
+                                                <span className="text-[10px] text-emerald-600 font-medium capitalize">{emp.status?.replace('_', ' ')}</span>
+                                              </div>
+                                            </div>
+                                          </TooltipTrigger>
+                                          <TooltipContent>
+                                            <p className="font-semibold">{getDisplayName(detail)}</p>
+                                            <p className="text-xs opacity-75">Employee • Assigned by Admin</p>
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      </TooltipProvider>
+                                    </div>
+                                  );
+                                })}
                               </div>
                             )}
-                            {task.sharedTo && (
-                              <div className="text-sm">
-                                <div className="flex items-center gap-1 text-gray-600">
-                                  <User className="w-3 h-3" />
-                                  <span className="font-medium">Shared To:</span>
-                                </div>
-                                <div className="flex items-center gap-2 mt-1">
-  <Avatar className="w-6 h-6">
-    <AvatarFallback className="bg-gradient-to-r from-green-500 to-emerald-600 text-white text-xs">
-      {getDisplayName(task.sharedTo)?.[0]}
-    </AvatarFallback>
-  </Avatar>
-  <span className="text-xs font-medium text-gray-900">
-    {getDisplayName(task.sharedTo)}
-  </span>
-</div>
 
+                            {/* Shares Hierarchy */}
+                            {task.shares && task.shares.length > 0 && (
+                              <div className="flex flex-col gap-2">
+                                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Share History</span>
+                                {task.shares.map((share, index) => {
+                                  const sharerId = share.sharedBy?._id || share.sharedBy;
+                                  const receiverId = share.sharedTo?._id || share.sharedTo;
+                                  
+                                  const sharer = teamLeads.find(u => u._id === sharerId) || employees.find(u => u._id === sharerId);
+                                  const receiver = teamLeads.find(u => u._id === receiverId) || employees.find(u => u._id === receiverId);
+
+                                  return (
+                                    <div key={`share-${index}`} className="flex items-center gap-2 text-sm bg-gray-50 p-2 rounded-lg border border-gray-100 hover:border-gray-300 transition-colors">
+                                      <TooltipProvider delayDuration={0}>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <Avatar className="w-6 h-6 border">
+                                              <AvatarFallback className="bg-gradient-to-br from-slate-400 to-slate-500 text-white text-[10px] font-bold">
+                                                {sharer?.firstName?.[0] || "?"}
+                                              </AvatarFallback>
+                                            </Avatar>
+                                          </TooltipTrigger>
+                                          <TooltipContent>
+                                            <p className="font-semibold">Shared by: {getDisplayName(sharer)}</p>
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      </TooltipProvider>
+
+                                      <ArrowRight className="w-3 h-3 text-gray-400 flex-shrink-0" />
+
+                                      <TooltipProvider delayDuration={0}>
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <div className="flex items-center gap-2 flex-1 min-w-0">
+                                              <Avatar className="w-6 h-6 border">
+                                                <AvatarFallback className="bg-gradient-to-br from-indigo-500 to-blue-600 text-white text-[10px] font-bold">
+                                                  {receiver?.firstName?.[0] || "?"}
+                                                </AvatarFallback>
+                                              </Avatar>
+                                              <div className="flex flex-col truncate">
+                                                <span className="text-xs font-medium text-gray-700 truncate">{getDisplayName(receiver)}</span>
+                                                <span className="text-[10px] text-gray-500 truncate">{formatDate(share.sharedAt)}</span>
+                                              </div>
+                                            </div>
+                                          </TooltipTrigger>
+                                          <TooltipContent>
+                                            <p className="font-semibold">Shared to: {getDisplayName(receiver)}</p>
+                                            <p className="text-xs opacity-75">{formatDate(share.sharedAt)}</p>
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      </TooltipProvider>
+                                    </div>
+                                  );
+                                })}
                               </div>
                             )}
-                            {!task.sharedBY && !task.sharedTo && (
-                              <span className="text-sm text-gray-500 italic">Not shared</span>
+
+                            {(!task.teamleads?.length && !task.employees?.length && !task.shares?.length) && (
+                              <div className="text-center py-2 text-gray-400 h-full flex flex-col items-center justify-center">
+                                <Users className="w-4 h-4 mb-1 opacity-50" />
+                                <span className="text-xs italic">Unassigned</span>
+                              </div>
                             )}
                           </div>
                         </TableCell>
@@ -1934,7 +2149,7 @@ export default function TeamLeadAndEmployeeTask() {
           {selectedTask && (
             <div className="space-y-6 p-6">
               {/* Task Header */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <Card className="bg-white border border-gray-200 rounded-xl shadow-sm">
                   <CardHeader className="bg-gradient-to-r from-gray-50 to-green-50/50 p-6 border-b">
                     <CardTitle className="text-lg flex items-center gap-3 text-gray-900">
@@ -1966,56 +2181,7 @@ export default function TeamLeadAndEmployeeTask() {
                   </CardContent>
                 </Card>
 
-                {/* Created By & Sharing Info */}
-                <Card className="bg-white border border-gray-200 rounded-xl shadow-sm">
-                  <CardHeader className="bg-gradient-to-r from-gray-50 to-blue-50/50 p-6 border-b">
-                    <CardTitle className="text-lg flex items-center gap-3 text-gray-900">
-                      <User className="w-6 h-6 text-blue-600" />
-                      Sharing
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-6 space-y-4">
-                   
-                    
-                    {selectedTask.sharedBY && (
-                      <div className="pt-4 border-t border-gray-100">
-                        <Label className="text-gray-600 text-sm font-medium">Shared By</Label>
-                        <div className="flex items-center gap-3 mt-2">
-                          <Avatar className="w-8 h-8">
-                            <AvatarFallback className="bg-gradient-to-r from-blue-500 to-cyan-600 text-white text-xs">
-                              {getDisplayName(selectedTask.sharedBY)?.[0]}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="font-semibold text-gray-900 text-sm">{getDisplayName(selectedTask.sharedBY)}</p>
-                            <p className="text-xs text-gray-500">
-                              {selectedTask.sharedByModel || "User"}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                    
-                    {selectedTask.sharedTo && (
-                      <div className="pt-4 border-t border-gray-100">
-                        <Label className="text-gray-600 text-sm font-medium">Shared To</Label>
-                        <div className="flex items-center gap-3 mt-2">
-                          <Avatar className="w-8 h-8">
-                            <AvatarFallback className="bg-gradient-to-r from-green-500 to-emerald-600 text-white text-xs">
-                              {getDisplayName(selectedTask.sharedTo)?.[0]}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="font-semibold text-gray-900 text-sm">{getDisplayName(selectedTask.sharedTo)}</p>
-                            <p className="text-xs text-gray-500">
-                              {selectedTask.sharedToModel || "User"}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
+               
 
                 {/* Progress Stats */}
                 <Card className="bg-white border border-gray-200 rounded-xl shadow-sm">
@@ -2174,6 +2340,66 @@ export default function TeamLeadAndEmployeeTask() {
                   )}
                 </CardContent>
               </Card>
+
+              {/* Share History Section */}
+              {selectedTask.shares && selectedTask.shares.length > 0 && (
+                <Card className="bg-white border border-gray-200 rounded-xl shadow-sm">
+                  <CardHeader className="bg-gradient-to-r from-gray-50 to-indigo-50/50 p-6 border-b">
+                    <CardTitle className="text-lg flex items-center gap-3 text-gray-900">
+                      <Share2 className="w-6 h-6 text-indigo-600" />
+                      Share History & Hierarchy
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-6">
+                    <div className="space-y-3">
+                      {selectedTask.shares.map((share, index) => {
+                        const sharerId = share.sharedBy?._id || share.sharedBy;
+                        const receiverId = share.sharedTo?._id || share.sharedTo;
+                        
+                        const sharer = teamLeads.find(u => u._id === sharerId) || employees.find(u => u._id === sharerId);
+                        const receiver = teamLeads.find(u => u._id === receiverId) || employees.find(u => u._id === receiverId);
+
+                        return (
+                          <div key={index} className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl border border-gray-100">
+                            <div className="flex items-center gap-3 flex-1">
+                              <div className="flex flex-col items-center">
+                                <Avatar className="h-10 w-10 border-2 border-white shadow-sm">
+                                  <AvatarFallback className="bg-slate-100 text-slate-600 text-xs font-bold">
+                                    {sharer?.firstName?.[0] || "?"}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <span className="text-[10px] text-gray-500 mt-1 font-medium">Sharer</span>
+                              </div>
+                              
+                              <ArrowRight className="w-5 h-5 text-gray-400" />
+                              
+                              <div className="flex flex-col items-center">
+                                <Avatar className="h-10 w-10 border-2 border-white shadow-sm ring-2 ring-indigo-50">
+                                  <AvatarFallback className="bg-indigo-500 text-white text-xs font-bold">
+                                    {receiver?.firstName?.[0] || "?"}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <span className="text-[10px] text-indigo-600 mt-1 font-medium">Receiver</span>
+                              </div>
+                              
+                              <div className="ml-4 flex-1">
+                                <p className="font-bold text-gray-900">{getDisplayName(receiver)}</p>
+                                <p className="text-xs text-gray-500 flex items-center gap-1">
+                                  <Clock className="w-3 h-3" />
+                                  Shared on {formatDate(share.sharedAt)}
+                                </p>
+                              </div>
+                            </div>
+                            <Badge className="bg-white text-gray-600 border shadow-sm">
+                              {share.sharedToModel === "TeamLead" ? "Team Lead" : "Employee"}
+                            </Badge>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
 
               {/* Attachments Section */}
               {(selectedTask.audioUrl || selectedTask.fileAttachments) && (

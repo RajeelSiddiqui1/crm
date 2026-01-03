@@ -1,4 +1,34 @@
+// models/AdminTask2.js - Fixed Schema
 import mongoose, { Schema, model, models } from "mongoose";
+
+const shareSchema = new Schema({
+  sharedTo: {
+    type: mongoose.Schema.Types.ObjectId,
+    required: true
+  },
+  sharedToModel: {
+    type: String,
+    enum: ["TeamLead", "Employee"],
+    required: true
+  },
+  sharedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    required: true
+  },
+  sharedByModel: {
+    type: String,
+    enum: ["TeamLead", "Employee"],
+    required: true
+  },
+  sharedAt: {
+    type: Date,
+    default: Date.now
+  },
+  canRemove: {
+    type: Boolean,
+    default: true
+  }
+}, { _id: true });
 
 const adminTaskSchema2 = new Schema(
   {
@@ -6,7 +36,7 @@ const adminTaskSchema2 = new Schema(
       type: String,
       required: true,
     },
-description: {
+    description: {
       type: String,
       default: ""
     },
@@ -27,26 +57,18 @@ description: {
 
     endDate: Date,
 
+    // Original sharer
     sharedBY: {
       type: mongoose.Schema.Types.ObjectId,
       refPath: "sharedByModel",
     },
-
     sharedByModel: {
       type: String,
       enum: ["TeamLead", "Employee"],
     },
 
-    sharedTo: {
-      type: mongoose.Schema.Types.ObjectId,
-      refPath: "sharedToModel",
-    },
-
-    sharedToModel: {
-      type: String,
-      enum: ["TeamLead", "Employee"],
-    },
-
+    // Current sharing details
+    shares: [shareSchema],
 
     teamleads: [
       {
@@ -64,6 +86,14 @@ description: {
           default: Date.now,
         },
         completedAt: Date,
+        sharedBy: {
+          type: mongoose.Schema.Types.ObjectId,
+          refPath: "teamleads.sharedByModel"
+        },
+        sharedByModel: {
+          type: String,
+          enum: ["TeamLead", "Employee"]
+        }
       },
     ],
 
@@ -83,6 +113,14 @@ description: {
           default: Date.now,
         },
         completedAt: Date,
+        sharedBy: {
+          type: mongoose.Schema.Types.ObjectId,
+          refPath: "employees.sharedByModel"
+        },
+        sharedByModel: {
+          type: String,
+          enum: ["TeamLead", "Employee"]
+        }
       },
     ],
 
@@ -111,7 +149,6 @@ description: {
   { timestamps: true }
 );
 
-const AdminTask2 =
-  models.AdminTask2 || model("AdminTask2", adminTaskSchema2);
+const AdminTask2 = models.AdminTask2 || model("AdminTask2", adminTaskSchema2);
 
 export default AdminTask2;

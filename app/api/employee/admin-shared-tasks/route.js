@@ -16,28 +16,28 @@ export async function GET() {
 
     const employeeId = session.user.id;
 
-    // Tasks shared TO this employee
+    // Tasks shared TO this employee (either in sharedTo array or employees array)
     const sharedToMe = await AdminTask2.find({
       $or: [
-        { sharedTo: employeeId },
+        { "sharedTo.userId": employeeId },
         { "employees.employeeId": employeeId }
       ]
     })
       .populate({
         path: "teamleads.teamleadId",
-        select: "name email profilePic",
+        select: "firstName lastName email profilePic",
       })
       .populate({
         path: "employees.employeeId",
-        select: "name email profilePic",
+        select: "firstName lastName email profilePic",
       })
       .populate({
         path: "sharedBY",
-        select: "name email profilePic",
+        select: "firstName lastName email profilePic",
       })
       .populate({
-        path: "sharedTo",
-        select: "name email profilePic",
+        path: "sharedTo.userId",
+        select: "firstName lastName email profilePic",
       })
       .populate({
         path: "departments",
@@ -45,29 +45,30 @@ export async function GET() {
       })
       .populate({
         path: "submittedBy",
-        select: "name email profilePic",
+        select: "firstName lastName email profilePic",
       })
       .sort({ createdAt: -1 });
 
     // Tasks shared BY this employee
     const sharedByMe = await AdminTask2.find({
-      sharedBY: employeeId
+      sharedBY: employeeId,
+      sharedByModel: "Employee"
     })
       .populate({
         path: "teamleads.teamleadId",
-        select: "name email profilePic",
+        select: "firstName lastName email profilePic",
       })
       .populate({
         path: "employees.employeeId",
-        select: "name email profilePic",
+        select: "firstName lastName email profilePic",
       })
       .populate({
         path: "sharedBY",
-        select: "name email profilePic",
+        select: "firstName lastName email profilePic",
       })
       .populate({
-        path: "sharedTo",
-        select: "name email profilePic",
+        path: "sharedTo.userId",
+        select: "firstName lastName email profilePic",
       })
       .populate({
         path: "departments",
@@ -75,7 +76,7 @@ export async function GET() {
       })
       .populate({
         path: "submittedBy",
-        select: "name email profilePic",
+        select: "firstName lastName email profilePic",
       })
       .sort({ createdAt: -1 });
 
@@ -84,9 +85,9 @@ export async function GET() {
       sharedByMe
     }, { status: 200 });
   } catch (error) {
-    console.error(error);
+    console.error("GET Shared Tasks Error:", error);
     return NextResponse.json(
-      { message: "Internal Server Error" },
+      { message: "Internal Server Error", error: error.message },
       { status: 500 }
     );
   }

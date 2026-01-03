@@ -33,24 +33,46 @@ export async function PUT(req, { params }) {
 
     const formData = await req.formData();
 
-    /* ---------- BASIC ---------- */
+    // Update basic info
     task.title = formData.get("title") ?? task.title;
     task.clientName = formData.get("clientName") ?? task.clientName;
     task.priority = formData.get("priority") ?? task.priority;
     task.endDate = formData.get("endDate") ?? task.endDate;
 
-    /* ---------- ASSIGNMENTS ---------- */
+    // Update assignments
     const teamleadIds = JSON.parse(formData.get("teamleadIds") || "[]");
     const employeeIds = JSON.parse(formData.get("employeeIds") || "[]");
 
-    if (teamleadIds.length) {
-      task.teamleads = teamleadIds.map(id => ({ teamleadId: id }));
-    }
-    if (employeeIds.length) {
-      task.employees = employeeIds.map(id => ({ employeeId: id }));
-    }
+    // Preserve existing statuses for existing assignees
+    const existingTeamleads = new Map();
+    task.teamleads.forEach(tl => {
+      if (tl.teamleadId) {
+        existingTeamleads.set(tl.teamleadId.toString(), tl.status);
+      }
+    });
 
-    /* ---------- FILE ---------- */
+    const existingEmployees = new Map();
+    task.employees.forEach(emp => {
+      if (emp.employeeId) {
+        existingEmployees.set(emp.employeeId.toString(), emp.status);
+      }
+    });
+
+    // Update teamleads with preserved status
+    task.teamleads = teamleadIds.map(id => ({
+      teamleadId: id,
+      status: existingTeamleads.get(id) || "pending",
+      assignedAt: Date.now()
+    }));
+
+    // Update employees with preserved status
+    task.employees = employeeIds.map(id => ({
+      employeeId: id,
+      status: existingEmployees.get(id) || "pending",
+      assignedAt: Date.now()
+    }));
+
+    // File update
     const file = formData.get("file");
     if (file && file.size > 0) {
       if (task.filePublicId) {
@@ -69,7 +91,7 @@ export async function PUT(req, { params }) {
       task.fileType = file.type;
     }
 
-    /* ---------- AUDIO ---------- */
+    // Audio update
     const audio = formData.get("audio");
     if (audio && audio.size > 0) {
       if (task.audioPublicId) {
@@ -88,11 +110,10 @@ export async function PUT(req, { params }) {
 
     await task.save();
 
-    /* ---------- NOTIFICATION + MAIL ---------- */
+    // Notifications
     const taskLink = `${process.env.NEXT_PUBLIC_DOMAIN}/teamlead/tasks`;
-
-    const teamleads = await TeamLead.find({ _id: { $in: task.teamleads.map(t => t.teamleadId) } });
-    const employees = await Employee.find({ _id: { $in: task.employees.map(e => e.employeeId) } });
+    const teamleads = await TeamLead.find({ _id: { $in: teamleadIds } });
+    const employees = await Employee.find({ _id: { $in: employeeIds } });
 
     await Promise.all([
       ...teamleads.map(tl =>
@@ -159,9 +180,6 @@ export async function PUT(req, { params }) {
   }
 }
 
-
-
-
 export async function DELETE(req, { params }) {
   try {
     await dbConnect();
@@ -177,6 +195,7 @@ export async function DELETE(req, { params }) {
       return NextResponse.json({ message: "Task not found" }, { status: 404 });
     }
 
+    // Delete files from cloudinary
     if (task.filePublicId) {
       await cloudinary.uploader.destroy(task.filePublicId, { resource_type: "raw" });
     }
@@ -184,13 +203,15 @@ export async function DELETE(req, { params }) {
       await cloudinary.uploader.destroy(task.audioPublicId, { resource_type: "video" });
     }
 
+    // Get assignees for notifications
     const teamleads = await TeamLead.find({ _id: { $in: task.teamleads.map(t => t.teamleadId) } });
     const employees = await Employee.find({ _id: { $in: task.employees.map(e => e.employeeId) } });
-
     const taskTitle = task.title;
 
+    // Delete task
     await task.deleteOne();
 
+    // Send notifications
     const taskLink = `${process.env.NEXT_PUBLIC_DOMAIN}/dashboard`;
 
     await Promise.all([

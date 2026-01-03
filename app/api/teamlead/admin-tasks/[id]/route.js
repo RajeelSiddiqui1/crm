@@ -8,19 +8,19 @@ import { authOptions } from "@/lib/auth";
 import { sendNotification } from "@/lib/sendNotification";
 import { sendMail } from "@/lib/mail";
 
-// GET Task Details
+// GET Task Details for TeamLead
 export async function GET(req, { params }) {
   try {
     await dbConnect();
 
     const session = await getServerSession(authOptions);
 
-    if (!session || session.user.role !== "Employee") {
+    if (!session || session.user.role !== "TeamLead") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const taskId = params.id;
-    const employeeId = session.user.id;
+    const teamleadId = session.user.id;
 
     const task = await AdminTask2.findById(taskId)
       .populate({
@@ -46,8 +46,8 @@ export async function GET(req, { params }) {
 
     // Check access
     const hasAccess = 
-      task.employees.some(e => e.employeeId?._id?.toString() === employeeId) ||
-      task.shares.some(s => s.sharedTo?.toString() === employeeId && s.sharedToModel === "Employee");
+      task.teamleads.some(t => t.teamleadId?._id?.toString() === teamleadId) ||
+      task.shares.some(s => s.sharedTo?.toString() === teamleadId && s.sharedToModel === "TeamLead");
 
     if (!hasAccess) {
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
@@ -58,25 +58,29 @@ export async function GET(req, { params }) {
       task.shares.map(async (share) => {
         let populatedShare = { ...share.toObject() };
         
-        // Populate sharedTo based on model
+        // Populate sharedTo
         if (share.sharedToModel === "Employee") {
           const employee = await Employee.findById(share.sharedTo)
-            .select("firstName lastName email profilePic");
+            .select("firstName lastName email profilePic")
+            .lean();
           populatedShare.sharedTo = employee;
         } else if (share.sharedToModel === "TeamLead") {
           const teamlead = await TeamLead.findById(share.sharedTo)
-            .select("firstName lastName email profilePic");
+            .select("firstName lastName email profilePic")
+            .lean();
           populatedShare.sharedTo = teamlead;
         }
         
-        // Populate sharedBy based on model
+        // Populate sharedBy
         if (share.sharedByModel === "Employee") {
           const employee = await Employee.findById(share.sharedBy)
-            .select("firstName lastName email profilePic");
+            .select("firstName lastName email profilePic")
+            .lean();
           populatedShare.sharedBy = employee;
         } else if (share.sharedByModel === "TeamLead") {
           const teamlead = await TeamLead.findById(share.sharedBy)
-            .select("firstName lastName email profilePic");
+            .select("firstName lastName email profilePic")
+            .lean();
           populatedShare.sharedBy = teamlead;
         }
         
@@ -99,19 +103,19 @@ export async function GET(req, { params }) {
   }
 }
 
-// PUT Update Status
+// PUT Update Status (TeamLead)
 export async function PUT(req, { params }) {
   try {
     await dbConnect();
     
     const session = await getServerSession(authOptions);
-    if (!session || session.user.role !== "Employee") {
+    if (!session || session.user.role !== "TeamLead") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { status, feedback } = await req.json();
     const taskId = params.id;
-    const employeeId = session.user.id;
+    const teamleadId = session.user.id;
 
     const task = await AdminTask2.findById(taskId)
       .populate("employees.employeeId", "email firstName lastName")
@@ -121,38 +125,32 @@ export async function PUT(req, { params }) {
       return NextResponse.json({ error: "Task not found" }, { status: 404 });
     }
 
-    // Update employee status
-    const employeeIndex = task.employees.findIndex(
-      e => e.employeeId?._id?.toString() === employeeId
+    // Update teamlead status
+    const teamleadIndex = task.teamleads.findIndex(
+      t => t.teamleadId?._id?.toString() === teamleadId
     );
 
-    if (employeeIndex === -1) {
+    if (teamleadIndex === -1) {
       return NextResponse.json({ error: "Not assigned to this task" }, { status: 403 });
     }
 
-    task.employees[employeeIndex].status = status;
+    task.teamleads[teamleadIndex].status = status;
     if (status === "completed") {
-      task.employees[employeeIndex].completedAt = new Date();
-    }
-
-    // Check if all employees completed
-    const allCompleted = task.employees.every(e => e.status === "completed");
-    if (allCompleted && task.employees.length > 0) {
-      task.completedAt = new Date();
+      task.teamleads[teamleadIndex].completedAt = new Date();
     }
 
     await task.save();
 
-    // Send notifications
+    // Send notifications to admin
     await sendNotification({
-      senderId: employeeId,
-      senderModel: "Employee",
+      senderId: teamleadId,
+      senderModel: "TeamLead",
       senderName: session.user.name,
       receiverId: task.submittedBy,
       receiverModel: "Admin",
       type: "task_status_updated",
       title: "Task Status Updated",
-      message: `${session.user.name} updated status to ${status} for task: ${task.title}`,
+      message: `${session.user.name} (TeamLead) updated status to ${status} for task: ${task.title}`,
       link: `/admin/tasks/${taskId}`,
       referenceId: task._id,
       referenceModel: "AdminTask2",
@@ -172,22 +170,22 @@ export async function PUT(req, { params }) {
   }
 }
 
-// POST Share Task (Employee can only share with other Employees)
+// POST Share Task (TeamLead can share with other TeamLeads)
 export async function POST(req, { params }) {
   try {
     await dbConnect();
     
     const session = await getServerSession(authOptions);
-    if (!session || session.user.role !== "Employee") {
+    if (!session || session.user.role !== "TeamLead") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { employeeId: targetEmployeeId } = await req.json();
+    const { teamleadId: targetTeamleadId } = await req.json();
     const taskId = params.id;
     const sharerId = session.user.id;
 
-    if (!targetEmployeeId) {
-      return NextResponse.json({ error: "Employee ID is required" }, { status: 400 });
+    if (!targetTeamleadId) {
+      return NextResponse.json({ error: "TeamLead ID is required" }, { status: 400 });
     }
 
     // Check if sharer has access to this task
@@ -196,93 +194,86 @@ export async function POST(req, { params }) {
       return NextResponse.json({ error: "Task not found" }, { status: 404 });
     }
 
-    const hasAccess = task.employees.some(e => 
-      e.employeeId?.toString() === sharerId
+    const hasAccess = task.teamleads.some(t => 
+      t.teamleadId?.toString() === sharerId
     );
     
     if (!hasAccess) {
       return NextResponse.json({ error: "You don't have access to share this task" }, { status: 403 });
     }
 
-    // Check if target employee exists
-    const targetEmployee = await Employee.findById(targetEmployeeId);
-    if (!targetEmployee) {
-      return NextResponse.json({ error: "Employee not found" }, { status: 404 });
+    // Check if target teamlead exists
+    const targetTeamlead = await TeamLead.findById(targetTeamleadId);
+    if (!targetTeamlead) {
+      return NextResponse.json({ error: "TeamLead not found" }, { status: 404 });
     }
 
     // Check if already shared
     const alreadyShared = task.shares.some(s => 
-      s.sharedTo?.toString() === targetEmployeeId && s.sharedToModel === "Employee"
+      s.sharedTo?.toString() === targetTeamleadId && s.sharedToModel === "TeamLead"
     );
     
     if (alreadyShared) {
-      return NextResponse.json({ error: "Task already shared with this employee" }, { status: 400 });
+      return NextResponse.json({ error: "Task already shared with this teamlead" }, { status: 400 });
     }
 
     // Add to shares array
     task.shares.push({
-      sharedTo: targetEmployeeId,
-      sharedToModel: "Employee",
+      sharedTo: targetTeamleadId,
+      sharedToModel: "TeamLead",
       sharedBy: sharerId,
-      sharedByModel: "Employee",
+      sharedByModel: "TeamLead",
       sharedAt: new Date()
     });
 
-    // Also add to employees array if not already there
-    const alreadyInEmployees = task.employees.some(e => 
-      e.employeeId?.toString() === targetEmployeeId
+    // Also add to teamleads array if not already there
+    const alreadyInTeamleads = task.teamleads.some(t => 
+      t.teamleadId?.toString() === targetTeamleadId
     );
     
-    if (!alreadyInEmployees) {
-      task.employees.push({
-        employeeId: targetEmployeeId,
+    if (!alreadyInTeamleads) {
+      task.teamleads.push({
+        teamleadId: targetTeamleadId,
         status: "pending",
         assignedAt: new Date(),
         sharedBy: sharerId,
-        sharedByModel: "Employee"
+        sharedByModel: "TeamLead"
       });
     }
 
     await task.save();
 
-    // Get the shared task with populated data
-    const populatedTask = await AdminTask2.findById(taskId)
-      .populate({
-        path: "employees.employeeId",
-        select: "firstName lastName email profilePic department",
-      });
-
-    // Send notification to target employee
+    // Send notification to target teamlead
     await sendNotification({
       senderId: sharerId,
-      senderModel: "Employee",
+      senderModel: "TeamLead",
       senderName: session.user.name,
-      receiverId: targetEmployeeId,
-      receiverModel: "Employee",
+      receiverId: targetTeamleadId,
+      receiverModel: "TeamLead",
       type: "task_shared",
       title: "Task Shared With You",
       message: `${session.user.name} shared a task with you: ${task.title}`,
-      link: `/employee/admin-tasks/${taskId}`,
+      link: `/teamlead/admin-tasks/${taskId}`,
       referenceId: task._id,
       referenceModel: "AdminTask2",
     });
 
     // Send email notification
     await sendMail({
-      to: targetEmployee.email,
+      to: targetTeamlead.email,
       subject: "New Task Shared With You",
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h2>Task Shared</h2>
-          <p>Hello ${targetEmployee.firstName},</p>
+          <p>Hello ${targetTeamlead.firstName},</p>
           <p><strong>${session.user.name}</strong> has shared a task with you:</p>
           <div style="background: #f5f5f5; padding: 15px; border-radius: 5px; margin: 20px 0;">
             <h3 style="margin: 0; color: #333;">${task.title}</h3>
             ${task.description ? `<p style="margin: 10px 0;">${task.description}</p>` : ''}
             ${task.clientName ? `<p><strong>Client:</strong> ${task.clientName}</p>` : ''}
           </div>
-          <a href="${process.env.NEXT_PUBLIC_URL}/employee/admin-tasks/${taskId}" 
-             style="background: #4f46e5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
+          <a href="${process.env.NEXT_PUBLIC_URL}/teamlead/admin-tasks/${taskId}" 
+             style="background: #8b5cf6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">
             View Task
           </a>
         </div>
@@ -291,7 +282,7 @@ export async function POST(req, { params }) {
 
     return NextResponse.json({ 
       message: "Task shared successfully",
-      task: populatedTask
+      task 
     }, { status: 200 });
 
   } catch (error) {

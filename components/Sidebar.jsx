@@ -101,6 +101,7 @@ export default function Sidebar() {
     ],
     teamlead: [
       { href: "/teamlead/home", label: "Dashboard", icon: "Dashboard" },
+      { href: "/teamlead/admin-tasks", label: "Admin Tasks", icon: "AdminTasks" },
       { href: "/teamlead/subtasks", label: "Subtasks", icon: "Subtasks" },
       { href: "/teamlead/tasks", label: "Tasks", icon: "Tasks" },
       { href: "/teamlead/operation-tasks", label: "Operation Tasks", icon: "OperationTasks" },
@@ -110,6 +111,7 @@ export default function Sidebar() {
     employee: [
       { href: "/employee/home", label: "Dashboard", icon: "Dashboard" },
       { href: "/employee/tasks", label: "Tasks", icon: "Tasks" },
+      { href: "/employee/admin-tasks", label: "Admin Tasks", icon: "AdminTasks" },
       { href: "/employee/subtasks", label: "Subtasks", icon: "Subtasks" },
       { href: "/employee/operation-tasks", label: "Operation Tasks", icon: "OperationTasks" },
       { href: "/employee/received-tasks", label: "Received Tasks", icon: "ReceivedTasks" },
