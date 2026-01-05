@@ -1,3 +1,4 @@
+// app/teamlead/subtasks/edit/[id]/page.jsx
 "use client";
 import React, { useState, useEffect, useMemo } from "react";
 import { useSession } from "next-auth/react";
@@ -55,6 +56,8 @@ import {
   XCircle,
   Building,
   UserCog,
+  Crown,
+  Sparkles,
 } from "lucide-react";
 import axios from "axios";
 import { format } from "date-fns";
@@ -70,11 +73,13 @@ export default function EditSubtaskPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [fetchingEmployees, setFetchingEmployees] = useState(true);
   const [fetchingManagers, setFetchingManagers] = useState(true);
+  const [fetchingTeamLeads, setFetchingTeamLeads] = useState(true);
   const [employees, setEmployees] = useState([]);
   const [managers, setManagers] = useState([]);
+  const [teamLeads, setTeamLeads] = useState([]);
   const [subtask, setSubtask] = useState(null);
   const [originalSubtask, setOriginalSubtask] = useState(null);
-  const [activeTab, setActiveTab] = useState("employees"); // "employees" or "managers"
+  const [activeTab, setActiveTab] = useState("employees"); // "employees", "managers", or "teamleads"
 
   const [formData, setFormData] = useState({
     title: "",
@@ -84,11 +89,12 @@ export default function EditSubtaskPage() {
     startTime: "",
     endTime: "",
     priority: "medium",
-    totalLeadsRequired: "1", // Updated field name
+    totalLeadsRequired: "1",
   });
 
   const [selectedEmployees, setSelectedEmployees] = useState([]);
   const [selectedManagers, setSelectedManagers] = useState([]);
+  const [selectedTeamLeads, setSelectedTeamLeads] = useState([]);
 
   // Check if current team lead has the specific depId
   const shouldShowLeadsField = useMemo(() => {
@@ -107,6 +113,7 @@ export default function EditSubtaskPage() {
     fetchSubtask();
     fetchEmployees();
     fetchManagers();
+    fetchTeamLeads();
   }, [session, status, router]);
 
   const fetchSubtask = async () => {
@@ -135,7 +142,6 @@ export default function EditSubtaskPage() {
           ? subtaskData.endTime.substring(0, 5)
           : "17:00";
 
-        // Use lead field for totalLeadsRequired only if leads field should be shown
         let totalLeadsRequired = "1";
         if (shouldShowLeadsField) {
           totalLeadsRequired =
@@ -188,10 +194,25 @@ export default function EditSubtaskPage() {
           );
           setSelectedManagers(managerAssignments);
         }
+
+        // Set already assigned team leads
+        if (subtaskData.assignedTeamLeads) {
+          const teamLeadAssignments = subtaskData.assignedTeamLeads.map(
+            (tl) => ({
+              teamLeadId: tl.teamLeadId?._id?.toString() || tl.teamLeadId.toString(),
+              email: tl.email || "",
+              name: tl.name || `${tl.teamLeadId?.firstName || ""} ${tl.teamLeadId?.lastName || ""}`.trim(),
+              depId: tl.teamLeadId?.depId || tl.depId,
+            })
+          );
+          setSelectedTeamLeads(teamLeadAssignments);
+        }
       }
     } catch (error) {
       console.error("Error fetching subtask:", error);
-      toast.error("Failed to load subtask details");
+      toast.error("Failed to load subtask details", {
+        style: { background: '#fef2f2', borderColor: '#fecaca', color: '#dc2626' }
+      });
       router.push("/teamlead/subtasks");
     } finally {
       setLoading(false);
@@ -202,7 +223,6 @@ export default function EditSubtaskPage() {
     try {
       setFetchingEmployees(true);
       const response = await axios.get("/api/teamlead/employees");
-
       if (response.status === 200) {
         setEmployees(response.data.employees || response.data || []);
       }
@@ -218,7 +238,6 @@ export default function EditSubtaskPage() {
     try {
       setFetchingManagers(true);
       const response = await axios.get("/api/teamlead/managers");
-
       if (response.status === 200) {
         setManagers(response.data.managers || []);
       }
@@ -230,6 +249,21 @@ export default function EditSubtaskPage() {
     }
   };
 
+  const fetchTeamLeads = async () => {
+    try {
+      setFetchingTeamLeads(true);
+      const response = await axios.get("/api/teamlead/teamleads");
+      if (response.status === 200) {
+        setTeamLeads(response.data.teamLeads || []);
+      }
+    } catch (error) {
+      console.error("Error fetching team leads:", error);
+      toast.error("Failed to load team leads");
+    } finally {
+      setFetchingTeamLeads(false);
+    }
+  };
+
   const handleInputChange = (field, value) => {
     setFormData((prev) => ({
       ...prev,
@@ -238,10 +272,7 @@ export default function EditSubtaskPage() {
   };
 
   const handleEmployeeSelect = (employeeId) => {
-    if (
-      employeeId &&
-      !selectedEmployees.find((emp) => emp.employeeId === employeeId)
-    ) {
+    if (employeeId && !selectedEmployees.find((emp) => emp.employeeId === employeeId)) {
       const employee = employees.find((emp) => emp._id === employeeId);
       if (employee) {
         setSelectedEmployees([
@@ -257,10 +288,7 @@ export default function EditSubtaskPage() {
   };
 
   const handleManagerSelect = (managerId) => {
-    if (
-      managerId &&
-      !selectedManagers.find((mgr) => mgr.managerId === managerId)
-    ) {
+    if (managerId && !selectedManagers.find((mgr) => mgr.managerId === managerId)) {
       const manager = managers.find((mgr) => mgr._id === managerId);
       if (manager) {
         setSelectedManagers([
@@ -275,16 +303,33 @@ export default function EditSubtaskPage() {
     }
   };
 
+  const handleTeamLeadSelect = (teamLeadId) => {
+    if (teamLeadId && !selectedTeamLeads.find((tl) => tl.teamLeadId === teamLeadId)) {
+      const teamLead = teamLeads.find((tl) => tl._id === teamLeadId);
+      if (teamLead) {
+        setSelectedTeamLeads([
+          ...selectedTeamLeads,
+          {
+            teamLeadId,
+            email: teamLead.email,
+            name: `${teamLead.firstName} ${teamLead.lastName}`.trim(),
+            depId: teamLead.depId,
+          },
+        ]);
+      }
+    }
+  };
+
   const removeEmployee = (employeeId) => {
-    setSelectedEmployees(
-      selectedEmployees.filter((emp) => emp.employeeId !== employeeId)
-    );
+    setSelectedEmployees(selectedEmployees.filter((emp) => emp.employeeId !== employeeId));
   };
 
   const removeManager = (managerId) => {
-    setSelectedManagers(
-      selectedManagers.filter((mgr) => mgr.managerId !== managerId)
-    );
+    setSelectedManagers(selectedManagers.filter((mgr) => mgr.managerId !== managerId));
+  };
+
+  const removeTeamLead = (teamLeadId) => {
+    setSelectedTeamLeads(selectedTeamLeads.filter((tl) => tl.teamLeadId !== teamLeadId));
   };
 
   const getEmployeeDetails = (employeeId) => {
@@ -295,13 +340,15 @@ export default function EditSubtaskPage() {
     return managers.find((mgr) => mgr._id === managerId);
   };
 
+  const getTeamLeadDetails = (teamLeadId) => {
+    return teamLeads.find((tl) => tl._id === teamLeadId);
+  };
+
   const getEmployeeProgress = (employeeId) => {
-    if (!subtask?.assignedEmployees)
-      return { completed: 0, assigned: 0, status: "pending" };
+    if (!subtask?.assignedEmployees) return { completed: 0, assigned: 0, status: "pending" };
 
     const assignment = subtask.assignedEmployees.find((emp) => {
-      const empId =
-        emp.employeeId?._id?.toString() || emp.employeeId.toString();
+      const empId = emp.employeeId?._id?.toString() || emp.employeeId.toString();
       return empId === employeeId;
     });
 
@@ -313,8 +360,7 @@ export default function EditSubtaskPage() {
   };
 
   const getManagerProgress = (managerId) => {
-    if (!subtask?.assignedManagers)
-      return { completed: 0, assigned: 0, status: "pending" };
+    if (!subtask?.assignedManagers) return { completed: 0, assigned: 0, status: "pending" };
 
     const assignment = subtask.assignedManagers.find((mgr) => {
       const mgrId = mgr.managerId?._id?.toString() || mgr.managerId.toString();
@@ -328,77 +374,66 @@ export default function EditSubtaskPage() {
     };
   };
 
+  const getTeamLeadProgress = (teamLeadId) => {
+    if (!subtask?.assignedTeamLeads) return { completed: 0, assigned: 0, status: "pending" };
+
+    const assignment = subtask.assignedTeamLeads.find((tl) => {
+      const tlId = tl.teamLeadId?._id?.toString() || tl.teamLeadId.toString();
+      return tlId === teamLeadId;
+    });
+
+    return {
+      completed: assignment?.leadsCompleted || 0,
+      assigned: assignment?.leadsAssigned || 0,
+      status: assignment?.status || "pending",
+    };
+  };
+
   const hasChanges = () => {
     if (!originalSubtask) return false;
 
-    // Compare original with current form data
-    const originalLeads =
-      originalSubtask.totalLeadsRequired?.toString() ||
-      originalSubtask.lead ||
-      "1";
+    // Compare leads
+    const originalLeads = originalSubtask.totalLeadsRequired?.toString() || originalSubtask.lead || "1";
+    if (shouldShowLeadsField && formData.totalLeadsRequired !== originalLeads) return true;
 
-    // Get original employee assignments
-    const originalEmployeeAssignments =
-      originalSubtask.assignedEmployees?.map((emp) => ({
-        employeeId:
-          emp.employeeId?._id?.toString() || emp.employeeId.toString(),
-        email: emp.email || "",
-        name: emp.name || "",
-      })) || [];
+    // Compare employee assignments
+    const originalEmployeeAssignments = originalSubtask.assignedEmployees?.map((emp) => ({
+      employeeId: emp.employeeId?._id?.toString() || emp.employeeId.toString(),
+      email: emp.email || "",
+      name: emp.name || "",
+    })) || [];
 
-    // Get original manager assignments
-    const originalManagerAssignments =
-      originalSubtask.assignedManagers?.map((mgr) => ({
-        managerId: mgr.managerId?._id?.toString() || mgr.managerId.toString(),
-        email: mgr.email || "",
-        name: mgr.name || "",
-      })) || [];
+    const currentEmployeeIds = selectedEmployees.map((emp) => emp.employeeId).sort();
+    const originalEmployeeIds = originalEmployeeAssignments.map((emp) => emp.employeeId).sort();
+    if (JSON.stringify(currentEmployeeIds) !== JSON.stringify(originalEmployeeIds)) return true;
 
-    // Check if leads changed (only if leads field should be shown)
-    if (shouldShowLeadsField && formData.totalLeadsRequired !== originalLeads)
-      return true;
+    // Compare manager assignments
+    const originalManagerAssignments = originalSubtask.assignedManagers?.map((mgr) => ({
+      managerId: mgr.managerId?._id?.toString() || mgr.managerId.toString(),
+      email: mgr.email || "",
+      name: mgr.name || "",
+    })) || [];
 
-    // Check if employees changed
-    const currentEmployeeIds = selectedEmployees
-      .map((emp) => emp.employeeId)
-      .sort();
-    const originalEmployeeIds = originalEmployeeAssignments
-      .map((emp) => emp.employeeId)
-      .sort();
-    if (
-      JSON.stringify(currentEmployeeIds) !== JSON.stringify(originalEmployeeIds)
-    ) {
-      return true;
-    }
+    const currentManagerIds = selectedManagers.map((mgr) => mgr.managerId).sort();
+    const originalManagerIds = originalManagerAssignments.map((mgr) => mgr.managerId).sort();
+    if (JSON.stringify(currentManagerIds) !== JSON.stringify(originalManagerIds)) return true;
 
-    // Check if managers changed
-    const currentManagerIds = selectedManagers
-      .map((mgr) => mgr.managerId)
-      .sort();
-    const originalManagerIds = originalManagerAssignments
-      .map((mgr) => mgr.managerId)
-      .sort();
-    if (
-      JSON.stringify(currentManagerIds) !== JSON.stringify(originalManagerIds)
-    ) {
-      return true;
-    }
+    // Compare team lead assignments
+    const originalTeamLeadAssignments = originalSubtask.assignedTeamLeads?.map((tl) => ({
+      teamLeadId: tl.teamLeadId?._id?.toString() || tl.teamLeadId.toString(),
+      email: tl.email || "",
+      name: tl.name || "",
+    })) || [];
 
-    // Check other fields
-    const originalFormattedStartDate = format(
-      new Date(originalSubtask.startDate),
-      "yyyy-MM-dd"
-    );
-    const originalFormattedEndDate = format(
-      new Date(originalSubtask.endDate),
-      "yyyy-MM-dd"
-    );
-    const originalStartTime = originalSubtask.startTime
-      ? originalSubtask.startTime.substring(0, 5)
-      : "09:00";
-    const originalEndTime = originalSubtask.endTime
-      ? originalSubtask.endTime.substring(0, 5)
-      : "17:00";
+    const currentTeamLeadIds = selectedTeamLeads.map((tl) => tl.teamLeadId).sort();
+    const originalTeamLeadIds = originalTeamLeadAssignments.map((tl) => tl.teamLeadId).sort();
+    if (JSON.stringify(currentTeamLeadIds) !== JSON.stringify(originalTeamLeadIds)) return true;
+
+    // Compare other fields
+    const originalFormattedStartDate = format(new Date(originalSubtask.startDate), "yyyy-MM-dd");
+    const originalFormattedEndDate = format(new Date(originalSubtask.endDate), "yyyy-MM-dd");
+    const originalStartTime = originalSubtask.startTime ? originalSubtask.startTime.substring(0, 5) : "09:00";
+    const originalEndTime = originalSubtask.endTime ? originalSubtask.endTime.substring(0, 5) : "17:00";
 
     const changedFields = [
       ["title", originalSubtask.title],
@@ -436,27 +471,12 @@ export default function EditSubtaskPage() {
       return;
     }
 
-    if (!formData.startDate) {
-      toast.error("Please select start date");
+    if (!formData.startDate || !formData.endDate || !formData.startTime || !formData.endTime) {
+      toast.error("Please select dates and times");
       return;
     }
 
-    if (!formData.endDate) {
-      toast.error("Please select end date");
-      return;
-    }
-
-    if (!formData.startTime) {
-      toast.error("Please select start time");
-      return;
-    }
-
-    if (!formData.endTime) {
-      toast.error("Please select end time");
-      return;
-    }
-
-    // Additional validation for leads field if visible
+    // Leads validation
     if (shouldShowLeadsField) {
       if (!formData.totalLeadsRequired) {
         toast.error("Please enter number of leads required");
@@ -471,9 +491,7 @@ export default function EditSubtaskPage() {
     }
 
     // Date validation
-    const startDateTime = new Date(
-      `${formData.startDate}T${formData.startTime}`
-    );
+    const startDateTime = new Date(`${formData.startDate}T${formData.startTime}`);
     const endDateTime = new Date(`${formData.endDate}T${formData.endTime}`);
 
     if (startDateTime >= endDateTime) {
@@ -482,50 +500,49 @@ export default function EditSubtaskPage() {
     }
 
     // At least one assignee validation
-    if (selectedEmployees.length === 0 && selectedManagers.length === 0) {
-      toast.error("Please select at least one employee or manager");
+    if (selectedEmployees.length === 0 && selectedManagers.length === 0 && selectedTeamLeads.length === 0) {
+      toast.error("Please select at least one employee, manager, or team lead");
       return;
     }
 
     setIsSubmitting(true);
 
     try {
-      // Prepare data for API
       const subtaskData = {
         ...formData,
         teamLeadId: session.user.id,
-        teamLeadName:
-          session.user.name ||
-          `${session.user.firstName} ${session.user.lastName}`,
+        teamLeadName: session.user.name || `${session.user.firstName} ${session.user.lastName}`,
         teamLeadDepId: session.user.depId,
         assignedEmployees: selectedEmployees,
         assignedManagers: selectedManagers,
+        assignedTeamLeads: selectedTeamLeads,
         hasLeadsTarget: shouldShowLeadsField && formData.totalLeadsRequired > 0,
-        totalLeadsRequired: shouldShowLeadsField
-          ? parseInt(formData.totalLeadsRequired)
-          : 0,
+        totalLeadsRequired: shouldShowLeadsField ? parseInt(formData.totalLeadsRequired) : 0,
       };
 
-      console.log("Updating subtask with data:", subtaskData);
-
-      const response = await axios.put(
-        `/api/teamlead/subtasks/${subtaskId}`,
-        subtaskData
-      );
+      const response = await axios.put(`/api/teamlead/subtasks/${subtaskId}`, subtaskData);
 
       if (response.status === 200) {
-        toast.success("Subtask updated successfully!");
+        toast.success("Subtask updated successfully!", {
+          icon: "🎯",
+          style: { background: '#f0fdf4', borderColor: '#bbf7d0', color: '#15803d' }
+        });
+        
+        // Show notification info
+        toast.info("Notifications sent to all assignees", {
+          icon: "📧",
+          style: { background: '#eff6ff', borderColor: '#bfdbfe', color: '#1d4ed8' }
+        });
+        
         setTimeout(() => {
           router.push("/teamlead/subtasks");
         }, 1000);
       }
     } catch (error) {
       console.error("Error updating subtask:", error);
-      if (error.response?.status === 409) {
-        toast.error("Subtask with this title already exists");
-      } else {
-        toast.error(error.response?.data?.error || "Failed to update subtask");
-      }
+      toast.error(error.response?.data?.error || "Failed to update subtask", {
+        style: { background: '#fef2f2', borderColor: '#fecaca', color: '#dc2626' }
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -536,37 +553,44 @@ export default function EditSubtaskPage() {
 
     setIsDeleting(true);
     try {
-      const response = await axios.delete(
-        `/api/teamlead/subtasks/${subtaskId}`
-      );
+      const response = await axios.delete(`/api/teamlead/subtasks/${subtaskId}`);
 
       if (response.status === 200) {
-        toast.success("Subtask deleted successfully!");
+        toast.success("Subtask deleted successfully!", {
+          icon: "🗑️",
+          style: { background: '#f0fdf4', borderColor: '#bbf7d0', color: '#15803d' }
+        });
+        
+        // Show notification info
+        toast.info("Notifications sent to all assignees", {
+          icon: "📧",
+          style: { background: '#eff6ff', borderColor: '#bfdbfe', color: '#1d4ed8' }
+        });
+        
         setTimeout(() => {
           router.push("/teamlead/subtasks");
         }, 1000);
       }
     } catch (error) {
       console.error("Error deleting subtask:", error);
-      toast.error(error.response?.data?.error || "Failed to delete subtask");
+      toast.error(error.response?.data?.error || "Failed to delete subtask", {
+        style: { background: '#fef2f2', borderColor: '#fecaca', color: '#dc2626' }
+      });
       setIsDeleting(false);
     }
   };
 
   const leadsRequired = parseInt(formData.totalLeadsRequired) || 1;
-  const totalAssignees = selectedEmployees.length + selectedManagers.length;
-  const leadsPerAssignee =
-    shouldShowLeadsField && totalAssignees > 0
-      ? Math.ceil(leadsRequired / totalAssignees)
-      : 0;
+  const totalAssignees = selectedEmployees.length + selectedManagers.length + selectedTeamLeads.length;
+  const leadsPerAssignee = shouldShowLeadsField && totalAssignees > 0
+    ? Math.ceil(leadsRequired / totalAssignees)
+    : 0;
 
   const getEmployeeDisplayName = (employeeId) => {
     const employee = getEmployeeDetails(employeeId);
     if (!employee) {
-      // Try to find in existing subtask assignments
       const existingAssignment = subtask?.assignedEmployees?.find((emp) => {
-        const existingEmpId =
-          emp.employeeId?._id?.toString() || emp.employeeId.toString();
+        const existingEmpId = emp.employeeId?._id?.toString() || emp.employeeId.toString();
         return existingEmpId === employeeId;
       });
       if (existingAssignment) {
@@ -580,10 +604,8 @@ export default function EditSubtaskPage() {
   const getManagerDisplayName = (managerId) => {
     const manager = getManagerDetails(managerId);
     if (!manager) {
-      // Try to find in existing subtask assignments
       const existingAssignment = subtask?.assignedManagers?.find((mgr) => {
-        const existingMgrId =
-          mgr.managerId?._id?.toString() || mgr.managerId.toString();
+        const existingMgrId = mgr.managerId?._id?.toString() || mgr.managerId.toString();
         return existingMgrId === managerId;
       });
       if (existingAssignment) {
@@ -594,12 +616,44 @@ export default function EditSubtaskPage() {
     return manager.name || `${manager.firstName} ${manager.lastName}`.trim();
   };
 
+  const getTeamLeadDisplayName = (teamLeadId) => {
+    const teamLead = getTeamLeadDetails(teamLeadId);
+    if (!teamLead) {
+      const existingAssignment = subtask?.assignedTeamLeads?.find((tl) => {
+        const existingTlId = tl.teamLeadId?._id?.toString() || tl.teamLeadId.toString();
+        return existingTlId === teamLeadId;
+      });
+      if (existingAssignment) {
+        return existingAssignment.name || "Unknown Team Lead";
+      }
+      return "Unknown Team Lead";
+    }
+    return teamLead.name || `${teamLead.firstName} ${teamLead.lastName}`.trim();
+  };
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case "completed": return "text-green-600 bg-green-100";
+      case "in_progress": return "text-blue-600 bg-blue-100";
+      case "approved": return "text-emerald-600 bg-emerald-100";
+      case "rejected": return "text-red-600 bg-red-100";
+      default: return "text-yellow-600 bg-yellow-100";
+    }
+  };
+
   if (status === "loading" || loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-white">
-        <div className="flex items-center gap-2">
-          <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
-          <span className="text-gray-900">Loading...</span>
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+        <div className="flex flex-col items-center gap-4">
+          <div className="relative">
+            <div className="w-20 h-20 border-4 border-blue-200 rounded-full"></div>
+            <div className="absolute top-0 left-0 w-20 h-20 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+            <Sparkles className="absolute -top-2 -right-2 w-8 h-8 text-blue-500 animate-pulse" />
+          </div>
+          <div className="text-center">
+            <h3 className="text-xl font-bold text-gray-900">Loading Subtask Editor</h3>
+            <p className="text-gray-800 mt-2">Preparing your subtask for editing...</p>
+          </div>
         </div>
       </div>
     );
@@ -607,15 +661,21 @@ export default function EditSubtaskPage() {
 
   if (!session || session.user.role !== "TeamLead") {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-white">
-        <div className="text-center">
-          <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">
-            Access Denied
-          </h2>
-          <p className="text-gray-600">
-            You need to be logged in as TeamLead to access this page.
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-rose-50 via-pink-50 to-red-50">
+        <div className="text-center max-w-md p-8">
+          <div className="w-24 h-24 bg-gradient-to-r from-rose-500 to-pink-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-xl">
+            <AlertCircle className="w-12 h-12 text-white" />
+          </div>
+          <h2 className="text-3xl font-bold text-gray-900 mb-3">Access Restricted</h2>
+          <p className="text-gray-800 text-lg mb-6">
+            This page is exclusively for team leads. Please log in with your team lead credentials.
           </p>
+          <Button
+            onClick={() => router.push("/teamleadlogin")}
+            className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white hover:opacity-90 px-8 py-6 text-lg rounded-xl shadow-lg"
+          >
+            Go to Team Lead Login
+          </Button>
         </div>
       </div>
     );
@@ -626,10 +686,11 @@ export default function EditSubtaskPage() {
       <div className="min-h-screen flex items-center justify-center bg-white">
         <div className="text-center">
           <AlertCircle className="w-16 h-16 text-yellow-500 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">
-            Subtask Not Found
-          </h2>
-          <Button onClick={() => router.push("/teamlead/subtasks")}>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Subtask Not Found</h2>
+          <Button 
+            onClick={() => router.push("/teamlead/subtasks")}
+            className="bg-gradient-to-r from-blue-600 to-indigo-700 hover:opacity-90 text-white"
+          >
             Go Back to Subtasks
           </Button>
         </div>
@@ -638,17 +699,18 @@ export default function EditSubtaskPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 p-6">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 p-4 md:p-6">
       <Toaster position="top-right" />
 
-      <div className="max-w-2xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
+      <div className="max-w-4xl mx-auto">
+        {/* Header */}
+        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-8">
           <div className="flex items-center gap-4">
             <Button
               variant="outline"
               size="icon"
               onClick={() => router.back()}
-              className="border-blue-200 text-blue-700 hover:bg-blue-50"
+              className="border-blue-200 text-blue-700 hover:bg-blue-50 shadow-sm rounded-xl"
             >
               <ArrowLeft className="w-4 h-4" />
             </Button>
@@ -658,36 +720,34 @@ export default function EditSubtaskPage() {
               </h1>
               <p className="text-gray-800 mt-2">
                 {shouldShowLeadsField
-                  ? "Update subtask details and lead assignments"
-                  : "Update subtask details"}
+                  ? "Update subtask details, lead targets, and assignments"
+                  : "Update subtask details and assignments"}
               </p>
             </div>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-3">
             {shouldShowLeadsField && (
-              <Badge className="bg-green-100 text-green-800 border-green-200 mr-2">
+              <Badge className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white border-0 shadow-sm">
                 <Target className="w-3 h-3 mr-1" />
-                Lead Tracking Enabled
+                Lead Tracking Active
               </Badge>
             )}
 
             <Button
               variant="outline"
-              onClick={() =>
-                router.push(`/teamlead/subtask-employee/view/${subtaskId}`)
-              }
-              className="border-blue-200 text-blue-700 hover:bg-blue-50"
+              onClick={() => router.push(`/teamlead/subtasks/${subtaskId}`)}
+              className="border-blue-200 text-blue-700 hover:bg-blue-50 shadow-sm rounded-xl"
             >
               <Eye className="w-4 h-4 mr-2" />
-              View
+              View Details
             </Button>
 
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button
                   variant="destructive"
-                  className="bg-red-600 hover:bg-red-700"
+                  className="bg-gradient-to-r from-rose-500 to-pink-600 hover:opacity-90 text-white shadow-sm rounded-xl"
                   disabled={isDeleting}
                 >
                   {isDeleting ? (
@@ -698,26 +758,26 @@ export default function EditSubtaskPage() {
                   Delete
                 </Button>
               </AlertDialogTrigger>
-              <AlertDialogContent>
+              <AlertDialogContent className="bg-white border border-gray-200 shadow-2xl rounded-2xl">
                 <AlertDialogHeader className="text-gray-900">
-                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This action cannot be undone. This will permanently delete
-                    the subtask and remove all associated data including
-                    employee and manager assignments. All assigned users will be
-                    notified.
+                  <AlertDialogTitle className="text-xl font-bold">Delete Subtask?</AlertDialogTitle>
+                  <AlertDialogDescription className="text-gray-700">
+                    This action cannot be undone. This will permanently delete the subtask and:
+                    <ul className="list-disc pl-5 mt-2 space-y-1">
+                      <li>Remove all assignments</li>
+                      <li>Delete progress tracking data</li>
+                      <li>Send notifications to all assignees</li>
+                      <li>Remove from all reports</li>
+                    </ul>
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                  <AlertDialogCancel
-                    disabled={isDeleting}
-                    className="text-gray-900"
-                  >
+                  <AlertDialogCancel disabled={isDeleting} className="border-gray-300 text-gray-700 hover:bg-gray-50 rounded-xl">
                     Cancel
                   </AlertDialogCancel>
                   <AlertDialogAction
                     onClick={handleDelete}
-                    className="bg-red-600 hover:bg-red-700"
+                    className="bg-gradient-to-r from-rose-500 to-pink-600 hover:opacity-90 text-white rounded-xl"
                     disabled={isDeleting}
                   >
                     {isDeleting ? (
@@ -735,248 +795,229 @@ export default function EditSubtaskPage() {
           </div>
         </div>
 
-        <Card className="shadow-2xl shadow-blue-500/10 border-0 bg-gradient-to-br from-white to-blue-50/50 backdrop-blur-sm">
+        {/* Main Form Card */}
+        <Card className="border-0 shadow-2xl bg-gradient-to-br from-white to-blue-50/50 backdrop-blur-sm rounded-2xl overflow-hidden">
           <CardHeader className="bg-gradient-to-r from-white to-blue-50 border-b border-blue-100/50">
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle className="text-xl font-bold text-gray-900">
-                  Edit Subtask
-                </CardTitle>
+                <CardTitle className="text-2xl font-bold text-gray-900">Edit Subtask Details</CardTitle>
                 <CardDescription className="text-gray-700">
-                  Update the details below
+                  Make changes to the subtask below
                 </CardDescription>
               </div>
               {hasChanges() && (
-                <Badge className="bg-yellow-100 text-yellow-800 border-yellow-300">
+                <Badge className="bg-gradient-to-r from-amber-500 to-orange-500 text-white border-0 shadow-sm">
                   <Pencil className="w-3 h-3 mr-1" />
                   Unsaved Changes
                 </Badge>
               )}
             </div>
           </CardHeader>
+
           <CardContent className="p-6">
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="title" className="text-gray-800 font-semibold">
-                  Title *
-                </Label>
-                <Input
-                  id="title"
-                  value={formData.title}
-                  onChange={(e) => handleInputChange("title", e.target.value)}
-                  placeholder="Enter subtask title"
-                  className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900"
-                  required
-                  disabled={isSubmitting}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label
-                  htmlFor="description"
-                  className="text-gray-800 font-semibold"
-                >
-                  Description *
-                </Label>
-                <Textarea
-                  id="description"
-                  value={formData.description}
-                  onChange={(e) =>
-                    handleInputChange("description", e.target.value)
-                  }
-                  placeholder="Enter detailed description of the subtask"
-                  className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900 min-h-[120px]"
-                  required
-                  disabled={isSubmitting}
-                />
-              </div>
-
-              {/* Leads Required Field - Only show for specific depId */}
-              {shouldShowLeadsField && (
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="totalLeadsRequired"
-                    className="text-gray-800 font-semibold"
-                  >
-                    Number of Leads Required *
-                  </Label>
-                  <div className="relative">
-                    <Phone className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
+            <form onSubmit={handleSubmit} className="space-y-8">
+              {/* Basic Information */}
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="title" className="text-gray-900 font-semibold">
+                      Title *
+                    </Label>
                     <Input
-                      id="totalLeadsRequired"
-                      type="number"
-                      min="1"
-                      max="10000"
-                      value={formData.totalLeadsRequired}
-                      onChange={(e) =>
-                        handleInputChange("totalLeadsRequired", e.target.value)
-                      }
-                      placeholder="Enter total number of leads/calls/targets"
-                      className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900 pl-10"
+                      id="title"
+                      value={formData.title}
+                      onChange={(e) => handleInputChange("title", e.target.value)}
+                      placeholder="Enter subtask title"
+                      className="border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900 rounded-xl"
                       required
                       disabled={isSubmitting}
                     />
                   </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-600">Total leads target</span>
-                    <span
-                      className={`font-medium ${
-                        leadsRequired > 0 ? "text-green-600" : "text-red-600"
-                      }`}
+
+                  <div className="space-y-2">
+                    <Label htmlFor="priority" className="text-gray-900 font-semibold">
+                      Priority
+                    </Label>
+                    <Select
+                      value={formData.priority}
+                      onValueChange={(value) => handleInputChange("priority", value)}
+                      disabled={isSubmitting}
                     >
-                      {leadsRequired} lead{leadsRequired !== 1 ? "s" : ""}
-                    </span>
+                      <SelectTrigger className="border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900 rounded-xl">
+                        <SelectValue placeholder="Select priority" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white border border-gray-200 rounded-xl">
+                        <SelectItem value="low" className="text-gray-900 hover:bg-gray-100">
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                            Low Priority
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="medium" className="text-gray-900 hover:bg-gray-100">
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                            Medium Priority
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="high" className="text-gray-900 hover:bg-gray-100">
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                            High Priority
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
-                  <p className="text-xs text-gray-500">
-                    Current completion: {subtask.leadsCompleted || 0} /{" "}
-                    {subtask.totalLeadsRequired || leadsRequired} leads
-                  </p>
                 </div>
-              )}
+
+                <div className="space-y-2">
+                  <Label htmlFor="description" className="text-gray-900 font-semibold">
+                    Description *
+                  </Label>
+                  <Textarea
+                    id="description"
+                    value={formData.description}
+                    onChange={(e) => handleInputChange("description", e.target.value)}
+                    placeholder="Enter detailed description of the subtask"
+                    className="border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900 min-h-[120px] rounded-xl"
+                    required
+                    disabled={isSubmitting}
+                  />
+                </div>
+
+                {/* Leads Field */}
+                {shouldShowLeadsField && (
+                  <div className="space-y-2 bg-gradient-to-r from-emerald-50 to-green-50 p-4 rounded-xl border border-emerald-100">
+                    <Label htmlFor="totalLeadsRequired" className="text-gray-900 font-semibold">
+                      Number of Leads Required *
+                    </Label>
+                    <div className="relative">
+                      <Phone className="absolute left-3 top-3 h-4 w-4 text-emerald-600" />
+                      <Input
+                        id="totalLeadsRequired"
+                        type="number"
+                        min="1"
+                        max="10000"
+                        value={formData.totalLeadsRequired}
+                        onChange={(e) => handleInputChange("totalLeadsRequired", e.target.value)}
+                        placeholder="Enter total number of leads/calls/targets"
+                        className="border-2 border-emerald-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 text-gray-900 pl-10 rounded-xl"
+                        required
+                        disabled={isSubmitting}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-700">Total leads target</span>
+                      <span className="font-bold text-emerald-700">
+                        {leadsRequired} lead{leadsRequired !== 1 ? "s" : ""}
+                      </span>
+                    </div>
+                    <div className="text-xs text-gray-600">
+                      Current progress: <span className="font-bold">{subtask.leadsCompleted || 0}</span> /{" "}
+                      <span className="font-bold">{subtask.totalLeadsRequired || leadsRequired}</span> leads completed
+                    </div>
+                  </div>
+                )}
+              </div>
 
               {/* Assignees Section */}
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <Label className="text-gray-800 font-semibold">
+                  <Label className="text-gray-900 font-semibold text-lg">
                     Assign To *
                   </Label>
-                  <div className="flex items-center gap-2">
-                    <Badge
-                      variant="outline"
-                      className="bg-blue-50 text-blue-700 border-blue-200"
-                    >
-                      {totalAssignees} total assignee
-                      {totalAssignees !== 1 ? "s" : ""}
-                    </Badge>
-                    {hasChanges() && (
-                      <Badge className="bg-yellow-100 text-yellow-800 border-yellow-300">
-                        Changes in assignment
-                      </Badge>
-                    )}
-                  </div>
+                  <Badge className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white border-0">
+                    {totalAssignees} total assignee{totalAssignees !== 1 ? "s" : ""}
+                  </Badge>
                 </div>
 
-                <Tabs
-                  defaultValue="employees"
-                  value={activeTab}
-                  onValueChange={setActiveTab}
-                >
-                  <TabsList className="grid w-full grid-cols-2 bg-white p-1 rounded-xl shadow-sm">
+                <Tabs defaultValue="employees" value={activeTab} onValueChange={setActiveTab} className="w-full">
+                  <TabsList className="grid grid-cols-3 bg-gray-100/50 p-1 rounded-xl">
                     <TabsTrigger
                       value="employees"
-                      className="flex items-center justify-center gap-2 rounded-lg text-gray-600
-               data-[state=active]:bg-indigo-600
-               data-[state=active]:text-white
-               data-[state=active]:shadow
-               transition-all duration-200"
+                      className="flex items-center justify-center gap-2 rounded-lg text-gray-700 data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow transition-all"
                     >
                       <Users className="w-4 h-4" />
                       Employees ({selectedEmployees.length})
                     </TabsTrigger>
-
                     <TabsTrigger
                       value="managers"
-                      className="flex items-center justify-center gap-2 rounded-lg text-gray-600
-               data-[state=active]:bg-rose-600
-               data-[state=active]:text-white
-               data-[state=active]:shadow
-               transition-all duration-200"
+                      className="flex items-center justify-center gap-2 rounded-lg text-gray-700 data-[state=active]:bg-purple-600 data-[state=active]:text-white data-[state=active]:shadow transition-all"
                     >
                       <Building className="w-4 h-4" />
                       Managers ({selectedManagers.length})
                     </TabsTrigger>
+                    <TabsTrigger
+                      value="teamleads"
+                      className="flex items-center justify-center gap-2 rounded-lg text-gray-700 data-[state=active]:bg-amber-600 data-[state=active]:text-white data-[state=active]:shadow transition-all"
+                    >
+                      <Crown className="w-4 h-4" />
+                      Team Leads ({selectedTeamLeads.length})
+                    </TabsTrigger>
                   </TabsList>
 
+                  {/* Employees Tab */}
                   <TabsContent value="employees" className="space-y-4 mt-4">
-                    <Select
-                      onValueChange={handleEmployeeSelect}
-                      disabled={isSubmitting || employees.length === 0}
-                    >
-                      <SelectTrigger className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900">
+                    <Select onValueChange={handleEmployeeSelect} disabled={isSubmitting}>
+                      <SelectTrigger className="border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900 rounded-xl">
                         <SelectValue placeholder="Select employees to assign" />
                       </SelectTrigger>
-                      <SelectContent className="text-black bg-white max-h-60">
+                      <SelectContent className="bg-white border border-gray-200 rounded-xl max-h-60">
                         {employees.map((employee) => (
                           <SelectItem
                             key={employee._id}
                             value={employee._id}
-                            disabled={selectedEmployees.find(
-                              (emp) => emp.employeeId === employee._id
-                            )}
+                            disabled={selectedEmployees.find((emp) => emp.employeeId === employee._id)}
+                            className="text-gray-900 hover:bg-gray-100"
                           >
                             <div className="flex items-center gap-2">
                               <Avatar className="w-6 h-6">
-                                <AvatarFallback className="text-xs bg-blue-100 text-blue-600">
+                                <AvatarFallback className="bg-blue-100 text-blue-600 text-xs">
                                   {employee.firstName?.[0]}
                                   {employee.lastName?.[0]}
                                 </AvatarFallback>
                               </Avatar>
                               <span>
                                 {employee.firstName} {employee.lastName}
-                                <span className="text-gray-500 text-xs ml-2">
-                                  ({employee.email})
-                                </span>
+                                <span className="text-gray-500 text-xs ml-2">({employee.email})</span>
                               </span>
                             </div>
                           </SelectItem>
                         ))}
-                        {employees.length === 0 && (
-                          <div className="px-2 py-4 text-center text-gray-500 text-sm">
-                            No employees available
-                          </div>
-                        )}
                       </SelectContent>
                     </Select>
 
                     {selectedEmployees.length > 0 && (
                       <div className="space-y-3">
-                        <Label className="text-gray-800 font-semibold">
+                        <Label className="text-gray-900 font-semibold">
                           Selected Employees ({selectedEmployees.length})
                         </Label>
                         <div className="space-y-2">
                           {selectedEmployees.map((emp) => {
-                            const employeeName = getEmployeeDisplayName(
-                              emp.employeeId
-                            );
-                            const progress = getEmployeeProgress(
-                              emp.employeeId
-                            );
-                            const isExisting = subtask.assignedEmployees?.some(
-                              (existingEmp) => {
-                                const existingEmpId =
-                                  existingEmp.employeeId?._id?.toString() ||
-                                  existingEmp.employeeId.toString();
-                                return existingEmpId === emp.employeeId;
-                              }
-                            );
+                            const employeeName = getEmployeeDisplayName(emp.employeeId);
+                            const progress = getEmployeeProgress(emp.employeeId);
+                            const isExisting = subtask?.assignedEmployees?.some((existingEmp) => {
+                              const existingEmpId = existingEmp.employeeId?._id?.toString() || existingEmp.employeeId.toString();
+                              return existingEmpId === emp.employeeId;
+                            });
 
                             return (
                               <div
                                 key={emp.employeeId}
-                                className={`flex items-center justify-between p-3 border rounded-lg ${
-                                  isExisting
-                                    ? "bg-green-50 border-green-200"
-                                    : "bg-blue-50/50 border-blue-200"
+                                className={`flex items-center justify-between p-3 border rounded-xl ${
+                                  isExisting ? 'bg-green-50 border-green-200' : 'bg-blue-50 border-blue-200'
                                 }`}
                               >
                                 <div className="flex items-center gap-3">
-                                  <Avatar className="w-8 h-8">
-                                    <AvatarFallback
-                                      className={
-                                        isExisting
-                                          ? "bg-green-100 text-green-600"
-                                          : "bg-blue-100 text-blue-600"
-                                      }
-                                    >
+                                  <Avatar className="w-10 h-10">
+                                    <AvatarFallback className={`${isExisting ? 'bg-green-100 text-green-600' : 'bg-blue-100 text-blue-600'}`}>
                                       {employeeName[0]}
-                                      {employeeName.split(" ")[1]?.[0] || ""}
+                                      {employeeName.split(' ')[1]?.[0] || ''}
                                     </AvatarFallback>
                                   </Avatar>
                                   <div>
-                                    <div className="flex items-center gap-2">
-                                      <p className="font-medium text-gray-900">
-                                        {employeeName}
-                                      </p>
+                                    <p className="font-bold text-gray-900">{employeeName}</p>
+                                    <div className="flex items-center gap-2 mt-1">
                                       {isExisting ? (
                                         <Badge className="bg-green-100 text-green-800 border-green-200 text-xs">
                                           Currently assigned
@@ -986,69 +1027,25 @@ export default function EditSubtaskPage() {
                                           New assignment
                                         </Badge>
                                       )}
+                                      {isExisting && shouldShowLeadsField && progress.assigned > 0 && (
+                                        <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200 text-xs">
+                                          {progress.completed}/{progress.assigned} leads
+                                        </Badge>
+                                      )}
                                     </div>
-                                    <div className="flex items-center gap-4 mt-1">
-                                      <div className="text-xs text-gray-500">
-                                        {emp.email}
-                                      </div>
-                                      {isExisting &&
-                                        shouldShowLeadsField &&
-                                        progress.completed > 0 && (
-                                          <div className="flex items-center gap-1 text-xs">
-                                            <span className="text-gray-600">
-                                              Progress:
-                                            </span>
-                                            <span
-                                              className={`font-medium ${
-                                                progress.status === "completed"
-                                                  ? "text-green-600"
-                                                  : "text-blue-600"
-                                              }`}
-                                            >
-                                              {progress.completed}/
-                                              {progress.assigned}
-                                            </span>
-                                            <span
-                                              className={`${
-                                                progress.status === "completed"
-                                                  ? "text-green-600"
-                                                  : progress.status ===
-                                                    "in_progress"
-                                                  ? "text-blue-600"
-                                                  : "text-yellow-600"
-                                              }`}
-                                            >
-                                              ({progress.status})
-                                            </span>
-                                          </div>
-                                        )}
-                                    </div>
+                                    <p className="text-xs text-gray-600 mt-1">{emp.email}</p>
                                   </div>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                  {isExisting &&
-                                    progress.status !== "pending" && (
-                                      <Badge
-                                        className={`${
-                                          progress.status === "completed"
-                                            ? "bg-green-100 text-green-800"
-                                            : "bg-blue-100 text-blue-800"
-                                        }`}
-                                      >
-                                        {progress.status === "completed" ? (
-                                          <CheckCircle className="w-3 h-3 mr-1" />
-                                        ) : (
-                                          <Clock className="w-3 h-3 mr-1" />
-                                        )}
-                                        {progress.status.replace("_", "-")}
-                                      </Badge>
-                                    )}
+                                  {isExisting && progress.status !== "pending" && (
+                                    <Badge className={`text-xs ${getStatusColor(progress.status)}`}>
+                                      {progress.status.replace('_', ' ')}
+                                    </Badge>
+                                  )}
                                   <Button
                                     variant="ghost"
                                     size="sm"
-                                    onClick={() =>
-                                      removeEmployee(emp.employeeId)
-                                    }
+                                    onClick={() => removeEmployee(emp.employeeId)}
                                     className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
                                     disabled={isSubmitting}
                                   >
@@ -1063,94 +1060,68 @@ export default function EditSubtaskPage() {
                     )}
                   </TabsContent>
 
+                  {/* Managers Tab */}
                   <TabsContent value="managers" className="space-y-4 mt-4">
-                    <Select
-                      onValueChange={handleManagerSelect}
-                      disabled={isSubmitting || managers.length === 0}
-                    >
-                      <SelectTrigger className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900">
+                    <Select onValueChange={handleManagerSelect} disabled={isSubmitting}>
+                      <SelectTrigger className="border-2 border-gray-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 text-gray-900 rounded-xl">
                         <SelectValue placeholder="Select managers to assign" />
                       </SelectTrigger>
-                      <SelectContent className="text-black bg-white max-h-60">
+                      <SelectContent className="bg-white border border-gray-200 rounded-xl max-h-60">
                         {managers.map((manager) => (
                           <SelectItem
                             key={manager._id}
                             value={manager._id}
-                            disabled={selectedManagers.find(
-                              (mgr) => mgr.managerId === manager._id
-                            )}
+                            disabled={selectedManagers.find((mgr) => mgr.managerId === manager._id)}
+                            className="text-gray-900 hover:bg-gray-100"
                           >
                             <div className="flex items-center gap-2">
                               <Avatar className="w-6 h-6">
-                                <AvatarFallback className="text-xs bg-purple-100 text-purple-600">
+                                <AvatarFallback className="bg-purple-100 text-purple-600 text-xs">
                                   {manager.firstName?.[0]}
                                   {manager.lastName?.[0]}
                                 </AvatarFallback>
                               </Avatar>
                               <span>
                                 {manager.firstName} {manager.lastName}
-                                <span className="text-gray-500 text-xs ml-2">
-                                  ({manager.email})
-                                </span>
+                                <span className="text-gray-500 text-xs ml-2">({manager.email})</span>
                               </span>
                             </div>
                           </SelectItem>
                         ))}
-                        {managers.length === 0 && (
-                          <div className="px-2 py-4 text-center text-gray-500 text-sm">
-                            No managers available
-                          </div>
-                        )}
                       </SelectContent>
                     </Select>
 
                     {selectedManagers.length > 0 && (
                       <div className="space-y-3">
-                        <Label className="text-gray-800 font-semibold">
+                        <Label className="text-gray-900 font-semibold">
                           Selected Managers ({selectedManagers.length})
                         </Label>
                         <div className="space-y-2">
                           {selectedManagers.map((mgr) => {
-                            const managerName = getManagerDisplayName(
-                              mgr.managerId
-                            );
+                            const managerName = getManagerDisplayName(mgr.managerId);
                             const progress = getManagerProgress(mgr.managerId);
-                            const isExisting = subtask.assignedManagers?.some(
-                              (existingMgr) => {
-                                const existingMgrId =
-                                  existingMgr.managerId?._id?.toString() ||
-                                  existingMgr.managerId.toString();
-                                return existingMgrId === mgr.managerId;
-                              }
-                            );
+                            const isExisting = subtask?.assignedManagers?.some((existingMgr) => {
+                              const existingMgrId = existingMgr.managerId?._id?.toString() || existingMgr.managerId.toString();
+                              return existingMgrId === mgr.managerId;
+                            });
 
                             return (
                               <div
                                 key={mgr.managerId}
-                                className={`flex items-center justify-between p-3 border rounded-lg ${
-                                  isExisting
-                                    ? "bg-green-50 border-green-200"
-                                    : "bg-purple-50/50 border-purple-200"
+                                className={`flex items-center justify-between p-3 border rounded-xl ${
+                                  isExisting ? 'bg-green-50 border-green-200' : 'bg-purple-50 border-purple-200'
                                 }`}
                               >
                                 <div className="flex items-center gap-3">
-                                  <Avatar className="w-8 h-8">
-                                    <AvatarFallback
-                                      className={
-                                        isExisting
-                                          ? "bg-green-100 text-green-600"
-                                          : "bg-purple-100 text-purple-600"
-                                      }
-                                    >
+                                  <Avatar className="w-10 h-10">
+                                    <AvatarFallback className={`${isExisting ? 'bg-green-100 text-green-600' : 'bg-purple-100 text-purple-600'}`}>
                                       {managerName[0]}
-                                      {managerName.split(" ")[1]?.[0] || ""}
+                                      {managerName.split(' ')[1]?.[0] || ''}
                                     </AvatarFallback>
                                   </Avatar>
                                   <div>
-                                    <div className="flex items-center gap-2">
-                                      <p className="font-medium text-gray-900">
-                                        {managerName}
-                                      </p>
+                                    <p className="font-bold text-gray-900">{managerName}</p>
+                                    <div className="flex items-center gap-2 mt-1">
                                       {isExisting ? (
                                         <Badge className="bg-green-100 text-green-800 border-green-200 text-xs">
                                           Currently assigned
@@ -1160,63 +1131,21 @@ export default function EditSubtaskPage() {
                                           New assignment
                                         </Badge>
                                       )}
+                                      {isExisting && shouldShowLeadsField && progress.assigned > 0 && (
+                                        <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200 text-xs">
+                                          {progress.completed}/{progress.assigned} leads
+                                        </Badge>
+                                      )}
                                     </div>
-                                    <div className="flex items-center gap-4 mt-1">
-                                      <div className="text-xs text-gray-500">
-                                        {mgr.email}
-                                      </div>
-                                      {isExisting &&
-                                        shouldShowLeadsField &&
-                                        progress.completed > 0 && (
-                                          <div className="flex items-center gap-1 text-xs">
-                                            <span className="text-gray-600">
-                                              Progress:
-                                            </span>
-                                            <span
-                                              className={`font-medium ${
-                                                progress.status === "completed"
-                                                  ? "text-green-600"
-                                                  : "text-purple-600"
-                                              }`}
-                                            >
-                                              {progress.completed}/
-                                              {progress.assigned}
-                                            </span>
-                                            <span
-                                              className={`${
-                                                progress.status === "completed"
-                                                  ? "text-green-600"
-                                                  : progress.status ===
-                                                    "in_progress"
-                                                  ? "text-purple-600"
-                                                  : "text-yellow-600"
-                                              }`}
-                                            >
-                                              ({progress.status})
-                                            </span>
-                                          </div>
-                                        )}
-                                    </div>
+                                    <p className="text-xs text-gray-600 mt-1">{mgr.email}</p>
                                   </div>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                  {isExisting &&
-                                    progress.status !== "pending" && (
-                                      <Badge
-                                        className={`${
-                                          progress.status === "completed"
-                                            ? "bg-green-100 text-green-800"
-                                            : "bg-purple-100 text-purple-800"
-                                        }`}
-                                      >
-                                        {progress.status === "completed" ? (
-                                          <CheckCircle className="w-3 h-3 mr-1" />
-                                        ) : (
-                                          <Clock className="w-3 h-3 mr-1" />
-                                        )}
-                                        {progress.status.replace("_", "-")}
-                                      </Badge>
-                                    )}
+                                  {isExisting && progress.status !== "pending" && (
+                                    <Badge className={`text-xs ${getStatusColor(progress.status)}`}>
+                                      {progress.status.replace('_', ' ')}
+                                    </Badge>
+                                  )}
                                   <Button
                                     variant="ghost"
                                     size="sm"
@@ -1234,234 +1163,243 @@ export default function EditSubtaskPage() {
                       </div>
                     )}
                   </TabsContent>
+
+                  {/* Team Leads Tab */}
+                  <TabsContent value="teamleads" className="space-y-4 mt-4">
+                    <Select onValueChange={handleTeamLeadSelect} disabled={isSubmitting}>
+                      <SelectTrigger className="border-2 border-gray-200 focus:border-amber-500 focus:ring-2 focus:ring-amber-200 text-gray-900 rounded-xl">
+                        <SelectValue placeholder="Select team leads to assign" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white border border-gray-200 rounded-xl max-h-60">
+                        {teamLeads.map((teamLead) => (
+                          <SelectItem
+                            key={teamLead._id}
+                            value={teamLead._id}
+                            disabled={selectedTeamLeads.find((tl) => tl.teamLeadId === teamLead._id)}
+                            className="text-gray-900 hover:bg-gray-100"
+                          >
+                            <div className="flex items-center gap-2">
+                              <Avatar className="w-6 h-6">
+                                <AvatarFallback className="bg-amber-100 text-amber-600 text-xs">
+                                  {teamLead.firstName?.[0]}
+                                  {teamLead.lastName?.[0]}
+                                </AvatarFallback>
+                              </Avatar>
+                              <span>
+                                {teamLead.firstName} {teamLead.lastName}
+                                <span className="text-gray-500 text-xs ml-2">({teamLead.email})</span>
+                              </span>
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    {selectedTeamLeads.length > 0 && (
+                      <div className="space-y-3">
+                        <Label className="text-gray-900 font-semibold">
+                          Selected Team Leads ({selectedTeamLeads.length})
+                        </Label>
+                        <div className="space-y-2">
+                          {selectedTeamLeads.map((tl) => {
+                            const teamLeadName = getTeamLeadDisplayName(tl.teamLeadId);
+                            const progress = getTeamLeadProgress(tl.teamLeadId);
+                            const isExisting = subtask?.assignedTeamLeads?.some((existingTl) => {
+                              const existingTlId = existingTl.teamLeadId?._id?.toString() || existingTl.teamLeadId.toString();
+                              return existingTlId === tl.teamLeadId;
+                            });
+                            const isCurrentUser = tl.teamLeadId === session.user.id;
+
+                            return (
+                              <div
+                                key={tl.teamLeadId}
+                                className={`flex items-center justify-between p-3 border rounded-xl ${
+                                  isExisting ? 'bg-green-50 border-green-200' : 'bg-amber-50 border-amber-200'
+                                } ${isCurrentUser ? 'ring-2 ring-blue-300' : ''}`}
+                              >
+                                <div className="flex items-center gap-3">
+                                  <Avatar className="w-10 h-10">
+                                    <AvatarFallback className={`${isExisting ? 'bg-green-100 text-green-600' : 'bg-amber-100 text-amber-600'}`}>
+                                      {teamLeadName[0]}
+                                      {teamLeadName.split(' ')[1]?.[0] || ''}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <div>
+                                    <div className="flex items-center gap-2">
+                                      <p className="font-bold text-gray-900">{teamLeadName}</p>
+                                      {isCurrentUser && (
+                                        <Badge className="bg-blue-100 text-blue-800 border-blue-200 text-xs">You</Badge>
+                                      )}
+                                    </div>
+                                    <div className="flex items-center gap-2 mt-1">
+                                      {isExisting ? (
+                                        <Badge className="bg-green-100 text-green-800 border-green-200 text-xs">
+                                          Currently assigned
+                                        </Badge>
+                                      ) : (
+                                        <Badge className="bg-amber-100 text-amber-800 border-amber-200 text-xs">
+                                          New assignment
+                                        </Badge>
+                                      )}
+                                      {isExisting && shouldShowLeadsField && progress.assigned > 0 && (
+                                        <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200 text-xs">
+                                          {progress.completed}/{progress.assigned} leads
+                                        </Badge>
+                                      )}
+                                    </div>
+                                    <p className="text-xs text-gray-600 mt-1">{tl.email}</p>
+                                    {tl.depId && (
+                                      <p className="text-xs text-gray-500">Dept: {tl.depId}</p>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  {isExisting && progress.status !== "pending" && (
+                                    <Badge className={`text-xs ${getStatusColor(progress.status)}`}>
+                                      {progress.status.replace('_', ' ')}
+                                    </Badge>
+                                  )}
+                                  {!isCurrentUser && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => removeTeamLead(tl.teamLeadId)}
+                                      className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                                      disabled={isSubmitting}
+                                    >
+                                      <XCircle className="w-4 h-4" />
+                                    </Button>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </TabsContent>
                 </Tabs>
 
-                {shouldShowLeadsField &&
-                  leadsRequired > 0 &&
-                  totalAssignees > 0 && (
-                    <div className="text-sm text-gray-700 bg-green-50 p-3 rounded-md border border-green-200">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Target className="w-4 h-4 text-green-600" />
-                        <span className="font-medium">Lead Distribution:</span>
-                      </div>
-                      <p className="text-sm">
-                        <span className="font-semibold">
-                          {leadsRequired} total leads
-                        </span>{" "}
-                        will be distributed among{" "}
-                        <span className="font-semibold">
-                          {totalAssignees} assignee
-                          {totalAssignees > 1 ? "s" : ""}
-                        </span>{" "}
-                        ({selectedEmployees.length} employees,{" "}
-                        {selectedManagers.length} managers)
-                      </p>
-                      <p className="text-sm mt-1">
-                        Each assignee will be assigned approximately{" "}
-                        <span className="font-semibold">
-                          {leadsPerAssignee} lead
-                          {leadsPerAssignee > 1 ? "s" : ""}
-                        </span>
-                      </p>
+                {/* Leads Distribution Info */}
+                {shouldShowLeadsField && leadsRequired > 0 && totalAssignees > 0 && (
+                  <div className="bg-gradient-to-r from-emerald-50 to-teal-50 p-4 rounded-xl border border-emerald-200">
+                    <div className="flex items-center gap-2 mb-3">
+                      <Target className="w-5 h-5 text-emerald-600" />
+                      <h4 className="font-bold text-gray-900">Lead Distribution Plan</h4>
                     </div>
-                  )}
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="startDate"
-                    className="text-gray-800 font-semibold"
-                  >
-                    Start Date *
-                  </Label>
-                  <div className="relative">
-                    <Calendar className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
-                    <Input
-                      id="startDate"
-                      type="date"
-                      value={formData.startDate}
-                      onChange={(e) =>
-                        handleInputChange("startDate", e.target.value)
-                      }
-                      className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900 pl-10"
-                      required
-                      disabled={isSubmitting}
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="endDate"
-                    className="text-gray-800 font-semibold"
-                  >
-                    End Date *
-                  </Label>
-                  <div className="relative">
-                    <Calendar className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
-                    <Input
-                      id="endDate"
-                      type="date"
-                      value={formData.endDate}
-                      onChange={(e) =>
-                        handleInputChange("endDate", e.target.value)
-                      }
-                      className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900 pl-10"
-                      required
-                      disabled={isSubmitting}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="startTime"
-                    className="text-gray-800 font-semibold"
-                  >
-                    Start Time *
-                  </Label>
-                  <div className="relative">
-                    <Clock className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
-                    <Input
-                      id="startTime"
-                      type="time"
-                      value={formData.startTime}
-                      onChange={(e) =>
-                        handleInputChange("startTime", e.target.value)
-                      }
-                      className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900 pl-10"
-                      required
-                      disabled={isSubmitting}
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="endTime"
-                    className="text-gray-800 font-semibold"
-                  >
-                    End Time *
-                  </Label>
-                  <div className="relative">
-                    <Clock className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
-                    <Input
-                      id="endTime"
-                      type="time"
-                      value={formData.endTime}
-                      onChange={(e) =>
-                        handleInputChange("endTime", e.target.value)
-                      }
-                      className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900 pl-10"
-                      required
-                      disabled={isSubmitting}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label
-                  htmlFor="priority"
-                  className="text-gray-800 font-semibold"
-                >
-                  Priority
-                </Label>
-                <Select
-                  value={formData.priority}
-                  onValueChange={(value) =>
-                    handleInputChange("priority", value)
-                  }
-                  disabled={isSubmitting}
-                >
-                  <SelectTrigger className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900">
-                    <SelectValue placeholder="Select priority" />
-                  </SelectTrigger>
-                  <SelectContent className="text-black bg-white">
-                    <SelectItem value="low">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                        Low
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-emerald-700">{leadsRequired}</div>
+                        <div className="text-sm text-gray-700">Total Leads</div>
                       </div>
-                    </SelectItem>
-                    <SelectItem value="medium">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-                        Medium
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-blue-700">{totalAssignees}</div>
+                        <div className="text-sm text-gray-700">Total Assignees</div>
                       </div>
-                    </SelectItem>
-                    <SelectItem value="high">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                        High
+                      <div className="text-center">
+                        <div className="text-2xl font-bold text-purple-700">{leadsPerAssignee}</div>
+                        <div className="text-sm text-gray-700">Leads Per Assignee</div>
                       </div>
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
+                    </div>
+                    <div className="text-sm text-gray-700 mt-3">
+                      Distribution: {selectedEmployees.length} employees, {selectedManagers.length} managers, {selectedTeamLeads.length} team leads
+                    </div>
+                  </div>
+                )}
               </div>
 
-              <div className="space-y-2">
-                <Label className="text-gray-800 font-semibold">
-                  Team Lead Info
-                </Label>
-                <div className="relative">
-                  <UserCog className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
-                  <Input
-                    value={
-                      session.user.name ||
-                      `${session.user.firstName} ${session.user.lastName}`
-                    }
-                    className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900 pl-10 bg-gray-50"
-                    readOnly
-                    disabled
-                  />
+              {/* Dates and Times */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-bold text-gray-900">Timeline</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="startDate" className="text-gray-900 font-semibold">
+                      Start Date *
+                    </Label>
+                    <div className="relative">
+                      <Calendar className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
+                      <Input
+                        id="startDate"
+                        type="date"
+                        value={formData.startDate}
+                        onChange={(e) => handleInputChange("startDate", e.target.value)}
+                        className="border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900 pl-10 rounded-xl"
+                        required
+                        disabled={isSubmitting}
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="endDate" className="text-gray-900 font-semibold">
+                      End Date *
+                    </Label>
+                    <div className="relative">
+                      <Calendar className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
+                      <Input
+                        id="endDate"
+                        type="date"
+                        value={formData.endDate}
+                        onChange={(e) => handleInputChange("endDate", e.target.value)}
+                        className="border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900 pl-10 rounded-xl"
+                        required
+                        disabled={isSubmitting}
+                      />
+                    </div>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 text-xs text-gray-500">
-                  <span>Department ID: {session.user.depId}</span>
-                  {shouldShowLeadsField && (
-                    <Badge
-                      variant="outline"
-                      className="ml-2 bg-green-50 text-green-700 border-green-200"
-                    >
-                      Lead Tracking Active
-                    </Badge>
-                  )}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="startTime" className="text-gray-900 font-semibold">
+                      Start Time *
+                    </Label>
+                    <div className="relative">
+                      <Clock className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
+                      <Input
+                        id="startTime"
+                        type="time"
+                        value={formData.startTime}
+                        onChange={(e) => handleInputChange("startTime", e.target.value)}
+                        className="border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900 pl-10 rounded-xl"
+                        required
+                        disabled={isSubmitting}
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="endTime" className="text-gray-900 font-semibold">
+                      End Time *
+                    </Label>
+                    <div className="relative">
+                      <Clock className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
+                      <Input
+                        id="endTime"
+                        type="time"
+                        value={formData.endTime}
+                        onChange={(e) => handleInputChange("endTime", e.target.value)}
+                        className="border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900 pl-10 rounded-xl"
+                        required
+                        disabled={isSubmitting}
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label className="text-gray-800 font-semibold">
-                  Last Updated
-                </Label>
-                <div className="text-sm text-gray-600">
-                  {subtask.updatedAt
-                    ? format(new Date(subtask.updatedAt), "PPPpp")
-                    : "Not updated yet"}
-                </div>
-              </div>
-
-              <div className="flex gap-3 pt-4 border-t border-gray-200">
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-6 border-t border-gray-200">
                 <Button
                   type="button"
                   variant="outline"
                   onClick={() => router.back()}
-                  className="flex-1 border-gray-300 text-gray-700 hover:bg-gray-50"
+                  className="flex-1 border-gray-300 text-gray-700 hover:bg-gray-50 rounded-xl"
                   disabled={isSubmitting}
                 >
                   Cancel
                 </Button>
                 <Button
                   type="submit"
-                  disabled={
-                    isSubmitting ||
-                    !hasChanges() ||
-                    totalAssignees === 0 ||
-                    (shouldShowLeadsField && leadsRequired <= 0)
-                  }
-                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white disabled:bg-gray-400 disabled:cursor-not-allowed"
+                  disabled={isSubmitting || !hasChanges() || totalAssignees === 0 || (shouldShowLeadsField && leadsRequired <= 0)}
+                  className="flex-1 bg-gradient-to-r from-blue-600 to-indigo-700 hover:opacity-90 text-white rounded-xl"
                 >
                   {isSubmitting ? (
                     <>
@@ -1480,102 +1418,79 @@ export default function EditSubtaskPage() {
           </CardContent>
         </Card>
 
-        {/* Summary Card */}
+        {/* Current Status Summary */}
         <div className="mt-6">
-          <Card className="shadow-2xl shadow-blue-500/10 border-0 bg-gradient-to-br from-white to-blue-50/50 backdrop-blur-sm">
-            <CardHeader className="bg-gradient-to-r from-white to-blue-50 border-b border-blue-100/50">
-              <CardTitle className="text-lg font-bold text-gray-900">
-                Current Status Summary
-              </CardTitle>
+          <Card className="border-0 shadow-xl bg-gradient-to-br from-white to-gray-50/50 rounded-2xl overflow-hidden">
+            <CardHeader className="bg-gradient-to-r from-gray-50 to-white border-b border-gray-100">
+              <CardTitle className="text-xl font-bold text-gray-900">Current Status Summary</CardTitle>
             </CardHeader>
             <CardContent className="p-6">
-              <div className="space-y-4">
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="bg-blue-50 p-4 rounded-lg">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Users className="w-5 h-5 text-blue-600" />
-                      <h3 className="font-semibold text-gray-800">Employees</h3>
-                    </div>
-                    <p className="text-3xl font-bold text-blue-700">
-                      {subtask.assignedEmployees?.length || 0}
-                    </p>
-                    <p className="text-sm text-gray-600 mt-1">
-                      Currently assigned
-                    </p>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Users className="w-5 h-5 text-blue-600" />
+                    <h4 className="font-semibold text-gray-900">Employees</h4>
                   </div>
-
-                  <div className="bg-purple-50 p-4 rounded-lg">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Building className="w-5 h-5 text-purple-600" />
-                      <h3 className="font-semibold text-gray-800">Managers</h3>
-                    </div>
-                    <p className="text-3xl font-bold text-purple-700">
-                      {subtask.assignedManagers?.length || 0}
-                    </p>
-                    <p className="text-sm text-gray-600 mt-1">
-                      Currently assigned
-                    </p>
-                  </div>
-
-                  {shouldShowLeadsField && (
-                    <div className="bg-green-50 p-4 rounded-lg">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Target className="w-5 h-5 text-green-600" />
-                        <h3 className="font-semibold text-gray-800">
-                          Leads Progress
-                        </h3>
-                      </div>
-                      <p className="text-3xl font-bold text-green-700">
-                        {subtask.leadsCompleted || 0} /{" "}
-                        {subtask.totalLeadsRequired || leadsRequired}
-                      </p>
-                      <p className="text-sm text-gray-600 mt-1">
-                        {subtask.totalLeadsRequired
-                          ? Math.round(
-                              ((subtask.leadsCompleted || 0) /
-                                subtask.totalLeadsRequired) *
-                                100
-                            )
-                          : 0}
-                        % completed
-                      </p>
-                    </div>
-                  )}
+                  <p className="text-3xl font-bold text-blue-700">{subtask.assignedEmployees?.length || 0}</p>
+                  <p className="text-sm text-gray-600">Assigned</p>
                 </div>
-
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <h3 className="font-semibold text-gray-800 mb-3">
-                    Subtask Information:
-                  </h3>
+                <div className="bg-purple-50 p-4 rounded-xl border border-purple-100">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Building className="w-5 h-5 text-purple-600" />
+                    <h4 className="font-semibold text-gray-900">Managers</h4>
+                  </div>
+                  <p className="text-3xl font-bold text-purple-700">{subtask.assignedManagers?.length || 0}</p>
+                  <p className="text-sm text-gray-600">Assigned</p>
+                </div>
+                <div className="bg-amber-50 p-4 rounded-xl border border-amber-100">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Crown className="w-5 h-5 text-amber-600" />
+                    <h4 className="font-semibold text-gray-900">Team Leads</h4>
+                  </div>
+                  <p className="text-3xl font-bold text-amber-700">{subtask.assignedTeamLeads?.length || 0}</p>
+                  <p className="text-sm text-gray-600">Assigned</p>
+                </div>
+                <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-100">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Target className="w-5 h-5 text-emerald-600" />
+                    <h4 className="font-semibold text-gray-900">Leads Progress</h4>
+                  </div>
+                  <p className="text-3xl font-bold text-emerald-700">
+                    {subtask.leadsCompleted || 0}/{subtask.totalLeadsRequired || leadsRequired}
+                  </p>
+                  <p className="text-sm text-gray-600">Completed</p>
+                </div>
+              </div>
+              <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-gray-50 p-4 rounded-xl border border-gray-200">
+                  <h4 className="font-semibold text-gray-900 mb-2">Subtask Info</h4>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
                       <span className="text-gray-600">Status:</span>
-                      <Badge
-                        className={`
-                                                ${
-                                                  subtask.status === "completed"
-                                                    ? "bg-green-100 text-green-800"
-                                                    : subtask.status ===
-                                                      "in_progress"
-                                                    ? "bg-blue-100 text-blue-800"
-                                                    : "bg-yellow-100 text-yellow-800"
-                                                }
-                                            `}
-                      >
-                        {subtask.status?.replace("_", "-") || "pending"}
+                      <Badge className={`${getStatusColor(subtask.status)}`}>
+                        {subtask.status?.replace('_', ' ') || 'pending'}
                       </Badge>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Created On:</span>
-                      <span className="font-medium">
-                        {format(new Date(subtask.createdAt), "PPP")}
-                      </span>
+                      <span className="font-medium">{format(new Date(subtask.createdAt), "PPP")}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Created By:</span>
-                      <span className="font-medium">
-                        {subtask.teamLeadName || "Unknown"}
-                      </span>
+                      <span className="font-medium">{subtask.teamLeadName || "Unknown"}</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
+                  <h4 className="font-semibold text-gray-900 mb-2">Your Role</h4>
+                  <div className="flex items-center gap-3">
+                    <UserCog className="w-8 h-8 text-blue-600" />
+                    <div>
+                      <p className="font-bold text-gray-900">
+                        {session.user.name || `${session.user.firstName} ${session.user.lastName}`}
+                      </p>
+                      <p className="text-sm text-gray-600">Team Lead (Editor)</p>
+                      <p className="text-xs text-gray-500">Department: {session.user.depId}</p>
                     </div>
                   </div>
                 </div>

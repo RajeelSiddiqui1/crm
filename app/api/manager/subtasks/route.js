@@ -28,31 +28,35 @@ export async function GET() {
       // सिर्फ उन्ही subtasks जहाँ current manager assigned न हो
       "assignedManagers.managerId": { $ne: currentManager._id }
     })
-    .populate({
-      path: 'submissionId',
-      select: 'title description'
-    })
-    .populate({
-      path: 'teamLeadId',
-      select: 'firstName lastName email'
-    })
-    .populate({
-      path: 'depId',
-      select: 'name'
-    })
-    .populate({
-      path: 'assignedEmployees.employeeId',
-      select: 'firstName lastName email phone department position'
-    })
-    .populate({
-      path: 'assignedManagers.managerId',
-      select: 'firstName lastName email phone department'
-    })
-    .sort({ createdAt: -1 });
+      .populate({
+        path: 'submissionId',
+        select: 'title description'
+      })
+      .populate({
+        path: 'teamLeadId',
+        select: 'firstName lastName email'
+      })
+      .populate({
+        path: 'depId',
+        select: 'name'
+      })
+      .populate({
+        path: 'assignedEmployees.employeeId',
+        select: 'firstName lastName email phone department position'
+      })
+      .populate({
+        path: 'assignedManagers.managerId',
+        select: 'firstName lastName email phone department'
+      })
+      .populate({
+        path: 'assignedTeamLeads.teamLeadId',
+        select: 'firstName lastName email avatar'
+      })
+      .sort({ createdAt: -1 });
 
-    return NextResponse.json({ 
-      subtasks, 
-      message: "Subtasks where you are NOT assigned" 
+    return NextResponse.json({
+      subtasks,
+      message: "Subtasks where you are NOT assigned"
     }, { status: 200 });
   } catch (error) {
     console.error("Error fetching other managers' subtasks:", error);

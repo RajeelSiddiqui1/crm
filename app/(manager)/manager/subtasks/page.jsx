@@ -41,7 +41,6 @@ import {
   XCircle,
   AlertCircle,
   Eye,
-  Loader2,
   RefreshCw,
   Plus,
   Users,
@@ -55,7 +54,20 @@ import {
   UserCheck,
   Users as UsersIcon,
   ViewIcon,
+  Shield,
+  Crown,
+  Zap,
+  DownloadCloud,
+  Mail,
+  Activity,
+  TrendingUp,
+  Target,
+  MessageCircle,
+  AlertTriangle,
+  Send,
+  Loader2
 } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import axios from "axios";
 import Link from "next/link";
 
@@ -68,6 +80,21 @@ export default function OtherManagersSubtasksPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedSubtask, setSelectedSubtask] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const COLORS = {
+    manager: {
+      gradient: "from-blue-600 to-indigo-700",
+      accent: "blue-600",
+    },
+    employee: {
+      gradient: "from-emerald-500 to-teal-600",
+      accent: "emerald-500",
+    },
+    lead: {
+      gradient: "from-violet-600 to-purple-700",
+      accent: "violet-600",
+    },
+  };
 
   useEffect(() => {
     if (status === "loading") return;
@@ -108,6 +135,7 @@ export default function OtherManagersSubtasksPage() {
   const getStatusVariant = (status) => {
     switch (status) {
       case "completed":
+      case "approved":
         return "bg-green-100 text-green-800 border-green-200";
       case "in_progress":
         return "bg-blue-100 text-blue-800 border-blue-200";
@@ -136,6 +164,7 @@ export default function OtherManagersSubtasksPage() {
   const getStatusIcon = (status) => {
     switch (status) {
       case "completed":
+      case "approved":
         return <CheckCircle className="w-4 h-4" />;
       case "in_progress":
         return <Clock className="w-4 h-4" />;
@@ -203,316 +232,430 @@ export default function OtherManagersSubtasksPage() {
 
       {/* Subtask Detail Modal - विस्तृत देखने के लिए */}
       {isModalOpen && selectedSubtask && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 text-gray-900">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-hidden">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-300 text-gray-900">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden border border-gray-200/50">
             {/* Modal Header */}
-            <div className="bg-gradient-to-r from-blue-600 to-indigo-700 p-6 text-white">
-              <div className="flex justify-between items-start">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <Briefcase className="w-6 h-6" />
-                    <h2 className="text-2xl font-bold truncate text-white">
-                      {selectedSubtask.title}
-                    </h2>
-                  </div>
-                  <p className="text-blue-100 text-sm">
-                    Assigned by: {selectedSubtask.teamLeadId?.firstName}{" "}
-                    {selectedSubtask.teamLeadId?.lastName}
-                  </p>
+            <div className="relative bg-gradient-to-r from-blue-600 to-indigo-700 p-8 text-white overflow-hidden">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-32 translate-x-32"></div>
+                <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full translate-y-24 -translate-x-24"></div>
+                
+                <div className="relative z-10">
+                    <div className="flex justify-between items-start mb-6">
+                        <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-3">
+                                <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
+                                    <Briefcase className="w-6 h-6" />
+                                </div>
+                                <h2 className="text-3xl font-bold truncate text-white drop-shadow-lg">
+                                    {selectedSubtask.title}
+                                </h2>
+                            </div>
+                            <p className="text-blue-100/90 text-base line-clamp-2 max-w-3xl">
+                                {selectedSubtask.description}
+                            </p>
+                        </div>
+                        <Button
+                            onClick={closeModal}
+                            variant="ghost"
+                            size="icon"
+                            className="text-white hover:bg-white/20 rounded-full transition-all duration-300"
+                        >
+                            <XCircle className="w-6 h-6" />
+                        </Button>
+                    </div>
+                    
+                    <div className="flex flex-wrap gap-4 mt-6">
+                        <Badge className={`${getStatusVariant(selectedSubtask.status)} px-4 py-2 font-semibold text-sm`}>
+                            {getStatusIcon(selectedSubtask.status)}
+                            Task Status: {selectedSubtask.status.replace("_", " ")}
+                        </Badge>
+                        <Badge className={`${getPriorityVariant(selectedSubtask.priority)} px-4 py-2 font-semibold text-sm`}>
+                            <Target className="w-3.5 h-3.5 mr-1.5" />
+                            {selectedSubtask.priority || 'Medium'} Priority
+                        </Badge>
+                        <Badge className="bg-white/20 backdrop-blur-sm text-white px-4 py-2 font-semibold text-sm border border-white/30">
+                            <Calendar className="w-3.5 h-3.5 mr-1.5" />
+                            Due: {formatDate(selectedSubtask.endDate)}
+                        </Badge>
+                    </div>
                 </div>
-                <Button
-                  onClick={closeModal}
-                  variant="ghost"
-                  size="icon"
-                  className="text-white hover:bg-white hover:bg-opacity-20 rounded-full"
-                >
-                  <X className="w-5 h-5" />
-                </Button>
-              </div>
             </div>
 
             {/* Modal Content */}
-            <div className="p-6 overflow-y-auto max-h-[calc(90vh-200px)]">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Left Column - Basic Info */}
-                <div className="space-y-6">
-                  {/* Basic Info */}
-                  <Card className="border border-gray-200 shadow-sm">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-lg flex items-center gap-2">
-                        <FileText className="w-5 h-5 text-blue-600" />
-                        Subtask Details
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      <div>
-                        <Label className="text-sm font-medium">Title</Label>
-                        <p className="text-sm mt-1 font-medium">
-                          {selectedSubtask.title}
-                        </p>
-                      </div>
-                      <div>
-                        <Label className="text-sm font-medium">
-                          Description
-                        </Label>
-                        <p className="text-sm mt-1 text-gray-700">
-                          {selectedSubtask.description}
-                        </p>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <Label className="text-sm font-medium">
-                            Priority
-                          </Label>
-                          <Badge
-                            className={`${getPriorityVariant(
-                              selectedSubtask.priority
-                            )} mt-1`}
-                          >
-                            {selectedSubtask.priority}
-                          </Badge>
-                        </div>
-                        <div>
-                          <Label className="text-sm font-medium">Status</Label>
-                          <Badge
-                            className={`${getStatusVariant(
-                              selectedSubtask.status
-                            )} mt-1 flex items-center gap-1`}
-                          >
-                            {getStatusIcon(selectedSubtask.status)}
-                            {selectedSubtask.status.replace("_", " ")}
-                          </Badge>
-                        </div>
-                      </div>
-                    </CardContent>
+            <div className="p-8 overflow-y-auto max-h-[calc(90vh-220px)]">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {/* Left Column */}
+                <div className="lg:col-span-2 space-y-8">
+                  {/* Task Details Info */}
+                  <Card className="border border-gray-200 shadow-lg rounded-xl overflow-hidden bg-white">
+                      <CardHeader className="bg-gradient-to-r from-gray-50 to-white border-b border-gray-100">
+                          <div className="flex items-center gap-3">
+                              <div className="p-2 bg-gradient-to-r from-emerald-500 to-teal-600 rounded-lg">
+                                  <FileText className="w-5 h-5 text-white" />
+                              </div>
+                              <CardTitle className="text-xl font-bold text-gray-900">
+                                  Task Specifications
+                              </CardTitle>
+                          </div>
+                      </CardHeader>
+                      <CardContent className="p-6 space-y-6">
+                          <div className="space-y-3">
+                              <h4 className="font-semibold text-gray-900">Task Description</h4>
+                              <p className="text-gray-800 bg-gray-50 p-4 rounded-lg border border-gray-200 leading-relaxed font-medium">
+                                  {selectedSubtask.description}
+                              </p>
+                          </div>
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                              <div className="space-y-2 bg-blue-50/50 p-4 rounded-xl border border-blue-100">
+                                  <div className="flex items-center gap-2 text-blue-700">
+                                      <Calendar className="w-4 h-4" />
+                                      <span className="font-bold text-xs uppercase tracking-wider">Start Timeline</span>
+                                  </div>
+                                  <div className="text-lg font-bold text-gray-900">
+                                      {formatDate(selectedSubtask.startDate)}
+                                  </div>
+                              </div>
+                              <div className="space-y-2 bg-rose-50/50 p-4 rounded-xl border border-rose-100">
+                                  <div className="flex items-center gap-2 text-rose-700">
+                                      <Calendar className="w-4 h-4" />
+                                      <span className="font-bold text-xs uppercase tracking-wider">Deadline</span>
+                                  </div>
+                                  <div className="text-lg font-bold text-gray-900">
+                                      {formatDate(selectedSubtask.endDate)}
+                                  </div>
+                              </div>
+                          </div>
+                          
+                          <div className="space-y-2">
+                              <div className="flex items-center gap-2 text-gray-800 mb-2">
+                                  <TrendingUp className="w-4 h-4" />
+                                  <span className="font-bold">Team Progress Tracking</span>
+                              </div>
+                              <div className="text-lg font-bold text-gray-900 bg-gradient-to-r from-gray-50 to-white p-4 rounded-xl border-2 border-dashed border-gray-200 flex justify-between items-center">
+                                  <span>Total Leads Achieved:</span>
+                                  <span className="text-2xl text-blue-700">{selectedSubtask.leadsCompleted || 0} / {selectedSubtask.lead || 0}</span>
+                              </div>
+                          </div>
+                      </CardContent>
                   </Card>
 
-                  {/* Parent Submission */}
-                  <Card className="border border-gray-200 shadow-sm">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-lg flex items-center gap-2">
-                        <FileText className="w-5 h-5 text-green-600" />
-                        Parent Submission
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-2">
-                        <h4 className="font-semibold">
-                          {selectedSubtask.submissionId?.title || "N/A"}
-                        </h4>
-                        <p className="text-sm text-gray-700">
-                          {selectedSubtask.submissionId?.description ||
-                            "No description"}
-                        </p>
-                      </div>
-                    </CardContent>
-                  </Card>
+                  {/* Team Feedback & Activity - Aggregated Feed */}
+                  <Card className="border border-gray-200/50 shadow-lg rounded-xl overflow-hidden bg-white">
+                      <CardHeader className="bg-gradient-to-r from-gray-50 to-white border-b border-gray-100">
+                          <div className="flex items-center gap-3">
+                              <div className="p-2 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg">
+                                  <Activity className="w-5 h-5 text-white" />
+                              </div>
+                              <CardTitle className="text-xl font-bold text-gray-900">
+                                  Team Feedback & Activity
+                              </CardTitle>
+                          </div>
+                      </CardHeader>
+                      <CardContent className="p-6">
+                          <div className="space-y-6">
+                              {/* Managers Feedback */}
+                              <div className="space-y-4">
+                                  <h4 className="text-sm font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
+                                      <Shield className="w-4 h-4" />
+                                      Management Updates
+                                  </h4>
+                                  <div className="space-y-4">
+                                      {selectedSubtask.assignedManagers?.filter(m => m.feedback || m.status !== 'pending').map((mgr, idx) => (
+                                          <div key={idx} className="flex gap-4 p-4 rounded-xl border border-gray-100 bg-gray-50/50">
+                                              <Avatar className="w-10 h-10 border-2 border-white shadow-sm shrink-0">
+                                                  <AvatarFallback className="bg-gradient-to-r from-violet-500 to-purple-600 text-white font-bold">
+                                                      {(mgr.managerId?.firstName?.[0] || mgr.name?.[0] || 'M')}
+                                                  </AvatarFallback>
+                                              </Avatar>
+                                              <div className="space-y-2 flex-1">
+                                                  <div className="flex justify-between items-start">
+                                                      <div>
+                                                          <p className="font-bold text-gray-900">
+                                                              {mgr.managerId?.firstName ? `${mgr.managerId.firstName} ${mgr.managerId.lastName}` : (mgr.name || mgr.email)}
+                                                          </p>
+                                                          <p className="text-xs text-gray-500">Manager</p>
+                                                      </div>
+                                                      <Badge className={`text-[10px] ${getStatusVariant(mgr.status)}`}>
+                                                          {mgr.status}
+                                                      </Badge>
+                                                  </div>
+                                                  {mgr.feedback ? (
+                                                      <div className="bg-white p-3 rounded-lg border border-gray-100 text-sm text-gray-800 italic leading-relaxed shadow-sm">
+                                                          "{mgr.feedback}"
+                                                      </div>
+                                                  ) : (
+                                                      <p className="text-xs text-gray-400 italic">No feedback provided yet</p>
+                                                  )}
+                                              </div>
+                                          </div>
+                                      ))}
+                                      {(!selectedSubtask.assignedManagers || selectedSubtask.assignedManagers.length === 0) && (
+                                          <p className="text-sm text-gray-400 text-center py-4 bg-gray-50 rounded-xl border-2 border-dashed border-gray-100">No managers assigned</p>
+                                      )}
+                                  </div>
+                              </div>
 
-                  {/* Timeline */}
-                  <Card className="border border-gray-200 shadow-sm">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-lg flex items-center gap-2">
-                        <Calendar className="w-5 h-5 text-purple-600" />
-                        Timeline
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      <div className="flex justify-between">
-                        <span className="text-sm">Start Date:</span>
-                        <span className="font-medium">
-                          {formatDate(selectedSubtask.startDate)}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-sm">End Date:</span>
-                        <span className="font-medium">
-                          {formatDate(selectedSubtask.endDate)}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-sm">Time:</span>
-                        <span className="font-medium">
-                          {selectedSubtask.startTime} -{" "}
-                          {selectedSubtask.endTime}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-sm">Created:</span>
-                        <span className="font-medium text-xs">
-                          {formatDateTime(selectedSubtask.createdAt)}
-                        </span>
-                      </div>
-                    </CardContent>
+                              {/* Team Leads Feedback */}
+                              <div className="space-y-4 pt-4 border-t border-gray-100">
+                                  <h4 className="text-sm font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
+                                      <Crown className="w-4 h-4" />
+                                      Lead Reviews
+                                  </h4>
+                                  <div className="space-y-4">
+                                      {/* Primary Task Owner/Creator */}
+                                      <div className="flex gap-4 p-4 rounded-xl border border-blue-100 bg-blue-50/30">
+                                          <Avatar className="w-10 h-10 border-2 border-white shadow-sm shrink-0">
+                                              <AvatarFallback className="bg-gradient-to-r from-blue-500 to-cyan-600 text-white font-bold">
+                                                  {selectedSubtask.teamLeadId?.firstName?.[0] || 'TL'}
+                                              </AvatarFallback>
+                                          </Avatar>
+                                          <div className="space-y-2 flex-1">
+                                              <div className="flex justify-between items-start">
+                                                  <div>
+                                                      <p className="font-bold text-gray-900">
+                                                          {selectedSubtask.teamLeadId?.firstName} {selectedSubtask.teamLeadId?.lastName}
+                                                      </p>
+                                                      <p className="text-xs text-gray-500">Primary Team Lead (Creator)</p>
+                                                  </div>
+                                                  <Badge className={`text-[10px] ${getStatusVariant(selectedSubtask.status)}`}>
+                                                      {selectedSubtask.status}
+                                                  </Badge>
+                                              </div>
+                                              {selectedSubtask.teamLeadFeedback ? (
+                                                  <div className="bg-white p-3 rounded-lg border border-blue-100 text-sm text-gray-800 italic leading-relaxed shadow-sm">
+                                                      "{selectedSubtask.teamLeadFeedback}"
+                                                  </div>
+                                              ) : (
+                                                  <p className="text-xs text-blue-400 italic">Expecting creator's review...</p>
+                                              )}
+                                          </div>
+                                      </div>
+
+                                      {/* Other Assigned Team Leads */}
+                                      {selectedSubtask.assignedTeamLeads?.map((tl, idx) => (
+                                          <div key={idx} className="flex gap-4 p-4 rounded-xl border border-gray-100 bg-gray-50/50">
+                                              <Avatar className="w-10 h-10 border-2 border-white shadow-sm shrink-0">
+                                                  <AvatarFallback className="bg-gradient-to-r from-indigo-500 to-blue-600 text-white font-bold">
+                                                      {tl.teamLeadId?.firstName?.[0] || tl.name?.[0] || 'L'}
+                                                  </AvatarFallback>
+                                              </Avatar>
+                                              <div className="space-y-2 flex-1">
+                                                  <div className="flex justify-between items-start">
+                                                      <div>
+                                                          <p className="font-bold text-gray-900">
+                                                              {tl.teamLeadId?.firstName ? `${tl.teamLeadId.firstName} ${tl.teamLeadId.lastName}` : (tl.name || tl.email)}
+                                                          </p>
+                                                          <p className="text-xs text-gray-500">Collaborating Lead</p>
+                                                      </div>
+                                                      <Badge className={`text-[10px] ${getStatusVariant(tl.status)}`}>
+                                                          {tl.status}
+                                                      </Badge>
+                                                  </div>
+                                                  {tl.feedback ? (
+                                                      <div className="bg-white p-3 rounded-lg border border-gray-100 text-sm text-gray-800 italic leading-relaxed shadow-sm">
+                                                          "{tl.feedback}"
+                                                      </div>
+                                                  ) : (
+                                                      <p className="text-xs text-gray-400 italic">No feedback provided yet</p>
+                                                  )}
+                                              </div>
+                                          </div>
+                                      ))}
+                                  </div>
+                              </div>
+
+                              {/* Employees Feedback */}
+                              <div className="space-y-4 pt-4 border-t border-gray-100">
+                                  <h4 className="text-sm font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
+                                      <UsersIcon className="w-4 h-4" />
+                                      Employee Updates
+                                  </h4>
+                                  <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                                      {selectedSubtask.assignedEmployees?.filter(e => e.feedback || e.status !== 'pending').map((emp, idx) => (
+                                          <div key={idx} className="flex gap-4 p-4 rounded-xl border border-gray-100 bg-white hover:border-blue-200 transition-colors">
+                                              <Avatar className="w-9 h-9 border-2 border-white shadow-sm shrink-0">
+                                                  <AvatarFallback className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-xs font-bold">
+                                                      {emp.employeeId?.firstName?.[0] || emp.name?.[0] || 'E'}
+                                                  </AvatarFallback>
+                                              </Avatar>
+                                              <div className="space-y-2 flex-1">
+                                                  <div className="flex justify-between items-start">
+                                                      <div>
+                                                          <p className="font-bold text-gray-900 text-sm">
+                                                              {emp.employeeId?.firstName ? `${emp.employeeId.firstName} ${emp.employeeId.lastName}` : (emp.name || emp.email)}
+                                                          </p>
+                                                          <p className="text-[10px] text-gray-500 flex items-center gap-1">
+                                                               <Mail className="w-2.5 h-2.5" /> {emp.email}
+                                                          </p>
+                                                      </div>
+                                                      <Badge className={`text-[9px] px-1.5 py-0 ${getStatusVariant(emp.status)}`}>
+                                                          {emp.status}
+                                                      </Badge>
+                                                  </div>
+                                                  {emp.feedback ? (
+                                                      <div className="bg-emerald-50/30 p-2.5 rounded-lg border border-emerald-100/50 text-xs text-gray-700 leading-relaxed italic">
+                                                          "{emp.feedback}"
+                                                      </div>
+                                                  ) : (
+                                                      <p className="text-[10px] text-gray-400 italic">Progress update only</p>
+                                                  )}
+                                              </div>
+                                          </div>
+                                      ))}
+                                  </div>
+                              </div>
+                          </div>
+                      </CardContent>
                   </Card>
                 </div>
 
-                {/* Right Column - Assignments */}
-                <div className="space-y-6">
-                  {/* Assigned Managers */}
-                  <Card className="border border-gray-200 shadow-sm">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-lg flex items-center gap-2">
-                        <UserCheck className="w-5 h-5 text-red-600" />
-                        Assigned Managers
-                        <Badge variant="secondary" className="ml-2">
-                          {selectedSubtask.assignedManagers?.length || 0}
-                        </Badge>
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-3">
-                        {selectedSubtask.assignedManagers &&
-                        selectedSubtask.assignedManagers.length > 0 ? (
-                          selectedSubtask.assignedManagers.map((mgr, index) => (
-                            <div
-                              key={index}
-                              className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200"
-                            >
-                              <div className="flex items-center gap-3">
-                                <Avatar className="w-10 h-10 border-2 border-white">
-                                  <AvatarFallback className="bg-gradient-to-r from-red-500 to-pink-600 text-white font-semibold">
-                                    {mgr.managerId?.firstName?.[0]}
-                                    {mgr.managerId?.lastName?.[0]}
-                                  </AvatarFallback>
-                                </Avatar>
-                                <div>
-                                  <div className="font-medium">
-                                    {mgr.managerId?.firstName}{" "}
-                                    {mgr.managerId?.lastName}
-                                  </div>
-                                  <div className="text-sm text-gray-700">
-                                    {mgr.email}
-                                  </div>
-                                </div>
-                              </div>
-                              <div className="flex flex-col items-end gap-1">
-                                <Badge className={getStatusVariant(mgr.status)}>
-                                  {mgr.status.replace("_", " ")}
-                                </Badge>
-                                {mgr.leadsAssigned > 0 && (
-                                  <span className="text-xs text-gray-700">
-                                    Leads: {mgr.leadsCompleted}/
-                                    {mgr.leadsAssigned}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          ))
-                        ) : (
-                          <div className="text-center py-4 text-gray-700">
-                            No managers assigned
-                          </div>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
+                {/* Right Column - Stakeholders */}
+                <div className="space-y-8">
+                  {/* All Assignees Categories */}
+                  <Tabs defaultValue="employees" className="w-full">
+                      <TabsList className="grid w-full grid-cols-3 bg-gray-100 p-1 rounded-xl">
+                          <TabsTrigger value="employees" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm text-xs md:text-sm">
+                              Employees ({selectedSubtask.assignedEmployees?.length || 0})
+                          </TabsTrigger>
+                          <TabsTrigger value="managers" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm text-xs md:text-sm">
+                              Managers ({selectedSubtask.assignedManagers?.length || 0})
+                          </TabsTrigger>
+                          <TabsTrigger value="leads" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm text-xs md:text-sm">
+                              Leads ({ (selectedSubtask.assignedTeamLeads?.length || 0) + 1 })
+                          </TabsTrigger>
+                      </TabsList>
+                      
+                      <TabsContent value="employees">
+                          <Card className="border border-gray-200/50 shadow-lg rounded-xl overflow-hidden mt-4">
+                              <CardContent className="p-4 space-y-3">
+                                  {selectedSubtask.assignedEmployees?.map((emp, index) => {
+                                      const employee = emp.employeeId || emp;
+                                      return (
+                                          <div key={index} className="flex items-center justify-between group hover:bg-gray-50 p-3 rounded-xl transition-colors border border-transparent hover:border-gray-100">
+                                              <div className="flex items-center gap-3">
+                                                  <Avatar className="w-10 h-10 border-2 border-white shadow-sm">
+                                                      <AvatarFallback className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-bold">
+                                                          {employee.firstName?.[0] || emp.name?.[0] || 'E'}
+                                                      </AvatarFallback>
+                                                  </Avatar>
+                                                  <div className="min-w-0">
+                                                      <div className="font-bold text-gray-900 text-sm truncate">
+                                                          {employee.firstName ? `${employee.firstName} ${employee.lastName}` : (emp.name || emp.email)}
+                                                      </div>
+                                                      <div className="text-[10px] text-gray-600 truncate flex items-center gap-1">
+                                                           <Mail className="w-2.5 h-2.5" /> {emp.email}
+                                                      </div>
+                                                  </div>
+                                              </div>
+                                              <Badge className={`text-[10px] px-2 py-0.5 ${getStatusVariant(emp.status)}`}>
+                                                  {emp.status}
+                                              </Badge>
+                                          </div>
+                                      );
+                                  })}
+                              </CardContent>
+                          </Card>
+                      </TabsContent>
 
-                  {/* Assigned Employees */}
-                  <Card className="border border-gray-200 shadow-sm text-gray-900">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-lg flex items-center gap-2 text-gray-900">
-                        <UsersIcon className="w-5 h-5 text-blue-600" />
-                        Assigned Employees
-                        <Badge variant="secondary" className="ml-2">
-                          {selectedSubtask.assignedEmployees?.length || 0}
-                        </Badge>
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-3">
-                        {selectedSubtask.assignedEmployees &&
-                        selectedSubtask.assignedEmployees.length > 0 ? (
-                          selectedSubtask.assignedEmployees.map(
-                            (emp, index) => (
-                              <div
-                                key={index}
-                                className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200"
-                              >
-                                <div className="flex items-center gap-3">
-                                  <Avatar className="w-10 h-10 border-2 border-white">
-                                    <AvatarFallback className="bg-gradient-to-r from-blue-500 to-cyan-600 text-white font-semibold">
-                                      {emp.employeeId?.firstName?.[0]}
-                                      {emp.employeeId?.lastName?.[0]}
-                                    </AvatarFallback>
-                                  </Avatar>
-                                  <div>
-                                    <div className="font-medium">
-                                      {emp.employeeId?.firstName}{" "}
-                                      {emp.employeeId?.lastName}
-                                    </div>
-                                    <div className="text-sm text-gray-700">
-                                      {emp.email}
-                                    </div>
-                                  </div>
-                                </div>
-                                <div className="flex flex-col items-end gap-1">
-                                  <Badge
-                                    className={getStatusVariant(emp.status)}
-                                  >
-                                    {emp.status.replace("_", " ")}
-                                  </Badge>
-                                  {emp.leadsAssigned > 0 && (
-                                    <span className="text-xs text-gray-700">
-                                      Leads: {emp.leadsCompleted}/
-                                      {emp.leadsAssigned}
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
-                            )
-                          )
-                        ) : (
-                          <div className="text-center py-4 text-gray-700">
-                            No employees assigned
-                          </div>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
+                      <TabsContent value="managers">
+                          <Card className="border border-gray-200/50 shadow-lg rounded-xl overflow-hidden mt-4">
+                              <CardContent className="p-4 space-y-3">
+                                  {selectedSubtask.assignedManagers?.map((mgr, index) => (
+                                      <div key={index} className="flex items-center justify-between group hover:bg-gray-50 p-3 rounded-xl transition-colors border border-transparent hover:border-gray-100">
+                                          <div className="flex items-center gap-3">
+                                              <Avatar className="w-10 h-10 border-2 border-white shadow-sm">
+                                                  <AvatarFallback className="bg-gradient-to-r from-violet-500 to-purple-500 text-white font-bold">
+                                                      {mgr.managerId?.firstName?.[0] || mgr.name?.[0] || 'M'}
+                                                  </AvatarFallback>
+                                              </Avatar>
+                                              <div className="min-w-0">
+                                                  <div className="font-bold text-gray-900 text-sm truncate">
+                                                      {mgr.managerId?.firstName ? `${mgr.managerId.firstName} ${mgr.managerId.lastName}` : (mgr.name || mgr.email)}
+                                                  </div>
+                                                  <div className="text-[10px] text-gray-600 truncate flex items-center gap-1">
+                                                       <Mail className="w-2.5 h-2.5" /> {mgr.email}
+                                                  </div>
+                                              </div>
+                                          </div>
+                                          <Badge className={`text-[10px] px-2 py-0.5 ${getStatusVariant(mgr.status)}`}>
+                                              {mgr.status}
+                                          </Badge>
+                                      </div>
+                                  ))}
+                              </CardContent>
+                          </Card>
+                      </TabsContent>
 
-                  {/* Team Lead Info */}
-                  <Card className="border border-gray-200 shadow-sm">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-lg flex items-center gap-2">
-                        <User className="w-5 h-5 text-purple-600" />
-                        Created By Team Lead
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex items-center gap-3">
-                        <Avatar className="w-12 h-12">
-                          <AvatarFallback className="bg-gradient-to-r from-purple-500 to-violet-600 text-white">
-                            {selectedSubtask.teamLeadId?.firstName?.[0]}
-                            {selectedSubtask.teamLeadId?.lastName?.[0]}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <div className="font-medium">
-                            {selectedSubtask.teamLeadId?.firstName}{" "}
-                            {selectedSubtask.teamLeadId?.lastName}
-                          </div>
-                          <div className="text-sm text-gray-700">
-                            {selectedSubtask.teamLeadId?.email}
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
+                      <TabsContent value="leads">
+                          <Card className="border border-gray-200/50 shadow-lg rounded-xl overflow-hidden mt-4">
+                              <CardContent className="p-4 space-y-3">
+                                  {/* Creator */}
+                                  <div className="flex items-center justify-between bg-blue-50/50 p-3 rounded-xl border border-blue-100">
+                                      <div className="flex items-center gap-3">
+                                          <div className="relative">
+                                              <Avatar className="w-10 h-10 border-2 border-blue-300 shadow-sm">
+                                                  <AvatarFallback className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white font-bold">
+                                                      {selectedSubtask.teamLeadId?.firstName?.[0] || 'TL'}
+                                                  </AvatarFallback>
+                                              </Avatar>
+                                              <div className="absolute -top-1 -right-1 bg-amber-400 rounded-full p-0.5 border border-white">
+                                                  <Crown className="w-3 h-3 text-white" />
+                                              </div>
+                                          </div>
+                                          <div className="min-w-0">
+                                              <div className="font-bold text-gray-900 text-sm truncate">
+                                                  {selectedSubtask.teamLeadId?.firstName} {selectedSubtask.teamLeadId?.lastName}
+                                              </div>
+                                              <div className="text-[10px] text-blue-700 font-extrabold uppercase tracking-tight">Lead Creator</div>
+                                          </div>
+                                      </div>
+                                      <Badge className={`text-[10px] ${getStatusVariant(selectedSubtask.status)}`}>
+                                          {selectedSubtask.status}
+                                      </Badge>
+                                  </div>
+
+                                  {/* Collaborators */}
+                                  {selectedSubtask.assignedTeamLeads?.map((tl, index) => (
+                                      <div key={index} className="flex items-center justify-between group hover:bg-gray-50 p-3 rounded-xl transition-colors border border-transparent hover:border-gray-100">
+                                          <div className="flex items-center gap-3">
+                                              <Avatar className="w-10 h-10 border-2 border-white shadow-sm">
+                                                  <AvatarFallback className="bg-gradient-to-r from-indigo-500 to-blue-500 text-white font-bold">
+                                                      {tl.teamLeadId?.firstName?.[0] || tl.name?.[0] || 'L'}
+                                                  </AvatarFallback>
+                                              </Avatar>
+                                              <div className="min-w-0">
+                                                  <div className="font-bold text-gray-900 text-sm truncate">
+                                                      {tl.teamLeadId?.firstName ? `${tl.teamLeadId.firstName} ${tl.teamLeadId.lastName}` : (tl.name || tl.email)}
+                                                  </div>
+                                                  <div className="text-[10px] text-gray-600 truncate">Collaborating Lead</div>
+                                              </div>
+                                          </div>
+                                          <Badge className={`text-[10px] px-2 py-0.5 ${getStatusVariant(tl.status)}`}>
+                                              {tl.status}
+                                          </Badge>
+                                      </div>
+                                  ))}
+                              </CardContent>
+                          </Card>
+                      </TabsContent>
+                  </Tabs>
+
+                  {/* Resource Card */}
+                 
                 </div>
               </div>
             </div>
 
             {/* Modal Footer */}
-            <div className="border-t border-gray-200 bg-gray-50 px-6 py-4">
-              <div className="flex justify-end">
-                <Button
+            <div className="border-t border-gray-200 bg-gray-50/50 px-8 py-4 flex justify-end">
+              <Button
                   variant="outline"
                   onClick={closeModal}
-                  className="border-gray-300 hover:bg-gray-100"
-                >
-                  Close
-                </Button>
-              </div>
+                  className="px-8 font-bold text-gray-900 border-gray-300 hover:bg-white hover:text-blue-600 transition-all shadow-sm"
+              >
+                  Close Detailed View
+              </Button>
             </div>
           </div>
         </div>

@@ -18,7 +18,8 @@ export async function GET(req, { params }) {
         const subtask = await Subtask.findById(id)
             .populate("submissionId", "title description")
             .populate("assignedEmployees.employeeId", "firstName lastName email")
-            .populate("assignedManagers.managerId", "firstName lastName email");
+            .populate("assignedManagers.managerId", "firstName lastName email")
+            .populate("assignedTeamLeads.teamLeadId", "firstName lastName email");
 
         if (!subtask) {
             return NextResponse.json({ error: "Subtask not found" }, { status: 404 });
@@ -27,17 +28,17 @@ export async function GET(req, { params }) {
         // Calculate leads data
         let totalLeadsRequired = 0;
         let leadsCompleted = 0;
-        
+
         if (subtask.hasLeadsTarget) {
             totalLeadsRequired = subtask.totalLeadsRequired || parseInt(subtask.lead || "1");
-            
+
             // Calculate completed leads from all assignees
-            const employeeLeads = subtask.assignedEmployees?.reduce((total, emp) => 
+            const employeeLeads = subtask.assignedEmployees?.reduce((total, emp) =>
                 total + (emp.leadsCompleted || 0), 0) || 0;
-            
-            const managerLeads = subtask.assignedManagers?.reduce((total, mgr) => 
+
+            const managerLeads = subtask.assignedManagers?.reduce((total, mgr) =>
                 total + (mgr.leadsCompleted || 0), 0) || 0;
-            
+
             leadsCompleted = employeeLeads + managerLeads;
         }
 
@@ -101,33 +102,33 @@ export async function PUT(request, { params }) {
 
         // Prevent modification if subtask is completed
         if (existingSubtask.status === 'completed') {
-            return NextResponse.json({ 
-                error: "Cannot edit completed subtask" 
+            return NextResponse.json({
+                error: "Cannot edit completed subtask"
             }, { status: 400 });
         }
 
         // Get old and new employee lists
-        const oldEmployeeIds = existingSubtask.assignedEmployees?.map(emp => 
+        const oldEmployeeIds = existingSubtask.assignedEmployees?.map(emp =>
             emp.employeeId?.toString() || emp.employeeId) || [];
-        
+
         const newEmployeeIds = assignedEmployees.map(emp => emp.employeeId);
 
         // Get old and new manager lists
-        const oldManagerIds = existingSubtask.assignedManagers?.map(mgr => 
+        const oldManagerIds = existingSubtask.assignedManagers?.map(mgr =>
             mgr.managerId?.toString() || mgr.managerId) || [];
-        
+
         const newManagerIds = assignedManagers.map(mgr => mgr.managerId);
 
         // Find added and removed users
         const addedEmployees = newEmployeeIds.filter(id => !oldEmployeeIds.includes(id));
         const removedEmployees = oldEmployeeIds.filter(id => !newEmployeeIds.includes(id));
-        
+
         const addedManagers = newManagerIds.filter(id => !oldManagerIds.includes(id));
         const removedManagers = oldManagerIds.filter(id => !newManagerIds.includes(id));
 
         // Calculate leads per assignee
         const totalAssignees = assignedEmployees.length + assignedManagers.length;
-        const leadsPerAssignee = hasLeadsTarget && totalLeadsRequired && totalAssignees > 0 
+        const leadsPerAssignee = hasLeadsTarget && totalLeadsRequired && totalAssignees > 0
             ? Math.ceil(totalLeadsRequired / totalAssignees)
             : 0;
 
@@ -137,7 +138,7 @@ export async function PUT(request, { params }) {
                 const existingEmpId = e.employeeId?.toString() || e.employeeId;
                 return existingEmpId === emp.employeeId;
             });
-            
+
             return {
                 employeeId: emp.employeeId,
                 email: emp.email || "",
@@ -156,7 +157,7 @@ export async function PUT(request, { params }) {
                 const existingMgrId = e.managerId?.toString() || e.managerId;
                 return existingMgrId === mgr.managerId;
             });
-            
+
             return {
                 managerId: mgr.managerId,
                 email: mgr.email || "",
@@ -192,13 +193,13 @@ export async function PUT(request, { params }) {
             updateData,
             { new: true }
         )
-        .populate("assignedEmployees.employeeId", "firstName lastName email")
-        .populate("assignedManagers.managerId", "firstName lastName email");
+            .populate("assignedEmployees.employeeId", "firstName lastName email")
+            .populate("assignedManagers.managerId", "firstName lastName email");
 
         // Send notifications and emails for added employees
         if (addedEmployees.length > 0) {
             const addedEmployeeDetails = await Employee.find({ _id: { $in: addedEmployees } });
-            
+
             for (const emp of addedEmployeeDetails) {
                 sendNotification({
                     senderId: teamLead._id,
@@ -233,7 +234,7 @@ export async function PUT(request, { params }) {
         // Send notifications and emails for added managers
         if (addedManagers.length > 0) {
             const addedManagerDetails = await Manager.find({ _id: { $in: addedManagers } });
-            
+
             for (const mgr of addedManagerDetails) {
                 sendNotification({
                     senderId: teamLead._id,
@@ -268,7 +269,7 @@ export async function PUT(request, { params }) {
         // Send notifications for removed employees
         if (removedEmployees.length > 0) {
             const removedEmployeeDetails = await Employee.find({ _id: { $in: removedEmployees } });
-            
+
             for (const emp of removedEmployeeDetails) {
                 sendNotification({
                     senderId: teamLead._id,
@@ -303,7 +304,7 @@ export async function PUT(request, { params }) {
         // Send notifications for removed managers
         if (removedManagers.length > 0) {
             const removedManagerDetails = await Manager.find({ _id: { $in: removedManagers } });
-            
+
             for (const mgr of removedManagerDetails) {
                 sendNotification({
                     senderId: teamLead._id,
@@ -339,7 +340,7 @@ export async function PUT(request, { params }) {
         const existingEmployees = newEmployeeIds.filter(id => !addedEmployees.includes(id));
         if (existingEmployees.length > 0) {
             const existingEmployeeDetails = await Employee.find({ _id: { $in: existingEmployees } });
-            
+
             for (const emp of existingEmployeeDetails) {
                 sendNotification({
                     senderId: teamLead._id,
@@ -375,7 +376,7 @@ export async function PUT(request, { params }) {
         const existingManagers = newManagerIds.filter(id => !addedManagers.includes(id));
         if (existingManagers.length > 0) {
             const existingManagerDetails = await Manager.find({ _id: { $in: existingManagers } });
-            
+
             for (const mgr of existingManagerDetails) {
                 sendNotification({
                     senderId: teamLead._id,
@@ -407,7 +408,7 @@ export async function PUT(request, { params }) {
             }
         }
 
-        return NextResponse.json({ 
+        return NextResponse.json({
             message: "Subtask updated successfully",
             subtask: updatedSubtask
         }, { status: 200 });
@@ -508,8 +509,8 @@ export async function DELETE(request, { params }) {
         // Delete the subtask
         await Subtask.findByIdAndDelete(id);
 
-        return NextResponse.json({ 
-            message: "Subtask deleted successfully" 
+        return NextResponse.json({
+            message: "Subtask deleted successfully"
         }, { status: 200 });
 
     } catch (error) {

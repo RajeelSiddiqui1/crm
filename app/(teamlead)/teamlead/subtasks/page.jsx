@@ -302,6 +302,18 @@ export default function AllSubtasksPage() {
     return "Unknown Manager";
   };
 
+  const getTeamLeadDisplayName = (teamLead) => {
+    if (typeof teamLead === 'object' && teamLead !== null) {
+      if (teamLead.firstName && teamLead.lastName) {
+        return `${teamLead.firstName} ${teamLead.lastName}`;
+      }
+      if (teamLead.name) {
+        return teamLead.name;
+      }
+    }
+    return "Unknown Team Lead";
+  };
+
   if (status === "loading") {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
@@ -625,6 +637,66 @@ export default function AllSubtasksPage() {
                     </CardContent>
                   </Card>
 
+                  {/* Assigned Team Leads */}
+                  <Card className="border border-gray-200 shadow-sm bg-white">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-lg flex items-center gap-2 text-black">
+                        <Users className="w-5 h-5 text-indigo-600" />
+                        Assigned Team Leads
+                        <Badge
+                          variant="secondary"
+                          className="ml-2 bg-indigo-100 text-indigo-800"
+                        >
+                          {selectedSubtask.assignedTeamLeads?.length || 0}
+                        </Badge>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        {selectedSubtask.assignedTeamLeads &&
+                        selectedSubtask.assignedTeamLeads.length > 0 ? (
+                          selectedSubtask.assignedTeamLeads.map(
+                            (tl, index) => (
+                              <div
+                                key={tl.teamLeadId?._id || tl.teamLeadId || index}
+                                className="flex items-center justify-between p-3 bg-indigo-50 rounded-lg border border-indigo-200"
+                              >
+                                <div className="flex items-center gap-3">
+                                  <Avatar className="w-10 h-10 border-2 border-white shadow-sm">
+                                    <AvatarFallback className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-semibold">
+                                      {getTeamLeadDisplayName(tl.teamLeadId)[0]}
+                                      {getTeamLeadDisplayName(tl.teamLeadId).split(' ')[1]?.[0]}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <div>
+                                    <div className="font-medium text-black">
+                                      {getTeamLeadDisplayName(tl.teamLeadId)}
+                                    </div>
+                                    <div className="text-sm text-gray-700">
+                                      {tl.email}
+                                    </div>
+                                    {selectedSubtask.hasLeadsTarget && tl.leadsAssigned && (
+                                      <div className="text-xs text-gray-600 mt-1">
+                                        Leads: {tl.leadsCompleted || 0}/{tl.leadsAssigned}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                                <Badge className={getStatusVariant(tl.status)}>
+                                  {tl.status.replace("_", " ")}
+                                </Badge>
+                              </div>
+                            )
+                          )
+                        ) : (
+                          <div className="text-center py-4 text-gray-700">
+                            No team leads assigned
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+
                   {/* Additional Information */}
                   <Card className="border border-gray-200 shadow-sm bg-white">
                     <CardHeader className="pb-3">
@@ -905,7 +977,8 @@ export default function AllSubtasksPage() {
                       const leadsProgress = calculateLeadsProgress(subtask);
                       const totalAssignees = 
                         (subtask.assignedEmployees?.length || 0) + 
-                        (subtask.assignedManagers?.length || 0);
+                        (subtask.assignedManagers?.length || 0) +
+                        (subtask.assignedTeamLeads?.length || 0);
                       
                       return (
                       <TableRow
@@ -991,6 +1064,32 @@ export default function AllSubtasksPage() {
                                   {subtask.assignedManagers.length > 2 && (
                                     <Badge className="text-xs bg-gray-100 text-gray-800">
                                       +{subtask.assignedManagers.length - 2}
+                                    </Badge>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Team Leads */}
+                            {subtask.assignedTeamLeads && subtask.assignedTeamLeads.length > 0 && (
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-1 text-xs text-gray-600">
+                                  <Users className="w-3 h-3" />
+                                  <span>Team Leads ({subtask.assignedTeamLeads.length})</span>
+                                </div>
+                                <div className="flex flex-wrap gap-1">
+                                  {subtask.assignedTeamLeads.slice(0, 2).map((tl, index) => (
+                                    <Badge 
+                                      key={tl.teamLeadId?._id || tl.teamLeadId || index}
+                                      className="text-xs bg-indigo-100 text-indigo-800 border-indigo-200"
+                                      variant="outline"
+                                    >
+                                      {getTeamLeadDisplayName(tl.teamLeadId)}
+                                    </Badge>
+                                  ))}
+                                  {subtask.assignedTeamLeads.length > 2 && (
+                                    <Badge className="text-xs bg-gray-100 text-gray-800">
+                                      +{subtask.assignedTeamLeads.length - 2}
                                     </Badge>
                                   )}
                                 </div>

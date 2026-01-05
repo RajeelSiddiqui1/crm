@@ -29,6 +29,10 @@ export async function GET(req) {
       .populate({
         path: "assignedManagers.managerId",
         select: "firstName lastName email",
+      })
+      .populate({
+        path: "assignedTeamLeads.teamLeadId",
+        select: "firstName lastName email",
       });
 
     return NextResponse.json({ subtasks }, { status: 200 });
@@ -41,6 +45,7 @@ export async function GET(req) {
   }
 }
 
+// app/api/teamlead/subtasks/route.js - Update the POST function
 export async function POST(request) {
   try {
     const session = await getServerSession(authOptions);
@@ -58,6 +63,7 @@ export async function POST(request) {
       submissionId,
       assignedEmployees = [],
       assignedManagers = [],
+      assignedTeamLeads = [], // NEW
       startDate,
       endDate,
       startTime,
@@ -113,10 +119,26 @@ export async function POST(request) {
       }
     }
 
+    // Validate team leads if assigned (NEW)
+    if (assignedTeamLeads.length > 0) {
+      const teamLeads = await TeamLead.find({
+        _id: { $in: assignedTeamLeads.map((tl) => tl.teamLeadId) },
+      });
+
+      if (teamLeads.length !== assignedTeamLeads.length) {
+        return NextResponse.json(
+          { error: "Some team leads not found" },
+          { status: 400 }
+        );
+      }
+    }
+
     // Ensure at least one assignee
-    if (assignedEmployees.length === 0 && assignedManagers.length === 0) {
+    if (assignedEmployees.length === 0 && 
+        assignedManagers.length === 0 && 
+        assignedTeamLeads.length === 0) {
       return NextResponse.json(
-        { error: "Please assign at least one employee or manager" },
+        { error: "Please assign at least one employee, manager, or team lead" },
         { status: 400 }
       );
     }
@@ -125,7 +147,9 @@ export async function POST(request) {
     const leadValue = totalLeadsRequired ? totalLeadsRequired.toString() : "1";
 
     // Calculate leads distribution
-    const totalAssignees = assignedEmployees.length + assignedManagers.length;
+    const totalAssignees = assignedEmployees.length + 
+                          assignedManagers.length + 
+                          assignedTeamLeads.length;
     const leadsPerAssignee = hasLeadsTarget && totalLeadsRequired && totalAssignees > 0 
       ? Math.ceil(totalLeadsRequired / totalAssignees)
       : 0;
@@ -150,6 +174,16 @@ export async function POST(request) {
       leadsAssigned: hasLeadsTarget ? leadsPerAssignee : 0,
     }));
 
+    // Prepare assigned team leads data (NEW)
+    const teamLeadAssignments = assignedTeamLeads.map((tl) => ({
+      teamLeadId: tl.teamLeadId,
+      email: tl.email,
+      name: tl.name || "",
+      status: "pending",
+      leadsCompleted: 0,
+      leadsAssigned: hasLeadsTarget ? leadsPerAssignee : 0,
+    }));
+
     const subtask = new Subtask({
       title,
       description,
@@ -158,6 +192,7 @@ export async function POST(request) {
       depId,
       assignedEmployees: employeeAssignments,
       assignedManagers: managerAssignments,
+      assignedTeamLeads: teamLeadAssignments, // NEW
       startDate,
       endDate,
       startTime,
@@ -174,7 +209,8 @@ export async function POST(request) {
     const populatedSubtask = await Subtask.findById(subtask._id)
       .populate("submissionId", "title description")
       .populate("assignedEmployees.employeeId", "firstName lastName email")
-      .populate("assignedManagers.managerId", "firstName lastName email");
+      .populate("assignedManagers.managerId", "firstName lastName email")
+      .populate("assignedTeamLeads.teamLeadId", "firstName lastName email"); // NEW
 
     // Send notifications and emails to assigned employees
     if (assignedEmployees.length > 0) {
@@ -192,7 +228,7 @@ export async function POST(request) {
           type: "new_subtask",
           title: "New Subtask Assigned",
           message: `You have been assigned a new subtask: "${title}".`,
-          link: `/employee/subtasks/${subtask._id}`,
+          link: `/employee/subtasks/`,
           referenceId: subtask._id,
           referenceModel: "Subtask",
         });
@@ -227,7 +263,7 @@ export async function POST(request) {
           type: "new_subtask",
           title: "New Subtask Assigned",
           message: `You have been assigned a new subtask: "${title}".`,
-          link: `/manager/subtasks/${subtask._id}`,
+          link: `/manager/subtasks`,
           referenceId: subtask._id,
           referenceModel: "Subtask",
         });
@@ -242,6 +278,41 @@ export async function POST(request) {
             endDate
           );
           sendMail(mgr.email, "New Subtask Assigned", html);
+        }
+      }
+    }
+
+    // Send notifications and emails to assigned team leads (NEW)
+    if (assignedTeamLeads.length > 0) {
+      const teamLeads = await TeamLead.find({
+        _id: { $in: assignedTeamLeads.map((tl) => tl.teamLeadId) },
+      });
+
+      for (const tl of teamLeads) {
+        sendNotification({
+          senderId: teamLead._id,
+          senderModel: "TeamLead",
+          senderName: leadName,
+          receiverId: tl._id,
+          receiverModel: "TeamLead",
+          type: "new_subtask",
+          title: "New Subtask Assigned",
+          message: `You have been assigned a new subtask by ${leadName}: "${title}".`,
+          link: `/teamlead/assigned-subtasks`,
+          referenceId: subtask._id,
+          referenceModel: "Subtask",
+        });
+
+        if (tl.email) {
+          const html = createdSubtaskMailTemplate(
+            tl.firstName,
+            title,
+            description,
+            leadName,
+            startDate,
+            endDate
+          );
+          sendMail(tl.email, "New Subtask Assigned", html);
         }
       }
     }

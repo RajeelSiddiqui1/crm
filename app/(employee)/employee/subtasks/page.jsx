@@ -39,7 +39,12 @@ import {
     Star,
     Shield,
     Zap,
-    Sparkles
+    Sparkles,
+    MessageCircle,
+    Send,
+    ThumbsUp,
+    AlertTriangle,
+    Mail
 } from "lucide-react";
 import axios from "axios";
 
@@ -77,6 +82,8 @@ export default function EmployeeSubtasksPage() {
     const [selectedSubtask, setSelectedSubtask] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [activeTab, setActiveTab] = useState("all");
+    const [feedback, setFeedback] = useState("");
+    const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
     const [stats, setStats] = useState({
         completed: 0,
         inProgress: 0,
@@ -107,12 +114,12 @@ export default function EmployeeSubtasksPage() {
                 
                 // Calculate stats
                 const now = new Date();
-                const completed = data.filter(s => s.status === "completed").length;
-                const inProgress = data.filter(s => s.status === "in_progress").length;
-                const pending = data.filter(s => s.status === "pending").length;
+                const completed = data.filter(s => s.status === "completed" || s.employeeStatus === "completed").length;
+                const inProgress = data.filter(s => s.status === "in_progress" || s.employeeStatus === "in_progress").length;
+                const pending = data.filter(s => s.status === "pending" || s.employeeStatus === "pending").length;
                 const highPriority = data.filter(s => s.priority === "high").length;
                 const overdue = data.filter(s => 
-                    new Date(s.endDate) < now && s.status !== "completed"
+                    new Date(s.endDate) < now && s.status !== "completed" && s.employeeStatus !== "completed"
                 ).length;
                 
                 const efficiency = data.length > 0 
@@ -140,7 +147,13 @@ export default function EmployeeSubtasksPage() {
         try {
             const response = await axios.get(`/api/employee/subtasks/${subtask._id}`);
             if (response.status === 200) {
-                setSelectedSubtask(response.data);
+                const subtaskData = response.data;
+                setSelectedSubtask(subtaskData);
+                // Set existing feedback if any
+                const employeeAssignment = subtaskData.assignedEmployees?.find(
+                    emp => emp.employeeId?._id?.toString() === session.user.id
+                );
+                setFeedback(employeeAssignment?.feedback || "");
                 setIsModalOpen(true);
             }
         } catch (error) {
@@ -152,6 +165,7 @@ export default function EmployeeSubtasksPage() {
     const closeModal = () => {
         setIsModalOpen(false);
         setSelectedSubtask(null);
+        setFeedback("");
     };
 
     const updateSubtaskStatus = async (newStatus) => {
@@ -160,7 +174,8 @@ export default function EmployeeSubtasksPage() {
         try {
             setLoading(true);
             const response = await axios.put(`/api/employee/subtasks/${selectedSubtask._id}`, {
-                status: newStatus
+                status: newStatus,
+                feedback
             });
 
             if (response.status === 200) {
@@ -170,10 +185,28 @@ export default function EmployeeSubtasksPage() {
                         ? { ...st, ...response.data }
                         : st
                 ));
+                
                 toast.success(`Status updated to ${newStatus.replace('_', ' ')}`, {
                     icon: "🎯",
+                    style: {
+                        background: '#f0fdf4',
+                        borderColor: '#bbf7d0',
+                        color: '#15803d'
+                    }
                 });
+                
+                // Show notification info
+                toast.info("Notification sent to team lead", {
+                    icon: "📧",
+                    style: {
+                        background: '#eff6ff',
+                        borderColor: '#bfdbfe',
+                        color: '#1d4ed8'
+                    }
+                });
+                
                 fetchSubtasks(); // Refresh stats
+                closeModal();
             }
         } catch (error) {
             console.error("Error updating subtask:", error);
@@ -183,43 +216,80 @@ export default function EmployeeSubtasksPage() {
         }
     };
 
+    const submitFeedbackOnly = async () => {
+        if (!selectedSubtask || !feedback.trim()) return;
+        
+        try {
+            setIsSubmittingFeedback(true);
+            const response = await axios.put(`/api/employee/subtasks/${selectedSubtask._id}`, {
+                feedback
+            });
+
+            if (response.status === 200) {
+                toast.success("Feedback submitted successfully", {
+                    icon: "💬",
+                    style: {
+                        background: '#f0fdf4',
+                        borderColor: '#bbf7d0',
+                        color: '#15803d'
+                    }
+                });
+                
+                // Show notification info
+                toast.info("Feedback sent to team lead", {
+                    icon: "📧",
+                    style: {
+                        background: '#eff6ff',
+                        borderColor: '#bfdbfe',
+                        color: '#1d4ed8'
+                    }
+                });
+                
+                setFeedback("");
+            }
+        } catch (error) {
+            console.error("Error submitting feedback:", error);
+            toast.error("Failed to submit feedback");
+        } finally {
+            setIsSubmittingFeedback(false);
+        }
+    };
+
     const breakTextSmartly = (
-  text,
-  minChars = 8,
-  maxChars = 13
-) => {
-  let lines = [];
-  let currentLine = "";
+        text,
+        minChars = 8,
+        maxChars = 13
+    ) => {
+        let lines = [];
+        let currentLine = "";
 
-  const words = text.split(" ");
+        const words = text.split(" ");
 
-  for (let word of words) {
-    // Agar word add karne se max exceed ho raha hai
-    if ((currentLine + " " + word).trim().length > maxChars) {
-      lines.push(currentLine.trim());
-      currentLine = word;
-    } else {
-      currentLine += (currentLine ? " " : "") + word;
-    }
+        for (let word of words) {
+            if ((currentLine + " " + word).trim().length > maxChars) {
+                lines.push(currentLine.trim());
+                currentLine = word;
+            } else {
+                currentLine += (currentLine ? " " : "") + word;
+            }
 
-    // Agar minimum chars cross ho gaye → soft break allow
-    if (currentLine.length >= minChars && currentLine.length <= maxChars) {
-      lines.push(currentLine.trim());
-      currentLine = "";
-    }
-  }
+            if (currentLine.length >= minChars && currentLine.length <= maxChars) {
+                lines.push(currentLine.trim());
+                currentLine = "";
+            }
+        }
 
-  if (currentLine.trim()) {
-    lines.push(currentLine.trim());
-  }
+        if (currentLine.trim()) {
+            lines.push(currentLine.trim());
+        }
 
-  return lines.join("\n");
-};
-
+        return lines.join("\n");
+    };
 
     const getStatusVariant = (status) => {
         const variants = {
             completed: "bg-gradient-to-r from-emerald-500 to-green-500 text-white border-emerald-400",
+            approved: "bg-gradient-to-r from-green-500 to-emerald-600 text-white border-green-400",
             in_progress: "bg-gradient-to-r from-blue-500 to-cyan-500 text-white border-blue-400",
             pending: "bg-gradient-to-r from-amber-500 to-orange-500 text-white border-amber-400",
             rejected: "bg-gradient-to-r from-rose-500 to-pink-500 text-white border-rose-400",
@@ -239,6 +309,7 @@ export default function EmployeeSubtasksPage() {
     const getStatusIcon = (status) => {
         switch (status) {
             case "completed":
+            case "approved":
                 return <CheckCircle className="w-5 h-5" />;
             case "in_progress":
                 return <Clock className="w-5 h-5" />;
@@ -251,7 +322,6 @@ export default function EmployeeSubtasksPage() {
         }
     };
 
-    // Safe status formatter
     const formatStatus = (status) => {
         if (!status) return 'Unknown';
         return status.replace('_', ' ');
@@ -273,11 +343,27 @@ export default function EmployeeSubtasksPage() {
         const diffTime = end - now;
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
         
-        if (diffDays < 0) return { text: "Overdue", class: "text-rose-700" };
-        if (diffDays === 0) return { text: "Due today", class: "text-amber-700" };
+        if (diffDays < 0) return { text: "Overdue", class: "text-rose-700 font-bold" };
+        if (diffDays === 0) return { text: "Due today", class: "text-amber-700 font-bold" };
         if (diffDays === 1) return { text: "1 day left", class: "text-amber-700" };
         if (diffDays <= 3) return { text: `${diffDays} days left`, class: "text-amber-700" };
         return { text: `${diffDays} days left`, class: "text-emerald-700" };
+    };
+
+    const getEmployeeStatus = (subtask) => {
+        if (!subtask.assignedEmployees) return "pending";
+        const employeeAssignment = subtask.assignedEmployees.find(
+            emp => emp.employeeId?._id?.toString() === session.user.id
+        );
+        return employeeAssignment?.status || "pending";
+    };
+
+    const getEmployeeFeedback = (subtask) => {
+        if (!subtask.assignedEmployees) return "";
+        const employeeAssignment = subtask.assignedEmployees.find(
+            emp => emp.employeeId?._id?.toString() === session.user.id
+        );
+        return employeeAssignment?.feedback || "";
     };
 
     const filteredSubtasks = subtasks.filter(subtask => {
@@ -285,7 +371,8 @@ export default function EmployeeSubtasksPage() {
             subtask.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
             subtask.description?.toLowerCase().includes(searchTerm.toLowerCase());
 
-        const matchesStatus = statusFilter === "all" || subtask.status === statusFilter;
+        const employeeStatus = getEmployeeStatus(subtask);
+        const matchesStatus = statusFilter === "all" || employeeStatus === statusFilter;
         const matchesPriority = priorityFilter === "all" || subtask.priority === priorityFilter;
 
         return matchesSearch && matchesStatus && matchesPriority;
@@ -321,10 +408,10 @@ export default function EmployeeSubtasksPage() {
                         This workspace is exclusively for employees. Please log in with your employee credentials.
                     </p>
                     <Button
-                        onClick={() => router.push("/login")}
+                        onClick={() => router.push("/employeelogin")}
                         className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white hover:opacity-90 px-8 py-6 text-lg rounded-xl shadow-lg"
                     >
-                        Go to Login
+                        Go to Employee Login
                     </Button>
                 </div>
             </div>
@@ -363,6 +450,16 @@ export default function EmployeeSubtasksPage() {
                                         <p className="text-blue-100/90 text-base line-clamp-2 max-w-3xl">
                                             {selectedSubtask.description}
                                         </p>
+                                        <div className="flex items-center gap-2 mt-3">
+                                            <Badge className="bg-white/20 backdrop-blur-sm text-white border border-white/30">
+                                                <Mail className="w-3.5 h-3.5 mr-1" />
+                                                Team lead will be notified
+                                            </Badge>
+                                            <Badge className="bg-white/20 backdrop-blur-sm text-white border border-white/30">
+                                                <MessageCircle className="w-3.5 h-3.5 mr-1" />
+                                                Feedback enabled
+                                            </Badge>
+                                        </div>
                                     </div>
                                     <Button
                                         onClick={closeModal}
@@ -398,58 +495,110 @@ export default function EmployeeSubtasksPage() {
                                 <div className="lg:col-span-2 space-y-8">
                                     {/* Status Update Section */}
                                    <Card className="border-2 border-gray-300 shadow-xl rounded-xl overflow-hidden bg-white">
-  <CardHeader className="bg-gradient-to-r from-gray-100 to-white border-b-2 border-gray-300">
-    <div className="flex items-center gap-3">
-      <div className="p-2 bg-gradient-to-r from-blue-600 to-indigo-700 rounded-lg shadow-md">
-        <TrendingUp className="w-5 h-5 text-white" />
-      </div>
-      <CardTitle className="text-xl font-bold text-gray-900">
-        Update Task Status
-      </CardTitle>
-    </div>
-  </CardHeader>
+                                        <CardHeader className="bg-gradient-to-r from-gray-100 to-white border-b-2 border-gray-300">
+                                            <div className="flex items-center gap-3">
+                                                <div className="p-2 bg-gradient-to-r from-blue-600 to-indigo-700 rounded-lg shadow-md">
+                                                    <TrendingUp className="w-5 h-5 text-white" />
+                                                </div>
+                                                <CardTitle className="text-xl font-bold text-gray-900">
+                                                    Update Task Status
+                                                </CardTitle>
+                                            </div>
+                                        </CardHeader>
 
-  <CardContent className="p-6">
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-      {[
-        { status: "pending", label: "Pending", icon: <AlertCircle /> },
-        { status: "in_progress", label: "In Progress", icon: <Clock /> },
-        { status: "completed", label: "Completed", icon: <CheckCircle /> }
-      ].map((item) => {
-        const isActive = selectedSubtask.status === item.status;
+                                        <CardContent className="p-6">
+                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                                                {[
+                                                    { status: "pending", label: "Pending", icon: <AlertCircle /> },
+                                                    { status: "in_progress", label: "In Progress", icon: <Clock /> },
+                                                    { status: "completed", label: "Completed", icon: <CheckCircle /> }
+                                                ].map((item) => {
+                                                    const isActive = selectedSubtask.employeeStatus === item.status;
 
-        return (
-          <Button
-            key={item.status}
-            disabled={loading || isActive}
-            variant="outline"
-            onClick={() => updateSubtaskStatus(item.status)}
-            className={`h-24 flex flex-col gap-2 font-semibold transition-all duration-300
-              ${isActive
-                ? `bg-gradient-to-r
-                    ${item.status === 'completed'
-                      ? 'from-emerald-600 to-green-700'
-                      : item.status === 'in_progress'
-                      ? 'from-blue-600 to-cyan-700'
-                      : 'from-amber-600 to-orange-700'}
-                    text-white border-0 shadow-xl`
-                : 'bg-gray-50 text-gray-900 border-2 border-gray-800 hover:bg-gray-100 hover:scale-105 hover:shadow-xl'
-              }
-            `}
-          >
-            <div className={`${isActive ? 'text-white' : 'text-gray-900'} text-2xl`}>
-              {item.icon}
-            </div>
-            <span className="capitalize">
-              {item.label}
-            </span>
-          </Button>
-        );
-      })}
-    </div>
-  </CardContent>
-</Card>
+                                                    return (
+                                                        <Button
+                                                            key={item.status}
+                                                            disabled={loading || isActive}
+                                                            variant="outline"
+                                                            onClick={() => updateSubtaskStatus(item.status)}
+                                                            className={`h-24 flex flex-col gap-2 font-semibold transition-all duration-300
+                                                                ${isActive
+                                                                    ? `bg-gradient-to-r
+                                                                        ${item.status === 'completed'
+                                                                        ? 'from-emerald-600 to-green-700'
+                                                                        : item.status === 'in_progress'
+                                                                        ? 'from-blue-600 to-cyan-700'
+                                                                        : 'from-amber-600 to-orange-700'}
+                                                                        text-white border-0 shadow-xl`
+                                                                    : 'bg-gray-50 text-gray-900 border-2 border-gray-800 hover:bg-gray-100 hover:scale-105 hover:shadow-xl'
+                                                                }
+                                                            `}
+                                                        >
+                                                            <div className={`${isActive ? 'text-white' : 'text-gray-900'} text-2xl`}>
+                                                                {item.icon}
+                                                            </div>
+                                                            <span className="capitalize">
+                                                                {item.label}
+                                                            </span>
+                                                        </Button>
+                                                    );
+                                                })}
+                                            </div>
 
+                                            {/* Feedback Section */}
+                                            <div className="space-y-4 pt-4 border-t border-gray-200">
+                                                <div className="flex items-center gap-2">
+                                                    <MessageCircle className="w-5 h-5 text-blue-600" />
+                                                    <h4 className="font-bold text-gray-900">Add Feedback / Comments</h4>
+                                                </div>
+                                                <div className="space-y-3">
+                                                    <textarea
+  value={feedback}
+  onChange={(e) => setFeedback(e.target.value)}
+  placeholder="Share your progress, challenges, or any feedback about this task..."
+  className="w-full min-h-[100px] p-3 border-2 border-gray-300 rounded-lg 
+             text-gray-900 placeholder-gray-400
+             focus:border-blue-500 focus:ring-2 focus:ring-blue-200 
+             resize-none"
+  rows={4}
+/>
+
+                                                    <div className="flex gap-3">
+                                                        <Button
+                                                            onClick={submitFeedbackOnly}
+                                                            disabled={!feedback.trim() || isSubmittingFeedback}
+                                                            className="bg-gradient-to-r from-blue-600 to-indigo-700 hover:opacity-90 text-white flex-1"
+                                                        >
+                                                            {isSubmittingFeedback ? (
+                                                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                                            ) : (
+                                                                <Send className="w-4 h-4 mr-2" />
+                                                            )}
+                                                            Send Feedback Only
+                                                        </Button>
+                                                        <Button
+                                                            variant="outline"
+                                                            onClick={() => setFeedback("")}
+                                                            className="border-gray-300 text-gray-700 hover:bg-gray-100"
+                                                            disabled={!feedback.trim()}
+                                                        >
+                                                            Clear
+                                                        </Button>
+                                                    </div>
+                                                    <div className="text-sm text-gray-600">
+                                                        <div className="flex items-center gap-1 mb-1">
+                                                            <AlertTriangle className="w-4 h-4 text-amber-500" />
+                                                            <span>Your feedback will be sent to the team lead along with status updates</span>
+                                                        </div>
+                                                        <div className="flex items-center gap-1">
+                                                            <ThumbsUp className="w-4 h-4 text-emerald-500" />
+                                                            <span>Team lead will be notified immediately</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
 
                                     {/* Task Details */}
                                     <Card className="border border-gray-200/50 shadow-lg rounded-xl overflow-hidden">
@@ -501,6 +650,27 @@ export default function EmployeeSubtasksPage() {
                                                     {selectedSubtask.startTime || '09:00'} - {selectedSubtask.endTime || '17:00'}
                                                 </div>
                                             </div>
+
+                                            {/* Employee Specific Status */}
+                                            {selectedSubtask.assignedEmployees && (
+                                                <div className="space-y-2">
+                                                    <div className="flex items-center gap-2 text-gray-800">
+                                                        <User className="w-4 h-4" />
+                                                        <span className="font-medium">Your Status</span>
+                                                    </div>
+                                                    <div className="flex items-center gap-3">
+                                                        <Badge className={`${getStatusVariant(selectedSubtask.employeeStatus)} px-3 py-1.5 font-semibold`}>
+                                                            {getStatusIcon(selectedSubtask.employeeStatus)}
+                                                            {formatStatus(selectedSubtask.employeeStatus)}
+                                                        </Badge>
+                                                        {selectedSubtask.employeeStatus === "completed" && selectedSubtask.completedAt && (
+                                                            <span className="text-sm text-gray-600">
+                                                                Completed on: {formatDate(selectedSubtask.completedAt)}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            )}
                                         </CardContent>
                                     </Card>
                                 </div>
@@ -508,7 +678,43 @@ export default function EmployeeSubtasksPage() {
                                 {/* Right Column */}
                                 <div className="space-y-8">
                                     {/* Team Lead Info */}
-                                    
+                                    <Card className="border border-gray-200/50 shadow-lg rounded-xl overflow-hidden">
+                                        <CardHeader className="bg-gradient-to-r from-gray-50 to-white border-b border-gray-100">
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="p-2 bg-gradient-to-r from-purple-500 to-pink-600 rounded-lg">
+                                                        <User className="w-5 h-5 text-white" />
+                                                    </div>
+                                                    <CardTitle className="text-xl font-bold text-gray-900">
+                                                        Team Lead
+                                                    </CardTitle>
+                                                </div>
+                                                <Badge variant="outline" className="border-purple-200 text-purple-800">
+                                                    <Mail className="w-3 h-3 mr-1" />
+                                                    Will be notified
+                                                </Badge>
+                                            </div>
+                                        </CardHeader>
+                                        <CardContent className="p-6">
+                                            <div className="flex items-center gap-3">
+                                                <Avatar className="w-12 h-12 border-2 border-purple-200">
+                                                    <AvatarFallback className="bg-gradient-to-r from-purple-500 to-pink-600 text-white font-semibold">
+                                                        {selectedSubtask.teamLeadId?.firstName?.[0] || "T"}
+                                                        {selectedSubtask.teamLeadId?.lastName?.[0] || "L"}
+                                                    </AvatarFallback>
+                                                </Avatar>
+                                                <div>
+                                                    <div className="font-bold text-gray-900">
+                                                        {selectedSubtask.teamLeadId?.firstName} {selectedSubtask.teamLeadId?.lastName}
+                                                    </div>
+                                                    <div className="text-sm text-gray-900">Team Lead</div>
+                                                    <div className="text-xs text-gray-900 mt-1">
+                                                        {selectedSubtask.teamLeadId?.email}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
 
                                     {/* Team Members */}
                                     <Card className="border border-gray-200/50 shadow-lg rounded-xl overflow-hidden">
@@ -531,11 +737,15 @@ export default function EmployeeSubtasksPage() {
                                             <div className="space-y-4">
                                                 {selectedSubtask.assignedEmployees?.slice(0, 4).map((emp, index) => {
                                                     const employee = emp.employeeId || emp;
+                                                    const isCurrentUser = employee._id?.toString() === session.user.id;
+                                                    
                                                     return (
-                                                        <div key={employee._id} className="flex items-center justify-between group hover:bg-gray-50 p-2 rounded-lg transition-colors">
+                                                        <div key={employee._id} className={`flex items-center justify-between p-2 rounded-lg transition-colors ${
+                                                            isCurrentUser ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200' : 'hover:bg-gray-50'
+                                                        }`}>
                                                             <div className="flex items-center gap-3">
                                                                 <div className="relative">
-                                                                    <Avatar className="w-10 h-10 border-2 border-white shadow-sm">
+                                                                    <Avatar className={`w-10 h-10 border-2 ${isCurrentUser ? 'border-blue-400' : 'border-white'} shadow-sm`}>
                                                                         <AvatarFallback className={`text-sm font-medium ${
                                                                             index % 3 === 0 ? 'bg-gradient-to-r from-blue-500 to-cyan-500' :
                                                                             index % 3 === 1 ? 'bg-gradient-to-r from-emerald-500 to-teal-500' :
@@ -544,17 +754,27 @@ export default function EmployeeSubtasksPage() {
                                                                             {employee.firstName?.[0]}{employee.lastName?.[0]}
                                                                         </AvatarFallback>
                                                                     </Avatar>
-                                                                    {emp.status === 'completed' && (
-                                                                        <div className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-white flex items-center justify-center">
-                                                                            <CheckCircle className="w-2.5 h-2.5 text-white" />
+                                                                    {isCurrentUser && (
+                                                                        <div className="absolute -top-1 -right-1 w-4 h-4 bg-blue-500 rounded-full border-2 border-white flex items-center justify-center">
+                                                                            <User className="w-2.5 h-2.5 text-white" />
                                                                         </div>
                                                                     )}
                                                                 </div>
                                                                 <div>
-                                                                    <div className="font-medium text-gray-900 text-sm">
+                                                                    <div className="font-medium text-gray-900 text-sm flex items-center gap-2">
                                                                         {employee.firstName} {employee.lastName}
+                                                                        {isCurrentUser && (
+                                                                            <Badge className="bg-blue-100 text-blue-800 border-blue-200 text-xs">
+                                                                                You
+                                                                            </Badge>
+                                                                        )}
                                                                     </div>
-                                                                   
+                                                                    <div className="text-xs text-gray-500">{employee.email}</div>
+                                                                    {emp.feedback && (
+                                                                        <div className="text-xs text-gray-600 mt-1 line-clamp-1">
+                                                                            "{(emp.feedback || "").substring(0, 30)}..."
+                                                                        </div>
+                                                                    )}
                                                                 </div>
                                                             </div>
                                                             <Badge className={`text-xs px-2 py-1 ${getStatusVariant(emp.status)}`}>
@@ -600,7 +820,19 @@ export default function EmployeeSubtasksPage() {
                                                     <FileText className="w-4 h-4 mr-2" />
                                                     Submit Task Form
                                                 </Button>
-                                               
+                                                <Button
+                                                    onClick={() => {
+                                                        // Send email to team lead
+                                                        const subject = encodeURIComponent(`Update on task: ${selectedSubtask.title}`);
+                                                        const body = encodeURIComponent(`Hi ${selectedSubtask.teamLeadId?.firstName},\n\nHere's an update on the task "${selectedSubtask.title}":\n\nMy Status: ${selectedSubtask.employeeStatus}\nFeedback: ${feedback || 'No feedback yet'}\n\nBest regards,\n${session.user.name}`);
+                                                        window.open(`mailto:${selectedSubtask.teamLeadId?.email}?subject=${subject}&body=${body}`, '_blank');
+                                                    }}
+                                                    variant="outline"
+                                                    className="w-full border-blue-200 text-blue-800 hover:bg-blue-50"
+                                                >
+                                                    <Mail className="w-4 h-4 mr-2" />
+                                                    Email Team Lead
+                                                </Button>
                                             </div>
                                         </CardContent>
                                     </Card>
@@ -802,8 +1034,7 @@ export default function EmployeeSubtasksPage() {
                 </Card>
 
                 {/* Subtasks Table */}
-               <Card className="bg-white border border-gray-200/50 shadow-2xl rounded-2xl overflow-hidden">
-
+                <Card className="bg-white border border-gray-200/50 shadow-2xl rounded-2xl overflow-hidden">
                     <CardHeader className="bg-gradient-to-r from-white to-blue-50/30 border-b border-gray-100">
                         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
                             <div>
@@ -878,7 +1109,7 @@ export default function EmployeeSubtasksPage() {
                                     <TableHeader className="bg-gradient-to-r from-gray-50 to-blue-50/30">
                                         <TableRow className="hover:bg-transparent border-b border-gray-100">
                                             <TableHead className="font-semibold text-gray-900 py-6 text-left">Task Details</TableHead>
-                                            <TableHead className="font-semibold text-gray-900 py-6">Status</TableHead>
+                                            <TableHead className="font-semibold text-gray-900 py-6">Your Status</TableHead>
                                             <TableHead className="font-semibold text-gray-900 py-6">Priority</TableHead>
                                             <TableHead className="font-semibold text-gray-900 py-6">Timeline</TableHead>
                                             <TableHead className="font-semibold text-gray-900 py-6">Actions</TableHead>
@@ -887,6 +1118,8 @@ export default function EmployeeSubtasksPage() {
                                     <TableBody>
                                         {filteredSubtasks.map((subtask) => {
                                             const timeRemaining = getTimeRemaining(subtask.endDate);
+                                            const employeeStatus = getEmployeeStatus(subtask);
+                                            const employeeFeedback = getEmployeeFeedback(subtask);
                                             
                                             return (
                                                 <TableRow
@@ -909,9 +1142,8 @@ export default function EmployeeSubtasksPage() {
                                                             <div className="flex-1 min-w-0">
                                                                 <div className="flex items-center gap-2 mb-1">
                                                                     <h4 className="font-bold text-gray-900 text-lg whitespace-pre-line group-hover:text-blue-800 transition-colors">
-  {breakTextSmartly(subtask.title)}
-</h4>
-
+                                                                        {breakTextSmartly(subtask.title)}
+                                                                    </h4>
                                                                     {subtask.attachments?.length > 0 && (
                                                                         <Badge variant="outline" className="border-blue-200 text-blue-800 text-xs">
                                                                             {subtask.attachments.length} file{subtask.attachments.length > 1 ? 's' : ''}
@@ -932,16 +1164,27 @@ export default function EmployeeSubtasksPage() {
                                                                             {subtask.teamLeadId?.firstName || 'Unknown'} {subtask.teamLeadId?.lastName || ''}
                                                                         </span>
                                                                     </div>
+                                                                    {employeeFeedback && (
+                                                                        <div className="flex items-center gap-1">
+                                                                            <MessageCircle className="w-3.5 h-3.5 text-blue-500" />
+                                                                            <span className="text-blue-600">Feedback provided</span>
+                                                                        </div>
+                                                                    )}
                                                                 </div>
                                                             </div>
                                                         </div>
                                                     </TableCell>
                                                     
                                                     <TableCell className="py-5">
-                                                        <Badge className={`${getStatusVariant(subtask.status)} flex items-center gap-1.5 px-3 py-1.5 font-semibold text-sm rounded-full`}>
-                                                            {getStatusIcon(subtask.status)}
-                                                            {formatStatus(subtask.status)}
+                                                        <Badge className={`${getStatusVariant(employeeStatus)} flex items-center gap-1.5 px-3 py-1.5 font-semibold text-sm rounded-full`}>
+                                                            {getStatusIcon(employeeStatus)}
+                                                            {formatStatus(employeeStatus)}
                                                         </Badge>
+                                                        {employeeFeedback && (
+                                                            <div className="text-xs text-gray-600 mt-1 line-clamp-1 max-w-[150px]">
+                                                                "{(employeeFeedback || "").substring(0, 30)}..."
+                                                            </div>
+                                                        )}
                                                     </TableCell>
                                                     
                                                     <TableCell className="py-5">
@@ -959,11 +1202,15 @@ export default function EmployeeSubtasksPage() {
                                                                 <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
                                                                     <div 
                                                                         className={`h-full rounded-full ${
-                                                                            subtask.status === 'completed' ? 'bg-gradient-to-r from-emerald-500 to-green-500' :
-                                                                            subtask.status === 'in_progress' ? 'bg-gradient-to-r from-blue-500 to-cyan-500' :
+                                                                            employeeStatus === 'completed' ? 'bg-gradient-to-r from-emerald-500 to-green-500' :
+                                                                            employeeStatus === 'in_progress' ? 'bg-gradient-to-r from-blue-500 to-cyan-500' :
                                                                             'bg-gradient-to-r from-amber-500 to-orange-500'
                                                                         }`}
-                                                                        style={{ width: subtask.status === 'completed' ? '100%' : subtask.status === 'in_progress' ? '60%' : '30%' }}
+                                                                        style={{ 
+                                                                            width: employeeStatus === 'completed' ? '100%' : 
+                                                                                   employeeStatus === 'in_progress' ? '60%' : 
+                                                                                   '30%' 
+                                                                        }}
                                                                     ></div>
                                                                 </div>
                                                                 <span className={`text-xs font-semibold ${timeRemaining.class}`}>
@@ -982,7 +1229,7 @@ export default function EmployeeSubtasksPage() {
                                                                 onClick={() => openModal(subtask)}
                                                             >
                                                                 <Eye className="w-4 h-4 mr-2" />
-                                                                View
+                                                                Update
                                                             </Button>
                                                             <Button
                                                                 onClick={() => router.push(`/employee/subtasks/${subtask._id}`)}

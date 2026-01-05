@@ -103,6 +103,7 @@ export default function Sidebar() {
       { href: "/teamlead/home", label: "Dashboard", icon: "Dashboard" },
       { href: "/teamlead/admin-tasks", label: "Admin Tasks", icon: "AdminTasks" },
       { href: "/teamlead/subtasks", label: "Subtasks", icon: "Subtasks" },
+      { href: "/teamlead/assigned-subtasks", label: "Assigned Subtasks", icon: "Subtasks" },
       { href: "/teamlead/tasks", label: "Tasks", icon: "Tasks" },
       { href: "/teamlead/operation-tasks", label: "Operation Tasks", icon: "OperationTasks" },
       { href: "/teamlead/received-tasks", label: "Received Tasks", icon: "ReceivedTasks" },

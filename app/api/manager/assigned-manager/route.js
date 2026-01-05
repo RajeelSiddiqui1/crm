@@ -9,7 +9,7 @@ import { authOptions } from "@/lib/auth";
 export async function GET(request) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session || session.user.role !== "Manager") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -42,8 +42,13 @@ export async function GET(request) {
       })
       .populate({
         path: "assignedManagers.managerId",
-        select: "firstName lastName email avatar",
+        select: "firstName lastName email phone department",
         model: "Manager"
+      })
+      .populate({
+        path: "assignedTeamLeads.teamLeadId",
+        select: "firstName lastName email avatar designation",
+        model: "TeamLead"
       })
       .sort({ createdAt: -1 })
       .lean();
@@ -56,25 +61,25 @@ export async function GET(request) {
 
       // ✅ Employee status summary calculate karo
       const assignedEmployees = subtask.assignedEmployees || [];
-      const completedEmployees = assignedEmployees.filter(emp => 
+      const completedEmployees = assignedEmployees.filter(emp =>
         emp.status === 'completed' || emp.status === 'approved'
       ).length;
-      const inProgressEmployees = assignedEmployees.filter(emp => 
+      const inProgressEmployees = assignedEmployees.filter(emp =>
         emp.status === 'in_progress'
       ).length;
-      const pendingEmployees = assignedEmployees.filter(emp => 
+      const pendingEmployees = assignedEmployees.filter(emp =>
         emp.status === 'pending'
       ).length;
 
       // ✅ Leads progress calculate karo
       const totalLeadsRequired = parseInt(subtask.lead) || 0;
       let leadsCompleted = 0;
-      
+
       // Employees ke leads
       assignedEmployees.forEach(emp => {
         leadsCompleted += emp.leadsCompleted || 0;
       });
-      
+
       // Managers ke leads
       subtask.assignedManagers?.forEach(mgr => {
         leadsCompleted += mgr.leadsCompleted || 0;
@@ -89,48 +94,48 @@ export async function GET(request) {
         managerAssignedAt: managerAssignment?.assignedAt,
         managerLeadsCompleted: managerAssignment?.leadsCompleted || 0,
         managerLeadsAssigned: managerAssignment?.leadsAssigned || 0,
-        
+
         // ✅ Overall task status
         subtaskStatus: subtask.status,
-        
+
         // ✅ Team statistics
         teamStats: {
           totalEmployees: assignedEmployees.length,
           completed: completedEmployees,
           inProgress: inProgressEmployees,
           pending: pendingEmployees,
-          completionRate: assignedEmployees.length > 0 
+          completionRate: assignedEmployees.length > 0
             ? Math.round((completedEmployees / assignedEmployees.length) * 100)
             : 0
         },
-        
+
         // ✅ Leads statistics
         leadsStats: {
           required: totalLeadsRequired,
           completed: leadsCompleted,
-          progress: totalLeadsRequired > 0 
+          progress: totalLeadsRequired > 0
             ? Math.round((leadsCompleted / totalLeadsRequired) * 100)
             : 0
         },
-        
+
         // ✅ Agar manager ka status "completed" hai lekin task approve nahi hua
-        needsApproval: managerAssignment?.status === 'completed' && 
-                      subtask.status !== 'approved' && 
-                      subtask.status !== 'completed',
-        
+        needsApproval: managerAssignment?.status === 'completed' &&
+          subtask.status !== 'approved' &&
+          subtask.status !== 'completed',
+
         // ✅ Time tracking
-        isOverdue: new Date(subtask.endDate) < new Date() && 
-                  !["completed", "approved"].includes(subtask.status)
+        isOverdue: new Date(subtask.endDate) < new Date() &&
+          !["completed", "approved"].includes(subtask.status)
       };
     });
 
-    return NextResponse.json({ 
-      success: true, 
+    return NextResponse.json({
+      success: true,
       subtasks: enhancedSubtasks,
       managerId: session.user.id,
       totalTasks: enhancedSubtasks.length
     });
-    
+
   } catch (error) {
     console.error("❌ Manager subtasks fetch error:", error);
     return NextResponse.json(
@@ -143,21 +148,21 @@ export async function GET(request) {
 export async function POST(request) {
   try {
     const session = await getServerSession(authOptions);
-    
+
     if (!session || session.user.role !== "Manager") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     await dbConnect();
     const body = await request.json();
-    
+
     // ✅ Manager ko directly task assign karne ki permission (optional)
     // Yeh sirf team leads ke liye ho sakta hai
     return NextResponse.json(
       { error: "Managers cannot directly create tasks. Contact team lead." },
       { status: 403 }
     );
-    
+
   } catch (error) {
     console.error("❌ Manager task creation error:", error);
     return NextResponse.json(

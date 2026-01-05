@@ -54,8 +54,14 @@ import {
     UploadCloud,
     Mail,
     Phone,
-    MapPin
+    MapPin,
+    MessageCircle,
+    Send,
+    ThumbsUp,
+    ThumbsDown,
+    AlertTriangle,
 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";  // Ensure Textarea is imported
 import axios from "axios";
 
 // Color Palette for Manager
@@ -111,6 +117,8 @@ export default function ManagerSubtasksPage() {
         myTasks: 0,
         teamTasks: 0
     });
+    const [feedback, setFeedback] = useState("");
+    const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
 
     useEffect(() => {
         if (status === "loading") return;
@@ -213,7 +221,14 @@ export default function ManagerSubtasksPage() {
         try {
             const response = await axios.get(`/api/manager/assigned-manager/${subtask._id}`);
             if (response.status === 200) {
-                setSelectedSubtask(response.data);
+                const data = response.data;
+                setSelectedSubtask(data);
+                // Pre-fill feedback from manager assignment
+                const currentMgrId = session?.user?.id;
+                const myAssignment = data.assignedManagers?.find(m => 
+                    (m.managerId?._id || m.managerId) === currentMgrId
+                );
+                setFeedback(myAssignment?.feedback || "");
                 setIsModalOpen(true);
             }
         } catch (error) {
@@ -225,6 +240,7 @@ export default function ManagerSubtasksPage() {
     const closeModal = () => {
         setIsModalOpen(false);
         setSelectedSubtask(null);
+        setFeedback("");
     };
 
     const updateSubtaskStatus = async (newStatus) => {
@@ -233,26 +249,71 @@ export default function ManagerSubtasksPage() {
         try {
             setLoading(true);
             const response = await axios.put(`/api/manager/assigned-manager/${selectedSubtask._id}`, {
-                status: newStatus
+                status: newStatus,
+                feedback: feedback // Include current feedback
             });
 
             if (response.status === 200) {
-                setSelectedSubtask(response.data);
-                setSubtasks(prev => prev.map(st =>
-                    st._id === selectedSubtask._id
-                        ? { ...st, ...response.data }
-                        : st
-                ));
                 toast.success(`Status updated to ${newStatus.replace('_', ' ')}`, {
                     icon: "🎯",
                 });
-                fetchSubtasks(); // Refresh stats
+                
+                // Refresh data to show latest feedback and status
+                const updatedResponse = await axios.get(`/api/manager/assigned-manager/${selectedSubtask._id}`);
+                if (updatedResponse.status === 200) {
+                    setSelectedSubtask(updatedResponse.data);
+                    setSubtasks(prev => prev.map(st =>
+                        st._id === selectedSubtask._id
+                            ? { ...st, ...updatedResponse.data, employeeStatus: newStatus }
+                            : st
+                    ));
+                }
+                fetchSubtasks(); // Refresh main list and stats
             }
         } catch (error) {
             console.error("Error updating task:", error);
             toast.error("Failed to update task status");
         } finally {
             setLoading(false);
+        }
+    };
+
+    const submitFeedbackOnly = async () => {
+        if (!selectedSubtask || !feedback.trim()) {
+            toast.error("Please enter some feedback first");
+            return;
+        }
+
+        try {
+            setIsSubmittingFeedback(true);
+            const response = await axios.put(`/api/manager/assigned-manager/${selectedSubtask._id}`, {
+                feedback: feedback,
+                // Status remains same
+                status: selectedSubtask.employeeStatus || selectedSubtask.managerInfo?.status
+            });
+
+            if (response.status === 200) {
+                toast.success("Feedback submitted successfully!", {
+                    icon: "💬",
+                });
+                
+                // Toast for team lead notification
+                toast.info(`Team Lead ${selectedSubtask.teamLeadId?.firstName || ''} has been notified.`, {
+                    description: "Your feedback was sent to the task creator.",
+                });
+
+                // Refresh data
+                const updatedResponse = await axios.get(`/api/manager/assigned-manager/${selectedSubtask._id}`);
+                if (updatedResponse.status === 200) {
+                    setSelectedSubtask(updatedResponse.data);
+                }
+                fetchSubtasks();
+            }
+        } catch (error) {
+            console.error("Error submitting feedback:", error);
+            toast.error("Failed to submit feedback");
+        } finally {
+            setIsSubmittingFeedback(false);
         }
     };
 
@@ -468,59 +529,282 @@ export default function ManagerSubtasksPage() {
                             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                                 {/* Left Column */}
                                 <div className="lg:col-span-2 space-y-8">
-                                    {/* Status Update Section */}
+                                    {/* Status & Feedback Submission Section */}
                                     <Card className="border-2 border-gray-300 shadow-xl rounded-xl overflow-hidden bg-white">
                                         <CardHeader className="bg-gradient-to-r from-gray-100 to-white border-b-2 border-gray-300">
-                                            <div className="flex items-center gap-3">
-                                                <div className="p-2 bg-gradient-to-r from-violet-600 to-purple-700 rounded-lg shadow-md">
-                                                    <TrendingUp className="w-5 h-5 text-white" />
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="p-2 bg-gradient-to-r from-violet-600 to-purple-700 rounded-lg shadow-md">
+                                                        <MessageCircle className="w-5 h-5 text-white" />
+                                                    </div>
+                                                    <div>
+                                                        <CardTitle className="text-xl font-bold text-gray-900">
+                                                            Your Feedback & Status
+                                                        </CardTitle>
+                                                        <CardDescription className="text-gray-900 font-medium">
+                                                            Team Lead will be notified of your updates
+                                                        </CardDescription>
+                                                    </div>
                                                 </div>
-                                                <CardTitle className="text-xl font-bold text-gray-900">
-                                                    Update My Task Status
-                                                </CardTitle>
+                                                <Badge className="bg-blue-100 text-blue-700 border-blue-200">
+                                                    Official Update
+                                                </Badge>
                                             </div>
-                                            <CardDescription className="text-gray-900">
-                                                Update your personal status for this task
-                                            </CardDescription>
                                         </CardHeader>
 
-                                        <CardContent className="p-6">
-                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                                {[
-                                                    { status: "pending", label: "Pending", icon: <AlertCircle /> },
-                                                    { status: "in_progress", label: "In Progress", icon: <Clock /> },
-                                                    { status: "completed", label: "Completed", icon: <CheckCircle /> }
-                                                ].map((item) => {
-                                                    const isActive = selectedSubtask.employeeStatus === item.status;
+                                        <CardContent className="p-6 space-y-6">
+                                            {/* Feedback Input */}
+                                            <div className="space-y-3">
+                                                <Label className="text-sm font-bold text-gray-900 uppercase tracking-wider flex items-center gap-2">
+                                                    <MessageSquare className="w-4 h-4 text-violet-600" />
+                                                    Add Your Feedback
+                                                </Label>
+                                                <Textarea
+                                                    placeholder="Type your feedback, updates or concerns here..."
+                                                    className="min-h-[120px] bg-gray-50 border-2 border-gray-200 focus:border-violet-500 focus:ring-violet-200 transition-all text-gray-900 text-lg placeholder:text-gray-400 font-medium"
+                                                    value={feedback}
+                                                    onChange={(e) => setFeedback(e.target.value)}
+                                                />
+                                                <div className="flex justify-between items-center bg-violet-50 p-3 rounded-lg border border-violet-100">
+                                                    <p className="text-xs text-violet-700 flex items-center gap-1.5 font-medium">
+                                                        <AlertTriangle className="w-3.5 h-3.5" />
+                                                        Feedback is visible to Team Leads and other Managers.
+                                                    </p>
+                                                    <Button
+                                                        size="sm"
+                                                        onClick={submitFeedbackOnly}
+                                                        disabled={isSubmittingFeedback || !feedback.trim()}
+                                                        className="bg-violet-600 hover:bg-violet-700 text-white font-bold h-9 px-4 shadow-md"
+                                                    >
+                                                        {isSubmittingFeedback ? (
+                                                            <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                                                        ) : (
+                                                            <Send className="w-4 h-4 mr-2" />
+                                                        )}
+                                                        Send Feedback Only
+                                                    </Button>
+                                                </div>
+                                            </div>
 
-                                                    return (
-                                                        <Button
-                                                            key={item.status}
-                                                            disabled={loading || isActive}
-                                                            variant="outline"
-                                                            onClick={() => updateSubtaskStatus(item.status)}
-                                                            className={`h-24 flex flex-col gap-2 font-semibold transition-all duration-300
-                                                                ${isActive
-                                                                    ? `bg-gradient-to-r
-                                                                        ${item.status === 'completed'
-                                                                            ? 'from-emerald-600 to-green-700'
-                                                                            : item.status === 'in_progress'
-                                                                            ? 'from-blue-600 to-cyan-700'
-                                                                            : 'from-amber-600 to-orange-700'}
-                                                                        text-white border-0 shadow-xl`
-                                                                    : 'bg-gray-50 text-gray-900 border-2 border-gray-800 hover:bg-gray-100 hover:scale-105 hover:shadow-xl'
-                                                                }
-                                                            `}
-                                                        >
-                                                            <div className={`${isActive ? 'text-white' : 'text-gray-900'} text-2xl`}>
-                                                                {item.icon}
+                                            <div className="border-t-2 border-dashed border-gray-200 pt-6">
+                                                <Label className="text-sm font-bold text-gray-900 uppercase tracking-wider block mb-4">
+                                                    Update Task Status & Notify Team
+                                                </Label>
+                                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                                    {[
+                                                        { status: "pending", label: "Pending", icon: <AlertCircle />, color: "amber" },
+                                                        { status: "in_progress", label: "In Progress", icon: <Clock />, color: "blue" },
+                                                        { status: "completed", label: "Completed", icon: <CheckCircle />, color: "emerald" }
+                                                    ].map((item) => {
+                                                        const isActive = (selectedSubtask.employeeStatus || selectedSubtask.managerInfo?.status) === item.status;
+
+                                                        return (
+                                                            <Button
+                                                                key={item.status}
+                                                                disabled={loading || isActive}
+                                                                variant="outline"
+                                                                onClick={() => updateSubtaskStatus(item.status)}
+                                                                className={`h-24 flex flex-col gap-2 font-bold transition-all duration-300 border-2
+                                                                    ${isActive
+                                                                        ? `bg-gradient-to-br
+                                                                            ${item.status === 'completed'
+                                                                                ? 'from-emerald-600 to-green-700 border-emerald-500'
+                                                                                : item.status === 'in_progress'
+                                                                                ? 'from-blue-600 to-cyan-700 border-blue-500'
+                                                                                : 'from-amber-600 to-orange-700 border-amber-500'}
+                                                                            text-white shadow-xl scale-100`
+                                                                        : 'bg-white text-gray-900 border-gray-800 hover:bg-gray-50 hover:scale-105 hover:shadow-lg'
+                                                                    }
+                                                                `}
+                                                            >
+                                                                <div className={`${isActive ? 'text-white' : `text-${item.color}-600`} text-2xl`}>
+                                                                    {item.icon}
+                                                                </div>
+                                                                <span className="capitalize text-base">
+                                                                    {item.label}
+                                                                </span>
+                                                                {isActive && (
+                                                                    <div className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full mt-1">
+                                                                        Current Status
+                                                                    </div>
+                                                                )}
+                                                            </Button>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+
+                                    {/* Team Feedback & Activity - Aggregated Feed */}
+                                    <Card className="border border-gray-200/50 shadow-lg rounded-xl overflow-hidden bg-white">
+                                        <CardHeader className="bg-gradient-to-r from-gray-50 to-white border-b border-gray-100">
+                                            <div className="flex items-center gap-3">
+                                                <div className="p-2 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-lg">
+                                                    <Activity className="w-5 h-5 text-white" />
+                                                </div>
+                                                <CardTitle className="text-xl font-bold text-gray-900">
+                                                    Team Feedback & Activity
+                                                </CardTitle>
+                                            </div>
+                                        </CardHeader>
+                                        <CardContent className="p-6">
+                                            <div className="space-y-6">
+                                                {/* Managers Feedback */}
+                                                <div className="space-y-4">
+                                                    <h4 className="text-sm font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
+                                                        <Shield className="w-4 h-4" />
+                                                        Management Updates
+                                                    </h4>
+                                                    <div className="space-y-4">
+                                                        {selectedSubtask.assignedManagers?.filter(m => m.feedback || m.status !== 'pending').map((mgr, idx) => (
+                                                            <div key={idx} className="flex gap-4 p-4 rounded-xl border border-gray-100 bg-gray-50/50">
+                                                                <Avatar className="w-10 h-10 border-2 border-white shadow-sm shrink-0">
+                                                                    <AvatarFallback className="bg-gradient-to-r from-violet-500 to-purple-600 text-white font-bold">
+                                                                        {(mgr.managerId?.firstName?.[0] || mgr.name?.[0] || 'M')}
+                                                                    </AvatarFallback>
+                                                                </Avatar>
+                                                                <div className="space-y-2 flex-1">
+                                                                    <div className="flex justify-between items-start">
+                                                                        <div>
+                                                                            <p className="font-bold text-gray-900">
+                                                                                {mgr.managerId?.firstName ? `${mgr.managerId.firstName} ${mgr.managerId.lastName}` : (mgr.name || mgr.email)}
+                                                                                {mgr.managerId?._id === session?.user?.id && <span className="ml-2 text-xs bg-violet-100 text-violet-700 px-2 py-0.5 rounded-full">You</span>}
+                                                                            </p>
+                                                                            <p className="text-xs text-gray-500">Manager</p>
+                                                                        </div>
+                                                                        <Badge className={`text-[10px] ${getMyStatusVariant(mgr.status)}`}>
+                                                                            {formatStatus(mgr.status)}
+                                                                        </Badge>
+                                                                    </div>
+                                                                    {mgr.feedback ? (
+                                                                        <div className="bg-white p-3 rounded-lg border border-gray-100 text-sm text-gray-800 italic leading-relaxed shadow-sm">
+                                                                            "{mgr.feedback}"
+                                                                        </div>
+                                                                    ) : (
+                                                                        <p className="text-xs text-gray-400 italic italic italic">No feedback provided yet</p>
+                                                                    )}
+                                                                </div>
                                                             </div>
-                                                            <span className="capitalize">
-                                                                {item.label}
-                                                            </span>
-                                                        </Button>
-                                                    );
-                                                })}
+                                                        ))}
+                                                        {(!selectedSubtask.assignedManagers || selectedSubtask.assignedManagers.length === 0) && (
+                                                            <p className="text-sm text-gray-400 text-center py-4 bg-gray-50 rounded-xl border-2 border-dashed border-gray-100">No other managers assigned</p>
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                {/* Team Leads Feedback */}
+                                                <div className="space-y-4 pt-4 border-t border-gray-100">
+                                                    <h4 className="text-sm font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
+                                                        <Crown className="w-4 h-4" />
+                                                        Lead Reviews
+                                                    </h4>
+                                                    <div className="space-y-4">
+                                                        {/* Primary Task Owner/Creator */}
+                                                        <div className="flex gap-4 p-4 rounded-xl border border-blue-100 bg-blue-50/30">
+                                                            <Avatar className="w-10 h-10 border-2 border-white shadow-sm shrink-0">
+                                                                <AvatarFallback className="bg-gradient-to-r from-blue-500 to-cyan-600 text-white font-bold">
+                                                                    {selectedSubtask.teamLeadId?.firstName?.[0] || 'TL'}
+                                                                </AvatarFallback>
+                                                            </Avatar>
+                                                            <div className="space-y-2 flex-1">
+                                                                <div className="flex justify-between items-start">
+                                                                    <div>
+                                                                        <p className="font-bold text-gray-900">
+                                                                            {selectedSubtask.teamLeadId?.firstName} {selectedSubtask.teamLeadId?.lastName}
+                                                                        </p>
+                                                                        <p className="text-xs text-gray-500">Primary Team Lead (Creator)</p>
+                                                                    </div>
+                                                                    <Badge className={`text-[10px] ${getTaskStatusVariant(selectedSubtask.subtaskStatus)}`}>
+                                                                        {formatStatus(selectedSubtask.subtaskStatus)}
+                                                                    </Badge>
+                                                                </div>
+                                                                {selectedSubtask.teamLeadFeedback ? (
+                                                                    <div className="bg-white p-3 rounded-lg border border-blue-100 text-sm text-gray-800 italic leading-relaxed shadow-sm">
+                                                                        "{selectedSubtask.teamLeadFeedback}"
+                                                                    </div>
+                                                                ) : (
+                                                                    <p className="text-xs text-blue-400 italic">Expecting creator's review...</p>
+                                                                )}
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Other Assigned Team Leads */}
+                                                        {selectedSubtask.assignedTeamLeads?.map((tl, idx) => (
+                                                            <div key={idx} className="flex gap-4 p-4 rounded-xl border border-gray-100 bg-gray-50/50">
+                                                                <Avatar className="w-10 h-10 border-2 border-white shadow-sm shrink-0">
+                                                                    <AvatarFallback className="bg-gradient-to-r from-indigo-500 to-blue-600 text-white font-bold">
+                                                                        {tl.teamLeadId?.firstName?.[0] || tl.name?.[0] || 'L'}
+                                                                    </AvatarFallback>
+                                                                </Avatar>
+                                                                <div className="space-y-2 flex-1">
+                                                                    <div className="flex justify-between items-start">
+                                                                        <div>
+                                                                            <p className="font-bold text-gray-900">
+                                                                                {tl.teamLeadId?.firstName ? `${tl.teamLeadId.firstName} ${tl.teamLeadId.lastName}` : (tl.name || tl.email)}
+                                                                            </p>
+                                                                            <p className="text-xs text-gray-500">Collaborating Lead</p>
+                                                                        </div>
+                                                                        <Badge className={`text-[10px] ${getMyStatusVariant(tl.status)}`}>
+                                                                            {formatStatus(tl.status)}
+                                                                        </Badge>
+                                                                    </div>
+                                                                    {tl.feedback ? (
+                                                                        <div className="bg-white p-3 rounded-lg border border-gray-100 text-sm text-gray-800 italic leading-relaxed shadow-sm">
+                                                                            "{tl.feedback}"
+                                                                        </div>
+                                                                    ) : (
+                                                                        <p className="text-xs text-gray-400 italic">No feedback provided yet</p>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+
+                                                {/* Employees Feedback */}
+                                                <div className="space-y-4 pt-4 border-t border-gray-100">
+                                                    <h4 className="text-sm font-bold text-gray-500 uppercase tracking-widest flex items-center gap-2">
+                                                        <Users className="w-4 h-4" />
+                                                        Employee Updates
+                                                    </h4>
+                                                    <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                                                        {selectedSubtask.assignedEmployees?.filter(e => e.feedback || e.status !== 'pending').map((emp, idx) => (
+                                                            <div key={idx} className="flex gap-4 p-4 rounded-xl border border-gray-100 bg-white hover:border-blue-200 transition-colors">
+                                                                <Avatar className="w-9 h-9 border-2 border-white shadow-sm shrink-0">
+                                                                    <AvatarFallback className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-xs font-bold">
+                                                                        {emp.employeeId?.firstName?.[0] || emp.name?.[0] || 'E'}
+                                                                    </AvatarFallback>
+                                                                </Avatar>
+                                                                <div className="space-y-2 flex-1">
+                                                                    <div className="flex justify-between items-start">
+                                                                        <div>
+                                                                            <p className="font-bold text-gray-900 text-sm">
+                                                                                {emp.employeeId?.firstName ? `${emp.employeeId.firstName} ${emp.employeeId.lastName}` : (emp.name || emp.email)}
+                                                                            </p>
+                                                                            <p className="text-[10px] text-gray-500 flex items-center gap-1">
+                                                                                 <Mail className="w-2.5 h-2.5" /> {emp.email}
+                                                                            </p>
+                                                                        </div>
+                                                                        <Badge className={`text-[9px] px-1.5 py-0 ${getMyStatusVariant(emp.status)}`}>
+                                                                            {formatStatus(emp.status)}
+                                                                        </Badge>
+                                                                    </div>
+                                                                    {emp.feedback ? (
+                                                                        <div className="bg-emerald-50/30 p-2.5 rounded-lg border border-emerald-100/50 text-xs text-gray-700 leading-relaxed italic">
+                                                                            "{emp.feedback}"
+                                                                        </div>
+                                                                    ) : (
+                                                                        <p className="text-[10px] text-gray-400 italic">Progress update only</p>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                        {(!selectedSubtask.assignedEmployees || selectedSubtask.assignedEmployees.length === 0) && (
+                                                            <p className="text-sm text-gray-400 text-center py-4 bg-gray-50 rounded-xl border-2 border-dashed border-gray-100">No employees involved</p>
+                                                        )}
+                                                    </div>
+                                                </div>
                                             </div>
                                         </CardContent>
                                     </Card>
@@ -635,143 +919,175 @@ export default function ManagerSubtasksPage() {
 
                                 {/* Right Column */}
                                 <div className="space-y-8">
-                                    {/* Team Lead Info */}
-                                    <Card className="border border-gray-200/50 shadow-lg rounded-xl overflow-hidden">
-                                        <CardHeader className="bg-gradient-to-r from-gray-50 to-white border-b border-gray-100">
-                                            <div className="flex items-center gap-3">
-                                                <div className="p-2 bg-gradient-to-r from-blue-500 to-cyan-600 rounded-lg">
-                                                    <User className="w-5 h-5 text-white" />
-                                                </div>
-                                                <CardTitle className="text-xl font-bold text-gray-900">
-                                                    Team Lead
-                                                </CardTitle>
-                                            </div>
-                                        </CardHeader>
-                                        <CardContent className="p-6">
-                                            <div className="flex items-center gap-3">
-                                                <Avatar className="w-12 h-12 border-2 border-white shadow-sm">
-                                                    <AvatarFallback className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white font-medium">
-                                                        {selectedSubtask.teamLeadId?.firstName?.[0]}{selectedSubtask.teamLeadId?.lastName?.[0]}
-                                                    </AvatarFallback>
-                                                </Avatar>
-                                                <div>
-                                                    <div className="font-bold text-gray-900">
-                                                        {selectedSubtask.teamLeadId?.firstName} {selectedSubtask.teamLeadId?.lastName}
-                                                    </div>
-                                                    <div className="text-sm text-gray-800">Team Lead</div>
-                                                    <div className="text-xs text-gray-600 flex items-center gap-1 mt-1">
-                                                        <Mail className="w-3 h-3" />
-                                                        {selectedSubtask.teamLeadId?.email}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-
-                                    {/* Assigned Employees */}
-                                    <Card className="border border-gray-200/50 shadow-lg rounded-xl overflow-hidden">
-                                        <CardHeader className="bg-gradient-to-r from-gray-50 to-white border-b border-gray-100">
-                                            <div className="flex items-center justify-between">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="p-2 bg-gradient-to-r from-emerald-500 to-teal-600 rounded-lg">
-                                                        <Users className="w-5 h-5 text-white" />
-                                                    </div>
-                                                    <CardTitle className="text-xl font-bold text-gray-900">
-                                                        Assigned Employees
-                                                    </CardTitle>
-                                                </div>
-                                                <Badge variant="outline" className="border-emerald-200 text-emerald-800">
-                                                    {selectedSubtask.assignedEmployees?.length || 0} members
-                                                </Badge>
-                                            </div>
-                                        </CardHeader>
-                                        <CardContent className="p-6">
-                                            <div className="space-y-3">
-                                                {selectedSubtask.assignedEmployees?.slice(0, 5).map((emp, index) => {
-                                                    const employee = emp.employeeId || emp;
-                                                    return (
-                                                        <div key={employee._id || index} className="flex items-center justify-between group hover:bg-gray-50 p-2 rounded-lg transition-colors">
-                                                            <div className="flex items-center gap-3">
-                                                                <div className="relative">
-                                                                    <Avatar className="w-9 h-9 border-2 border-white shadow-sm">
-                                                                        <AvatarFallback className={`text-xs font-medium ${
-                                                                            index % 3 === 0 ? 'bg-gradient-to-r from-blue-500 to-cyan-500' :
-                                                                            index % 3 === 1 ? 'bg-gradient-to-r from-emerald-500 to-teal-500' :
-                                                                            'bg-gradient-to-r from-purple-500 to-pink-500'
-                                                                        } text-white`}>
-                                                                            {employee.firstName?.[0]}{employee.lastName?.[0]}
+                                    {/* All Assignees Categories */}
+                                    <Tabs defaultValue="employees" className="w-full">
+                                        <TabsList className="grid w-full grid-cols-3 bg-gray-100 p-1 rounded-xl">
+                                            <TabsTrigger value="employees" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                                                Employees ({selectedSubtask.assignedEmployees?.length || 0})
+                                            </TabsTrigger>
+                                            <TabsTrigger value="managers" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                                                Managers ({selectedSubtask.assignedManagers?.length || 0})
+                                            </TabsTrigger>
+                                            <TabsTrigger value="leads" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">
+                                                Team Leads ({ (selectedSubtask.assignedTeamLeads?.length || 0) + 1 })
+                                            </TabsTrigger>
+                                        </TabsList>
+                                        
+                                        <TabsContent value="employees">
+                                            <Card className="border border-gray-200/50 shadow-lg rounded-xl overflow-hidden">
+                                                <CardContent className="p-4 space-y-3">
+                                                    {selectedSubtask.assignedEmployees?.map((emp, index) => {
+                                                        const employee = emp.employeeId || emp;
+                                                        return (
+                                                            <div key={index} className="flex items-center justify-between group hover:bg-gray-50 p-2 rounded-lg transition-colors border border-transparent hover:border-gray-100">
+                                                                <div className="flex items-center gap-3">
+                                                                    <Avatar className="w-10 h-10 border-2 border-white shadow-sm">
+                                                                        <AvatarFallback className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-medium">
+                                                                            {employee.firstName?.[0] || emp.name?.[0] || 'E'}
                                                                         </AvatarFallback>
                                                                     </Avatar>
-                                                                    {emp.status === 'completed' && (
-                                                                        <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-white flex items-center justify-center">
-                                                                            <CheckCircle className="w-2 h-2 text-white" />
+                                                                    <div className="min-w-0">
+                                                                        <div className="font-bold text-gray-900 text-sm truncate">
+                                                                            {employee.firstName ? `${employee.firstName} ${employee.lastName}` : (emp.name || emp.email)}
                                                                         </div>
-                                                                    )}
-                                                                </div>
-                                                                <div className="min-w-0">
-                                                                    <div className="font-medium text-gray-900 text-sm truncate">
-                                                                        {employee.firstName} {employee.lastName}
+                                                                        <div className="text-[10px] text-gray-600 truncate flex items-center gap-1">
+                                                                             <Mail className="w-2.5 h-2.5" /> {emp.email}
+                                                                        </div>
                                                                     </div>
-                                                                    <div className="text-xs text-gray-600 truncate">
-                                                                        {employee.email || emp.email}
+                                                                </div>
+                                                                <div className="text-right">
+                                                                    <Badge className={`text-[10px] px-2 py-0.5 ${getMyStatusVariant(emp.status)}`}>
+                                                                        {formatStatus(emp.status)}
+                                                                    </Badge>
+                                                                    <div className="text-[9px] text-gray-500 mt-1">Leads: {emp.leadsCompleted || 0}/{emp.leadsAssigned || 0}</div>
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </CardContent>
+                                            </Card>
+                                        </TabsContent>
+
+                                        <TabsContent value="managers">
+                                            <Card className="border border-gray-200/50 shadow-lg rounded-xl overflow-hidden">
+                                                <CardContent className="p-4 space-y-3">
+                                                    {selectedSubtask.assignedManagers?.map((mgr, index) => (
+                                                        <div key={index} className="flex items-center justify-between group hover:bg-gray-50 p-2 rounded-lg transition-colors border border-transparent hover:border-gray-100">
+                                                            <div className="flex items-center gap-3">
+                                                                <Avatar className="w-10 h-10 border-2 border-white shadow-sm">
+                                                                    <AvatarFallback className="bg-gradient-to-r from-violet-500 to-purple-500 text-white font-medium">
+                                                                        {mgr.managerId?.firstName?.[0] || mgr.name?.[0] || 'M'}
+                                                                    </AvatarFallback>
+                                                                </Avatar>
+                                                                <div className="min-w-0">
+                                                                    <div className="font-bold text-gray-900 text-sm truncate">
+                                                                        {mgr.managerId?.firstName ? `${mgr.managerId.firstName} ${mgr.managerId.lastName}` : (mgr.name || mgr.email)}
+                                                                        {mgr.managerId?._id === session?.user?.id && <span className="ml-1 text-[10px] text-violet-600 font-bold">(YOU)</span>}
+                                                                    </div>
+                                                                    <div className="text-[10px] text-gray-600 truncate flex items-center gap-1">
+                                                                         <Mail className="w-2.5 h-2.5" /> {mgr.email}
                                                                     </div>
                                                                 </div>
                                                             </div>
-                                                            <Badge className={`text-xs px-2 py-1 ${getMyStatusVariant(emp.status)}`}>
-                                                                {formatStatus(emp.status)}
+                                                            <div className="text-right">
+                                                                <Badge className={`text-[10px] px-2 py-0.5 ${getMyStatusVariant(mgr.status)}`}>
+                                                                    {formatStatus(mgr.status)}
+                                                                </Badge>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </CardContent>
+                                            </Card>
+                                        </TabsContent>
+
+                                        <TabsContent value="leads">
+                                            <Card className="border border-gray-200/50 shadow-lg rounded-xl overflow-hidden">
+                                                <CardContent className="p-4 space-y-3">
+                                                    {/* Creator */}
+                                                    <div className="flex items-center justify-between bg-blue-50/50 p-2 rounded-lg border border-blue-100">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="relative">
+                                                                <Avatar className="w-10 h-10 border-2 border-blue-300 shadow-sm">
+                                                                    <AvatarFallback className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white font-bold">
+                                                                        {selectedSubtask.teamLeadId?.firstName?.[0] || 'TL'}
+                                                                    </AvatarFallback>
+                                                                </Avatar>
+                                                                <div className="absolute -top-1 -right-1 bg-amber-400 rounded-full p-0.5 border border-white">
+                                                                    <Crown className="w-3 h-3 text-white" />
+                                                                </div>
+                                                            </div>
+                                                            <div className="min-w-0">
+                                                                <div className="font-bold text-gray-900 text-sm truncate">
+                                                                    {selectedSubtask.teamLeadId?.firstName} {selectedSubtask.teamLeadId?.lastName}
+                                                                </div>
+                                                                <div className="text-[10px] text-blue-700 font-bold uppercase tracking-tighter">Primary Lead (Creator)</div>
+                                                            </div>
+                                                        </div>
+                                                        <Badge className={`text-[10px] ${getTaskStatusVariant(selectedSubtask.subtaskStatus)}`}>
+                                                            {formatStatus(selectedSubtask.subtaskStatus)}
+                                                        </Badge>
+                                                    </div>
+
+                                                    {/* Collaborators */}
+                                                    {selectedSubtask.assignedTeamLeads?.map((tl, index) => (
+                                                        <div key={index} className="flex items-center justify-between group hover:bg-gray-50 p-2 rounded-lg transition-colors border border-transparent hover:border-gray-100">
+                                                            <div className="flex items-center gap-3">
+                                                                <Avatar className="w-10 h-10 border-2 border-white shadow-sm">
+                                                                    <AvatarFallback className="bg-gradient-to-r from-indigo-500 to-blue-500 text-white font-medium">
+                                                                        {tl.teamLeadId?.firstName?.[0] || tl.name?.[0] || 'L'}
+                                                                    </AvatarFallback>
+                                                                </Avatar>
+                                                                <div className="min-w-0">
+                                                                    <div className="font-bold text-gray-900 text-sm truncate">
+                                                                        {tl.teamLeadId?.firstName ? `${tl.teamLeadId.firstName} ${tl.teamLeadId.lastName}` : (tl.name || tl.email)}
+                                                                    </div>
+                                                                    <div className="text-[10px] text-gray-600 truncate">Collaborating Lead</div>
+                                                                </div>
+                                                            </div>
+                                                            <Badge className={`text-[10px] px-2 py-0.5 ${getMyStatusVariant(tl.status)}`}>
+                                                                {formatStatus(tl.status)}
                                                             </Badge>
                                                         </div>
-                                                    );
-                                                })}
-                                                
-                                                {selectedSubtask.assignedEmployees?.length > 5 && (
-                                                    <div className="text-center pt-3 border-t border-gray-100">
-                                                        <Button variant="ghost" size="sm" className="text-gray-800 hover:text-gray-900">
-                                                            View all {selectedSubtask.assignedEmployees.length} employees
-                                                            <ChevronRight className="w-4 h-4 ml-1" />
-                                                        </Button>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </CardContent>
-                                    </Card>
+                                                    ))}
+                                                </CardContent>
+                                            </Card>
+                                        </TabsContent>
+                                    </Tabs>
 
-                                    {/* Quick Actions */}
-                                    <Card className="border border-gray-200/50 shadow-lg rounded-xl overflow-hidden">
-                                        <CardHeader className="bg-gradient-to-r from-gray-50 to-white border-b border-gray-100">
+                                    {/* Quick Actions (Keep existing but polish) */}
+                                    <Card className="border border-gray-200/50 shadow-lg rounded-xl overflow-hidden bg-white">
+                                        <CardHeader className="bg-gradient-to-r from-gray-50 to-white border-b border-gray-100 py-4">
                                             <div className="flex items-center gap-3">
                                                 <div className="p-2 bg-gradient-to-r from-violet-500 to-purple-600 rounded-lg">
                                                     <Zap className="w-5 h-5 text-white" />
                                                 </div>
-                                                <CardTitle className="text-xl font-bold text-gray-900">
-                                                    Quick Actions
+                                                <CardTitle className="text-lg font-bold text-gray-900">
+                                                    Task Resources
                                                 </CardTitle>
                                             </div>
                                         </CardHeader>
-                                        <CardContent className="p-6">
-                                            <div className="space-y-3">
-                                                <Button
-                                                    onClick={() => {
-                                                        closeModal();
-                                                        router.push(`/manager/subtasks/${selectedSubtask._id}/submit`);
-                                                    }}
-                                                    className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:opacity-90 text-white shadow-lg"
-                                                >
-                                                    <FileText className="w-4 h-4 mr-2" />
-                                                    Submit Task Report
-                                                </Button>
+                                        <CardContent className="p-4 space-y-3">
+                                            <Button
+                                                variant="secondary"
+                                                onClick={() => {
+                                                    closeModal();
+                                                    router.push(`/manager/subtasks/${selectedSubtask._id}/submit`);
+                                                }}
+                                                className="w-full bg-emerald-50 text-emerald-700 border border-emerald-100 hover:bg-emerald-100 font-bold"
+                                            >
+                                                <FileText className="w-4 h-4 mr-2" />
+                                                Submit Official Report
+                                            </Button>
+                                            {selectedSubtask.fileAttachmentUrl && (
                                                 <Button
                                                     variant="outline"
-                                                    className="w-full border-blue-200 text-blue-800 hover:bg-blue-50"
-                                                    onClick={() => {
-                                                        // Navigate to team performance
-                                                        router.push(`/manager/team/${selectedSubtask.teamLeadId?._id}`);
-                                                    }}
+                                                    className="w-full border-blue-200 text-blue-700 hover:bg-blue-50 font-bold"
+                                                    onClick={() => window.open(selectedSubtask.fileAttachmentUrl, '_blank')}
                                                 >
-                                                    <Activity className="w-4 h-4 mr-2" />
-                                                    View Team Analytics
+                                                    <DownloadCloud className="w-4 h-4 mr-2" />
+                                                    Download Attachments
                                                 </Button>
-                                            </div>
+                                            )}
                                         </CardContent>
                                     </Card>
                                 </div>

@@ -29,6 +29,7 @@ export async function GET(req, { params }) {
       .populate("depId", "name departmentCode color")
       .populate("assignedEmployees.employeeId", "firstName lastName email avatar designation department")
       .populate("assignedManagers.managerId", "firstName lastName email avatar")
+      .populate("assignedTeamLeads.teamLeadId", "firstName lastName email avatar designation")
       .lean();
 
     if (!subtask) return NextResponse.json({ error: "Task not found" }, { status: 404 });
@@ -44,7 +45,7 @@ export async function GET(req, { params }) {
     const assignedEmployees = subtask.assignedEmployees || [];
     const teamPerformance = {
       total: assignedEmployees.length,
-      completed: assignedEmployees.filter(emp => ['completed','approved'].includes(emp.status)).length,
+      completed: assignedEmployees.filter(emp => ['completed', 'approved'].includes(emp.status)).length,
       inProgress: assignedEmployees.filter(emp => emp.status === 'in_progress').length,
       pending: assignedEmployees.filter(emp => emp.status === 'pending').length,
       submissionStats: {
@@ -70,7 +71,7 @@ export async function GET(req, { params }) {
         startDate: subtask.startDate,
         endDate: subtask.endDate,
         daysRemaining: Math.ceil((new Date(subtask.endDate) - new Date()) / (1000 * 60 * 60 * 24)),
-        isOverdue: new Date(subtask.endDate) < new Date() && !['completed','approved'].includes(subtask.status)
+        isOverdue: new Date(subtask.endDate) < new Date() && !['completed', 'approved'].includes(subtask.status)
       }
     });
 
@@ -116,7 +117,7 @@ export async function PUT(req, { params }) {
 
     // ✅ Recalculate total leads completed
     subtask.leadsCompleted = subtask.assignedEmployees.reduce((sum, emp) => sum + (emp.leadsCompleted || 0), 0) +
-                             subtask.assignedManagers.reduce((sum, mgr) => sum + (mgr.leadsCompleted || 0), 0);
+      subtask.assignedManagers.reduce((sum, mgr) => sum + (mgr.leadsCompleted || 0), 0);
 
     await subtask.save();
     return NextResponse.json({ success: true, message: "Task updated successfully", task: subtask });
