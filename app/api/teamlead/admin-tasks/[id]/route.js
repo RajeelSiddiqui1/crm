@@ -7,6 +7,9 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { sendNotification } from "@/lib/sendNotification";
 import { sendMail } from "@/lib/mail";
+import s3 from "@/lib/aws";
+import { GetObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 // GET Task Details for TeamLead
 export async function GET(req, { params }) {
@@ -45,7 +48,7 @@ export async function GET(req, { params }) {
     }
 
     // Check access
-    const hasAccess = 
+    const hasAccess =
       task.teamleads.some(t => t.teamleadId?._id?.toString() === teamleadId) ||
       task.shares.some(s => s.sharedTo?.toString() === teamleadId && s.sharedToModel === "TeamLead");
 
@@ -57,7 +60,7 @@ export async function GET(req, { params }) {
     const populatedShares = await Promise.all(
       task.shares.map(async (share) => {
         let populatedShare = { ...share.toObject() };
-        
+
         // Populate sharedTo
         if (share.sharedToModel === "Employee") {
           const employee = await Employee.findById(share.sharedTo)
@@ -70,7 +73,7 @@ export async function GET(req, { params }) {
             .lean();
           populatedShare.sharedTo = teamlead;
         }
-        
+
         // Populate sharedBy
         if (share.sharedByModel === "Employee") {
           const employee = await Employee.findById(share.sharedBy)
@@ -83,17 +86,51 @@ export async function GET(req, { params }) {
             .lean();
           populatedShare.sharedBy = teamlead;
         }
-        
+
         return populatedShare;
       })
     );
 
-    const taskWithPopulatedShares = {
-      ...task.toObject(),
-      shares: populatedShares
-    };
+    // Convert to object
+    const taskObj = task.toObject();
 
-    return NextResponse.json(taskWithPopulatedShares, { status: 200 });
+    // Regenerate signed URLs for files
+    if (taskObj.fileAttachments && taskObj.fileAttachments.length > 0) {
+      for (let file of taskObj.fileAttachments) {
+        if (file.publicId) {
+          try {
+            const command = new GetObjectCommand({
+              Bucket: process.env.AWS_BUCKET_NAME,
+              Key: file.publicId,
+            });
+            file.url = await getSignedUrl(s3, command, { expiresIn: 3600 }); // 1 hour
+          } catch (e) {
+            console.error("Error regenerating file URL:", e);
+          }
+        }
+      }
+    }
+
+    // Regenerate signed URLs for audio
+    if (taskObj.audioFiles && taskObj.audioFiles.length > 0) {
+      for (let audio of taskObj.audioFiles) {
+        if (audio.publicId) {
+          try {
+            const command = new GetObjectCommand({
+              Bucket: process.env.AWS_BUCKET_NAME,
+              Key: audio.publicId,
+            });
+            audio.url = await getSignedUrl(s3, command, { expiresIn: 3600 }); // 1 hour
+          } catch (e) {
+            console.error("Error regenerating audio URL:", e);
+          }
+        }
+      }
+    }
+
+    taskObj.shares = populatedShares;
+
+    return NextResponse.json(taskObj, { status: 200 });
   } catch (error) {
     console.error("GET Task Details Error:", error);
     return NextResponse.json(
@@ -107,7 +144,7 @@ export async function GET(req, { params }) {
 export async function PUT(req, { params }) {
   try {
     await dbConnect();
-    
+
     const session = await getServerSession(authOptions);
     if (!session || session.user.role !== "TeamLead") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -156,9 +193,9 @@ export async function PUT(req, { params }) {
       referenceModel: "AdminTask2",
     });
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       message: "Status updated successfully",
-      task 
+      task
     }, { status: 200 });
 
   } catch (error) {
@@ -174,7 +211,7 @@ export async function PUT(req, { params }) {
 export async function POST(req, { params }) {
   try {
     await dbConnect();
-    
+
     const session = await getServerSession(authOptions);
     if (!session || session.user.role !== "TeamLead") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -194,10 +231,10 @@ export async function POST(req, { params }) {
       return NextResponse.json({ error: "Task not found" }, { status: 404 });
     }
 
-    const hasAccess = task.teamleads.some(t => 
+    const hasAccess = task.teamleads.some(t =>
       t.teamleadId?.toString() === sharerId
     );
-    
+
     if (!hasAccess) {
       return NextResponse.json({ error: "You don't have access to share this task" }, { status: 403 });
     }
@@ -209,10 +246,10 @@ export async function POST(req, { params }) {
     }
 
     // Check if already shared
-    const alreadyShared = task.shares.some(s => 
+    const alreadyShared = task.shares.some(s =>
       s.sharedTo?.toString() === targetTeamleadId && s.sharedToModel === "TeamLead"
     );
-    
+
     if (alreadyShared) {
       return NextResponse.json({ error: "Task already shared with this teamlead" }, { status: 400 });
     }
@@ -227,10 +264,10 @@ export async function POST(req, { params }) {
     });
 
     // Also add to teamleads array if not already there
-    const alreadyInTeamleads = task.teamleads.some(t => 
+    const alreadyInTeamleads = task.teamleads.some(t =>
       t.teamleadId?.toString() === targetTeamleadId
     );
-    
+
     if (!alreadyInTeamleads) {
       task.teamleads.push({
         teamleadId: targetTeamleadId,
@@ -280,9 +317,9 @@ export async function POST(req, { params }) {
       `
     });
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       message: "Task shared successfully",
-      task 
+      task
     }, { status: 200 });
 
   } catch (error) {

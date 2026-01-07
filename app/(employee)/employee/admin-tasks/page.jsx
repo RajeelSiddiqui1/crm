@@ -414,24 +414,33 @@ export default function EmployeeAdminTasks() {
   const mySharedTasks = tasks.filter(task => isTaskSharedByMe(task));
   const sharedWithMeTasks = tasks.filter(task => isTaskSharedToMe(task));
 
-  const downloadFile = (url, fileName) => {
+  const downloadFile = async (url, fileName) => {
     if (!url) {
-      toast.error("No file available");
+      toast.error("No download link available");
       return;
     }
-    
+
     try {
+      toast.loading("Preparing download...", { id: "download" });
+      
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      
       const link = document.createElement('a');
-      link.href = url;
+      link.href = blobUrl;
       link.download = fileName || 'download';
-      link.target = '_blank';
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      toast.success("Download started");
+      window.URL.revokeObjectURL(blobUrl);
+      
+      toast.success("Download started", { id: "download" });
     } catch (error) {
       console.error("Download error:", error);
-      toast.error("Failed to download file");
+      toast.error("Failed to download file", { id: "download" });
+      // Fallback: try opening in new tab
+      window.open(url, '_blank');
     }
   };
 
@@ -753,16 +762,22 @@ export default function EmployeeAdminTasks() {
                                       </div>
                                       <div className="flex-1">
                                         <div className="flex items-center gap-2 flex-wrap">
-                                          <h4 className="font-semibold text-gray-900">{task.title}</h4>
+                                          <h4 className="font-semibold text-gray-900 group-hover:text-blue-700 transition-colors">{task.title}</h4>
                                           {isSharedToMe && (
-                                            <Badge className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white text-xs">
+                                            <Badge className="bg-gradient-to-r from-blue-500 to-cyan-500 text-white text-[10px] h-5">
                                               Shared with You
                                             </Badge>
                                           )}
                                           {isSharedByMe && (
-                                            <Badge className="bg-gradient-to-r from-emerald-500 to-green-500 text-white text-xs">
+                                            <Badge className="bg-gradient-to-r from-emerald-500 to-green-500 text-white text-[10px] h-5">
                                               You Shared
                                             </Badge>
+                                          )}
+                                          {(task.fileAttachments?.length > 0 || task.audioFiles?.length > 0) && (
+                                            <div className="flex items-center gap-1.5 px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full text-[10px] font-medium border border-gray-200">
+                                              <Paperclip className="w-3 h-3" />
+                                              {task.fileAttachments?.length + task.audioFiles?.length}
+                                            </div>
                                           )}
                                         </div>
                                         {task.clientName && (
@@ -1380,21 +1395,21 @@ export default function EmployeeAdminTasks() {
           <DialogHeader className="p-6 bg-gradient-to-r from-emerald-50 to-teal-50 border-b border-emerald-100">
             <DialogTitle className="text-xl font-bold text-gray-900 flex items-center gap-2">
               <Share2 className="w-5 h-5 text-emerald-600" />
-              Share Task
+              Share Task Access
             </DialogTitle>
-            <DialogDescription className="text-emerald-700">
-              Collaborate on <span className="font-semibold text-emerald-900">"{selectedTask?.title}"</span> with others
+            <DialogDescription className="text-emerald-800">
+              Collaborate on <span className="font-semibold text-emerald-900">"{selectedTask?.title}"</span> with another employee
             </DialogDescription>
           </DialogHeader>
 
           <div className="p-6 space-y-6">
             <div className="space-y-2">
-              <label className="text-sm font-semibold text-gray-700 ml-1">Select Employee</label>
+              <label className="text-sm font-semibold text-gray-900 ml-1">Select Employee</label>
               <Select value={selectedEmployee} onValueChange={setSelectedEmployee}>
-                <SelectTrigger className="h-11 bg-gray-50 border-gray-200 focus:ring-2 focus:ring-emerald-500 rounded-xl transition-all hover:bg-white hover:border-emerald-300">
+                <SelectTrigger className="h-11 bg-white border-gray-300 focus:ring-2 focus:ring-emerald-500 rounded-xl transition-all hover:bg-emerald-50 hover:border-emerald-400 text-gray-900">
                   <SelectValue placeholder="Choose an employee to share with" />
                 </SelectTrigger>
-                <SelectContent className="rounded-xl border-emerald-100 shadow-xl max-h-[300px]">
+                <SelectContent className="rounded-xl border-emerald-100 shadow-2xl max-h-[300px] bg-white ">
                   {employees
                     .filter(emp => {
                       if (emp._id === session?.user?.id) return false;
@@ -1403,16 +1418,16 @@ export default function EmployeeAdminTasks() {
                       return !isAssigned && !isShared;
                     })
                     .map((emp) => (
-                      <SelectItem key={emp._id} value={emp._id} className="focus:bg-emerald-50">
+                      <SelectItem key={emp._id} value={emp._id} className="focus:bg-emerald-50 cursor-pointer text-gray-900">
                         <div className="flex items-center gap-3 py-1">
-                          <Avatar className="h-8 w-8 border border-emerald-100">
+                          <Avatar className="h-8 w-8 border border-emerald-100 shadow-sm">
                             <AvatarFallback className="bg-gradient-to-br from-emerald-500 to-teal-500 text-white text-xs">
                               {emp.firstName?.[0]}
                             </AvatarFallback>
                           </Avatar>
-                          <div>
-                            <p className="font-medium text-slate-700">{emp.firstName} {emp.lastName}</p>
-                            <p className="text-xs text-slate-500">{emp.email}</p>
+                          <div className="leading-tight">
+                            <p className="font-medium text-gray-900">{emp.firstName} {emp.lastName}</p>
+                            <p className="text-[11px] text-gray-500">{emp.email}</p>
                           </div>
                         </div>
                       </SelectItem>
@@ -1421,15 +1436,15 @@ export default function EmployeeAdminTasks() {
               </Select>
             </div>
 
-            <div className="bg-emerald-50/50 border border-emerald-100 rounded-xl p-4">
+            <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-4">
               <div className="flex items-start gap-3">
                 <div className="p-2 bg-white rounded-lg shadow-sm">
                   <Info className="w-5 h-5 text-emerald-600 flex-shrink-0" />
                 </div>
                 <div>
-                  <p className="text-sm font-bold text-emerald-900 mb-1">How sharing works</p>
-                  <p className="text-sm text-emerald-700/80 leading-relaxed">
-                    The selected employee will receive full access to this task. They can view details, add attachments, and update the status independently.
+                  <p className="text-sm font-bold text-emerald-900 mb-1">Collaboration Access</p>
+                  <p className="text-xs text-emerald-700/80 leading-relaxed">
+                    The selected employee will receive full access to this task. They can view all attachments and update the status independently.
                   </p>
                 </div>
               </div>
@@ -1437,13 +1452,13 @@ export default function EmployeeAdminTasks() {
           </div>
 
           <DialogFooter className="p-6 pt-2 bg-gray-50/50">
-            <Button variant="ghost" onClick={() => setShowShareDialog(false)} className="hover:bg-gray-100 rounded-xl hover:text-gray-900">
+            <Button variant="ghost" onClick={() => setShowShareDialog(false)} className="hover:bg-gray-100 rounded-xl hover:text-gray-900 text-gray-600">
               Cancel
             </Button>
             <Button 
               onClick={handleShareTask}
               disabled={updating || !selectedEmployee}
-              className="bg-gradient-to-r from-emerald-600 to-green-600 hover:from-emerald-700 hover:to-green-700 text-white shadow-lg shadow-emerald-500/20 rounded-xl px-6 transition-all transform hover:scale-[1.02] active:scale-[0.98]"
+              className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-lg shadow-emerald-500/20 rounded-xl px-6 transition-all transform hover:scale-[1.02] active:scale-[0.98]"
             >
               {updating ? (
                 <>
@@ -1461,75 +1476,88 @@ export default function EmployeeAdminTasks() {
         </DialogContent>
       </Dialog>
 
-      {/* Teamlead Shares Dialog */}
+       {/* Teamlead Shares Dialog */}
       <Dialog open={showTeamleadShares} onOpenChange={setShowTeamleadShares}>
-        <DialogContent className="max-w-2xl bg-white rounded-xl">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-gray-900 flex items-center gap-2">
-              <ArrowRightLeft className="w-5 h-5 text-amber-600" />
+        <DialogContent className="sm:max-w-2xl p-0 overflow-hidden bg-white/95 backdrop-blur-xl border-white/20 shadow-2xl rounded-2xl">
+          <DialogHeader className="p-6 bg-gradient-to-r from-amber-50 to-orange-50 border-b border-amber-100">
+            <DialogTitle className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-amber-600 to-orange-600 flex items-center gap-2">
+              <Users2 className="w-5 h-5 text-amber-600" />
               Team Lead Sharing Activities
             </DialogTitle>
-            <DialogDescription>
-              View sharing activities between team leads in tasks you have access to
+            <DialogDescription className="text-amber-700">
+              View sharing activities by team leads in tasks you have access to
             </DialogDescription>
           </DialogHeader>
-          <div className="max-h-[500px] overflow-y-auto pr-2">
+
+          <div className="max-h-[500px] overflow-y-auto p-6">
             {teamleadShares.length === 0 ? (
-              <div className="py-12 text-center">
-                <div className="w-20 h-20 bg-amber-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Users2 className="w-10 h-10 text-amber-300" />
+              <div className="py-12 text-center rounded-xl bg-gray-50 border border-gray-100 border-dashed">
+                <div className="w-20 h-20 bg-amber-50 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
+                  <Users className="w-10 h-10 text-amber-300" />
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">No teamlead activities found</h3>
+                <h3 className="text-lg font-semibold text-amber-900 mb-2">No activities found</h3>
                 <p className="text-gray-500">Team lead sharing activities will appear here</p>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {teamleadShares.map((share, index) => (
-                  <Card key={index} className="border border-gray-200">
+                  <Card key={index} className="border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200 group">
                     <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between gap-4">
                         <div className="flex-1">
                           <div className="flex items-center gap-3 mb-3">
                             <div className="flex items-center gap-2">
-                              <Avatar className="h-10 w-10">
+                              <Avatar className="h-10 w-10 ring-2 ring-white shadow-sm">
                                 <AvatarFallback className="bg-gradient-to-br from-amber-500 to-orange-500 text-white">
                                   {share.sharedBy?.firstName?.[0] || "T"}
                                 </AvatarFallback>
                               </Avatar>
                               <div>
-                                <p className="font-medium text-gray-900">{share.sharedBy?.firstName} {share.sharedBy?.lastName}</p>
-                                <p className="text-xs text-gray-500">Team Lead</p>
+                                <p className="font-medium text-amber-900 text-sm group-hover:text-amber-700 transition-colors">
+                                  {share.sharedBy?.firstName} {share.sharedBy?.lastName}
+                                </p>
+                                <p className="text-xs text-amber-600 font-medium">Team Lead</p>
                               </div>
                             </div>
-                            <ArrowRightLeft className="w-4 h-4 text-gray-400" />
+                            
+                            <div className="p-1 rounded-full bg-gray-100 text-gray-400">
+                              <ArrowRightLeft className="w-4 h-4" />
+                            </div>
+
                             <div className="flex items-center gap-2">
-                              <Avatar className="h-10 w-10">
+                              <Avatar className="h-10 w-10 ring-2 ring-white shadow-sm">
                                 <AvatarFallback className="bg-gradient-to-br from-blue-500 to-cyan-500 text-white">
                                   {share.sharedTo?.firstName?.[0] || "T"}
                                 </AvatarFallback>
                               </Avatar>
                               <div>
-                                <p className="font-medium text-gray-900">{share.sharedTo?.firstName} {share.sharedTo?.lastName}</p>
-                                <p className="text-xs text-gray-500">Team Lead</p>
+                                <p className="font-medium text-gray-900 text-sm">
+                                  {share.sharedTo?.firstName} {share.sharedTo?.lastName}
+                                </p>
+                                <p className="text-xs text-blue-600 font-medium text-[10px] uppercase tracking-wider">Team Lead</p>
                               </div>
                             </div>
                           </div>
-                          <div className="mt-3">
-                            <p className="text-sm font-medium text-gray-900">{share.taskTitle}</p>
-                            <p className="text-xs text-gray-500 mt-1">Shared on: {formatDate(share.sharedAt)}</p>
+                          <div className="mt-3 pl-1">
+                            <p className="text-sm font-semibold text-gray-900 line-clamp-1">{share.taskTitle}</p>
+                            <div className="flex items-center justify-between mt-2">
+                              <p className="text-xs text-gray-500 flex items-center gap-1">
+                                <Clock className="w-3 h-3" /> {formatDate(share.sharedAt)}
+                              </p>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => {
+                                  router.push(`/employee/admin-tasks/${share.taskId}`);
+                                  setShowTeamleadShares(false);
+                                }}
+                                className="h-7 text-[10px] text-blue-600 hover:bg-blue-50 hover:text-blue-700 font-bold"
+                              >
+                                VIEW TASK <ExternalLink className="w-3 h-3 ml-1" />
+                              </Button>
+                            </div>
                           </div>
                         </div>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => {
-                            router.push(`/employee/admin-tasks/${share.taskId}`);
-                            setShowTeamleadShares(false);
-                          }}
-                          className="ml-4"
-                        >
-                          View Task
-                        </Button>
                       </div>
                     </CardContent>
                   </Card>
@@ -1848,48 +1876,97 @@ export default function EmployeeAdminTasks() {
                   )}
                 </div>
 
-                {/* Attachments */}
-                {(taskDetails.fileAttachments || taskDetails.audioUrl) && (
-                  <div className="mt-8">
-                    <h3 className="font-bold text-gray-900 mb-4">Attachments</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {taskDetails.fileAttachments && (
-                        <div className="border border-gray-200 rounded-lg p-4">
-                          <div className="flex items-center gap-3">
-                            <div className="p-2 bg-blue-100 rounded-lg">
-                              <FileIcon className="w-6 h-6 text-blue-600" />
-                            </div>
-                            <div className="flex-1">
-                              <p className="font-medium text-gray-900">
-                                {taskDetails.fileName || "Document"}
-                              </p>
-                              {taskDetails.fileType && (
-                                <p className="text-sm text-gray-500">{taskDetails.fileType}</p>
-                              )}
-                            </div>
-                            <Button
-                              onClick={() => downloadFile(taskDetails.fileAttachments, taskDetails.fileName)}
-                              size="sm"
-                              className="bg-gradient-to-r from-blue-600 to-cyan-600 text-white"
-                            >
-                              <Download className="w-4 h-4" />
-                            </Button>
+                {/* Attachments Section */}
+                {((taskDetails.fileAttachments && taskDetails.fileAttachments.length > 0) || 
+                  (taskDetails.audioFiles && taskDetails.audioFiles.length > 0)) && (
+                  <div className="mt-8 pt-8 border-t border-gray-100">
+                    <h3 className="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2">
+                      <Paperclip className="w-5 h-5 text-blue-600" />
+                      Task Attachments
+                    </h3>
+                    
+                    <div className="space-y-8">
+                      {/* File Attachments */}
+                      {taskDetails.fileAttachments?.length > 0 && (
+                        <div className="space-y-3">
+                          <p className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2">
+                            Documents ({taskDetails.fileAttachments.length})
+                          </p>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            {taskDetails.fileAttachments.map((file, idx) => (
+                              <div key={idx} className="group bg-white border border-gray-200 rounded-xl p-4 hover:border-blue-200 hover:shadow-md transition-all duration-200">
+                                <div className="flex items-center gap-3">
+                                  <div className="p-2 bg-blue-50 rounded-lg group-hover:bg-blue-100 transition-colors">
+                                    <FileText className="w-6 h-6 text-blue-600" />
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="font-semibold text-gray-900 truncate text-sm" title={file.name}>
+                                      {file.name}
+                                    </p>
+                                    <p className="text-[11px] text-gray-500 mt-0.5">
+                                      {file.type?.split('/')[1]?.toUpperCase() || 'FILE'} • {(file.size / 1024).toFixed(1)} KB
+                                    </p>
+                                  </div>
+                                  <Button
+                                    onClick={() => downloadFile(file.url, file.name)}
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-8 w-8 p-0 text-blue-600 hover:bg-blue-50 hover:text-blue-700"
+                                  >
+                                    <Download className="w-4 h-4" />
+                                  </Button>
+                                </div>
+                              </div>
+                            ))}
                           </div>
                         </div>
                       )}
-                      
-                      {taskDetails.audioUrl && (
-                        <div className="border border-gray-200 rounded-lg p-4">
-                          <div className="flex items-center gap-3">
-                            <div className="p-2 bg-purple-100 rounded-lg">
-                              <Headphones className="w-6 h-6 text-purple-600" />
-                            </div>
-                            <div className="flex-1">
-                              <p className="font-medium text-gray-900">Audio Recording</p>
-                              <audio controls className="w-full mt-2">
-                                <source src={taskDetails.audioUrl} type="audio/mpeg" />
-                              </audio>
-                            </div>
+
+                      {/* Audio Attachments */}
+                      {taskDetails.audioFiles?.length > 0 && (
+                        <div className="space-y-4">
+                          <p className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2">
+                            Audio Recordings ({taskDetails.audioFiles.length})
+                          </p>
+                          <div className="grid grid-cols-1 gap-4">
+                            {taskDetails.audioFiles.map((audio, idx) => (
+                              <div key={idx} className="bg-blue-50/50 border border-blue-100 rounded-xl p-4 hover:bg-blue-50 transition-all duration-200">
+                                <div className="flex flex-col gap-4">
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                      <div className="p-1.5 bg-white rounded-md shadow-sm">
+                                        <Mic className="w-4 h-4 text-blue-600" />
+                                      </div>
+                                      <p className="font-semibold text-sm text-gray-900 truncate max-w-[200px]" title={audio.name}>
+                                        {audio.name || "Voice Note"}
+                                      </p>
+                                      {audio.isRecording && (
+                                        <Badge className="bg-rose-100 text-rose-600 border-rose-200 hover:bg-rose-100 px-1.5 py-0 text-[10px]">
+                                          RECORDED
+                                        </Badge>
+                                      )}
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-[11px] text-blue-600/70 font-medium">
+                                        {(audio.size / 1024).toFixed(1)} KB
+                                      </span>
+                                      <Button
+                                        onClick={() => downloadFile(audio.url, audio.name || "recording.webm")}
+                                        size="sm"
+                                        variant="ghost"
+                                        className="h-8 w-8 p-0 text-blue-600 hover:bg-white"
+                                      >
+                                        <Download className="w-4 h-4" />
+                                      </Button>
+                                    </div>
+                                  </div>
+                                  <audio controls className="w-full h-10 custom-audio-player">
+                                    <source src={audio.url} type={audio.type || "audio/webm"} />
+                                    Your browser does not support the audio element.
+                                  </audio>
+                                </div>
+                              </div>
+                            ))}
                           </div>
                         </div>
                       )}

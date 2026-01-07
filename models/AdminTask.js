@@ -1,3 +1,4 @@
+// models/AdminTask.js
 import mongoose, { Schema, model, models } from "mongoose";
 
 const adminTaskSchema = Schema(
@@ -6,26 +7,76 @@ const adminTaskSchema = Schema(
       type: String,
       required: true,
     },
+    description: {
+      type: String,
+      required: false,
+    },
     clientName: {
       type: String,
       required: false,
     },
-    fileAttachments: {
-      type: String,
-      required: false,
-    },
-    fileName: {
-      type: String,
-      required: false,
-    },
-    fileType: {
-      type: String,
-      required: false,
-    },
-    audioUrl: {
-      type: String,
-      required: false,
-    },
+    // Multiple files array
+    fileAttachments: [
+      {
+        url: {
+          type: String,
+          required: true,
+        },
+        name: {
+          type: String,
+          required: true,
+        },
+        type: {
+          type: String,
+          required: true,
+        },
+        size: {
+          type: Number,
+          required: true,
+        },
+        publicId: {
+          type: String,
+          required: true,
+        },
+        createdAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
+    // Multiple audio files array
+    audioFiles: [
+      {
+        url: {
+          type: String,
+          required: true,
+        },
+        name: {
+          type: String,
+          required: true,
+        },
+        type: {
+          type: String,
+          required: true,
+        },
+        size: {
+          type: Number,
+          required: true,
+        },
+        publicId: {
+          type: String,
+          required: true,
+        },
+        duration: {
+          type: Number, // in seconds
+          required: false,
+        },
+        createdAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
     priority: {
       type: String,
       enum: ["low", "medium", "high"],
@@ -52,10 +103,12 @@ const adminTaskSchema = Schema(
       ref: "Admin",
       required: false,
     },
-    departments:[
-    {   type: mongoose.Schema.Types.ObjectId,
-      ref: "Admin",
-      default: []}
+    departments: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Admin",
+        default: [],
+      },
     ],
     isLate: {
       type: Boolean,
@@ -70,14 +123,6 @@ const adminTaskSchema = Schema(
       type: Date,
       required: false,
     },
-    filePublicId: {
-      type: String,
-      required: false,
-    },
-    audioPublicId: {
-      type: String,
-      required: false,
-    }
   },
   {
     timestamps: true,

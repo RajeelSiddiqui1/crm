@@ -1,4 +1,4 @@
-// models/AdminTask2.js - Fixed Schema
+// models/AdminTask2.js - Updated Schema
 import mongoose, { Schema, model, models } from "mongoose";
 
 const shareSchema = new Schema({
@@ -30,6 +30,68 @@ const shareSchema = new Schema({
   }
 }, { _id: true });
 
+const fileAttachmentSchema = new Schema({
+  url: {
+    type: String,
+    required: true
+  },
+  name: {
+    type: String,
+    required: true
+  },
+  type: {
+    type: String,
+    required: true
+  },
+  size: {
+    type: Number,
+    required: true
+  },
+  publicId: {
+    type: String,
+    required: true
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now
+  }
+});
+
+const audioFileSchema = new Schema({
+  url: {
+    type: String,
+    required: true
+  },
+  name: {
+    type: String,
+    default: "Voice Recording"
+  },
+  type: {
+    type: String,
+    default: "audio/webm"
+  },
+  size: {
+    type: Number,
+    required: true
+  },
+  publicId: {
+    type: String,
+    required: true
+  },
+  duration: {
+    type: Number,
+    required: false
+  },
+  isRecording: {
+    type: Boolean,
+    default: false
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now
+  }
+});
+
 const adminTaskSchema2 = new Schema(
   {
     title: {
@@ -40,14 +102,13 @@ const adminTaskSchema2 = new Schema(
       type: String,
       default: ""
     },
-    
     clientName: String,
 
-    fileAttachments: String,
-    fileName: String,
-    fileType: String,
+    // Multiple files support
+    fileAttachments: [fileAttachmentSchema],
 
-    audioUrl: String,
+    // Multiple audio files support
+    audioFiles: [audioFileSchema],
 
     priority: {
       type: String,
@@ -142,9 +203,6 @@ const adminTaskSchema2 = new Schema(
     },
 
     completedAt: Date,
-
-    filePublicId: String,
-    audioPublicId: String,
   },
   { timestamps: true }
 );

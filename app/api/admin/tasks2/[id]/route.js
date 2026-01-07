@@ -1,3 +1,4 @@
+// app/api/admin/tasks2/[id]/route.js
 import { NextResponse } from "next/server";
 import dbConnect from "@/lib/db";
 import AdminTask2 from "@/models/AdminTask2";
@@ -6,7 +7,10 @@ import Employee from "@/models/Employee";
 import mongoose from "mongoose";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import cloudinary from "@/lib/cloudinary";
+import s3 from "@/lib/aws";
+import { Upload } from "@aws-sdk/lib-storage";
+import { GetObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { sendNotification } from "@/lib/sendNotification";
 import { sendMail } from "@/lib/mail";
 import { adminTaskUpdatedMailTemplate } from "@/helper/emails/admin/updateTask";
@@ -34,16 +38,19 @@ export async function PUT(req, { params }) {
     const formData = await req.formData();
 
     // Update basic info
-    task.title = formData.get("title") ?? task.title;
-    task.clientName = formData.get("clientName") ?? task.clientName;
-    task.priority = formData.get("priority") ?? task.priority;
-    task.endDate = formData.get("endDate") ?? task.endDate;
+    task.title = formData.get("title") || task.title;
+    task.description = formData.get("description") || task.description;
+    task.clientName = formData.get("clientName") || task.clientName;
+    task.priority = formData.get("priority") || task.priority;
+    if (formData.get("endDate")) {
+      task.endDate = new Date(formData.get("endDate"));
+    }
 
     // Update assignments
     const teamleadIds = JSON.parse(formData.get("teamleadIds") || "[]");
     const employeeIds = JSON.parse(formData.get("employeeIds") || "[]");
 
-    // Preserve existing statuses for existing assignees
+    // Preserve existing statuses
     const existingTeamleads = new Map();
     task.teamleads.forEach(tl => {
       if (tl.teamleadId) {
@@ -72,48 +79,167 @@ export async function PUT(req, { params }) {
       assignedAt: Date.now()
     }));
 
-    // File update
-    const file = formData.get("file");
-    if (file && file.size > 0) {
-      if (task.filePublicId) {
-        await cloudinary.uploader.destroy(task.filePublicId, { resource_type: "raw" });
+    // -------------------------------
+    // HANDLE NEW FILES UPLOAD TO S3
+    // -------------------------------
+    const newFiles = formData.getAll("files[]");
+    for (const file of newFiles) {
+      if (file && file.size > 0) {
+        const buffer = Buffer.from(await file.arrayBuffer());
+        const fileKey = `admin2_tasks/files/${Date.now()}_${file.name}`;
+
+        const upload = new Upload({
+          client: s3,
+          params: {
+            Bucket: process.env.AWS_BUCKET_NAME,
+            Key: fileKey,
+            Body: buffer,
+            ContentType: file.type,
+          },
+        });
+        await upload.done();
+
+        const command = new GetObjectCommand({
+          Bucket: process.env.AWS_BUCKET_NAME,
+          Key: fileKey,
+        });
+        const fileUrl = await getSignedUrl(s3, command, { expiresIn: 604800 });
+
+        task.fileAttachments.push({
+          url: fileUrl,
+          name: file.name,
+          type: file.type,
+          size: file.size,
+          publicId: fileKey,
+        });
       }
-
-      const buffer = Buffer.from(await file.arrayBuffer());
-      const uploaded = await cloudinary.uploader.upload(
-        `data:${file.type};base64,${buffer.toString("base64")}`,
-        { folder: "admin_tasks/files", resource_type: "auto" }
-      );
-
-      task.fileAttachments = uploaded.secure_url;
-      task.filePublicId = uploaded.public_id;
-      task.fileName = file.name;
-      task.fileType = file.type;
     }
 
-    // Audio update
-    const audio = formData.get("audio");
-    if (audio && audio.size > 0) {
-      if (task.audioPublicId) {
-        await cloudinary.uploader.destroy(task.audioPublicId, { resource_type: "video" });
+    // -------------------------------
+    // REMOVE FILES FROM S3
+    // -------------------------------
+    const removeFiles = JSON.parse(formData.get("removeFiles") || "[]");
+    if (removeFiles.length > 0) {
+      for (const fileId of removeFiles) {
+        const file = task.fileAttachments.id(fileId);
+        if (file) {
+          try {
+            await s3.send(
+              new DeleteObjectCommand({
+                Bucket: process.env.AWS_BUCKET_NAME,
+                Key: file.publicId,
+              })
+            );
+          } catch (e) {
+            console.error("S3 delete error:", e);
+          }
+          task.fileAttachments.pull(fileId);
+        }
       }
+    }
 
-      const buffer = Buffer.from(await audio.arrayBuffer());
-      const uploaded = await cloudinary.uploader.upload(
-        `data:${audio.type};base64,${buffer.toString("base64")}`,
-        { folder: "admin_tasks/audio", resource_type: "video" }
-      );
+    // -------------------------------
+    // HANDLE NEW AUDIO UPLOADS TO S3
+    // -------------------------------
+    const newAudioFiles = formData.getAll("audioFiles[]");
+    for (const audio of newAudioFiles) {
+      if (audio && audio.size > 0) {
+        const buffer = Buffer.from(await audio.arrayBuffer());
+        const audioKey = `admin2_tasks/audio/${Date.now()}_${audio.name}`;
 
-      task.audioUrl = uploaded.secure_url;
-      task.audioPublicId = uploaded.public_id;
+        const uploadAudio = new Upload({
+          client: s3,
+          params: {
+            Bucket: process.env.AWS_BUCKET_NAME,
+            Key: audioKey,
+            Body: buffer,
+            ContentType: audio.type,
+          },
+        });
+        await uploadAudio.done();
+
+        const command = new GetObjectCommand({
+          Bucket: process.env.AWS_BUCKET_NAME,
+          Key: audioKey,
+        });
+        const audioUrl = await getSignedUrl(s3, command, { expiresIn: 604800 });
+
+        task.audioFiles.push({
+          url: audioUrl,
+          name: audio.name,
+          type: audio.type,
+          size: audio.size,
+          publicId: audioKey,
+        });
+      }
+    }
+
+    // -------------------------------
+    // HANDLE RECORDED AUDIO UPLOAD TO S3
+    // -------------------------------
+    const recordedAudio = formData.get("recordedAudio");
+    if (recordedAudio && recordedAudio.size > 0) {
+      const buffer = Buffer.from(await recordedAudio.arrayBuffer());
+      const audioKey = `admin2_tasks/recordings/${Date.now()}_recording.webm`;
+
+      const uploadAudio = new Upload({
+        client: s3,
+        params: {
+          Bucket: process.env.AWS_BUCKET_NAME,
+          Key: audioKey,
+          Body: buffer,
+          ContentType: "audio/webm",
+        },
+      });
+      await uploadAudio.done();
+
+      const command = new GetObjectCommand({
+        Bucket: process.env.AWS_BUCKET_NAME,
+        Key: audioKey,
+      });
+      const audioUrl = await getSignedUrl(s3, command, { expiresIn: 604800 });
+
+      task.audioFiles.push({
+        url: audioUrl,
+        name: "Voice Recording",
+        type: "audio/webm",
+        size: recordedAudio.size,
+        publicId: audioKey,
+        isRecording: true
+      });
+    }
+
+    // -------------------------------
+    // REMOVE AUDIO FILES FROM S3
+    // -------------------------------
+    const removeAudio = JSON.parse(formData.get("removeAudio") || "[]");
+    if (removeAudio.length > 0) {
+      for (const audioId of removeAudio) {
+        const audio = task.audioFiles.id(audioId);
+        if (audio) {
+          try {
+            await s3.send(
+              new DeleteObjectCommand({
+                Bucket: process.env.AWS_BUCKET_NAME,
+                Key: audio.publicId,
+              })
+            );
+          } catch (e) {
+            console.error("S3 delete error:", e);
+          }
+          task.audioFiles.pull(audioId);
+        }
+      }
     }
 
     await task.save();
 
-    // Notifications
+    // -------------------------------
+    // SEND NOTIFICATIONS
+    // -------------------------------
     const taskLink = `${process.env.NEXT_PUBLIC_DOMAIN}/teamlead/tasks`;
-    const teamleads = await TeamLead.find({ _id: { $in: teamleadIds } });
-    const employees = await Employee.find({ _id: { $in: employeeIds } });
+    const teamleads = await TeamLead.find({ _id: { $in: task.teamleads.map(t => t.teamleadId) } });
+    const employees = await Employee.find({ _id: { $in: task.employees.map(e => e.employeeId) } });
 
     await Promise.all([
       ...teamleads.map(tl =>
@@ -176,7 +302,7 @@ export async function PUT(req, { params }) {
 
   } catch (err) {
     console.error("UPDATE AdminTask2 Error:", err);
-    return NextResponse.json({ message: "Update failed" }, { status: 500 });
+    return NextResponse.json({ message: "Update failed", error: err.message }, { status: 500 });
   }
 }
 
@@ -195,12 +321,23 @@ export async function DELETE(req, { params }) {
       return NextResponse.json({ message: "Task not found" }, { status: 404 });
     }
 
-    // Delete files from cloudinary
-    if (task.filePublicId) {
-      await cloudinary.uploader.destroy(task.filePublicId, { resource_type: "raw" });
-    }
-    if (task.audioPublicId) {
-      await cloudinary.uploader.destroy(task.audioPublicId, { resource_type: "video" });
+    // -------------------------------
+    // DELETE ALL FILES FROM S3
+    // -------------------------------
+    const allMedia = [...(task.fileAttachments || []), ...(task.audioFiles || [])];
+    for (const item of allMedia) {
+      if (item.publicId) {
+        try {
+          await s3.send(
+            new DeleteObjectCommand({
+              Bucket: process.env.AWS_BUCKET_NAME,
+              Key: item.publicId,
+            })
+          );
+        } catch (e) {
+          console.error("S3 delete error during task deletion:", e);
+        }
+      }
     }
 
     // Get assignees for notifications
@@ -269,6 +406,6 @@ export async function DELETE(req, { params }) {
 
   } catch (err) {
     console.error("DELETE AdminTask2 Error:", err);
-    return NextResponse.json({ message: "Delete failed" }, { status: 500 });
+    return NextResponse.json({ message: "Delete failed", error: err.message }, { status: 500 });
   }
 }

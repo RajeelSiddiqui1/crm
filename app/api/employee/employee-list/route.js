@@ -16,40 +16,10 @@ export async function GET(req) {
 
     const loggedInEmployeeId = session.user.id;
 
-    // 🔹 Task ID query se lo (important)
-    const { searchParams } = new URL(req.url);
-    const taskId = searchParams.get("taskId");
-
-    if (!taskId) {
-      return NextResponse.json({ message: "Task ID required" }, { status: 400 });
-    }
-
-    // 🔹 Fetch task
-    const task = await AdminTask2.findById(taskId)
-      .select("employees.employeeId shares.sharedTo");
-
-    if (!task) {
-      return NextResponse.json({ message: "Task not found" }, { status: 404 });
-    }
-
-    // 🔹 Extract IDs to exclude
-    const assignedEmployeeIds = task.employees.map(e =>
-      e.employeeId.toString()
-    );
-
-    const sharedEmployeeIds = task.shares.map(s =>
-      s.sharedTo.toString()
-    );
-
-    const excludeIds = [
-      loggedInEmployeeId,
-      ...assignedEmployeeIds,
-      ...sharedEmployeeIds
-    ];
-
+    
     // 🔹 Fetch only eligible employees
     const employees = await Employee.find({
-      _id: { $nin: excludeIds }
+      _id: { $nin: loggedInEmployeeId }
     })
       .select("firstName lastName email profilePic depId")
       .populate({

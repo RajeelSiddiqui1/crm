@@ -1,3 +1,4 @@
+// app/api/admin/tasks2/route.js
 import { NextResponse } from "next/server";
 import dbConnect from "@/lib/db";
 import AdminTask2 from "@/models/AdminTask2";
@@ -6,7 +7,10 @@ import Employee from "@/models/Employee";
 import { getServerSession } from "next-auth";
 import Department from "@/models/Department";
 import { authOptions } from "@/lib/auth";
-import cloudinary from "@/lib/cloudinary";
+import s3 from "@/lib/aws";
+import { Upload } from "@aws-sdk/lib-storage";
+import { GetObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { sendNotification } from "@/lib/sendNotification";
 import { sendMail } from "@/lib/mail";
 import { adminTaskCreatedMailTemplate } from "@/helper/emails/admin/createTask";
@@ -23,6 +27,11 @@ export async function POST(req) {
 
     const formData = await req.formData();
     const title = formData.get("title");
+    const description = formData.get("description") || "";
+    const clientName = formData.get("clientName") || "";
+    const priority = formData.get("priority") || "low";
+    const endDate = formData.get("endDate") || null;
+
     if (!title) {
       return NextResponse.json({ message: "Title is required" }, { status: 400 });
     }
@@ -31,45 +40,151 @@ export async function POST(req) {
     const teamleadIds = JSON.parse(formData.get("teamleadIds") || "[]");
     const employeeIds = JSON.parse(formData.get("employeeIds") || "[]");
 
-    // File upload
-    let fileUrl = null, filePublicId = null, fileName = null, fileType = null;
-    const file = formData.get("file");
-    
-    if (file && file.size > 0) {
-      const buffer = Buffer.from(await file.arrayBuffer());
-      fileName = file.name;
-      fileType = file.type;
-      
-      const upload = await cloudinary.uploader.upload(
-        `data:${file.type};base64,${buffer.toString("base64")}`,
-        { folder: "admin_tasks/files", resource_type: "auto" }
-      );
-      
-      fileUrl = upload.secure_url;
-      filePublicId = upload.public_id;
+    // -------------------------------
+    // MULTIPLE FILE UPLOADS TO S3
+    // -------------------------------
+    const uploadedFiles = [];
+    const files = formData.getAll("files[]");
+
+    for (const file of files) {
+      if (file && file.size > 0) {
+        const buffer = Buffer.from(await file.arrayBuffer());
+        const fileName = file.name;
+        const fileType = file.type;
+        const fileSize = file.size;
+        const fileKey = `admin2_tasks/files/${Date.now()}_${fileName}`;
+
+        // Upload to S3
+        const upload = new Upload({
+          client: s3,
+          params: {
+            Bucket: process.env.AWS_BUCKET_NAME,
+            Key: fileKey,
+            Body: buffer,
+            ContentType: fileType,
+            Metadata: {
+              originalName: fileName,
+              uploadedBy: session.user.id,
+              uploadedAt: Date.now().toString()
+            }
+          },
+        });
+        await upload.done();
+
+        // Generate signed URL
+        const command = new GetObjectCommand({
+          Bucket: process.env.AWS_BUCKET_NAME,
+          Key: fileKey,
+        });
+        const fileUrl = await getSignedUrl(s3, command, { expiresIn: 604800 }); // 1 year
+
+        uploadedFiles.push({
+          url: fileUrl,
+          name: fileName,
+          type: fileType,
+          size: fileSize,
+          publicId: fileKey,
+        });
+      }
     }
 
-    // Audio upload
-    let audioUrl = null, audioPublicId = null;
-    const audio = formData.get("audio");
-    
-    if (audio && audio.size > 0) {
-      const buffer = Buffer.from(await audio.arrayBuffer());
-      const upload = await cloudinary.uploader.upload(
-        `data:${audio.type};base64,${buffer.toString("base64")}`,
-        { folder: "admin_tasks/audio", resource_type: "video" }
-      );
-      
-      audioUrl = upload.secure_url;
-      audioPublicId = upload.public_id;
+    // -------------------------------
+    // MULTIPLE AUDIO UPLOADS TO S3
+    // -------------------------------
+    const uploadedAudio = [];
+    const audioFiles = formData.getAll("audioFiles[]");
+
+    for (const audio of audioFiles) {
+      if (audio && audio.size > 0) {
+        const buffer = Buffer.from(await audio.arrayBuffer());
+        const audioName = audio.name || "audio_recording.webm";
+        const audioType = audio.type || "audio/webm";
+        const audioSize = audio.size;
+        const audioKey = `admin2_tasks/audio/${Date.now()}_${audioName}`;
+
+        // Upload to S3
+        const uploadAudio = new Upload({
+          client: s3,
+          params: {
+            Bucket: process.env.AWS_BUCKET_NAME,
+            Key: audioKey,
+            Body: buffer,
+            ContentType: audioType,
+            Metadata: {
+              originalName: audioName,
+              uploadedBy: session.user.id,
+              uploadedAt: Date.now().toString()
+            }
+          },
+        });
+        await uploadAudio.done();
+
+        // Generate signed URL
+        const command = new GetObjectCommand({
+          Bucket: process.env.AWS_BUCKET_NAME,
+          Key: audioKey,
+        });
+        const audioUrl = await getSignedUrl(s3, command, { expiresIn: 604800 });
+
+        uploadedAudio.push({
+          url: audioUrl,
+          name: audioName,
+          type: audioType,
+          size: audioSize,
+          publicId: audioKey,
+        });
+      }
     }
 
-    // Create task
+    // -------------------------------
+    // RECORDED AUDIO UPLOAD TO S3
+    // -------------------------------
+    const recordedAudio = formData.get("recordedAudio");
+    if (recordedAudio && recordedAudio.size > 0) {
+      const buffer = Buffer.from(await recordedAudio.arrayBuffer());
+      const audioKey = `admin2_tasks/recordings/${Date.now()}_recording.webm`;
+
+      const uploadAudio = new Upload({
+        client: s3,
+        params: {
+          Bucket: process.env.AWS_BUCKET_NAME,
+          Key: audioKey,
+          Body: buffer,
+          ContentType: "audio/webm",
+          Metadata: {
+            isRecording: "true",
+            uploadedBy: session.user.id,
+            uploadedAt: Date.now().toString()
+          }
+        },
+      });
+      await uploadAudio.done();
+
+      const command = new GetObjectCommand({
+        Bucket: process.env.AWS_BUCKET_NAME,
+        Key: audioKey,
+      });
+      const audioUrl = await getSignedUrl(s3, command, { expiresIn: 604800 });
+
+      uploadedAudio.push({
+        url: audioUrl,
+        name: "Voice Recording",
+        type: "audio/webm",
+        size: recordedAudio.size,
+        publicId: audioKey,
+        isRecording: true
+      });
+    }
+
+    // -------------------------------
+    // CREATE TASK
+    // -------------------------------
     const task = await AdminTask2.create({
       title,
-      clientName: formData.get("clientName"),
-      priority: formData.get("priority") || "low",
-      endDate: formData.get("endDate") || null,
+      description,
+      clientName,
+      priority,
+      endDate: endDate ? new Date(endDate) : null,
       teamleads: teamleadIds.map(id => ({ 
         teamleadId: id,
         status: "pending"
@@ -78,19 +193,17 @@ export async function POST(req) {
         employeeId: id,
         status: "pending"
       })),
-      fileAttachments: fileUrl,
-      fileName,
-      fileType,
-      audioUrl,
-      filePublicId,
-      audioPublicId,
+      fileAttachments: uploadedFiles,
+      audioFiles: uploadedAudio,
       submittedBy: session.user.id,
     });
 
-    // Send notifications
+    // -------------------------------
+    // SEND NOTIFICATIONS & EMAILS
+    // -------------------------------
+    const taskLink = `${process.env.NEXT_PUBLIC_DOMAIN}/teamlead/tasks`;
     const teamleadUsers = await TeamLead.find({ _id: { $in: teamleadIds } });
     const employeeUsers = await Employee.find({ _id: { $in: employeeIds } });
-    const taskLink = `${process.env.NEXT_PUBLIC_DOMAIN}/teamlead/tasks`;
 
     await Promise.all([
       ...teamleadUsers.map(async (tl) => {
@@ -156,7 +269,7 @@ export async function POST(req) {
   } catch (err) {
     console.error("AdminTask2 POST Error:", err);
     return NextResponse.json(
-      { message: "Task creation failed" },
+      { message: "Task creation failed", error: err.message },
       { status: 500 }
     );
   }
@@ -220,7 +333,9 @@ export async function GET(req) {
           statusCounts,
           completionPercentage: allAssignees.length > 0 
             ? Math.round((statusCounts.completed / allAssignees.length) * 100)
-            : 0
+            : 0,
+          totalFiles: task.fileAttachments?.length || 0,
+          totalAudio: task.audioFiles?.length || 0
         }
       };
     });
@@ -233,7 +348,7 @@ export async function GET(req) {
   } catch (err) {
     console.error("AdminTask2 GET Error:", err);
     return NextResponse.json(
-      { message: "Failed to fetch tasks" },
+      { message: "Failed to fetch tasks", error: err.message },
       { status: 500 }
     );
   }
