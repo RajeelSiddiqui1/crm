@@ -82,7 +82,6 @@ export async function GET(req, { params }) {
 }
 
 // ✅ PUT: Update manager's subtask status
-// ✅ PUT: Update manager's subtask status
 export async function PUT(req, { params }) {
   try {
     const session = await getServerSession(authOptions);
@@ -91,128 +90,43 @@ export async function PUT(req, { params }) {
     }
 
     await dbConnect();
-
     const { id } = params;
-    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+    if (!id || !mongoose.Types.ObjectId.isValid(id))
       return NextResponse.json({ error: "Invalid Task ID" }, { status: 400 });
-    }
 
     const { status, feedback, leadsCompleted, notes } = await req.json();
-
     const validStatuses = ["pending", "in_progress", "completed", "rejected"];
-    if (status && !validStatuses.includes(status)) {
+    if (status && !validStatuses.includes(status))
       return NextResponse.json({ error: "Invalid status" }, { status: 400 });
-    }
 
     const subtask = await Subtask.findById(id);
-    if (!subtask) {
-      return NextResponse.json({ error: "Task not found" }, { status: 404 });
-    }
+    if (!subtask) return NextResponse.json({ error: "Task not found" }, { status: 404 });
 
-    // ✅ Check manager assignment
-    const managerIndex = subtask.assignedManagers.findIndex(
-      mgr => mgr.managerId.toString() === session.user.id
-    );
+    const managerIndex = subtask.assignedManagers.findIndex(mgr => mgr.managerId.toString() === session.user.id);
+    if (managerIndex === -1) return NextResponse.json({ error: "You are not assigned to this task" }, { status: 403 });
 
-    if (managerIndex === -1) {
-      return NextResponse.json(
-        { error: "You are not assigned to this task" },
-        { status: 403 }
-      );
-    }
-
-    // ✅ Update manager fields
-    if (status) {
-      subtask.assignedManagers[managerIndex].status = status;
-    }
-
-    if (status === "completed") {
-      subtask.assignedManagers[managerIndex].completedAt = new Date();
-    }
-
-    if (feedback !== undefined) {
-      subtask.assignedManagers[managerIndex].feedback = feedback;
-    }
-
-    if (leadsCompleted !== undefined) {
-      subtask.assignedManagers[managerIndex].leadsCompleted =
-        parseInt(leadsCompleted) || 0;
-    }
-
+    // ✅ Update manager assignment
+    if (status) subtask.assignedManagers[managerIndex].status = status;
+    if (status === "completed") subtask.assignedManagers[managerIndex].completedAt = new Date();
+    if (feedback !== undefined) subtask.assignedManagers[managerIndex].feedback = feedback;
+    if (leadsCompleted !== undefined) subtask.assignedManagers[managerIndex].leadsCompleted = parseInt(leadsCompleted) || 0;
     if (notes) {
       if (!subtask.notes) subtask.notes = [];
-      subtask.notes.push({
-        managerId: session.user.id,
-        managerName: session.user.name,
-        note: notes,
-        createdAt: new Date()
-      });
+      subtask.notes.push({ managerId: session.user.id, managerName: session.user.name, note: notes, createdAt: new Date() });
     }
 
     // ✅ Recalculate total leads completed
-    subtask.leadsCompleted =
-      subtask.assignedEmployees.reduce(
-        (sum, emp) => sum + (emp.leadsCompleted || 0),
-        0
-      ) +
-      subtask.assignedManagers.reduce(
-        (sum, mgr) => sum + (mgr.leadsCompleted || 0),
-        0
-      );
+    subtask.leadsCompleted = subtask.assignedEmployees.reduce((sum, emp) => sum + (emp.leadsCompleted || 0), 0) +
+      subtask.assignedManagers.reduce((sum, mgr) => sum + (mgr.leadsCompleted || 0), 0);
 
     await subtask.save();
-
-    // ================================
-    // ✅ TEAM LEAD MAIL + NOTIFICATION
-    // ================================
-
-    if (subtask.teamLeadId && status) {
-      const teamLead = await mongoose
-        .model("TeamLead")
-        .findById(subtask.teamLeadId)
-        .select("firstName lastName email _id");
-
-      if (teamLead) {
-        const mailPromise = sendMail({
-          to: teamLead.email,
-          subject: "Subtask Status Updated",
-          html: subtaskStatusUpdateMailTemplate({
-            teamLeadName: `${teamLead.firstName} ${teamLead.lastName}`,
-            subtaskTitle: subtask.title,
-            status,
-            managerName: session.user.name,
-            feedback
-          })
-        });
-
-        const notificationPromise = sendNotification({
-          userId: teamLead._id,
-          title: "Subtask Updated",
-          message: `Manager ${session.user.name} updated subtask status to ${status}`,
-          type: "subtask_status_update",
-          referenceId: subtask._id
-        });
-
-        // 🔥 Parallel execution (safe)
-        await Promise.allSettled([mailPromise, notificationPromise]);
-      }
-    }
-
-    return NextResponse.json({
-      success: true,
-      message: "Task updated successfully",
-      task: subtask
-    });
+    return NextResponse.json({ success: true, message: "Task updated successfully", task: subtask });
 
   } catch (error) {
     console.error("Error updating manager subtask:", error);
-    return NextResponse.json(
-      { error: "Failed to update task", details: error.message },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to update task", details: error.message }, { status: 500 });
   }
 }
-
 
 // ✅ DELETE: Remove manager from subtask
 export async function DELETE(req, { params }) {
