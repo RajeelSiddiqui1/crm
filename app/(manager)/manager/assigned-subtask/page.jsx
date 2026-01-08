@@ -63,6 +63,7 @@ import {
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";  // Ensure Textarea is imported
 import axios from "axios";
+import { Label } from "@/components/ui/label";
 
 // Color Palette for Manager
 const COLORS = {
@@ -921,17 +922,47 @@ export default function ManagerSubtasksPage() {
                                 <div className="space-y-8">
                                     {/* All Assignees Categories */}
                                     <Tabs defaultValue="employees" className="w-full">
-                                        <TabsList className="grid w-full grid-cols-3 bg-gray-100 p-1 rounded-xl">
-                                            <TabsTrigger value="employees" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">
-                                                Employees ({selectedSubtask.assignedEmployees?.length || 0})
-                                            </TabsTrigger>
-                                            <TabsTrigger value="managers" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">
-                                                Managers ({selectedSubtask.assignedManagers?.length || 0})
-                                            </TabsTrigger>
-                                            <TabsTrigger value="leads" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">
-                                                Team Leads ({ (selectedSubtask.assignedTeamLeads?.length || 0) + 1 })
-                                            </TabsTrigger>
-                                        </TabsList>
+                                      <TabsList className="grid w-full grid-cols-3 bg-gray-100 p-1 rounded-xl">
+  <TabsTrigger
+    value="employees"
+    className="
+      rounded-lg
+      text-gray-900
+      data-[state=active]:bg-white
+      data-[state=active]:shadow-sm
+      data-[state=active]:text-gray-950
+    "
+  >
+    Employees ({selectedSubtask.assignedEmployees?.length || 0})
+  </TabsTrigger>
+
+  <TabsTrigger
+    value="managers"
+    className="
+      rounded-lg
+      text-gray-900
+      data-[state=active]:bg-white
+      data-[state=active]:shadow-sm
+      data-[state=active]:text-gray-950
+    "
+  >
+    Managers ({selectedSubtask.assignedManagers?.length || 0})
+  </TabsTrigger>
+
+  <TabsTrigger
+    value="leads"
+    className="
+      rounded-lg
+      text-gray-900
+      data-[state=active]:bg-white
+      data-[state=active]:shadow-sm
+      data-[state=active]:text-gray-950
+    "
+  >
+    Team Leads ({(selectedSubtask.assignedTeamLeads?.length || 0) + 1})
+  </TabsTrigger>
+</TabsList>
+
                                         
                                         <TabsContent value="employees">
                                             <Card className="border border-gray-200/50 shadow-lg rounded-xl overflow-hidden">
@@ -1054,42 +1085,7 @@ export default function ManagerSubtasksPage() {
                                         </TabsContent>
                                     </Tabs>
 
-                                    {/* Quick Actions (Keep existing but polish) */}
-                                    <Card className="border border-gray-200/50 shadow-lg rounded-xl overflow-hidden bg-white">
-                                        <CardHeader className="bg-gradient-to-r from-gray-50 to-white border-b border-gray-100 py-4">
-                                            <div className="flex items-center gap-3">
-                                                <div className="p-2 bg-gradient-to-r from-violet-500 to-purple-600 rounded-lg">
-                                                    <Zap className="w-5 h-5 text-white" />
-                                                </div>
-                                                <CardTitle className="text-lg font-bold text-gray-900">
-                                                    Task Resources
-                                                </CardTitle>
-                                            </div>
-                                        </CardHeader>
-                                        <CardContent className="p-4 space-y-3">
-                                            <Button
-                                                variant="secondary"
-                                                onClick={() => {
-                                                    closeModal();
-                                                    router.push(`/manager/subtasks/${selectedSubtask._id}/submit`);
-                                                }}
-                                                className="w-full bg-emerald-50 text-emerald-700 border border-emerald-100 hover:bg-emerald-100 font-bold"
-                                            >
-                                                <FileText className="w-4 h-4 mr-2" />
-                                                Submit Official Report
-                                            </Button>
-                                            {selectedSubtask.fileAttachmentUrl && (
-                                                <Button
-                                                    variant="outline"
-                                                    className="w-full border-blue-200 text-blue-700 hover:bg-blue-50 font-bold"
-                                                    onClick={() => window.open(selectedSubtask.fileAttachmentUrl, '_blank')}
-                                                >
-                                                    <DownloadCloud className="w-4 h-4 mr-2" />
-                                                    Download Attachments
-                                                </Button>
-                                            )}
-                                        </CardContent>
-                                    </Card>
+                                    
                                 </div>
                             </div>
                         </div>
