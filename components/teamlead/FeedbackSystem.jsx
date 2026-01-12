@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -81,7 +81,11 @@ export default function FeedbackSystem({
   };
 
   const getTeamLeadById = (teamLeadId) => {
-    return teamLeads.find(tl => tl._id === teamLeadId) || {};
+    // If teamLeadId is already populated as an object
+    if (teamLeadId && typeof teamLeadId === 'object' && teamLeadId._id) {
+      return teamLeadId;
+    }
+    return teamLeads.find(tl => (tl._id?.toString() || tl._id) === (teamLeadId?.toString() || teamLeadId)) || {};
   };
 
   const handleReplySubmit = async (feedbackId) => {
@@ -198,6 +202,9 @@ export default function FeedbackSystem({
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex items-center gap-3">
                       <Avatar className="w-10 h-10 border-2 border-white shadow">
+                        {teamLead.profilePic && (
+                          <AvatarImage src={teamLead.profilePic} alt={`${teamLead.firstName} ${teamLead.lastName}`} />
+                        )}
                         <AvatarFallback className="bg-gradient-to-r from-purple-500 to-pink-600 text-white">
                           {teamLead.firstName?.[0]}
                           {teamLead.lastName?.[0]}
@@ -324,16 +331,22 @@ export default function FeedbackSystem({
                               className="flex gap-3 p-3 bg-gray-50 rounded-lg"
                             >
                               <Avatar className="w-8 h-8">
+                                {reply.repliedBy?.profilePic && (
+                                  <AvatarImage src={reply.repliedBy.profilePic} alt={reply.repliedBy.firstName} />
+                                )}
                                 <AvatarFallback className="bg-gradient-to-r from-gray-500 to-gray-600 text-white text-xs">
-                                  {reply.repliedByModel === 'TeamLead' ? 'TL' : 
-                                   reply.repliedByModel === 'Manager' ? 'M' : 'E'}
+                                  {reply.repliedBy?.firstName?.[0] || (reply.repliedByModel === 'TeamLead' ? 'TL' : 
+                                   reply.repliedByModel === 'Manager' ? 'M' : 'E')}
                                 </AvatarFallback>
                               </Avatar>
                               <div className="flex-1">
                                 <div className="flex items-center gap-2">
                                   <span className="text-sm font-medium text-gray-900">
-                                    {reply.repliedByModel}
+                                    {reply.repliedBy?.firstName ? `${reply.repliedBy.firstName} ${reply.repliedBy.lastName}` : reply.repliedByModel}
                                   </span>
+                                  <Badge variant="outline" className="text-[10px] h-4 px-1 bg-gray-600">
+                                    {reply.repliedByModel}
+                                  </Badge>
                                   <span className="text-xs text-gray-500">
                                     {formatRelativeDate(reply.repliedAt)}
                                   </span>

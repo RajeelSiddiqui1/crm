@@ -26,36 +26,36 @@ export async function GET(req, { params }) {
         { multipleManagerShared: managerId }
       ]
     })
-    .populate({
-      path: 'formId',
-      select: 'title description fields depId',
-      populate: {
-        path: 'depId',
-        select: 'name'
-      }
-    })
-    .populate('submittedBy', 'firstName lastName email')
-    .populate('depId', 'name')
-    .populate('multipleManagerShared', 'firstName lastName email')
-    .populate('sharedBy', 'firstName lastName email')
-    .populate('multipleTeamLeadAssigned', 'firstName lastName email')
-    .populate('multipleTeamLeadShared', 'firstName lastName email')
-    .populate('sharedByTeamlead', 'firstName lastName email')
-    .populate('assignedTo', 'firstName lastName email')
-    .populate({
-      path: 'assignedEmployees.employeeId',
-      select: 'firstName lastName email position department'
-    })
-    .populate({
-      path: 'employeeFeedbacks.employeeId',
-      select: 'firstName lastName email'
-    })
-    .populate({
-      path: 'teamLeadFeedbacks.teamLeadId',
-      select: 'firstName lastName email'
-    })
-    .populate('teamLeadFeedbacks.replies.repliedBy', 'firstName lastName email')
-    .lean();
+      .populate({
+        path: 'formId',
+        select: 'title description fields depId',
+        populate: {
+          path: 'depId',
+          select: 'name'
+        }
+      })
+      .populate('submittedBy', 'firstName lastName email')
+      .populate('depId', 'name')
+      .populate('multipleManagerShared', 'firstName lastName email')
+      .populate('sharedBy', 'firstName lastName email')
+      .populate('multipleTeamLeadAssigned', 'firstName lastName email')
+      .populate('multipleTeamLeadShared', 'firstName lastName email')
+      .populate('sharedByTeamlead', 'firstName lastName email')
+      .populate('assignedTo', 'firstName lastName email')
+      .populate({
+        path: 'assignedEmployees.employeeId',
+        select: 'firstName lastName email position department'
+      })
+      .populate({
+        path: 'employeeFeedbacks.employeeId',
+        select: 'firstName lastName email profilePic'
+      })
+      .populate({
+        path: 'teamLeadFeedbacks.teamLeadId',
+        select: 'firstName lastName email profilePic'
+      })
+      .populate('teamLeadFeedbacks.replies.repliedBy', 'firstName lastName email profilePic')
+      .lean();
 
     if (!submission) {
       return NextResponse.json(
@@ -112,8 +112,8 @@ export async function GET(req, { params }) {
         admin: submission.adminStatus,
         employees: submission.assignedEmployees?.map(emp => ({
           employeeId: emp.employeeId?._id?.toString(),
-          name: emp.employeeId ? 
-            `${emp.employeeId.firstName} ${emp.employeeId.lastName}` : 
+          name: emp.employeeId ?
+            `${emp.employeeId.firstName} ${emp.employeeId.lastName}` :
             'Unknown',
           status: emp.status
         })) || []

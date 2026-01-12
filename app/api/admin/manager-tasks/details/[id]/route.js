@@ -4,15 +4,23 @@ import dbConnect from "@/lib/db";
 import FormSubmission from "@/models/FormSubmission";
 import { getServerSession } from "next-auth";
 import Form from "@/models/Form";
+import Department from "@/models/Department";
 import { authOptions } from "@/lib/auth";
 
-export async function GET(req, { params }) {
+
+function getId(req) {
+  const url = new URL(req.url);
+  return url.pathname.split("/").pop();
+}
+
+
+export async function GET(req) {
   try {
     await dbConnect();
 
-    const { id } = params; // params is already an object, no need for await
+     const id = getId(req);
 
-    // Validate the ID
+    // ✅ ObjectId validation
     if (!id || !mongoose.Types.ObjectId.isValid(id)) {
       return NextResponse.json(
         { error: "Invalid submission id" },
@@ -28,42 +36,94 @@ export async function GET(req, { params }) {
     // Fetch submission safely
     const submission = await FormSubmission.findOne({ _id: id })
       .populate({
-        path: "formId",
-        select: "title description fields depId createdAt",
-        populate: {
-          path: "depId",
-          select: "name manager totalEmployees",
-        },
-      })
-      .populate("submittedBy", "firstName lastName email role departments position phone")
-      .populate("depId", "name manager totalEmployees")
-      .populate("multipleManagerShared", "firstName lastName email role departments")
-      .populate("sharedBy", "firstName lastName email role")
-      .populate("multipleTeamLeadAssigned", "firstName lastName email role depId")
-      .populate("multipleTeamLeadShared", "firstName lastName email role depId")
-      .populate("sharedByTeamlead", "firstName lastName email role")
-      .populate("assignedTo", "firstName lastName email role depId")
-      .populate({
-        path: "assignedEmployees.employeeId",
-        match: { _id: { $ne: "" } }, // prevent casting errors
-        select: "firstName lastName email role depId position phone createdAt",
-        populate: {
-          path: "depId",
-          select: "name",
-        },
-      })
-      .populate({
-        path: "employeeFeedbacks.employeeId",
-        match: { _id: { $ne: "" } },
-        select: "firstName lastName email role",
-      })
-      .populate({
-        path: "teamLeadFeedbacks.teamLeadId",
-        match: { _id: { $ne: "" } },
-        select: "firstName lastName email role",
-      })
-      .populate("teamLeadFeedbacks.replies.repliedBy", "firstName lastName email role")
-      .lean();
+  path: "formId",
+  select: "title description fields depId createdAt",
+  populate: {
+    path: "depId",
+    match: { _id: { $type: "objectId" } },
+    select: "name manager totalEmployees",
+  },
+})
+
+.populate({
+  path: "submittedBy",
+  match: { _id: { $type: "objectId" } },
+  select: "firstName lastName email role departments position phone",
+})
+
+.populate({
+  path: "depId",
+  match: { _id: { $type: "objectId" } },
+  select: "name manager totalEmployees",
+})
+
+.populate({
+  path: "multipleManagerShared",
+  match: { _id: { $type: "objectId" } },
+  select: "firstName lastName email role departments",
+})
+
+.populate({
+  path: "sharedBy",
+  match: { _id: { $type: "objectId" } },
+  select: "firstName lastName email role",
+})
+
+.populate({
+  path: "multipleTeamLeadAssigned",
+  match: { _id: { $type: "objectId" } },
+  select: "firstName lastName email role depId",
+})
+
+.populate({
+  path: "multipleTeamLeadShared",
+  match: { _id: { $type: "objectId" } },
+  select: "firstName lastName email role depId",
+})
+
+.populate({
+  path: "sharedByTeamlead",
+  match: { _id: { $type: "objectId" } },
+  select: "firstName lastName email role",
+})
+
+.populate({
+  path: "assignedTo",
+  match: { _id: { $type: "objectId" } },
+  select: "firstName lastName email role depId",
+})
+
+.populate({
+  path: "assignedEmployees.employeeId",
+  match: { _id: { $type: "objectId" } },
+  select: "firstName lastName email role depId position phone createdAt",
+  populate: {
+    path: "depId",
+    match: { _id: { $type: "objectId" } },
+    select: "name",
+  },
+})
+
+.populate({
+  path: "employeeFeedbacks.employeeId",
+  match: { _id: { $type: "objectId" } },
+  select: "firstName lastName email role profilePic",
+})
+
+.populate({
+  path: "teamLeadFeedbacks.teamLeadId",
+  match: { _id: { $type: "objectId" } },
+  select: "firstName lastName email role profilePic",
+})
+
+.populate({
+  path: "teamLeadFeedbacks.replies.repliedBy",
+  match: { _id: { $type: "objectId" } },
+  select: "firstName lastName email role profilePic",
+})
+
+.lean();
+
 
     if (!submission) {
       return NextResponse.json({ error: "Submission not found" }, { status: 404 });
@@ -89,14 +149,14 @@ export async function GET(req, { params }) {
       },
       submittedBy: submission.submittedBy
         ? {
-            _id: submission.submittedBy._id.toString(),
-            name: `${submission.submittedBy.firstName} ${submission.submittedBy.lastName}`,
-            email: submission.submittedBy.email,
-            role: submission.submittedBy.role,
-            department: submission.submittedBy.department,
-            position: submission.submittedBy.position,
-            phone: submission.submittedBy.phone,
-          }
+          _id: submission.submittedBy._id.toString(),
+          name: `${submission.submittedBy.firstName} ${submission.submittedBy.lastName}`,
+          email: submission.submittedBy.email,
+          role: submission.submittedBy.role,
+          department: submission.submittedBy.department,
+          position: submission.submittedBy.position,
+          phone: submission.submittedBy.phone,
+        }
         : null,
       department: submission.depId || submission.formId?.depId,
       sharingInfo: {
@@ -118,15 +178,15 @@ export async function GET(req, { params }) {
         submission.assignedEmployees?.map((emp) => ({
           employeeId: emp.employeeId
             ? {
-                _id: emp.employeeId._id.toString(),
-                name: `${emp.employeeId.firstName} ${emp.employeeId.lastName}`,
-                email: emp.employeeId.email,
-                role: emp.employeeId.role,
-                department: emp.employeeId.department,
-                position: emp.employeeId.position,
-                phone: emp.employeeId.phone,
-                joinDate: emp.employeeId.createdAt,
-              }
+              _id: emp.employeeId._id.toString(),
+              name: `${emp.employeeId.firstName} ${emp.employeeId.lastName}`,
+              email: emp.employeeId.email,
+              role: emp.employeeId.role,
+              department: emp.employeeId.department,
+              position: emp.employeeId.position,
+              phone: emp.employeeId.phone,
+              joinDate: emp.employeeId.createdAt,
+            }
             : null,
           status: emp.status,
           assignedAt: emp.assignedAt,
@@ -141,11 +201,12 @@ export async function GET(req, { params }) {
             _id: fb._id.toString(),
             employeeId: fb.employeeId
               ? {
-                  _id: fb.employeeId._id.toString(),
-                  name: `${fb.employeeId.firstName} ${fb.employeeId.lastName}`,
-                  email: fb.employeeId.email,
-                  role: fb.employeeId.role,
-                }
+                _id: fb.employeeId._id.toString(),
+                name: `${fb.employeeId.firstName} ${fb.employeeId.lastName}`,
+                email: fb.employeeId.email,
+                role: fb.employeeId.role,
+                profilePic: fb.employeeId.profilePic,
+              }
               : null,
             submittedAt: fb.submittedAt,
           })) || [],
@@ -155,22 +216,24 @@ export async function GET(req, { params }) {
             _id: fb._id.toString(),
             teamLeadId: fb.teamLeadId
               ? {
-                  _id: fb.teamLeadId._id.toString(),
-                  name: `${fb.teamLeadId.firstName} ${fb.teamLeadId.lastName}`,
-                  email: fb.teamLeadId.email,
-                  role: fb.teamLeadId.role,
-                }
+                _id: fb.teamLeadId._id.toString(),
+                name: `${fb.teamLeadId.firstName} ${fb.teamLeadId.lastName}`,
+                email: fb.teamLeadId.email,
+                role: fb.teamLeadId.role,
+                profilePic: fb.teamLeadId.profilePic,
+              }
               : null,
             replies:
               fb.replies?.map((reply) => ({
                 ...reply,
                 repliedBy: reply.repliedBy
                   ? {
-                      _id: reply.repliedBy._id.toString(),
-                      name: `${reply.repliedBy.firstName} ${reply.repliedBy.lastName}`,
-                      email: reply.repliedBy.email,
-                      role: reply.repliedBy.role,
-                    }
+                    _id: reply.repliedBy._id.toString(),
+                    name: `${reply.repliedBy.firstName} ${reply.repliedBy.lastName}`,
+                    email: reply.repliedBy.email,
+                    role: reply.repliedBy.role,
+                    profilePic: reply.repliedBy.profilePic,
+                  }
                   : null,
               })) || [],
             submittedAt: fb.submittedAt,
@@ -218,9 +281,9 @@ export async function GET(req, { params }) {
           ...att,
           uploadedBy: att.uploadedBy
             ? {
-                name: `${att.uploadedBy.firstName} ${att.uploadedBy.lastName}`,
-                email: att.uploadedBy.email,
-              }
+              name: `${att.uploadedBy.firstName} ${att.uploadedBy.lastName}`,
+              email: att.uploadedBy.email,
+            }
             : null,
         })) || [],
       auditTrail: submission.auditTrail || [],

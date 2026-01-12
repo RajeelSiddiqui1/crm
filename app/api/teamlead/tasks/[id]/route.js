@@ -64,14 +64,14 @@ export async function GET(req, { params }) {
           select: "name",
         },
       })
-      .populate("employeeFeedbacks.employeeId", "firstName lastName email")
+      .populate("employeeFeedbacks.employeeId", "firstName lastName email profilePic")
       .populate({
         path: "teamLeadFeedbacks.teamLeadId",
-        select: "firstName lastName email department",
+        select: "firstName lastName email department profilePic",
       })
       .populate({
         path: "teamLeadFeedbacks.replies.repliedBy",
-        select: "firstName lastName email",
+        select: "firstName lastName email profilePic",
       })
 
       .lean();
@@ -167,7 +167,7 @@ export async function PUT(req, { params }) {
       return NextResponse.json({ error: "Task not found" }, { status: 404 });
     }
 
-  const hasAccess =
+    const hasAccess =
       task.assignedTo?.some(
         (assigned) => assigned._id.toString() === teamLead._id.toString()
       ) ||
