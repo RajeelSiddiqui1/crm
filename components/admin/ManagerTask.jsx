@@ -73,11 +73,7 @@ export default function ManagerTask() {
   const handleCreateTask = async (formData) => {
     setLoading(true);
     try {
-      const response = await axios.post("/api/admin/tasks", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
+      const response = await axios.post("/api/admin/tasks", formData);
 
       if (response.data.success) {
         toast.success("Task created successfully!");
@@ -97,11 +93,7 @@ export default function ManagerTask() {
   const handleEditTask = async (taskId, formData) => {
     setLoading(true);
     try {
-      const response = await axios.patch(`/api/admin/tasks/${taskId}`, formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
+      const response = await axios.patch(`/api/admin/tasks/${taskId}`, formData);
 
       if (response.data.success) {
         toast.success("Task updated successfully!");

@@ -96,11 +96,7 @@ export default function TeamLeadAndEmployeeTask() {
   const handleCreateTask = async (formData) => {
     setLoading(true);
     try {
-      const response = await axios.post("/api/admin/tasks2", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
+      const response = await axios.post("/api/admin/tasks2", formData);
 
       if (response.data.success) {
         toast.success("Task created successfully!");
@@ -120,21 +116,22 @@ export default function TeamLeadAndEmployeeTask() {
   const handleEditTask = async (taskId, formData) => {
     setLoading(true);
     try {
-      const response = await axios.put(`/api/admin/tasks2/${taskId}`, formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
+      console.log(`Updating task ${taskId}...`);
+      const response = await axios.put(`/api/admin/tasks2/${taskId}`, formData);
+      console.log("Update response:", response.data);
 
       if (response.data.success) {
         toast.success("Task updated successfully!");
         setShowEditModal(false);
         fetchAllData();
         return true;
+      } else {
+        toast.error(response.data.message || "Failed to update task");
+        return false;
       }
     } catch (error) {
-      console.error("Error:", error);
-      toast.error(error.response?.data?.message || "Failed to update task");
+      console.error("Task update error:", error);
+      toast.error(error.response?.data?.message || error.message || "Failed to update task");
       return false;
     } finally {
       setLoading(false);

@@ -61,6 +61,11 @@ export async function POST(req) {
             Key: fileKey,
             Body: buffer,
             ContentType: fileType,
+            Metadata: {
+              originalName: encodeURIComponent(fileName),
+              uploadedBy: session.user.id,
+              uploadedAt: Date.now().toString(),
+            },
           },
         });
         await upload.done();
@@ -89,72 +94,96 @@ export async function POST(req) {
 
     for (const audio of audioFiles) {
       if (audio && audio.size > 0) {
-        const buffer = Buffer.from(await audio.arrayBuffer());
-        const audioName = audio.name;
-        const audioType = audio.type;
-        const audioSize = audio.size;
-        const audioKey = `admin_tasks/audio/${Date.now()}_${audioName}`;
+        try {
+          const buffer = Buffer.from(await audio.arrayBuffer());
+          const audioKey = `admin_tasks/audio/${Date.now()}_${audio.name}`;
 
-        const uploadAudio = new Upload({
-          client: s3,
-          params: {
+          const uploadAudio = new Upload({
+            client: s3,
+            params: {
+              Bucket: process.env.AWS_BUCKET_NAME,
+              Key: audioKey,
+              Body: buffer,
+              ContentType: audio.type,
+              Metadata: {
+                originalName: encodeURIComponent(audio.name),
+                uploadedBy: session.user.id,
+                uploadedAt: Date.now().toString(),
+              },
+            },
+          });
+          await uploadAudio.done();
+
+          const command = new GetObjectCommand({
             Bucket: process.env.AWS_BUCKET_NAME,
             Key: audioKey,
-            Body: buffer,
-            ContentType: audioType,
-          },
-        });
-        await uploadAudio.done();
+          });
+          const audioUrl = await getSignedUrl(s3, command, { expiresIn: 604800 });
 
-        const command = new GetObjectCommand({
-          Bucket: process.env.AWS_BUCKET_NAME,
-          Key: audioKey,
-        });
-        const audioUrl = await getSignedUrl(s3, command, { expiresIn: 604800 });
-
-        uploadedAudio.push({
-          url: audioUrl,
-          name: audioName,
-          type: audioType,
-          size: audioSize,
-          publicId: audioKey,
-        });
+          uploadedAudio.push({
+            url: audioUrl,
+            name: audio.name,
+            type: audio.type,
+            size: audio.size,
+            publicId: audioKey,
+          });
+        } catch (err) {
+          console.error("S3 upload error for audio file:", audio.name, err);
+        }
       }
     }
 
     // -------------------------------
     // RECORDED AUDIO UPLOAD
     // -------------------------------
-    const recordedAudio = formData.get("recordedAudio");
-    if (recordedAudio && recordedAudio.size > 0) {
-      const buffer = Buffer.from(await recordedAudio.arrayBuffer());
-      const audioKey = `admin_tasks/recordings/${Date.now()}_recording.webm`;
+    const recordedAudios = formData.getAll("recordedAudios[]");
+    const singleRecordedAudio = formData.get("recordedAudio");
 
-      const uploadAudio = new Upload({
-        client: s3,
-        params: {
-          Bucket: process.env.AWS_BUCKET_NAME,
-          Key: audioKey,
-          Body: buffer,
-          ContentType: "audio/webm",
-        },
-      });
-      await uploadAudio.done();
-
-      const command = new GetObjectCommand({
-        Bucket: process.env.AWS_BUCKET_NAME,
-        Key: audioKey,
-      });
-      const audioUrl = await getSignedUrl(s3, command, { expiresIn: 604800 });
-
-      uploadedAudio.push({
-        url: audioUrl,
-        name: "Voice Recording",
-        type: "audio/webm",
-        size: recordedAudio.size,
-        publicId: audioKey,
-      });
+    if (singleRecordedAudio && singleRecordedAudio.size > 0) {
+      recordedAudios.push(singleRecordedAudio);
     }
+
+    for (const recordedAudio of recordedAudios) {
+      if (recordedAudio && recordedAudio.size > 0) {
+        try {
+          const buffer = Buffer.from(await recordedAudio.arrayBuffer());
+          const audioKey = `admin_tasks/recordings/${Date.now()}_recording.webm`;
+
+          const uploadAudio = new Upload({
+            client: s3,
+            params: {
+              Bucket: process.env.AWS_BUCKET_NAME,
+              Key: audioKey,
+              Body: buffer,
+              ContentType: recordedAudio.type || "audio/webm",
+              Metadata: {
+                isRecording: "true",
+                uploadedBy: session.user.id,
+                uploadedAt: Date.now().toString(),
+              },
+            },
+          });
+          await uploadAudio.done();
+
+          const command = new GetObjectCommand({
+            Bucket: process.env.AWS_BUCKET_NAME,
+            Key: audioKey,
+          });
+          const audioUrl = await getSignedUrl(s3, command, { expiresIn: 604800 });
+
+          uploadedAudio.push({
+            url: audioUrl,
+            name: recordedAudio.name || "Voice Recording",
+            type: recordedAudio.type || "audio/webm",
+            size: recordedAudio.size,
+            publicId: audioKey,
+          });
+        } catch (err) {
+          console.error("S3 upload error for recorded audio:", err);
+        }
+      }
+    }
+
 
     // -------------------------------
     // FETCH MANAGERS & DEPARTMENTS

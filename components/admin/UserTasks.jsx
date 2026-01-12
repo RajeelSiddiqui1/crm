@@ -274,18 +274,16 @@ function UserTasks({ onClose }) {
       }
 
       if (fileAttachment) {
-        submitFormData.append("file", fileAttachment);
+        submitFormData.append("files[]", fileAttachment);
       }
 
       if (audioFile) {
         const audioFileObj = new File([audioFile], "audio.webm", { type: "audio/webm" });
-        submitFormData.append("audio", audioFileObj);
+        submitFormData.append("recordedAudio", audioFileObj);
       }
 
       const endpoint = selectedType === "manager" ? "/api/admin/tasks" : "/api/admin/tasks2";
-      const response = await axios.post(endpoint, submitFormData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      const response = await axios.post(endpoint, submitFormData);
 
       if (response.data.success) {
         alert("Task created successfully!");

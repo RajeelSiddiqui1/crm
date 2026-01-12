@@ -63,7 +63,7 @@ export async function POST(req) {
             Body: buffer,
             ContentType: fileType,
             Metadata: {
-              originalName: fileName,
+              originalName: encodeURIComponent(fileName),
               uploadedBy: session.user.id,
               uploadedAt: Date.now().toString()
             }
@@ -111,7 +111,7 @@ export async function POST(req) {
             Body: buffer,
             ContentType: audioType,
             Metadata: {
-              originalName: audioName,
+              originalName: encodeURIComponent(audioName),
               uploadedBy: session.user.id,
               uploadedAt: Date.now().toString()
             }
@@ -139,41 +139,53 @@ export async function POST(req) {
     // -------------------------------
     // RECORDED AUDIO UPLOAD TO S3
     // -------------------------------
-    const recordedAudio = formData.get("recordedAudio");
-    if (recordedAudio && recordedAudio.size > 0) {
-      const buffer = Buffer.from(await recordedAudio.arrayBuffer());
-      const audioKey = `admin2_tasks/recordings/${Date.now()}_recording.webm`;
+    const recordedAudios = formData.getAll("recordedAudios[]");
+    const singleRecordedAudio = formData.get("recordedAudio");
 
-      const uploadAudio = new Upload({
-        client: s3,
-        params: {
-          Bucket: process.env.AWS_BUCKET_NAME,
-          Key: audioKey,
-          Body: buffer,
-          ContentType: "audio/webm",
-          Metadata: {
-            isRecording: "true",
-            uploadedBy: session.user.id,
-            uploadedAt: Date.now().toString()
-          }
-        },
-      });
-      await uploadAudio.done();
+    if (singleRecordedAudio && singleRecordedAudio.size > 0) {
+      recordedAudios.push(singleRecordedAudio);
+    }
 
-      const command = new GetObjectCommand({
-        Bucket: process.env.AWS_BUCKET_NAME,
-        Key: audioKey,
-      });
-      const audioUrl = await getSignedUrl(s3, command, { expiresIn: 604800 });
+    for (const recordedAudio of recordedAudios) {
+      if (recordedAudio && recordedAudio.size > 0) {
+        try {
+          const buffer = Buffer.from(await recordedAudio.arrayBuffer());
+          const audioKey = `admin2_tasks/recordings/${Date.now()}_recording.webm`;
 
-      uploadedAudio.push({
-        url: audioUrl,
-        name: "Voice Recording",
-        type: "audio/webm",
-        size: recordedAudio.size,
-        publicId: audioKey,
-        isRecording: true
-      });
+          const uploadAudio = new Upload({
+            client: s3,
+            params: {
+              Bucket: process.env.AWS_BUCKET_NAME,
+              Key: audioKey,
+              Body: buffer,
+              ContentType: recordedAudio.type || "audio/webm",
+              Metadata: {
+                isRecording: "true",
+                uploadedBy: session.user.id,
+                uploadedAt: Date.now().toString()
+              }
+            },
+          });
+          await uploadAudio.done();
+
+          const command = new GetObjectCommand({
+            Bucket: process.env.AWS_BUCKET_NAME,
+            Key: audioKey,
+          });
+          const audioUrl = await getSignedUrl(s3, command, { expiresIn: 604800 });
+
+          uploadedAudio.push({
+            url: audioUrl,
+            name: recordedAudio.name || "Voice Recording",
+            type: recordedAudio.type || "audio/webm",
+            size: recordedAudio.size,
+            publicId: audioKey,
+            isRecording: true
+          });
+        } catch (err) {
+          console.error("S3 upload error for recorded audio:", err);
+        }
+      }
     }
 
     // -------------------------------
@@ -185,11 +197,11 @@ export async function POST(req) {
       clientName,
       priority,
       endDate: endDate ? new Date(endDate) : null,
-      teamleads: teamleadIds.map(id => ({ 
+      teamleads: teamleadIds.map(id => ({
         teamleadId: id,
         status: "pending"
       })),
-      employees: employeeIds.map(id => ({ 
+      employees: employeeIds.map(id => ({
         employeeId: id,
         status: "pending"
       })),
@@ -331,7 +343,7 @@ export async function GET(req) {
         stats: {
           totalAssignees: allAssignees.length,
           statusCounts,
-          completionPercentage: allAssignees.length > 0 
+          completionPercentage: allAssignees.length > 0
             ? Math.round((statusCounts.completed / allAssignees.length) * 100)
             : 0,
           totalFiles: task.fileAttachments?.length || 0,
