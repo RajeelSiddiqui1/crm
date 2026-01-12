@@ -289,7 +289,7 @@ export async function GET() {
   } catch (error) {
     console.error("Error fetching admin tasks:", error);
     return NextResponse.json(
-      { success: false, message: "Tasks fetch error", error: error.message },
+      { success: false, message: "Tasks fetch error",error },
       { status: 500 }
     );
   }
