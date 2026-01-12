@@ -14,26 +14,48 @@ import { sendMail } from "@/lib/mail";
 import { adminTaskCreatedMailTemplate } from "@/helper/emails/admin/createTask";
 
 export async function POST(req) {
-  try {
-    await dbConnect();
+  console.log("---- POST /api/admin/tasks ----");
 
+  try {
+    console.log("1️⃣ Connecting to database...");
+    await dbConnect();
+    console.log("✅ DB connected");
+
+    console.log("2️⃣ Getting session...");
     const session = await getServerSession(authOptions);
+    console.log("Session:", session);
+
     if (!session || session.user.role !== "Admin") {
+      console.warn("❌ Unauthorized access");
       return NextResponse.json(
         { success: false, message: "Unauthorized" },
         { status: 401 }
       );
     }
 
+    console.log("3️⃣ Reading form data...");
     const formData = await req.formData();
     const title = formData.get("title");
     const description = formData.get("description") || "";
     const clientName = formData.get("clientName") || "";
     const priority = formData.get("priority") || "low";
     const endDate = formData.get("endDate") || null;
-    const managersId = JSON.parse(formData.get("managersId") || "[]");
+    let managersId = [];
+
+    try {
+      managersId = JSON.parse(formData.get("managersId") || "[]");
+    } catch (err) {
+      console.error("❌ Error parsing managersId:", err);
+      return NextResponse.json(
+        { success: false, message: "Invalid managersId format" },
+        { status: 400 }
+      );
+    }
+
+    console.log("Title:", title, "ManagersId:", managersId);
 
     if (!title || managersId.length === 0) {
+      console.warn("❌ Title or managers missing");
       return NextResponse.json(
         { success: false, message: "Title and managers are required" },
         { status: 400 }
@@ -43,58 +65,65 @@ export async function POST(req) {
     // -------------------------------
     // MULTIPLE FILE UPLOADS
     // -------------------------------
+    console.log("4️⃣ Handling file uploads...");
     const files = formData.getAll("files[]");
     const uploadedFiles = [];
 
     for (const file of files) {
       if (file && file.size > 0) {
-        const buffer = Buffer.from(await file.arrayBuffer());
-        const fileName = file.name;
-        const fileType = file.type;
-        const fileSize = file.size;
-        const fileKey = `admin_tasks/files/${Date.now()}_${fileName}`;
+        try {
+          console.log("Uploading file:", file.name);
+          const buffer = Buffer.from(await file.arrayBuffer());
+          const fileKey = `admin_tasks/files/${Date.now()}_${file.name}`;
 
-        const upload = new Upload({
-          client: s3,
-          params: {
+          const upload = new Upload({
+            client: s3,
+            params: {
+              Bucket: process.env.AWS_BUCKET_NAME,
+              Key: fileKey,
+              Body: buffer,
+              ContentType: file.type,
+              Metadata: {
+                originalName: encodeURIComponent(file.name),
+                uploadedBy: session.user.id,
+                uploadedAt: Date.now().toString(),
+              },
+            },
+          });
+
+          await upload.done();
+          console.log("✅ File uploaded:", file.name);
+
+          const command = new GetObjectCommand({
             Bucket: process.env.AWS_BUCKET_NAME,
             Key: fileKey,
-            Body: buffer,
-            ContentType: fileType,
-            Metadata: {
-              originalName: encodeURIComponent(fileName),
-              uploadedBy: session.user.id,
-              uploadedAt: Date.now().toString(),
-            },
-          },
-        });
-        await upload.done();
+          });
 
-        const command = new GetObjectCommand({
-          Bucket: process.env.AWS_BUCKET_NAME,
-          Key: fileKey,
-        });
-        const fileUrl = await getSignedUrl(s3, command, { expiresIn: 604800 }); // 1 year
-
-        uploadedFiles.push({
-          url: fileUrl,
-          name: fileName,
-          type: fileType,
-          size: fileSize,
-          publicId: fileKey,
-        });
+          const fileUrl = await getSignedUrl(s3, command, { expiresIn: 604800 });
+          uploadedFiles.push({
+            url: fileUrl,
+            name: file.name,
+            type: file.type,
+            size: file.size,
+            publicId: fileKey,
+          });
+        } catch (err) {
+          console.error("❌ S3 file upload error:", file.name, err);
+        }
       }
     }
 
     // -------------------------------
     // MULTIPLE AUDIO UPLOADS
     // -------------------------------
+    console.log("5️⃣ Handling audio uploads...");
     const audioFiles = formData.getAll("audioFiles[]");
     const uploadedAudio = [];
 
     for (const audio of audioFiles) {
       if (audio && audio.size > 0) {
         try {
+          console.log("Uploading audio:", audio.name);
           const buffer = Buffer.from(await audio.arrayBuffer());
           const audioKey = `admin_tasks/audio/${Date.now()}_${audio.name}`;
 
@@ -118,8 +147,8 @@ export async function POST(req) {
             Bucket: process.env.AWS_BUCKET_NAME,
             Key: audioKey,
           });
-          const audioUrl = await getSignedUrl(s3, command, { expiresIn: 604800 });
 
+          const audioUrl = await getSignedUrl(s3, command, { expiresIn: 604800 });
           uploadedAudio.push({
             url: audioUrl,
             name: audio.name,
@@ -127,8 +156,10 @@ export async function POST(req) {
             size: audio.size,
             publicId: audioKey,
           });
+
+          console.log("✅ Audio uploaded:", audio.name);
         } catch (err) {
-          console.error("S3 upload error for audio file:", audio.name, err);
+          console.error("❌ S3 upload error for audio file:", audio.name, err);
         }
       }
     }
@@ -136,6 +167,7 @@ export async function POST(req) {
     // -------------------------------
     // RECORDED AUDIO UPLOAD
     // -------------------------------
+    console.log("6️⃣ Handling recorded audios...");
     const recordedAudios = formData.getAll("recordedAudios[]");
     const singleRecordedAudio = formData.get("recordedAudio");
 
@@ -146,6 +178,7 @@ export async function POST(req) {
     for (const recordedAudio of recordedAudios) {
       if (recordedAudio && recordedAudio.size > 0) {
         try {
+          console.log("Uploading recorded audio:", recordedAudio.name || "Voice Recording");
           const buffer = Buffer.from(await recordedAudio.arrayBuffer());
           const audioKey = `admin_tasks/recordings/${Date.now()}_recording.webm`;
 
@@ -178,26 +211,32 @@ export async function POST(req) {
             size: recordedAudio.size,
             publicId: audioKey,
           });
+
+          console.log("✅ Recorded audio uploaded");
         } catch (err) {
-          console.error("S3 upload error for recorded audio:", err);
+          console.error("❌ S3 upload error for recorded audio:", err);
         }
       }
     }
 
-
     // -------------------------------
-    // FETCH MANAGERS & DEPARTMENTS
+    // FETCH MANAGERS
     // -------------------------------
+    console.log("7️⃣ Fetching managers...");
     const managers = await Manager.find({ _id: { $in: managersId } });
+    console.log("Managers found:", managers.length);
+
     const departmentSet = new Set();
     managers.forEach((manager) =>
       manager.departments.forEach((dep) => departmentSet.add(dep.toString()))
     );
     const departmentIds = Array.from(departmentSet);
+    console.log("Departments involved:", departmentIds);
 
     // -------------------------------
     // SAVE ADMIN TASK
     // -------------------------------
+    console.log("8️⃣ Saving admin task...");
     const newTask = new AdminTask({
       title,
       description,
@@ -212,10 +251,12 @@ export async function POST(req) {
     });
 
     await newTask.save();
+    console.log("✅ Admin task saved:", newTask._id);
 
     // -------------------------------
     // SEND NOTIFICATIONS & EMAILS
     // -------------------------------
+    console.log("9️⃣ Sending notifications and emails...");
     const taskLink = `${process.env.NEXT_PUBLIC_DOMAIN}/manager/admin-tasks`;
     await Promise.all(
       managers.flatMap((manager) => {
@@ -247,18 +288,21 @@ export async function POST(req) {
       })
     );
 
+    console.log("🔟 All notifications sent");
+
     return NextResponse.json(
       { success: true, message: "Admin task created successfully", task: newTask },
       { status: 201 }
     );
   } catch (error) {
-    console.error("Admin Task Error:", error);
+    console.error("🔥 Admin Task Error:", error.stack || error);
     return NextResponse.json(
       { success: false, message: "Task creation failed", error: error.message },
       { status: 500 }
     );
   }
 }
+
 
 export async function GET() {
   try {
