@@ -213,7 +213,8 @@ export async function POST(req) {
     // -------------------------------
     // SEND NOTIFICATIONS & EMAILS
     // -------------------------------
-    const taskLink = `${process.env.NEXT_PUBLIC_DOMAIN}/teamlead/tasks`;
+    const teamleadTaskLink = `${process.env.NEXT_PUBLIC_DOMAIN}/teamlead/admin-tasks`;
+    const employeeTaskLink = `${process.env.NEXT_PUBLIC_DOMAIN}/employee/admin-tasks`;
     const teamleadUsers = await TeamLead.find({ _id: { $in: teamleadIds } });
     const employeeUsers = await Employee.find({ _id: { $in: employeeIds } });
 
@@ -228,7 +229,7 @@ export async function POST(req) {
           type: "admin_task_created",
           title: "New Task Assigned",
           message: `You have received a new task: "${title}"`,
-          link: taskLink,
+          link: teamleadTaskLink,
           referenceId: task._id,
           referenceModel: "AdminTask2",
         });
@@ -239,7 +240,7 @@ export async function POST(req) {
           session.user.name || "Admin",
           task.priority,
           task.endDate,
-          taskLink
+            teamleadTaskLink
         );
 
         await sendMail(tl.email, "New Task Assigned", emailHtml);
@@ -255,7 +256,7 @@ export async function POST(req) {
           type: "admin_task_created",
           title: "New Task Assigned",
           message: `You have received a new task: "${title}"`,
-          link: taskLink,
+          link: employeeTaskLink,
           referenceId: task._id,
           referenceModel: "AdminTask2",
         });
@@ -266,7 +267,7 @@ export async function POST(req) {
           session.user.name || "Admin",
           task.priority,
           task.endDate,
-          taskLink
+          employeeTaskLink
         );
 
         await sendMail(emp.email, "New Task Assigned", emailHtml);

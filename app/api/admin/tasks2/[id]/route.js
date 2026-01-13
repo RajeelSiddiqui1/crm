@@ -277,7 +277,8 @@ export async function PUT(req, { params }) {
     // -------------------------------
     // SEND NOTIFICATIONS
     // -------------------------------
-    const taskLink = `${process.env.NEXT_PUBLIC_DOMAIN}/teamlead/tasks`;
+    const teamleadTaskLink = `${process.env.NEXT_PUBLIC_DOMAIN}/teamlead/admin-tasks`;
+    const employeeTaskLink = `${process.env.NEXT_PUBLIC_DOMAIN}/employee/admin-tasks`;
     const teamleads = await TeamLead.find({ _id: { $in: task.teamleads.map(t => t.teamleadId) } });
     const employees = await Employee.find({ _id: { $in: task.employees.map(e => e.employeeId) } });
 
@@ -293,7 +294,7 @@ export async function PUT(req, { params }) {
             type: "admin_task_updated",
             title: "Task Updated",
             message: `${task.title} has been updated`,
-            link: taskLink,
+            link: teamleadTaskLink,
             referenceId: task._id,
             referenceModel: "AdminTask2",
           }),
@@ -320,7 +321,7 @@ export async function PUT(req, { params }) {
             type: "admin_task_updated",
             title: "Task Updated",
             message: `${task.title} has been updated`,
-            link: taskLink,
+            link: employeeTaskLink,
             referenceId: task._id,
             referenceModel: "AdminTask2",
           }),
@@ -331,7 +332,7 @@ export async function PUT(req, { params }) {
               `${emp.firstName} ${emp.lastName}`,
               task.title,
               session.user.name || "Admin",
-              taskLink
+              employeeTaskLink
             )
           ),
         ])
@@ -389,7 +390,8 @@ export async function DELETE(req, { params }) {
     await task.deleteOne();
 
     // Send notifications
-    const taskLink = `${process.env.NEXT_PUBLIC_DOMAIN}/dashboard`;
+    const teamleadTaskLink = `${process.env.NEXT_PUBLIC_DOMAIN}/teamlead/admin-tasks`;
+    const employeeTaskLink = `${process.env.NEXT_PUBLIC_DOMAIN}/employee/admin-tasks`;
 
     await Promise.all([
       ...teamleads.map(tl =>
@@ -403,7 +405,7 @@ export async function DELETE(req, { params }) {
             type: "admin_task_deleted",
             title: "Task Deleted",
             message: `${taskTitle} has been deleted`,
-            link: taskLink,
+            link: teamleadTaskLink,
           }),
           sendMail(
             tl.email,
@@ -427,7 +429,7 @@ export async function DELETE(req, { params }) {
             type: "admin_task_deleted",
             title: "Task Deleted",
             message: `${taskTitle} has been deleted`,
-            link: taskLink,
+            link: employeeTaskLink,
           }),
           sendMail(
             emp.email,
