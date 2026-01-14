@@ -30,7 +30,15 @@ export async function GET(req) {
         path: "sharedBYManager",
         select: "_id firstName lastName email",
         model: "Manager",
+      }).populate({
+        path: "managerResponses.managerId",
+        select: "firstName lastName email profilePicture departments",
+        populate: {
+          path: "departments",
+          select: "name",
+        }
       })
+      
       .sort({ createdAt: -1 })
       .lean();
 

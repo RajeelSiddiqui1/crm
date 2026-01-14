@@ -1,4 +1,3 @@
-// models/AdminTask.js
 import mongoose, { Schema, model, models } from "mongoose";
 
 const adminTaskSchema = Schema(
@@ -68,7 +67,7 @@ const adminTaskSchema = Schema(
           required: true,
         },
         duration: {
-          type: Number, // in seconds
+          type: Number,
           required: false,
         },
         createdAt: {
@@ -96,6 +95,45 @@ const adminTaskSchema = Schema(
       {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Manager",
+      },
+    ],
+    // Manager responses array
+    managerResponses: [
+      {
+        managerId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Manager",
+          required: true,
+        },
+        status: {
+          type: String,
+          enum: ["pending", "in-progress", "rejected", "completed"],
+          default: "pending",
+        },
+        feedback: {
+          type: String,
+          default: "",
+        },
+        submittedFiles: [
+          {
+            url: String,
+            name: String,
+            type: String,
+            size: Number,
+            publicId: String,
+            uploadedAt: {
+              type: Date,
+              default: Date.now,
+            },
+          },
+        ],
+        submittedAt: {
+          type: Date,
+        },
+        updatedAt: {
+          type: Date,
+          default: Date.now,
+        },
       },
     ],
     submittedBy: {

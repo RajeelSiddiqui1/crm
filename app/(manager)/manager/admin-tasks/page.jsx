@@ -43,6 +43,7 @@ import {
   Mail
 } from "lucide-react";
 import axios from "axios";
+import ViewTaskModal from "@/components/manager/viewTaskModal"
 
 export default function ManagerAdminTasksPage() {
   const { data: session, status } = useSession();
@@ -59,6 +60,8 @@ export default function ManagerAdminTasksPage() {
   const [assigning, setAssigning] = useState(false);
   const [searchManager, setSearchManager] = useState("");
   const [refreshing, setRefreshing] = useState(false);
+ const [selectedTaskForModal, setSelectedTaskForModal] = useState(null);
+  const [viewTaskModalOpen, setViewTaskModalOpen] = useState(false);
 
   const audioRef = useRef(null);
 
@@ -73,6 +76,12 @@ export default function ManagerAdminTasksPage() {
     fetchTasks();
     fetchAllManagers();
   }, [session, status, router]);
+
+
+  const handleViewWithStatus = (task) => {
+    setSelectedTaskForModal(task);
+    setViewTaskModalOpen(true);
+  };
 
   const fetchTasks = async () => {
     try {
@@ -742,6 +751,16 @@ export default function ManagerAdminTasksPage() {
                             </Button>
 
                             <Button
+  onClick={() => handleViewWithStatus(task)}
+  variant="outline"
+  size="sm"
+  className="rounded-lg border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400"
+>
+  <Eye className="w-4 h-4 mr-2" />
+  Feedback & Update Status
+</Button>
+
+                            <Button
                               onClick={() =>
                                 router.push(
                                   `/manager/forms/create?taskId=${task._id}`
@@ -1233,6 +1252,18 @@ export default function ManagerAdminTasksPage() {
             </div>
           </div>
         </div>
+      )}
+      {selectedTaskForModal && (
+        <ViewTaskModal
+          isOpen={viewTaskModalOpen}
+          onClose={() => {
+            setViewTaskModalOpen(false);
+            setSelectedTaskForModal(null);
+          }}
+          task={selectedTaskForModal}
+          isManagerView={true}
+          refetch={fetchTasks}
+        />
       )}
     </div>
   );

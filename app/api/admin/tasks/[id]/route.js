@@ -335,3 +335,60 @@ export async function DELETE(req, { params }) {
     );
   }
 }
+
+
+export async function GET(req, { params }) {
+  try {
+    await dbConnect();
+    
+    const session = await getServerSession(authOptions);
+    if (!session || session.user.role !== "Admin") {
+      return NextResponse.json(
+        { success: false, message: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    const { id } = params;
+    
+    const task = await AdminTask.findById(id)
+      .populate({
+        path: "managers",
+        select: "firstName lastName email profilePicture departments",
+        populate: { path: "departments", select: "name description" },
+      })
+      .populate({
+        path: "managerResponses.managerId",
+        select: "firstName lastName email profilePicture",
+      })
+      .populate({ path: "submittedBy", select: "name email" })
+      .populate({ path: "departments", select: "name description" })
+      .lean();
+
+    if (!task) {
+      return NextResponse.json(
+        { success: false, message: "Task not found" },
+        { status: 404 }
+      );
+    }
+
+    // Check if admin owns this task
+    if (task.submittedBy._id.toString() !== session.user.id) {
+      return NextResponse.json(
+        { success: false, message: "Access denied" },
+        { status: 403 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      task,
+    });
+  } catch (error) {
+    console.error("GET task error:", error);
+    return NextResponse.json(
+      { success: false, message: "Fetch failed", error: error.message },
+      { status: 500 }
+    );
+  }
+}

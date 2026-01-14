@@ -110,34 +110,7 @@ export async function PUT(req, { params }) {
   }
 }
 
-// ------------------ GET / Task details ------------------
-export async function GET(req, { params }) {
-  try {
-    await dbConnect();
-    const session = await getServerSession(authOptions);
-    if (!session || session.user.role !== "Manager")
-      return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
 
-    const { id } = params;
-    if (!mongoose.Types.ObjectId.isValid(id)) return NextResponse.json({ success: false, error: "Invalid task ID" }, { status: 400 });
-
-    const task = await AdminTask.findById(id)
-      .populate("managers", "_id firstName lastName email")
-      .populate("sharedBYManager", "_id firstName lastName email")
-      .lean();
-
-    if (!task) return NextResponse.json({ success: false, message: "Task not found" }, { status: 404 });
-
-    task._id = task._id.toString();
-    task.managers = task.managers.map(m => ({ ...m, _id: m._id.toString() }));
-    if (task.sharedBYManager) task.sharedBYManager._id = task.sharedBYManager._id.toString();
-
-    return NextResponse.json({ success: true, task });
-  } catch (error) {
-    console.error("GET /manager-tasks/[id] error:", error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
-  }
-}
 
 // ------------------ DELETE / Remove manager ------------------
 export async function DELETE(req, { params }) {
@@ -161,5 +134,92 @@ export async function DELETE(req, { params }) {
   } catch (error) {
     console.error("DELETE /manager-tasks/[id] error:", error);
     return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+  }
+}
+
+
+
+// app/api/manager/admin-tasks/[id]/route.js (GET route میں update)
+
+export async function GET(req, { params }) {
+  try {
+    await dbConnect();
+    
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return NextResponse.json(
+        { success: false, message: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    const { id } = params;
+    const userId = session.user.id;
+    const userRole = session.user.role;
+
+    const task = await AdminTask.findById(id)
+      .populate({
+        path: "managers",
+        select: "firstName lastName email profilePicture departments phone",
+        populate: {
+          path: "departments",
+          select: "name",
+        }
+      })
+      .populate({
+        path: "managerResponses.managerId",
+        select: "firstName lastName email profilePicture departments",
+        populate: {
+          path: "departments",
+          select: "name",
+        }
+      })
+      .populate({
+        path: "submittedBy",
+        select: "name email",
+      });
+
+    if (!task) {
+      return NextResponse.json(
+        { success: false, message: "Task not found" },
+        { status: 404 }
+      );
+    }
+
+    // Role-based access control
+    if (userRole === "Manager") {
+      // Check if manager is assigned
+      if (!task.managers.some(m => m._id.toString() === userId)) {
+        return NextResponse.json(
+          { success: false, message: "Access denied" },
+          { status: 403 }
+        );
+      }
+    } else if (userRole !== "Admin") {
+      return NextResponse.json(
+        { success: false, message: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    // Find manager's response (if manager)
+    let managerResponse = null;
+    if (userRole === "Manager") {
+      managerResponse = task.managerResponses.find(
+        response => response.managerId._id.toString() === userId
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      task,
+      managerResponse,
+    });
+  } catch (error) {
+    console.error("Error fetching task:", error);
+    return NextResponse.json(
+      { success: false, message: "Fetch failed", error: error.message },
+      { status: 500 }
+    );
   }
 }

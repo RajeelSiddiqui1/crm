@@ -28,7 +28,7 @@ async function sendSubtaskUpdateNotification({ session, subtask, status, feedbac
         message: status 
             ? `Employee ${session.user.name} updated status of "${subtask.title}" to "${status}".`
             : `Employee ${session.user.name} submitted feedback for "${subtask.title}".`,
-        link: `${process.env.NEXT_PUBLIC_DOMAIN}/teamlead/subtasks/${subtask._id}`,
+        link: `${process.env.NEXT_PUBLIC_DOMAIN}/teamlead/subtasks`,
         referenceId: subtask._id,
         referenceModel: "Subtask",
     });
