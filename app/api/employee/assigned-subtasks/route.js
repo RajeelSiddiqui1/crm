@@ -229,7 +229,6 @@ export async function GET() {
   const tasks = await EmployeeTask.find({
     $or: [
       { submittedBy: session.user.id },
-      { "assignedEmployee.employeeId": session.user.id },
     ],
   })
     .populate("submittedBy", "firstName lastName email")

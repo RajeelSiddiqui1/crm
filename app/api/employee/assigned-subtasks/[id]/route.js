@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth";
 import dbConnect from "@/lib/db";
 import EmployeeTask from "@/models/EmployeeTask";
 import { authOptions } from "@/lib/auth";
-
+import Department from "@/models/Department";
 import s3 from "@/lib/aws";
 import { Upload } from "@aws-sdk/lib-storage";
 import { DeleteObjectCommand } from "@aws-sdk/client-s3";
@@ -243,8 +243,9 @@ export async function PATCH(req, { params }) {
 ====================================================== */
 
 
+
 export async function GET(req, { params }) {
-  try {
+try {
     const session = await getServerSession(authOptions);
 
     if (!session || session.user.role !== "Employee") {
