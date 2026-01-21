@@ -1,16 +1,19 @@
 import { NextResponse } from "next/server";
 import dbConnect from "@/lib/db";
 import FormSubmission from "@/models/FormSubmission";
-import Form from "@/models/Form";
-import cloudinary from "@/lib/cloudinary";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import mongoose from "mongoose";
-import { sendMail } from "@/lib/mail";
-import { deletedMailTemplate } from "@/helper/emails/manager/deletedMailTemplate";
-import { statusUpdateMailTemplate } from "@/helper/emails/manager/statusUpdateMailTemplate";
-import { taskEditedMailTemplate } from "@/helper/emails/manager/taskEditMail";
-import { sendNotification } from "@/lib/sendNotification";
+import s3 from "@/lib/aws";
+import { Upload } from "@aws-sdk/lib-storage";
+import {
+  GetObjectCommand,
+  DeleteObjectCommand
+} from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+
+const BUCKET = process.env.AWS_BUCKET_NAME;
+
+
 
 function getPublicIdFromUrl(url) {
   try {
@@ -35,6 +38,7 @@ export async function GET(req, { params }) {
       .populate("assignedTo", "firstName lastName email")
       .populate("multipleTeamLeadAssigned", "firstName lastName email")
       .populate("assignedEmployees.employeeId", "firstName lastName email")
+      .select("+fileAttachments")
       .lean();
 
     if (!submission) {
@@ -67,43 +71,55 @@ export async function GET(req, { params }) {
 }
 
 
-
-
-// ----------------------- UPDATE Submission -----------------------
+/* ======================================================
+   PUT  (UPDATE + FILE OVERWRITE)  ✅ FIXED
+====================================================== */
 export async function PUT(req, { params }) {
   try {
     await dbConnect();
+
     const session = await getServerSession(authOptions);
+    if (!session || session.user.role !== "Manager") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const { id } = params;
-    const body = await req.json();
+    const formData = await req.formData();
 
-    const {
-      title,
-      managerComments,
-      assignedTeamLeadId,
-      status,
-      clinetName,
-      formData
-    } = body;
+    const title = formData.get("title");
+    const managerComments = formData.get("managerComments");
+    const status = formData.get("status");
 
-    const submission = await FormSubmission.findById(id)
-      .populate("formId")
-      .populate("assignedTo", "firstName lastName email")
-      .populate("multipleTeamLeadAssigned", "firstName lastName email")
-      .populate("assignedEmployees.employeeId", "firstName lastName email");
+    /* ---------------- PARSE JSON DATA ---------------- */
+    let parsedFormData = {};
+    try {
+      parsedFormData = JSON.parse(formData.get("formData") || "{}");
+    } catch {
+      parsedFormData = {};
+    }
+
+    let removeFiles = [];
+    try {
+      removeFiles = JSON.parse(formData.get("removeFiles") || "[]");
+    } catch {
+      removeFiles = [];
+    }
+
+    let parsedFileUpdates = {};
+    try {
+      parsedFileUpdates = JSON.parse(formData.get("fileUpdates") || "{}");
+    } catch {
+      parsedFileUpdates = {};
+    }
+
+    /* ---------------- FIND SUBMISSION ---------------- */
+    const submission = await FormSubmission.findById(id).select("+fileAttachments");
 
     if (!submission) {
-      return NextResponse.json(
-        { error: "Submission not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Submission not found" }, { status: 404 });
     }
 
-    /* ---------------- BASIC UPDATES ---------------- */
-    if (clinetName !== undefined && clinetName !== null) {
-      submission.clinetName = clinetName.trim();
-    }
-
+    /* ---------------- BASIC UPDATE ---------------- */
     if (managerComments !== undefined) {
       submission.managerComments = managerComments;
     }
@@ -112,149 +128,170 @@ export async function PUT(req, { params }) {
       submission.status = status;
     }
 
+    /* ---------------- FORM DATA (MAP SAFE UPDATE) ---------------- */
+    if (!submission.formData) {
+      submission.formData = new Map();
+    }
+
+    // title inside formData
     if (title) {
-      submission.formData.title = title;
+      submission.formData.set("title", title);
     }
 
-    if (formData && typeof formData === "object") {
-      Object.keys(formData).forEach(key => {
-        submission.formData.set(key, formData[key]);
-      });
-    }
+    // sanitize helper (prevents mongoose schema objects)
+    const sanitize = (val) => JSON.parse(JSON.stringify(val));
 
-    /* ---------------- TEAM LEAD REASSIGN (FIXED) ---------------- */
-    if (assignedTeamLeadId) {
-      const newTlId = assignedTeamLeadId.toString();
-
-      const currentAssignedId =
-        submission.assignedTo?.[0]?._id?.toString() ||
-        submission.assignedTo?.[0]?.toString();
-
-      if (newTlId !== currentAssignedId) {
-
-        // remove old TL from multiple list
-        if (currentAssignedId) {
-          submission.multipleTeamLeadAssigned =
-            submission.multipleTeamLeadAssigned.filter(
-              tl => tl._id.toString() !== currentAssignedId
-            );
-        }
-
-        // assignedTo MUST be array
-        submission.assignedTo = [
-          new mongoose.Types.ObjectId(newTlId)
-        ];
-
-        // add to multiple list if not exists
-        const exists = submission.multipleTeamLeadAssigned.some(
-          tl => tl._id.toString() === newTlId
-        );
-
-        if (!exists) {
-          submission.multipleTeamLeadAssigned.push(
-            new mongoose.Types.ObjectId(newTlId)
-          );
-        }
+    if (parsedFormData && typeof parsedFormData === "object") {
+      for (const [key, value] of Object.entries(parsedFormData)) {
+        submission.formData.set(key, sanitize(value));
       }
     }
 
-    submission.updatedAt = new Date();
-    await submission.save();
+    /* ---------------- FILE HANDLING ---------------- */
+    let files = [...(submission.fileAttachments || [])];
 
-    /* ---------------- EMAIL + NOTIFICATIONS ---------------- */
-    const submissionLink = `${process.env.NEXT_PUBLIC_BASE_URL}/teamlead/tasks/${submission._id}`;
-    const updatedBy = session.user.name || "Manager";
+    // 🔥 REMOVE FILES
+    for (const fileId of removeFiles) {
+      const index = files.findIndex(f => f._id.toString() === fileId);
+      if (index > -1) {
+        const file = files[index];
 
-    const recipients = [
-      ...(submission.assignedTo || []),
-      ...(submission.multipleTeamLeadAssigned || []),
-      ...(submission.assignedEmployees.map(emp => emp.employeeId) || [])
-    ].filter(Boolean);
+        if (file.publicId) {
+          await s3.send(
+            new DeleteObjectCommand({
+              Bucket: BUCKET,
+              Key: file.publicId,
+            })
+          );
+        }
 
-    const mailPromises = recipients.map(user => {
-      const name = user.firstName || "User";
-      const email = user.email;
-      if (!email) return null;
+        files.splice(index, 1);
+      }
+    }
 
-      return sendMail(
-        `${name} <${email}>`,
-        "Submission Updated",
-        taskEditedMailTemplate(
-          name,
-          submission.formId?.title || "Submission",
-          updatedBy,
-          submissionLink
-        )
-      );
-    }).filter(Boolean);
+    // 🔥 ADD NEW FILES
+    const newFiles = formData.getAll("files");
 
-    const notiPromises = recipients.map(user => {
-      const model = user.__t === "Employee" ? "Employee" : "TeamLead";
+    for (const file of newFiles) {
+      if (!file || !file.size) continue;
 
-      return sendNotification({
-        senderId: session.user.id,
-        senderModel: "Manager",
-        senderName: updatedBy,
-        receiverId: user._id,
-        receiverModel: model,
-        type: "submission_edited",
-        title: "Submission Updated",
-        message: `${submission.formId?.title || "Submission"} has been edited`,
-        referenceId: submission._id,
-        referenceModel: "FormSubmission",
+      const buffer = Buffer.from(await file.arrayBuffer());
+      const key = `manager_tasks/${Date.now()}_${file.name.replace(/\s+/g, "_")}`;
+
+      const upload = new Upload({
+        client: s3,
+        params: {
+          Bucket: BUCKET,
+          Key: key,
+          Body: buffer,
+          ContentType: file.type,
+          Metadata: {
+            uploadedBy: session.user.id,
+            submissionId: id,
+          },
+        },
       });
+
+      await upload.done();
+
+      const signedUrl = await getSignedUrl(
+        s3,
+        new GetObjectCommand({ Bucket: BUCKET, Key: key }),
+        { expiresIn: 604800 } // 7 days
+      );
+
+      files.push({
+        url: signedUrl,
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        publicId: key,
+        uploadedBy: session.user.id,
+        uploadedAt: new Date(),
+      });
+    }
+
+    // 🔥 UPDATE FILE NAMES
+    files = files.map(file => {
+      const update = parsedFileUpdates[file._id];
+      if (update?.name) {
+        return { ...file, name: update.name };
+      }
+      return file;
     });
 
-    await Promise.all([...mailPromises, ...notiPromises]);
+    submission.fileAttachments = files;
+    submission.updatedAt = new Date();
 
-    return NextResponse.json(
-      {
-        message: "Submission updated successfully",
-        submission: {
-          _id: submission._id,
-          clinetName: submission.clinetName,
-          formData: submission.formData,
-          managerComments: submission.managerComments,
-          status: submission.status,
-          assignedTo: submission.assignedTo,
-          updatedAt: submission.updatedAt
-        }
-      },
-      { status: 200 }
-    );
+    /* ---------------- SAVE ---------------- */
+    await submission.save();
 
-  } catch (error) {
-    console.error("Error updating submission:", error);
-    return NextResponse.json(
-      { error: error.message || "Failed to update submission" },
-      { status: 500 }
-    );
+    /* ---------------- RESPONSE ---------------- */
+    const updatedSubmission = await FormSubmission.findById(id)
+      .populate("formId", "title description fields")
+      .populate("assignedTo", "firstName lastName email")
+      .populate("assignedEmployees.employeeId", "firstName lastName email")
+      .select("+fileAttachments");
+
+    return NextResponse.json({
+      message: "Updated successfully",
+      submission: updatedSubmission,
+    });
+
+  } catch (e) {
+    console.error("Update error:", e);
+    return NextResponse.json({ error: e.message }, { status: 500 });
   }
 }
 
-// ----------------------- DELETE Submission -----------------------
+
+
+
+
+
 export async function DELETE(req, { params }) {
   try {
     await dbConnect();
     const session = await getServerSession(authOptions);
     const { id } = params;
 
+    if (!session || session.user.role !== "Manager") {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const submission = await FormSubmission.findById(id)
       .populate("formId")
       .populate("multipleTeamLeadAssigned")
       .populate("assignedEmployees.employeeId");
 
-    if (!submission) return NextResponse.json({ error: "Submission not found" }, { status: 404 });
-
-    if (submission.formData?.file) {
-      const publicId = getPublicIdFromUrl(submission.formData.file);
-      if (publicId) await cloudinary.uploader.destroy(publicId);
+    if (!submission) {
+      return NextResponse.json({ error: "Submission not found" }, { status: 404 });
     }
 
+    // ---------------- FILE HANDLING ----------------
+    const allFiles = submission.fileAttachments || [];
+
+    for (const file of allFiles) {
+      if (file.publicId) {
+        try {
+          await s3.send(
+            new DeleteObjectCommand({
+              Bucket: process.env.AWS_BUCKET_NAME,
+              Key: file.publicId,
+            })
+          );
+        } catch (e) {
+          console.error("S3 delete error:", e);
+        }
+      }
+    }
+
+    // ---------------- DELETE RECORD ----------------
     await submission.deleteOne();
 
-    const teamLeads = submission.multipleTeamLeadAssigned;
-    const employees = submission.assignedEmployees;
+    // ---------------- NOTIFICATIONS & EMAILS ----------------
+    const teamLeads = submission.multipleTeamLeadAssigned || [];
+    const employees = submission.assignedEmployees || [];
     const deletedAt = new Date().toLocaleString();
 
     const mailPromises = [
@@ -262,14 +299,24 @@ export async function DELETE(req, { params }) {
         sendMail(
           `${tl.firstName} ${tl.lastName} <${tl.email}>`,
           "Submission Deleted",
-          deletedMailTemplate(`${tl.firstName} ${tl.lastName}`, submission.formId.title, session.user.name, deletedAt)
+          deletedMailTemplate(
+            `${tl.firstName} ${tl.lastName}`,
+            submission.formId.title,
+            session.user.name,
+            deletedAt
+          )
         )
       ),
       ...employees.map(emp =>
         sendMail(
           `${emp.employeeId.firstName} <${emp.employeeId.email}>`,
           "Submission Deleted",
-          deletedMailTemplate(emp.employeeId.firstName, submission.formId.title, session.user.name, deletedAt)
+          deletedMailTemplate(
+            emp.employeeId.firstName,
+            submission.formId.title,
+            session.user.name,
+            deletedAt
+          )
         )
       )
     ];
@@ -303,9 +350,11 @@ export async function DELETE(req, { params }) {
 
     await Promise.all([...mailPromises, ...notiPromises]);
 
-    return NextResponse.json({ message: "Deleted" }, { status: 200 });
+    return NextResponse.json({ message: "Submission deleted successfully" }, { status: 200 });
+
   } catch (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("Error deleting submission:", error);
+    return NextResponse.json({ error: error.message || "Failed to delete submission" }, { status: 500 });
   }
 }
 

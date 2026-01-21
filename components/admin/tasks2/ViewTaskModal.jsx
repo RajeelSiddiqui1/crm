@@ -34,6 +34,7 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
+import FileCard from "./FilePreviewDownload";
 
 export default function ViewTaskModal({ isOpen, onClose, task, teamLeads, employees }) {
   const [playingAudio, setPlayingAudio] = useState(null);
@@ -140,6 +141,11 @@ const handleAudioDownload = (audio) => {
       }
     }
   };
+
+  const allFiles = [
+  ...(task.fileAttachments || []).map(f => ({ ...f, category: "file" })),
+  ...(task.audioFiles || []).map(a => ({ ...a, category: "audio" })),
+];
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -449,129 +455,11 @@ const handleAudioDownload = (audio) => {
           )}
 
           {/* Files Section */}
-          {(task.fileAttachments?.length > 0 || task.audioFiles?.length > 0) && (
-            <div className="grid grid-cols-1 md:grid-cols-1 gap-6">
-              {/* Files */}
-              {task.fileAttachments?.length > 0 && (
-                <Card className="bg-white border border-gray-200 rounded-xl shadow-sm">
-                  <CardHeader className="bg-gradient-to-r from-gray-50 to-green-50/50 p-6 border-b">
-                    <CardTitle className="text-lg flex items-center gap-3 text-gray-900">
-                      <FileText className="w-6 h-6 text-green-600" />
-                      File Attachments ({task.fileAttachments.length})
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-6">
-                    <div className="space-y-4">
-                      {task.fileAttachments.map((file, index) => (
-                        <div key={index} className="flex items-center justify-between p-4 bg-green-50 border border-green-200 rounded-lg">
-                          <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-                              <FileText className="w-6 h-6 text-green-600" />
-                            </div>
-                            <div>
-                              <p className="font-bold text-green-800 text-lg">{file.name}</p>
-                              <p className="text-sm text-green-600">
-                                {formatFileSize(file.size)} • {file.type}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="flex gap-3">
-                            <Button
-                              onClick={() => window.open(file.url, "_blank")}
-                              className="bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white rounded-lg px-4 py-2"
-                            >
-                              <Eye className="w-4 h-4 mr-2" />
-                              View
-                            </Button>
-                            <Button
-  onClick={() => handleFileDownload(file)}
-  variant="outline"
-  className="border-blue-300 text-blue-700 hover:bg-blue-50 rounded-lg px-4 py-2"
->
-  <Download className="w-4 h-4 mr-2" />
-  Download
-</Button>
-
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Audio Files */}
-              {task.audioFiles?.length > 0 && (
-                <Card className="bg-white border border-gray-200 rounded-xl shadow-sm">
-                  <CardHeader className="bg-gradient-to-r from-gray-50 to-purple-50/50 p-6 border-b">
-                    <CardTitle className="text-lg flex items-center gap-3 text-gray-900">
-                      <AudioLines className="w-6 h-6 text-purple-600" />
-                      Audio Files ({task.audioFiles.length})
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-6">
-                    <div className="space-y-4">
-                      {task.audioFiles.map((audio, index) => (
-                        <div key={index} className="space-y-3">
-                          <div className="flex items-center justify-between p-4 bg-purple-50 border border-purple-200 rounded-lg">
-                            <div className="flex items-center gap-4">
-                              <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
-                                <AudioLines className="w-6 h-6 text-purple-600" />
-                              </div>
-                              <div>
-                                <p className="font-bold text-purple-800 text-lg">{audio.name}</p>
-                                <p className="text-sm text-purple-600">
-                                  {formatFileSize(audio.size)} • {audio.type}
-                                </p>
-                              </div>
-                            </div>
-                            <div className="flex gap-3">
-                              <Button
-                                onClick={() => handlePlayAudio(audio.url, index)}
-                                className={`${
-                                  playingAudio === index
-                                    ? "bg-yellow-600 hover:bg-yellow-700"
-                                    : "bg-purple-600 hover:bg-purple-700"
-                                } text-white rounded-lg px-4 py-2`}
-                              >
-                                {playingAudio === index ? (
-                                  <>
-                                    <Pause className="w-4 h-4 mr-2" />
-                                    Pause
-                                  </>
-                                ) : (
-                                  <>
-                                    <Play className="w-4 h-4 mr-2" />
-                                    Play
-                                  </>
-                                )}
-                              </Button>
-                              <Button
-  onClick={() => handleAudioDownload(audio)}
-  variant="outline"
-  className="border-purple-300 text-purple-700 hover:bg-purple-50 rounded-lg px-4 py-2"
->
-  <Download className="w-4 h-4 mr-2" />
-  Download
-</Button>
-
-                            </div>
-                          </div>
-<audio
-  id={`audio-${index}`}
-  src={audio.presignedUrl || audio.url} // presigned URL
-  controls
-  className="w-full mt-2"
-/>
-
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
-          )}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mt-4">
+          {allFiles.map((file) => (
+            <FileCard key={file._id || file.url} file={file} />
+          ))}
+        </div>
 
           {/* Task Metadata */}
           <Card className="bg-white border border-gray-200 rounded-xl shadow-sm">

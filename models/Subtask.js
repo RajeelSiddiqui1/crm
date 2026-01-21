@@ -112,12 +112,32 @@ const subtaskSchema = new mongoose.Schema(
       default: "medium",
     },
 
-    attachments: [
+    fileAttachments: [
       {
-        filename: String,
-        originalName: String,
-        url: String,
-        uploadedAt: { type: Date, default: Date.now },
+        url: {
+          type: String,
+          required: true,
+        },
+        name: {
+          type: String,
+          required: true,
+        },
+        type: {
+          type: String,
+          required: true,
+        },
+        size: {
+          type: Number,
+          required: true,
+        },
+        publicId: {
+          type: String,
+          required: true,
+        },
+        createdAt: {
+          type: Date,
+          default: Date.now,
+        },
       },
     ],
     teamLeadFeedback: String,

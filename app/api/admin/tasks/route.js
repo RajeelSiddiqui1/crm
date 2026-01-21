@@ -279,6 +279,7 @@ export async function GET() {
         populate: { path: "departments", select: "name description" },
       })
       .populate({ path: "submittedBy", select: "name email" })
+      .select('+fileAttachments +audioFiles +managerResponses')
       .sort({ createdAt: -1 })
       .lean();
 

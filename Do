@@ -1,0 +1,1182 @@
+TabsContent` must be used within `Tabs`
+
+components/ui/tabs.jsx (33:3) @ _c4
+
+
+  31 |
+  32 | const TabsContent = React.forwardRef(({ className, ...props }, ref) => (
+> 33 |   <TabsPrimitive.Content
+     |   ^
+  34 |     ref={ref}
+  35 |     className={cn(
+  36 |       "mt-2 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+Call Stack
+32
+
+Show 28 ignore-listed frame(s)
+_c4
+components/ui/tabs.jsx (3
+
+"use client";
+import React, { useState, useEffect, useRef } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { Progress } from "@/components/ui/progress";
+import {
+  X,
+  Download,
+  Eye,
+  FileText,
+  AudioLines,
+  Calendar,
+  Clock,
+  User,
+  Building,
+  CheckCircle,
+  AlertCircle,
+  CalendarDays,
+  MessageSquare,
+  Send,
+  Clock4,
+  CheckCheck,
+  XCircle,
+  TrendingUp,
+  FileUp,
+  Image,
+  Video,
+  Maximize2,
+  Minimize2,
+  ZoomIn,
+  ZoomOut,
+  FileSpreadsheet,
+  FilePlus,
+  RotateCw,
+  Search,
+  ChevronLeft,
+  ChevronRight,
+  Play,
+  Pause,
+  Volume2,
+  VolumeX,
+  FileAudio,
+  Link,
+  ExternalLink,
+} from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+export default function ViewTaskModal({ isOpen, onClose, task }) {
+  const [activeTab, setActiveTab] = useState("details");
+  const [feedback, setFeedback] = useState("");
+  const [previewFile, setPreviewFile] = useState(null);
+  const [zoom, setZoom] = useState(1);
+  const [rotation, setRotation] = useState(0);
+  const [videoPlaying, setVideoPlaying] = useState(false);
+  const [videoMuted, setVideoMuted] = useState(false);
+  const [currentFileIndex, setCurrentFileIndex] = useState(0);
+  const videoRef = useRef(null);
+  const dialogContentRef = useRef(null);
+
+  // Reset state when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      setPreviewFile(null);
+      setZoom(1);
+      setRotation(0);
+      setVideoPlaying(false);
+      setVideoMuted(false);
+      setCurrentFileIndex(0);
+      setActiveTab("details");
+      setFeedback("");
+    }
+  }, [isOpen]);
+
+  // Handle video play/pause
+  useEffect(() => {
+    if (videoRef.current) {
+      if (videoPlaying) {
+        videoRef.current.play().catch(console.error);
+      } else {
+        videoRef.current.pause();
+      }
+    }
+  }, [videoPlaying, previewFile]);
+
+  // Handle escape key for preview
+  useEffect(() => {
+    const handleEscape = (e) => {
+      if (e.key === "Escape" && previewFile) {
+        setPreviewFile(null);
+      }
+    };
+    document.addEventListener("keydown", handleEscape);
+    return () => document.removeEventListener("keydown", handleEscape);
+  }, [previewFile]);
+
+  const getPriorityColor = (priority) => {
+    switch (priority) {
+      case "high":
+        return "bg-gradient-to-r from-rose-500 to-pink-600 text-white";
+      case "medium":
+        return "bg-gradient-to-r from-amber-500 to-orange-500 text-white";
+      case "low":
+        return "bg-gradient-to-r from-emerald-500 to-teal-600 text-white";
+      default:
+        return "bg-gradient-to-r from-gray-500 to-slate-600 text-white";
+    }
+  };
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case "completed":
+        return "bg-gradient-to-r from-green-500 to-emerald-600 text-white";
+      case "in-progress":
+        return "bg-gradient-to-r from-blue-500 to-indigo-600 text-white";
+      case "overdue":
+        return "bg-gradient-to-r from-red-500 to-rose-600 text-white";
+      case "pending":
+        return "bg-gradient-to-r from-amber-500 to-orange-500 text-white";
+      default:
+        return "bg-gradient-to-r from-gray-500 to-slate-600 text-white";
+    }
+  };
+
+  const getManagerStatusColor = (status) => {
+    switch (status) {
+      case "completed":
+        return "bg-gradient-to-r from-green-500 to-emerald-600 text-white";
+      case "in-progress":
+        return "bg-gradient-to-r from-blue-500 to-indigo-600 text-white";
+      case "rejected":
+        return "bg-gradient-to-r from-red-500 to-rose-600 text-white";
+      case "pending":
+        return "bg-gradient-to-r from-amber-500 to-orange-500 text-white";
+      default:
+        return "bg-gradient-to-r from-gray-500 to-slate-600 text-white";
+    }
+  };
+
+  const getStatusIcon = (status) => {
+    switch (status) {
+      case "completed":
+        return <CheckCheck className="w-4 h-4" />;
+      case "in-progress":
+        return <TrendingUp className="w-4 h-4" />;
+      case "rejected":
+        return <XCircle className="w-4 h-4" />;
+      case "pending":
+        return <Clock4 className="w-4 h-4" />;
+      default:
+        return <Clock4 className="w-4 h-4" />;
+    }
+  };
+
+  const getFileIcon = (fileType) => {
+    if (!fileType) return <FilePlus className="w-6 h-6 text-gray-500" />;
+    if (fileType.includes('image')) return <Image className="w-6 h-6 text-blue-500" />;
+    if (fileType.includes('video')) return <Video className="w-6 h-6 text-purple-500" />;
+    if (fileType.includes('audio')) return <FileAudio className="w-6 h-6 text-green-500" />;
+    if (fileType.includes('pdf')) return <FileText className="w-6 h-6 text-red-500" />;
+    if (fileType.includes('spreadsheet') || fileType.includes('excel')) return <FileSpreadsheet className="w-6 h-6 text-green-500" />;
+    if (fileType.includes('word') || fileType.includes('document')) return <FileText className="w-6 h-6 text-blue-500" />;
+    return <FilePlus className="w-6 h-6 text-gray-500" />;
+  };
+
+  const getFileDisplayName = (file) => {
+    if (!file) return "Unnamed File";
+    if (file.name) return file.name;
+    if (file.originalName) return file.originalName;
+    if (file.fileName) return file.fileName;
+    return "Unnamed File";
+  };
+
+  const getManagerDisplayName = (manager) => {
+    if (!manager) return "Unknown";
+    const fullName = `${manager.firstName || ""} ${manager.lastName || ""}`.trim();
+    return fullName || manager.name || manager.email || "Unknown Manager";
+  };
+
+  const getManagerDepartments = (manager) => {
+    if (!manager) return "No Department";
+    if (manager.department) return manager.department;
+    if (manager.departments && Array.isArray(manager.departments)) {
+      const departmentNames = manager.departments
+        .map((dept) => dept?.name)
+        .filter((name) => name);
+      return departmentNames.length > 0 ? departmentNames.join(", ") : "No Department";
+    }
+    return "No Department";
+  };
+
+  const formatFileSize = (bytes) => {
+    if (!bytes || bytes === 0) return "0 Bytes";
+    const k = 1024;
+    const sizes = ["Bytes", "KB", "MB", "GB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return "Not set";
+    try {
+      return new Date(dateString).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } catch {
+      return "Invalid date";
+    }
+  };
+
+  const formatTimeAgo = (dateString) => {
+    if (!dateString) return "";
+    try {
+      const date = new Date(dateString);
+      const now = new Date();
+      const diffInSeconds = Math.floor((now - date) / 1000);
+
+      if (diffInSeconds < 60) return "Just now";
+      if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} minutes ago`;
+      if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} hours ago`;
+      return `${Math.floor(diffInSeconds / 86400)} days ago`;
+    } catch {
+      return "";
+    }
+  };
+
+  // Calculate completion statistics
+  const getCompletionStats = () => {
+    if (!task?.managerResponses || task.managerResponses.length === 0) {
+      return { completed: 0, total: 0, percentage: 0 };
+    }
+
+    const total = task.managerResponses.length;
+    const completed = task.managerResponses.filter(
+      (response) => response.status === "completed"
+    ).length;
+    const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+    return { completed, total, percentage };
+  };
+
+  const stats = getCompletionStats();
+
+  // Get all files for preview
+  const getAllFiles = () => {
+    const files = [];
+    
+    // Add original files
+    if (task?.fileAttachments && Array.isArray(task.fileAttachments)) {
+      files.push(...task.fileAttachments.map(file => ({ ...file, source: 'original' })));
+    }
+    
+    // Add audio files
+    if (task?.audioFiles && Array.isArray(task.audioFiles)) {
+      files.push(...task.audioFiles.map(file => ({ ...file, source: 'audio', type: 'audio' })));
+    }
+    
+    // Add submitted files from managers
+    if (task?.managerResponses && Array.isArray(task.managerResponses)) {
+      task.managerResponses.forEach(response => {
+        if (response.submittedFiles && Array.isArray(response.submittedFiles)) {
+          files.push(...response.submittedFiles.map(file => ({ 
+            ...file, 
+            source: 'manager',
+            managerName: getManagerDisplayName(task.managers?.find(m => m._id === response.managerId))
+          })));
+        }
+      });
+    }
+    
+    return files;
+  };
+
+  const allFiles = getAllFiles();
+
+  const handlePreview = (file, index) => {
+    setPreviewFile(file);
+    setCurrentFileIndex(index);
+    setZoom(1);
+    setRotation(0);
+    setVideoPlaying(false);
+    setVideoMuted(false);
+  };
+
+  const handleDownload = (url, filename) => {
+    if (!url) return;
+    
+    try {
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename || 'download';
+      link.target = '_blank';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error('Download error:', error);
+      window.open(url, '_blank');
+    }
+  };
+
+  const navigateFile = (direction) => {
+    if (!allFiles.length) return;
+    
+    let newIndex = currentFileIndex + direction;
+    if (newIndex < 0) newIndex = allFiles.length - 1;
+    if (newIndex >= allFiles.length) newIndex = 0;
+    
+    setCurrentFileIndex(newIndex);
+    setPreviewFile(allFiles[newIndex]);
+    setZoom(1);
+    setRotation(0);
+    setVideoPlaying(false);
+  };
+
+  const rotateImage = () => {
+    setRotation((prev) => (prev + 90) % 360);
+  };
+
+  const resetZoom = () => {
+    setZoom(1);
+    setRotation(0);
+  };
+
+  // Handle feedback submission
+  const handleSubmitFeedback = () => {
+    if (!feedback.trim()) return;
+    
+    console.log('Submitting feedback:', feedback);
+    // Add your feedback submission logic here
+    setFeedback("");
+  };
+
+  if (!task) return null;
+
+  return (
+    <>
+      {/* Main Modal */}
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent 
+          ref={dialogContentRef}
+          className="max-w-6xl max-h-[90vh] overflow-hidden p-0 bg-white"
+        >
+          <DialogHeader className="sticky top-0 z-10 bg-white border-b p-6 shadow-sm">
+            <div className="flex justify-between items-center">
+              <div className="flex-1 min-w-0">
+                <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent truncate">
+                  {task.title || "Task Details"}
+                </DialogTitle>
+                {task.clientName && (
+                  <p className="text-sm text-gray-600 mt-1 truncate">
+                    Client: <span className="font-medium">{task.clientName}</span>
+                  </p>
+                )}
+              </div>
+              <Button
+                onClick={onClose}
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 rounded-full hover:bg-gray-100 flex-shrink-0 ml-2"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          </DialogHeader>
+
+          {/* Tabs */}
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <div className="border-b bg-gray-50/50 sticky top-[73px] z-10">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <TabsList className="w-full grid grid-cols-3 bg-transparent p-0 h-auto">
+                <TabsTrigger 
+                  value="details" 
+                  className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-none py-4 px-6 border-r data-[state=active]:border-b-2 data-[state=active]:border-b-blue-500"
+                >
+                  Task Details
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="responses" 
+                  className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-none py-4 px-6 border-r data-[state=active]:border-b-2 data-[state=active]:border-b-blue-500"
+                >
+                  Manager Responses ({task.managerResponses?.length || 0})
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="files" 
+                  className="data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-none py-4 px-6 data-[state=active]:border-b-2 data-[state=active]:border-b-blue-500"
+                >
+                  Files & Media ({allFiles.length})
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+          </Tabs>
+          {/* Content - Scrollable Area */}
+          <div className="overflow-y-auto flex-1 p-6">
+            <TabsContent value="details" className="mt-0 space-y-6">
+              {/* Task Header with Badges */}
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <div className="flex-1 min-w-0">
+                  <h2 className="text-2xl font-bold text-gray-900 break-words">
+                    {task.title}
+                  </h2>
+                </div>
+                <div className="flex flex-wrap gap-2 sm:flex-nowrap">
+                  <Badge className={`${getPriorityColor(task.priority)} px-3 py-1 font-medium whitespace-nowrap`}>
+                    {task.priority || "normal"} Priority
+                  </Badge>
+                  <Badge className={`${getStatusColor(task.status)} px-3 py-1 font-medium flex items-center gap-1 whitespace-nowrap`}>
+                    {getStatusIcon(task.status)}
+                    {(task.status || "pending").replace("-", " ")}
+                  </Badge>
+                  {task.isLate && (
+                    <Badge className="bg-gradient-to-r from-red-500 to-rose-600 text-white px-3 py-1 font-medium whitespace-nowrap">
+                      <AlertCircle className="w-3 h-3 mr-1" />
+                      Late
+                    </Badge>
+                  )}
+                </div>
+              </div>
+
+              <Separator className="my-4" />
+
+              {/* Progress Bar */}
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <Label className="font-semibold text-gray-700">Task Progress</Label>
+                  <span className="text-sm text-gray-600 font-medium">
+                    {stats.completed} of {stats.total} managers completed ({stats.percentage}%)
+                  </span>
+                </div>
+                <Progress value={stats.percentage} className="h-2" />
+              </div>
+
+              {/* Description */}
+              {task.description && (
+                <div className="space-y-2">
+                  <Label className="font-semibold flex items-center gap-2 text-gray-700">
+                    <FileText className="w-4 h-4" />
+                    Description
+                  </Label>
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg border border-blue-100">
+                    <p className="text-gray-700 whitespace-pre-wrap break-words">
+                      {task.description}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Timeline Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-200 hover:shadow-md transition-shadow">
+                  <CardHeader className="p-4 pb-2">
+                    <CardTitle className="text-sm font-medium flex items-center gap-2 text-green-800">
+                      <CalendarDays className="w-4 h-4" />
+                      Created
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-4 pt-0">
+                    <p className="text-lg font-semibold text-green-900 break-words">
+                      {formatDate(task.createdAt)}
+                    </p>
+                    <p className="text-xs text-green-700 mt-1">
+                      {formatTimeAgo(task.createdAt)}
+                    </p>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-gradient-to-br from-red-50 to-rose-50 border-red-200 hover:shadow-md transition-shadow">
+                  <CardHeader className="p-4 pb-2">
+                    <CardTitle className="text-sm font-medium flex items-center gap-2 text-red-800">
+                      <Clock className="w-4 h-4" />
+                      Due Date
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-4 pt-0">
+                    <p className="text-lg font-semibold text-red-900 break-words">
+                      {task.endDate ? formatDate(task.endDate) : "No due date"}
+                    </p>
+                    {task.endDate && (
+                      <p className="text-xs text-red-700 mt-1">
+                        {formatTimeAgo(task.endDate)}
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {task.completedAt && (
+                  <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200 hover:shadow-md transition-shadow">
+                    <CardHeader className="p-4 pb-2">
+                      <CardTitle className="text-sm font-medium flex items-center gap-2 text-blue-800">
+                        <CheckCircle className="w-4 h-4" />
+                        Completed
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-4 pt-0">
+                      <p className="text-lg font-semibold text-blue-900 break-words">
+                        {formatDate(task.completedAt)}
+                      </p>
+                      <p className="text-xs text-blue-700 mt-1">
+                        {formatTimeAgo(task.completedAt)}
+                      </p>
+                    </CardContent>
+                  </Card>
+                )}
+
+                <Card className="bg-gradient-to-br from-purple-50 to-violet-50 border-purple-200 hover:shadow-md transition-shadow">
+                  <CardHeader className="p-4 pb-2">
+                    <CardTitle className="text-sm font-medium flex items-center gap-2 text-purple-800">
+                      <User className="w-4 h-4" />
+                      Assigned To
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-4 pt-0">
+                    <p className="text-lg font-semibold text-purple-900">
+                      {task.managers?.length || 0} Managers
+                    </p>
+                    <p className="text-xs text-purple-700 mt-1">
+                      {stats.completed} completed
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Assigned Managers */}
+              <div className="space-y-4">
+                <Label className="font-semibold flex items-center gap-2 text-gray-700">
+                  <User className="w-4 h-4" />
+                  Assigned Managers ({task.managers?.length || 0})
+                </Label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {task.managers?.length > 0 ? (
+                    task.managers.map((manager) => {
+                      const response = task.managerResponses?.find(
+                        (r) => r.managerId?._id === manager._id || r.managerId === manager._id
+                      );
+                      
+                      return (
+                        <Card key={manager._id} className="hover:shadow-md transition-shadow border">
+                          <CardContent className="p-4">
+                            <div className="flex items-center gap-3">
+                              <Avatar className="w-12 h-12 border-2 border-white shadow">
+                                {manager.profileImage ? (
+                                  <AvatarImage src={manager.profileImage} alt={getManagerDisplayName(manager)} />
+                                ) : null}
+                                <AvatarFallback className="bg-gradient-to-br from-purple-500 to-pink-600 text-white font-semibold">
+                                  {getManagerDisplayName(manager)
+                                    .split(" ")
+                                    .map((n) => n[0])
+                                    .join("")
+                                    .toUpperCase()}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex justify-between items-start">
+                                  <p className="font-semibold truncate text-gray-900">
+                                    {getManagerDisplayName(manager)}
+                                  </p>
+                                  {response && (
+                                    <Badge className={`${getManagerStatusColor(response.status)} capitalize text-xs px-2 py-1 whitespace-nowrap`}>
+                                      {response.status.replace("-", " ")}
+                                    </Badge>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-1 text-sm text-gray-600 mt-1">
+                                  <Building className="w-3 h-3 flex-shrink-0" />
+                                  <span className="truncate">
+                                    {getManagerDepartments(manager)}
+                                  </span>
+                                </div>
+                                <p className="text-xs text-gray-500 truncate mt-1">
+                                  {manager.email}
+                                </p>
+                                {response?.submittedAt && (
+                                  <p className="text-xs text-gray-400 mt-1">
+                                    Submitted: {formatDate(response.submittedAt)}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })
+                  ) : (
+                    <div className="col-span-2 text-center py-8">
+                      <User className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                      <p className="text-gray-600">No managers assigned to this task</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="responses" className="mt-0 space-y-6">
+              <div className="space-y-6">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                  <h3 className="text-lg font-semibold text-gray-900">Manager Responses</h3>
+                  <div className="flex flex-wrap gap-2">
+                    <Badge className="bg-gradient-to-r from-green-500 to-emerald-600 text-white">
+                      {stats.completed} Completed
+                    </Badge>
+                    <Badge className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white">
+                      {task.managerResponses?.filter(r => r.status === "in-progress").length || 0} In Progress
+                    </Badge>
+                    <Badge className="bg-gradient-to-r from-gray-500 to-slate-600 text-white">
+                      {task.managerResponses?.filter(r => r.status === "pending").length || 0} Pending
+                    </Badge>
+                  </div>
+                </div>
+
+                {task.managerResponses?.length > 0 ? (
+                  <div className="space-y-4">
+                    {task.managerResponses.map((response, index) => {
+                      const manager = task.managers?.find(
+                        m => m._id === response.managerId || m._id === response.managerId?._id
+                      );
+                      
+                      return (
+                        <Card key={index} className="border hover:shadow-md transition-shadow">
+                          <CardContent className="p-6">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+                              <div className="flex items-center gap-3">
+                                <Avatar className="w-10 h-10">
+                                  {manager?.profileImage ? (
+                                    <AvatarImage src={manager.profileImage} alt={getManagerDisplayName(manager)} />
+                                  ) : null}
+                                  <AvatarFallback className="bg-gray-200 text-gray-700">
+                                    {getManagerDisplayName(manager)
+                                      .split(" ")
+                                      .map(n => n[0])
+                                      .join("")
+                                      .toUpperCase()}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div>
+                                  <p className="font-semibold text-gray-900">{getManagerDisplayName(manager)}</p>
+                                  <p className="text-sm text-gray-600">{manager?.email}</p>
+                                </div>
+                              </div>
+                              <Badge className={`${getManagerStatusColor(response.status)} capitalize w-fit`}>
+                                {getStatusIcon(response.status)}
+                                {response.status.replace("-", " ")}
+                              </Badge>
+                            </div>
+                            
+                            {response.feedback && (
+                              <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                                <Label className="font-medium text-gray-700 mb-2 block">Feedback</Label>
+                                <p className="text-gray-700">{response.feedback}</p>
+                              </div>
+                            )}
+                            
+                            {response.submittedAt && (
+                              <div className="mt-4 flex items-center justify-between text-sm text-gray-600">
+                                <span>Submitted: {formatDate(response.submittedAt)}</span>
+                                {response.submittedFiles?.length > 0 && (
+                                  <Badge variant="outline" className="gap-1">
+                                    <FileText className="w-3 h-3" />
+                                    {response.submittedFiles.length} files
+                                  </Badge>
+                                )}
+                              </div>
+                            )}
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <MessageSquare className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                    <h4 className="text-lg font-semibold text-gray-900 mb-2">No Responses Yet</h4>
+                    <p className="text-gray-600">Managers haven't submitted any responses for this task.</p>
+                  </div>
+                )}
+
+                {/* Feedback Section */}
+                <Card className="border">
+                  <CardHeader>
+                    <CardTitle className="text-lg font-semibold flex items-center gap-2">
+                      <MessageSquare className="w-5 h-5" />
+                      Add Feedback
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <Textarea
+                        placeholder="Enter your feedback or comments about this task..."
+                        value={feedback}
+                        onChange={(e) => setFeedback(e.target.value)}
+                        className="min-h-[100px]"
+                      />
+                      <div className="flex justify-end">
+                        <Button
+                          onClick={handleSubmitFeedback}
+                          disabled={!feedback.trim()}
+                          className="bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:opacity-90"
+                        >
+                          <Send className="w-4 h-4 mr-2" />
+                          Submit Feedback
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="files" className="mt-0">
+              <div className="space-y-6">
+                {/* File Gallery */}
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {allFiles.length > 0 ? (
+                    allFiles.map((file, index) => {
+                      const displayName = getFileDisplayName(file);
+                      const isImage = file.type?.includes('image');
+                      const isVideo = file.type?.includes('video');
+                      const isAudio = file.type?.includes('audio');
+                      
+                      return (
+                        <div
+                          key={index}
+                          className="group relative overflow-hidden rounded-lg border border-gray-200 bg-white hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
+                        >
+                          {/* File Preview */}
+                          <div 
+                            className="aspect-square overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100 cursor-pointer relative"
+                            onClick={() => handlePreview(file, index)}
+                          >
+                            {isImage && file.url ? (
+                              <img
+                                src={file.url}
+                                alt={displayName}
+                                className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                loading="lazy"
+                              />
+                            ) : isVideo ? (
+                              <div className="relative w-full h-full flex items-center justify-center">
+                                <div className="absolute inset-0 bg-gradient-to-br from-purple-50 to-violet-100 flex items-center justify-center">
+                                  <Video className="w-12 h-12 text-purple-500" />
+                                </div>
+                                <div className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
+                                  Video
+                                </div>
+                              </div>
+                            ) : isAudio ? (
+                              <div className="relative w-full h-full flex items-center justify-center">
+                                <div className="absolute inset-0 bg-gradient-to-br from-green-50 to-emerald-100 flex items-center justify-center">
+                                  <FileAudio className="w-12 h-12 text-green-500" />
+                                </div>
+                                <div className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
+                                  Audio
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="w-full h-full flex flex-col items-center justify-center p-4">
+                                <div className="p-3 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-lg mb-3">
+                                  {getFileIcon(file.type)}
+                                </div>
+                                <div className="text-xs text-gray-500 text-center px-2">
+                                  {file.type?.split('/')[1]?.toUpperCase() || 'FILE'}
+                                </div>
+                              </div>
+                            )}
+                            
+                            {/* Overlay on hover */}
+                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100">
+                              <Eye className="w-8 h-8 text-white" />
+                            </div>
+                          </div>
+                          
+                          {/* File Info */}
+                          <div className="p-3 border-t border-gray-100">
+                            <div className="flex items-center justify-between mb-1">
+                              <p className="text-xs font-medium text-gray-900 truncate flex-1">
+                                {displayName}
+                              </p>
+                              <Badge 
+                                variant="outline" 
+                                className="text-[10px] px-1.5 py-0.5 ml-1 flex-shrink-0"
+                              >
+                                {file.source || 'file'}
+                              </Badge>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs text-gray-500">
+                                {formatFileSize(file.size)}
+                              </span>
+                              <div className="flex items-center gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-6 w-6 hover:bg-gray-100"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handlePreview(file, index);
+                                  }}
+                                >
+                                  <Eye className="w-3 h-3" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-6 w-6 hover:bg-gray-100"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDownload(file.url, displayName);
+                                  }}
+                                >
+                                  <Download className="w-3 h-3" />
+                                </Button>
+                              </div>
+                            </div>
+                            {file.source === 'manager' && file.managerName && (
+                              <p className="text-xs text-gray-400 truncate mt-1">
+                                By: {file.managerName}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="col-span-full text-center py-12">
+                      <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full mb-4">
+                        <FileUp className="w-10 h-10 text-gray-400" />
+                      </div>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2">No Files Available</h3>
+                      <p className="text-gray-600 max-w-md mx-auto">
+                        There are no files attached to this task. Files from managers will appear here once submitted.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </TabsContent>
+          </div>
+
+          {/* Footer Actions */}
+          <div className="sticky bottom-0 bg-white border-t p-6 shadow-lg mt-auto">
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+              <div className="text-sm text-gray-600">
+                <span className="font-medium">Last updated:</span> {formatDate(task.updatedAt || task.createdAt)}
+              </div>
+              <div className="flex gap-3 w-full sm:w-auto">
+                <Button
+                  variant="outline"
+                  onClick={onClose}
+                  className="flex-1 sm:flex-none border-gray-300 hover:bg-gray-50"
+                >
+                  Close
+                </Button>
+                <Button 
+                  className="flex-1 sm:flex-none bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:opacity-90"
+                  onClick={() => {
+                    // Export report logic here
+                    console.log('Exporting report for task:', task._id);
+                  }}
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Export Report
+                </Button>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Fullscreen Preview Modal with Zoom */}
+      {previewFile && (
+        <div className="fixed inset-0 bg-black/95 z-[100] flex items-center justify-center p-4">
+          <div className="relative w-full max-w-6xl max-h-[90vh] flex flex-col bg-black/90 backdrop-blur-sm rounded-xl overflow-hidden">
+            {/* Preview Header */}
+            <div className="flex items-center justify-between p-4 bg-black/50 border-b border-gray-800">
+              <div className="flex items-center gap-3 text-white min-w-0">
+                <div className="p-2 bg-black/50 rounded-lg">
+                  {getFileIcon(previewFile.type)}
+                </div>
+                <div className="min-w-0">
+                  <h3 className="font-bold text-lg truncate max-w-md">
+                    {getFileDisplayName(previewFile)}
+                  </h3>
+                  {previewFile.source === 'manager' && previewFile.managerName && (
+                    <p className="text-sm text-gray-300 truncate">Submitted by {previewFile.managerName}</p>
+                  )}
+                  <p className="text-xs text-gray-400">
+                    {formatFileSize(previewFile.size)} • {previewFile.type}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {/* File Navigation */}
+                {allFiles.length > 1 && (
+                  <>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => navigateFile(-1)}
+                      className="text-white hover:bg-white/20"
+                    >
+                      <ChevronLeft className="w-5 h-5" />
+                    </Button>
+                    <span className="text-white text-sm font-medium min-w-[60px] text-center">
+                      {currentFileIndex + 1} / {allFiles.length}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => navigateFile(1)}
+                      className="text-white hover:bg-white/20"
+                    >
+                      <ChevronRight className="w-5 h-5" />
+                    </Button>
+                    <Separator orientation="vertical" className="h-6 mx-2 bg-gray-700" />
+                  </>
+                )}
+                
+                {/* Zoom Controls */}
+                <div className="hidden sm:flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setZoom(prev => Math.max(prev - 0.2, 0.2))}
+                    className="text-white hover:bg-white/20"
+                    title="Zoom Out"
+                  >
+                    <ZoomOut className="w-5 h-5" />
+                  </Button>
+                  <span className="text-white text-sm min-w-[60px] text-center">
+                    {Math.round(zoom * 100)}%
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setZoom(prev => Math.min(prev + 0.2, 3))}
+                    className="text-white hover:bg-white/20"
+                    title="Zoom In"
+                  >
+                    <ZoomIn className="w-5 h-5" />
+                  </Button>
+                </div>
+                
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={resetZoom}
+                  className="text-white hover:bg-white/20 hidden sm:flex"
+                  title="Reset View"
+                >
+                  <Search className="w-5 h-5" />
+                </Button>
+                
+                {/* Rotate for Images */}
+                {previewFile.type?.includes('image') && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={rotateImage}
+                    className="text-white hover:bg-white/20"
+                    title="Rotate"
+                  >
+                    <RotateCw className="w-5 h-5" />
+                  </Button>
+                )}
+                
+                <Separator orientation="vertical" className="h-6 mx-2 bg-gray-700" />
+                
+                {/* Video Controls */}
+                {previewFile.type?.includes('video') && (
+                  <>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setVideoPlaying(!videoPlaying)}
+                      className="text-white hover:bg-white/20"
+                    >
+                      {videoPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setVideoMuted(!videoMuted)}
+                      className="text-white hover:bg-white/20"
+                    >
+                      {videoMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
+                    </Button>
+                  </>
+                )}
+                
+                {/* Download Button */}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => handleDownload(previewFile.url, getFileDisplayName(previewFile))}
+                  className="text-white hover:bg-white/20"
+                  title="Download"
+                >
+                  <Download className="w-5 h-5" />
+                </Button>
+                
+                <Separator orientation="vertical" className="h-6 mx-2 bg-gray-700" />
+                
+                {/* Close Button */}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setPreviewFile(null)}
+                  className="text-white hover:bg-white/20 hover:text-red-400"
+                >
+                  <X className="w-5 h-5" />
+                </Button>
+              </div>
+            </div>
+            
+            {/* Preview Content */}
+            <div className="flex-1 bg-black flex items-center justify-center p-4 overflow-hidden relative">
+              {previewFile.type?.includes('image') && previewFile.url ? (
+                <div className="relative w-full h-full flex items-center justify-center">
+                  <img
+                    src={previewFile.url}
+                    alt={getFileDisplayName(previewFile)}
+                    className="max-w-full max-h-full object-contain transition-all duration-200"
+                    style={{
+                      transform: `scale(${zoom}) rotate(${rotation}deg)`,
+                      cursor: zoom > 1 ? 'grab' : 'default'
+                    }}
+                    draggable={zoom > 1}
+                  />
+                </div>
+              ) : previewFile.type?.includes('video') && previewFile.url ? (
+                <div className="relative w-full max-w-4xl">
+                  <video
+                    ref={videoRef}
+                    src={previewFile.url}
+                    controls
+                    autoPlay
+                    muted={videoMuted}
+                    className="w-full max-h-[70vh] rounded-lg"
+                    onPlay={() => setVideoPlaying(true)}
+                    onPause={() => setVideoPlaying(false)}
+                  />
+                </div>
+              ) : previewFile.type?.includes('pdf') && previewFile.url ? (
+                <div className="w-full h-full">
+                  <iframe
+                    src={`${previewFile.url}#view=fitH`}
+                    className="w-full h-full rounded-lg"
+                    title={getFileDisplayName(previewFile)}
+                  />
+                </div>
+              ) : previewFile.type?.includes('audio') && previewFile.url ? (
+                <div className="w-full max-w-md bg-gradient-to-br from-gray-900 to-black p-8 rounded-2xl">
+                  <div className="flex flex-col items-center text-center">
+                    <div className="p-6 bg-gradient-to-br from-green-900 to-emerald-900 rounded-full mb-6">
+                      <FileAudio className="w-16 h-16 text-green-400" />
+                    </div>
+                    <h4 className="text-xl font-semibold text-white mb-2">
+                      {getFileDisplayName(previewFile)}
+                    </h4>
+                    <p className="text-gray-400 mb-6">
+                      {formatFileSize(previewFile.size)}
+                    </p>
+                    <audio
+                      src={previewFile.url}
+                      controls
+                      className="w-full"
+                    />
+                    <Button
+                      onClick={() => handleDownload(previewFile.url, getFileDisplayName(previewFile))}
+                      className="mt-6 bg-gradient-to-r from-green-600 to-emerald-600 text-white"
+                    >
+                      <Download className="w-4 h-4 mr-2" />
+                      Download Audio
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center p-12">
+                  <div className="inline-flex items-center justify-center w-32 h-32 bg-gradient-to-br from-gray-800 to-gray-900 rounded-full mb-6">
+                    {getFileIcon(previewFile.type)}
+                  </div>
+                  <h4 className="text-xl font-semibold text-white mb-4">
+                    {getFileDisplayName(previewFile)}
+                  </h4>
+                  <p className="text-gray-400 mb-6 max-w-md mx-auto">
+                    Preview not available for this file type. Please download to view.
+                  </p>
+                  {previewFile.url ? (
+                    <div className="flex gap-3 justify-center">
+                      <Button
+                        onClick={() => handleDownload(previewFile.url, getFileDisplayName(previewFile))}
+                        className="bg-gradient-to-r from-blue-600 to-purple-600 text-white"
+                      >
+                        <Download className="w-4 h-4 mr-2" />
+                        Download File
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => window.open(previewFile.url, '_blank')}
+                        className="border-gray-600 text-white hover:bg-gray-800"
+                      >
+                        <ExternalLink className="w-4 h-4 mr-2" />
+                        Open in New Tab
+                      </Button>
+                    </div>
+                  ) : (
+                    <p className="text-red-400">File URL not available</p>
+                  )}
+                </div>
+              )}
+              
+              {/* Mobile Zoom Controls */}
+              <div className="sm:hidden absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black/80 text-white px-4 py-2 rounded-full flex items-center gap-3">
+                <ZoomOut className="w-4 h-4" />
+                <input
+                  type="range"
+                  min="20"
+                  max="300"
+                  value={zoom * 100}
+                  onChange={(e) => setZoom(parseInt(e.target.value) / 100)}
+                  className="w-24 accent-white"
+                />
+                <ZoomIn className="w-4 h-4" />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+absContent` must be used within `Tabs`
+
+components/ui/tabs.jsx (33:3) @ _c4
+
+
+  31 |
+  32 | const TabsContent = React.forwardRef(({ className, ...props }, ref) => (
+> 33 |   <TabsPrimitive.Content
+     |   ^
+  34 |     ref={ref}
+  35 |     className={cn(
+  36 |       "mt-2 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+Call Stack
+32
+
+Show 28 ignore-listed frame(s)
+_c4

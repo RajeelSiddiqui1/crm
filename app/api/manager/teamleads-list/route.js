@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import dbConnect from "@/lib/db";
 import TeamLead from "@/models/TeamLead";
+import Department from "@/models/Department";
 
 export async function GET(req) {
   try {

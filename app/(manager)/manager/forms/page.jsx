@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -46,8 +46,42 @@ import {
     CalendarDays,
     Type,
     TextQuote,
-    GripVertical,
-    UserCircle
+    UserCircle,
+    File,
+    Trash2,
+    Paperclip,
+    CheckCircle,
+    FileImage,
+    FileVideo,
+    Music,
+    FileSpreadsheet,
+    FileType,
+    FileArchive,
+    FileCode,
+    Download,
+    CloudUpload,
+    FolderPlus,
+    FileSearch,
+    FolderArchive,
+    HardDrive,
+    FolderTree,
+    FileCog,
+    FileDigit,
+    FileSignature,
+    Shield,
+    LockKeyhole,
+    EyeIcon,
+    ArrowLeft,
+    Printer,
+    Share2,
+    ArrowRight,
+    Rocket,
+    FileUp,
+    CalendarFold,
+    Check,
+    ChevronRight,
+    ChevronLeft,
+    AlertCircle
 } from "lucide-react";
 import axios from "axios";
 
@@ -60,19 +94,40 @@ export default function ManagerFormsPage() {
     const [fetching, setFetching] = useState(true);
     const [showForm, setShowForm] = useState(false);
     const [selectedForm, setSelectedForm] = useState(null);
+    const [selectedFiles, setSelectedFiles] = useState({}); 
     const [searchTerm, setSearchTerm] = useState("");
+    const [activeTab, setActiveTab] = useState("form");
 
+    // Main form data
     const [formData, setFormData] = useState({
-        clinetName: "", // Added clinetName field
+        clientName: "",
         assignmentType: "single",
         assignedTo: "",
         multipleTeamLeadAssigned: [],
-        teamLeadFeedback: ""
+        teamLeadFeedback: "",
+        priority: "medium",
+        dueDate: "",
+        notes: ""
     });
 
+    // Dynamic form fields data
     const [dynamicFormData, setDynamicFormData] = useState({});
+    
+    // Attachments section
+    const [attachments, setAttachments] = useState({
+        files: [],
+        folders: [],
+        notes: "",
+        isEncrypted: false,
+        shareWithClient: false,
+        printCopy: false
+    });
+
     const [showPasswords, setShowPasswords] = useState({});
-    const [dragOver, setDragOver] = useState({});
+    const [dragOver, setDragOver] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState({});
+    const [isDragging, setIsDragging] = useState(false);
+    const [selectedAttachmentType, setSelectedAttachmentType] = useState("all");
 
     useEffect(() => {
         if (status === "loading") return;
@@ -116,13 +171,13 @@ export default function ManagerFormsPage() {
     const handleFormSelect = (form) => {
         setSelectedForm(form);
         setShowForm(true);
-        // Initialize dynamic form data with default values
+        setActiveTab("form");
+        
+        // Initialize dynamic form data
         const initialData = {};
-        form.fields.forEach(field => {
+        form.fields?.forEach(field => {
             switch (field.type) {
                 case 'checkbox':
-                    initialData[field.name] = field.checked || false;
-                    break;
                 case 'toggle':
                     initialData[field.name] = field.checked || false;
                     break;
@@ -131,9 +186,6 @@ export default function ManagerFormsPage() {
                     break;
                 case 'rating':
                     initialData[field.name] = field.defaultRating || 0;
-                    break;
-                case 'file':
-                    initialData[field.name] = null;
                     break;
                 case 'date':
                     initialData[field.name] = field.defaultDate || '';
@@ -148,16 +200,34 @@ export default function ManagerFormsPage() {
                     initialData[field.name] = "";
             }
         });
+        
         setDynamicFormData(initialData);
+        
+        // Reset attachments
+        setAttachments({
+            files: [],
+            folders: [],
+            notes: "",
+            isEncrypted: false,
+            shareWithClient: false,
+            printCopy: false
+        });
+        
         setFormData({
-            clinetName: "", // Reset clinetName when selecting new form
+            clientName: "",
             assignmentType: "single",
             assignedTo: "",
             multipleTeamLeadAssigned: [],
-            teamLeadFeedback: ""
+            teamLeadFeedback: "",
+            priority: "medium",
+            dueDate: "",
+            notes: ""
         });
+        
         setShowPasswords({});
-        setDragOver({});
+        setDragOver(false);
+        setUploadProgress({});
+        setIsDragging(false);
     };
 
     const handleDynamicFieldChange = (fieldName, value) => {
@@ -167,11 +237,127 @@ export default function ManagerFormsPage() {
         }));
     };
 
-    const togglePasswordVisibility = (fieldName) => {
-        setShowPasswords(prev => ({
-            ...prev,
-            [fieldName]: !prev[fieldName]
+    const handleFileUpload = (files) => {
+        const fileArray = Array.from(files);
+        
+        const newFiles = fileArray.map(file => ({
+            id: Date.now() + Math.random(),
+            file: file,
+            name: file.name,
+            size: file.size,
+            type: file.type,
+            uploadedAt: new Date(),
+            status: 'pending',
+            progress: 0
         }));
+
+        setAttachments(prev => ({
+            ...prev,
+            files: [...prev.files, ...newFiles]
+        }));
+
+        // Simulate upload progress
+        newFiles.forEach((fileObj) => {
+            simulateUpload(fileObj.id);
+        });
+
+        toast.success(`${fileArray.length} file(s) added`);
+    };
+
+    const simulateUpload = (fileId) => {
+        let progress = 0;
+        const interval = setInterval(() => {
+            progress += 10;
+            setAttachments(prev => ({
+                ...prev,
+                files: prev.files.map(f => 
+                    f.id === fileId 
+                        ? { ...f, progress: progress, status: progress >= 100 ? 'completed' : 'uploading' }
+                        : f
+                )
+            }));
+
+            if (progress >= 100) {
+                clearInterval(interval);
+            }
+        }, 200);
+    };
+
+    const handleRemoveFile = (fileId) => {
+        setAttachments(prev => ({
+            ...prev,
+            files: prev.files.filter(f => f.id !== fileId)
+        }));
+        toast.info("File removed");
+    };
+
+    const handleCreateFolder = () => {
+        const folderName = prompt("Enter folder name:");
+        if (folderName && folderName.trim()) {
+            setAttachments(prev => ({
+                ...prev,
+                folders: [...prev.folders, {
+                    id: Date.now(),
+                    name: folderName.trim(),
+                    createdAt: new Date(),
+                    fileCount: 0
+                }]
+            }));
+            toast.success(`Folder "${folderName}" created`);
+        }
+    };
+
+    const handleDragOver = (e) => {
+        e.preventDefault();
+        setIsDragging(true);
+        setDragOver(true);
+    };
+
+    const handleDragLeave = (e) => {
+        e.preventDefault();
+        setIsDragging(false);
+        setDragOver(false);
+    };
+
+    const handleDrop = (e) => {
+        e.preventDefault();
+        setIsDragging(false);
+        setDragOver(false);
+        handleFileUpload(e.dataTransfer.files);
+    };
+
+    const handleAttachmentTypeFilter = (type) => {
+        setSelectedAttachmentType(type);
+    };
+
+    const filteredAttachments = () => {
+        if (selectedAttachmentType === "all") return attachments.files;
+        return attachments.files.filter(file => {
+            if (selectedAttachmentType === "images") return file.type.startsWith('image/');
+            if (selectedAttachmentType === "documents") return file.type.includes('pdf') || file.type.includes('document') || file.type.includes('text');
+            if (selectedAttachmentType === "spreadsheets") return file.type.includes('spreadsheet') || file.type.includes('excel');
+            if (selectedAttachmentType === "media") return file.type.startsWith('video/') || file.type.startsWith('audio/');
+            return true;
+        });
+    };
+
+    const formatFileSize = (bytes) => {
+        if (!bytes) return "0 Bytes";
+        const k = 1024;
+        const sizes = ["Bytes", "KB", "MB", "GB"];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+    };
+
+    const getFileIcon = (fileType) => {
+        if (fileType.startsWith('image/')) return <FileImage className="w-5 h-5 text-rose-500" />;
+        if (fileType.startsWith('video/')) return <FileVideo className="w-5 h-5 text-violet-500" />;
+        if (fileType.startsWith('audio/')) return <Music className="w-5 h-5 text-emerald-500" />;
+        if (fileType.includes('pdf')) return <FileText className="w-5 h-5 text-red-500" />;
+        if (fileType.includes('word') || fileType.includes('document')) return <FileType className="w-5 h-5 text-blue-500" />;
+        if (fileType.includes('excel') || fileType.includes('spreadsheet')) return <FileSpreadsheet className="w-5 h-5 text-emerald-600" />;
+        if (fileType.includes('zip') || fileType.includes('compressed')) return <FileArchive className="w-5 h-5 text-amber-500" />;
+        return <File className="w-5 h-5 text-gray-500" />;
     };
 
     const handleAssignmentTypeChange = (type) => {
@@ -183,665 +369,119 @@ export default function ManagerFormsPage() {
         });
     };
 
-    const handleMultipleTeamLeadToggle = (teamLeadId) => {
-        setFormData(prev => {
-            const isSelected = prev.multipleTeamLeadAssigned.includes(teamLeadId);
-            return {
-                ...prev,
-                multipleTeamLeadAssigned: isSelected
-                    ? prev.multipleTeamLeadAssigned.filter(id => id !== teamLeadId)
-                    : [...prev.multipleTeamLeadAssigned, teamLeadId]
-            };
-        });
-    };
-
-    // File Upload Handlers
-    const handleFileInputClick = (fieldName) => {
-        document.getElementById(`file-input-${fieldName}`)?.click();
-    };
-
-   const handleFileChange = (fieldName, files) => {
-  console.log("File selected for field:", fieldName);
-  console.log("Files:", Array.from(files).map(f => ({
-    name: f.name,
-    size: f.size,
-    type: f.type
-  })));
-  
-  // Store the actual File objects
-  handleDynamicFieldChange(fieldName, files);
-  toast.success(`${files.length} file(s) selected`);
-};
-    const handleDragOver = (e, fieldName) => {
-        e.preventDefault();
-        setDragOver(prev => ({ ...prev, [fieldName]: true }));
-    };
-
-    const handleDragLeave = (e, fieldName) => {
-        e.preventDefault();
-        setDragOver(prev => ({ ...prev, [fieldName]: false }));
-    };
-
-    const handleDrop = (e, fieldName) => {
-        e.preventDefault();
-        setDragOver(prev => ({ ...prev, [fieldName]: false }));
-
-        const files = e.dataTransfer.files;
-        if (files.length > 0) {
-            handleFileChange(fieldName, files);
-        }
-    };
-
-   const handleSubmit = async (e) => {
+const handleSubmit = async (e) => {
   e.preventDefault();
   setLoading(true);
-
-  // Validate client name
-  if (!formData.clinetName || formData.clinetName.trim() === "") {
-    toast.error("Please enter client name");
-    setLoading(false);
-    return;
-  }
-
-  // Validate assignments
-  if (formData.assignmentType === "single" && !formData.assignedTo) {
-    toast.error("Please select a team lead");
-    setLoading(false);
-    return;
-  }
-
-  if (formData.assignmentType === "multiple" && formData.multipleTeamLeadAssigned.length === 0) {
-    toast.error("Please select at least one team lead");
-    setLoading(false);
-    return;
-  }
-
-  // Validate required fields
-  for (const field of selectedForm.fields) {
-    if (field.required) {
-      const value = dynamicFormData[field.name];
-      if (
-        value === undefined ||
-        value === null ||
-        value === "" ||
-        (Array.isArray(value) && value.length === 0)
-      ) {
-        toast.error(`Please fill in ${field.label}`);
-        setLoading(false);
-        return;
-      }
-    }
-  }
-
+  
   try {
-    // Create FormData object
+    // Validate client name
+    if (!formData.clientName || formData.clientName.trim() === "") {
+      toast.error("Please enter client name");
+      setLoading(false);
+      return;
+    }
+
+    // Validate assignments
+    if (formData.assignmentType === "single" && !formData.assignedTo) {
+      toast.error("Please select a team lead");
+      setLoading(false);
+      return;
+    }
+
+    if (formData.assignmentType === "multiple" && formData.multipleTeamLeadAssigned.length === 0) {
+      toast.error("Please select at least one team lead");
+      setLoading(false);
+      return;
+    }
+
+    // Prepare FormData
     const formDataToSend = new FormData();
     
-    // ✅ IMPORTANT: Add clinetName to FormData
-    formDataToSend.append("clinetName", formData.clinetName.trim());
+    console.log("Submitting form data:", {
+      formId: selectedForm._id,
+      clinetName: formData.clientName,
+      assignmentType: formData.assignmentType,
+      assignedTo: formData.assignedTo,
+      multipleTeamLeadAssigned: formData.multipleTeamLeadAssigned
+    });
     
-    // Add other text fields
+    // Add basic form data (NOTICE: backend expects "clinetName" not "clientName")
     formDataToSend.append("formId", selectedForm._id);
-    formDataToSend.append("submittedBy", session.user.id);
+    formDataToSend.append("clinetName", formData.clientName.trim()); // ✅ IMPORTANT: "clinetName" not "clientName"
     formDataToSend.append("assignmentType", formData.assignmentType);
-    formDataToSend.append("assignedTo", formData.assignedTo || "");
-    formDataToSend.append("multipleTeamLeadAssigned", JSON.stringify(formData.multipleTeamLeadAssigned || []));
     
-    // Prepare formData object for non-file fields
-    const formDataObj = {};
+    // Add assignment data based on type
+    if (formData.assignmentType === "single" && formData.assignedTo) {
+      formDataToSend.append("assignedTo", formData.assignedTo);
+    }
     
-    // Handle all form fields
-    for (const field of selectedForm.fields) {
+    if (formData.assignmentType === "multiple" && formData.multipleTeamLeadAssigned.length > 0) {
+      formDataToSend.append("multipleTeamLeadAssigned", JSON.stringify(formData.multipleTeamLeadAssigned));
+    }
+    
+    // Add form fields data
+    const dynamicFormDataObj = {};
+    selectedForm.fields?.forEach(field => {
       const value = dynamicFormData[field.name];
-      
-      if (field.type === "file") {
-        // File field - handle separately
-        if (value && value.length > 0) {
-          if (field.multiple) {
-            // Multiple files
-            const fileNames = [];
-            for (let i = 0; i < value.length; i++) {
-              formDataToSend.append(`files`, value[i]); // Append each file
-              fileNames.push(value[i].name);
-            }
-            formDataObj[field.name] = fileNames;
-          } else {
-            // Single file
-            formDataToSend.append("file", value[0]); // Main file field
-            formDataObj[field.name] = value[0].name;
-          }
-        } else {
-          formDataObj[field.name] = null;
-        }
-      } else {
-        // Non-file field
-        if (value !== undefined && value !== null) {
-          // Handle nested objects (like address, creditCard)
-          if (typeof value === 'object' && !Array.isArray(value)) {
-            formDataObj[field.name] = value;
-          } else {
-            formDataObj[field.name] = value;
-          }
-        } else {
-          formDataObj[field.name] = "";
-        }
+      if (value !== undefined && value !== null) {
+        dynamicFormDataObj[field.name] = value;
       }
-    }
+    });
     
-    // ✅ Add clinetName to formDataObj as well (for consistency)
-    formDataObj.clinetName = formData.clinetName.trim();
+    console.log("Dynamic form data:", dynamicFormDataObj);
+    formDataToSend.append("formData", JSON.stringify(dynamicFormDataObj));
     
-    // Add formData as JSON string
-    formDataToSend.append("formData", JSON.stringify(formDataObj));
-    
-    // Debug: Check what's being sent
-    console.log("=== DEBUG: FormData Contents ===");
-    for (let pair of formDataToSend.entries()) {
-      if (pair[0] === "file" || pair[0] === "files") {
-        console.log(pair[0] + ": [FILE]", pair[1].name, pair[1].size, pair[1].type);
-      } else {
-        console.log(pair[0] + ":", pair[1]);
+    // Add attachment files
+    attachments.files.forEach((fileObj) => {
+      if (fileObj.file) {
+        formDataToSend.append("files", fileObj.file);
       }
-    }
-    
-    // Check clinetName specifically
-    const formDataJson = JSON.parse(formDataToSend.get("formData"));
-    console.log("clinetName in formData:", formDataJson.clinetName);
-    console.log("clinetName from formDataToSend:", formDataToSend.get("clinetName"));
+    });
 
-    // Send to backend
+    // Debug: Check what's being sent
+    console.log("FormData contents:");
+    for (let [key, value] of formDataToSend.entries()) {
+      console.log(key, value);
+    }
+
+    // Submit to backend
     const response = await axios.post("/api/manager/forms", formDataToSend, {
       headers: {
         "Content-Type": "multipart/form-data",
       },
+      onUploadProgress: (progressEvent) => {
+        const progress = progressEvent.total 
+          ? Math.round((progressEvent.loaded * 100) / progressEvent.total)
+          : 0;
+        setUploadProgress({ isUploading: true, progress });
+      }
     });
 
     if (response.status === 201) {
       toast.success("Form submitted successfully!");
       resetForm();
       fetchForms();
-      router.push("/manager/submissions");
+      setTimeout(() => {
+        router.push("/manager/submissions");
+      }, 1500);
     }
   } catch (error) {
-    console.error("Submission error:", error.response?.data || error);
-    toast.error(
-      error.response?.data?.error ||
-      error.response?.data?.message ||
-      "Failed to submit form"
-    );
+    console.error("Submission error:", error);
+    console.error("Error response:", error.response?.data);
+    toast.error(error.response?.data?.error || "Failed to submit form");
+    
+    // Specific error messages
+    if (error.response?.data?.details?.includes("formId")) {
+      toast.error("Form ID is missing. Please try again.");
+    }
+    if (error.response?.data?.details?.includes("client")) {
+      toast.error("Client name is required.");
+    }
   } finally {
     setLoading(false);
+    setUploadProgress({});
   }
 };
-
-    const resetForm = () => {
-        setFormData({
-            clinetName: "",
-            assignmentType: "single",
-            assignedTo: "",
-            multipleTeamLeadAssigned: [],
-            teamLeadFeedback: ""
-        });
-        setDynamicFormData({});
-        setSelectedForm(null);
-        setShowForm(false);
-        setShowPasswords({});
-        setDragOver({});
-    };
-
-    const renderFormField = (field) => {
-        const fieldValue = dynamicFormData[field.name] || "";
-        const isDragOver = dragOver[field.name] || false;
-
-        switch (field.type) {
-            case "text":
-                return (
-                    <div className="relative">
-                        <Input
-                            type="text"
-                            value={fieldValue}
-                            onChange={(e) => handleDynamicFieldChange(field.name, e.target.value)}
-                            placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}`}
-                            className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900 pl-10"
-                            required={field.required}
-                        />
-                        <Type className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    </div>
-                );
-            case "email":
-                return (
-                    <div className="relative">
-                        <Input
-                            type="email"
-                            value={fieldValue}
-                            onChange={(e) => handleDynamicFieldChange(field.name, e.target.value)}
-                            placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}`}
-                            className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900 pl-10"
-                            required={field.required}
-                        />
-                        <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    </div>
-                );
-            case "number":
-                return (
-                    <div className="relative">
-                        <Input
-                            type="number"
-                            value={fieldValue}
-                            onChange={(e) => handleDynamicFieldChange(field.name, e.target.value)}
-                            placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}`}
-                            className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900 pl-10"
-                            required={field.required}
-                        />
-                        <Hash className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    </div>
-                );
-            case "tel":
-                return (
-                    <div className="relative">
-                        <Input
-                            type="tel"
-                            value={fieldValue}
-                            onChange={(e) => handleDynamicFieldChange(field.name, e.target.value)}
-                            placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}`}
-                            className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900 pl-10"
-                            required={field.required}
-                        />
-                        <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    </div>
-                );
-            case "url":
-                return (
-                    <div className="relative">
-                        <Input
-                            type="url"
-                            value={fieldValue}
-                            onChange={(e) => handleDynamicFieldChange(field.name, e.target.value)}
-                            placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}`}
-                            className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900 pl-10"
-                            required={field.required}
-                        />
-                        <Link className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    </div>
-                );
-            case "password":
-                return (
-                    <div className="relative">
-                        <Input
-                            type={showPasswords[field.name] ? "text" : "password"}
-                            value={fieldValue}
-                            onChange={(e) => handleDynamicFieldChange(field.name, e.target.value)}
-                            placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}`}
-                            className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900 pl-10 pr-10"
-                            required={field.required}
-                        />
-                        <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                        <button
-                            type="button"
-                            onClick={() => togglePasswordVisibility(field.name)}
-                            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                        >
-                            {showPasswords[field.name] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                        </button>
-                    </div>
-                );
-            case "textarea":
-                return (
-                    <div className="relative">
-                        <Textarea
-                            value={fieldValue}
-                            onChange={(e) => handleDynamicFieldChange(field.name, e.target.value)}
-                            placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}`}
-                            className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900 pl-10"
-                            required={field.required}
-                            rows={4}
-                        />
-                        <TextQuote className="absolute left-3 top-3 w-4 h-4 text-gray-400" />
-                    </div>
-                );
-            case "select":
-                return (
-                    <div className="relative">
-                        <Select
-                            value={fieldValue}
-                            onValueChange={(value) => handleDynamicFieldChange(field.name, value)}
-                        >
-                            <SelectTrigger className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900 pl-10">
-                                <SelectValue placeholder={field.placeholder || `Select ${field.label.toLowerCase()}`} />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {field.options?.map((option, index) => (
-                                    <SelectItem key={index} value={option}>
-                                        {option}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                        <List className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    </div>
-                );
-            case "date":
-                return (
-                    <div className="relative">
-                        <Input
-                            type="date"
-                            value={fieldValue}
-                            onChange={(e) => handleDynamicFieldChange(field.name, e.target.value)}
-                            className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900 pl-10"
-                            required={field.required}
-                            min={field.minDate}
-                            max={field.maxDate}
-                        />
-                        <CalendarDays className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    </div>
-                );
-            case "time":
-                return (
-                    <div className="relative">
-                        <Input
-                            type="time"
-                            value={fieldValue}
-                            onChange={(e) => handleDynamicFieldChange(field.name, e.target.value)}
-                            className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900 pl-10"
-                            required={field.required}
-                            step={field.step || 900}
-                            min={field.minTime}
-                            max={field.maxTime}
-                        />
-                        <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    </div>
-                );
-            case "datetime":
-                return (
-                    <div className="relative">
-                        <Input
-                            type="datetime-local"
-                            value={fieldValue}
-                            onChange={(e) => handleDynamicFieldChange(field.name, e.target.value)}
-                            className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900 pl-10"
-                            required={field.required}
-                            min={field.minDateTime}
-                            max={field.maxDateTime}
-                        />
-                        <CalendarClock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    </div>
-                );
-            case "checkbox":
-                return (
-                    <div className="flex items-center space-x-2">
-                        <input
-                            type="checkbox"
-                            checked={fieldValue}
-                            onChange={(e) => handleDynamicFieldChange(field.name, e.target.checked)}
-                            className="rounded border-gray-300 bg-white w-4 h-4"
-                            required={field.required}
-                        />
-                        <Label className="text-gray-700">{field.label}</Label>
-                    </div>
-                );
-            case "radio":
-                return (
-                    <div className="space-y-2">
-                        {field.options?.map((option, idx) => (
-                            <div key={idx} className="flex items-center space-x-2">
-                                <input
-                                    type="radio"
-                                    name={field.name}
-                                    value={option}
-                                    checked={fieldValue === option}
-                                    onChange={(e) => handleDynamicFieldChange(field.name, e.target.value)}
-                                    className="rounded-full border-gray-300 bg-white w-4 h-4"
-                                    required={field.required}
-                                />
-                                <Label className="text-gray-700">{option}</Label>
-                            </div>
-                        ))}
-                    </div>
-                );
-            case "range":
-                return (
-                    <div className="space-y-2">
-                        <div className="relative">
-                            <input
-                                type="range"
-                                min={field.min || 0}
-                                max={field.max || 100}
-                                step={field.step || 1}
-                                value={fieldValue}
-                                onChange={(e) => handleDynamicFieldChange(field.name, parseInt(e.target.value))}
-                                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider pl-10"
-                                required={field.required}
-                            />
-                            <SlidersHorizontal className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                        </div>
-                        <div className="flex justify-between text-xs text-gray-500">
-                            <span>{field.min || 0}</span>
-                            <span className="font-medium">{fieldValue}</span>
-                            <span>{field.max || 100}</span>
-                        </div>
-                    </div>
-                );
-            case "file":
-                const files = fieldValue;
-                const fileCount = files ? (field.multiple ? files.length : 1) : 0;
-
-                return (
-                    <div className="space-y-3">
-                        <Input
-                            id={`file-input-${field.name}`}
-                            type="file"
-                            onChange={(e) => handleFileChange(field.name, e.target.files)}
-                            className="hidden"
-                            multiple={field.multiple}
-                            accept={field.accept}
-                            required={field.required && !fileCount}
-                        />
-
-                        <div
-                            onClick={() => handleFileInputClick(field.name)}
-                            onDragOver={(e) => handleDragOver(e, field.name)}
-                            onDragLeave={(e) => handleDragLeave(e, field.name)}
-                            onDrop={(e) => handleDrop(e, field.name)}
-                            className={`
-                                border-2 border-dashed rounded-lg p-6 text-center bg-white cursor-pointer transition-all duration-200
-                                ${isDragOver
-                                    ? 'border-blue-500 bg-blue-50 scale-105'
-                                    : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'
-                                }
-                            `}
-                        >
-                            <Upload className={`w-8 h-8 mx-auto mb-2 ${isDragOver ? 'text-blue-500' : 'text-gray-400'}`} />
-                            <p className={`text-sm font-medium ${isDragOver ? 'text-blue-700' : 'text-gray-600'}`}>
-                                {isDragOver ? 'Drop files here' : 'Click to upload or drag and drop'}
-                            </p>
-                            <p className="text-xs text-gray-500 mt-1">
-                                {field.multiple ? 'Multiple files allowed' : 'Single file only'} • {field.accept || 'Any file type'}
-                            </p>
-                        </div>
-
-                        {fileCount > 0 && (
-                            <div className="space-y-2">
-                                <p className="text-sm text-gray-600 font-medium">
-                                    Selected {fileCount} file{fileCount !== 1 ? 's' : ''}:
-                                </p>
-                                <div className="space-y-1 max-h-32 overflow-y-auto">
-                                    {Array.from(files).map((file, index) => (
-                                        <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded border">
-                                            <div className="flex items-center space-x-2">
-                                                <FileText className="w-4 h-4 text-gray-500" />
-                                                <span className="text-sm text-gray-700 truncate max-w-xs">
-                                                    {file.name}
-                                                </span>
-                                            </div>
-                                            <span className="text-xs text-gray-500">
-                                                {(file.size / 1024 / 1024).toFixed(2)} MB
-                                            </span>
-                                        </div>
-                                    ))}
-                                </div>
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => handleFileInputClick(field.name)}
-                                    className="text-xs"
-                                >
-                                    <Upload className="w-3 h-3 mr-1" />
-                                    Change Files
-                                </Button>
-                            </div>
-                        )}
-                    </div>
-                );
-            case "rating":
-                return (
-                    <div className="flex space-x-1 items-center">
-                        <Star className="w-4 h-4 text-gray-400 mr-2" />
-                        {Array.from({ length: field.maxRating || 5 }, (_, i) => (
-                            <button
-                                key={i}
-                                type="button"
-                                onClick={() => handleDynamicFieldChange(field.name, i + 1)}
-                                className="focus:outline-none"
-                            >
-                                <Star
-                                    className={`w-6 h-6 transition-colors ${i < fieldValue
-                                        ? 'text-yellow-400 fill-yellow-400'
-                                        : 'text-gray-300 hover:text-yellow-200'
-                                        }`}
-                                />
-                            </button>
-                        ))}
-                    </div>
-                );
-            case "toggle":
-                return (
-                    <div className="flex items-center space-x-2">
-                        <ToggleLeft className="w-4 h-4 text-gray-400" />
-                        <button
-                            type="button"
-                            onClick={() => handleDynamicFieldChange(field.name, !fieldValue)}
-                            className={`relative inline-flex h-6 w-12 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${fieldValue ? 'bg-blue-600' : 'bg-gray-300'
-                                }`}
-                        >
-                            <span
-                                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow transition duration-200 ease-in-out ${fieldValue ? 'translate-x-6' : 'translate-x-0'
-                                    }`}
-                            />
-                        </button>
-                        <Label className="text-gray-700">{fieldValue ? 'On' : 'Off'}</Label>
-                    </div>
-                );
-            case "address":
-                return (
-                    <div className="space-y-3">
-                        <div className="relative">
-                            <Input
-                                type="text"
-                                value={fieldValue?.street || ""}
-                                onChange={(e) => handleDynamicFieldChange(field.name, { ...fieldValue, street: e.target.value })}
-                                placeholder="Street address"
-                                className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900 pl-10"
-                                required={field.required}
-                            />
-                            <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                        </div>
-                        <div className="grid grid-cols-2 gap-3">
-                            <Input
-                                type="text"
-                                value={fieldValue?.city || ""}
-                                onChange={(e) => handleDynamicFieldChange(field.name, { ...fieldValue, city: e.target.value })}
-                                placeholder="City"
-                                className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900"
-                                required={field.required}
-                            />
-                            <Input
-                                type="text"
-                                value={fieldValue?.state || ""}
-                                onChange={(e) => handleDynamicFieldChange(field.name, { ...fieldValue, state: e.target.value })}
-                                placeholder="State"
-                                className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900"
-                                required={field.required}
-                            />
-                        </div>
-                        <div className="grid grid-cols-2 gap-3">
-                            <Input
-                                type="text"
-                                value={fieldValue?.zip || ""}
-                                onChange={(e) => handleDynamicFieldChange(field.name, { ...fieldValue, zip: e.target.value })}
-                                placeholder="ZIP code"
-                                className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900"
-                                required={field.required}
-                            />
-                            <Input
-                                type="text"
-                                value={fieldValue?.country || ""}
-                                onChange={(e) => handleDynamicFieldChange(field.name, { ...fieldValue, country: e.target.value })}
-                                placeholder="Country"
-                                className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900"
-                                required={field.required}
-                            />
-                        </div>
-                    </div>
-                );
-            case "creditCard":
-                return (
-                    <div className="space-y-3">
-                        <div className="relative">
-                            <Input
-                                type="text"
-                                value={fieldValue?.cardNumber || ""}
-                                onChange={(e) => handleDynamicFieldChange(field.name, { ...fieldValue, cardNumber: e.target.value })}
-                                placeholder="Card number"
-                                className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900 pl-10"
-                                required={field.required}
-                            />
-                            <CreditCard className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                        </div>
-                        <div className="grid grid-cols-2 gap-3">
-                            <Input
-                                type="text"
-                                value={fieldValue?.expiry || ""}
-                                onChange={(e) => handleDynamicFieldChange(field.name, { ...fieldValue, expiry: e.target.value })}
-                                placeholder="MM/YY"
-                                className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900"
-                                required={field.required}
-                            />
-                            <Input
-                                type="text"
-                                value={fieldValue?.cvv || ""}
-                                onChange={(e) => handleDynamicFieldChange(field.name, { ...fieldValue, cvv: e.target.value })}
-                                placeholder="CVC"
-                                className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900"
-                                required={field.required}
-                            />
-                        </div>
-                        <Input
-                            type="text"
-                            value={fieldValue?.nameOnCard || ""}
-                            onChange={(e) => handleDynamicFieldChange(field.name, { ...fieldValue, nameOnCard: e.target.value })}
-                            placeholder="Cardholder name"
-                            className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900"
-                            required={field.required}
-                        />
-                    </div>
-                );
-            default:
-                return (
-                    <div className="relative">
-                        <Input
-                            type="text"
-                            value={fieldValue}
-                            onChange={(e) => handleDynamicFieldChange(field.name, e.target.value)}
-                            placeholder={`Enter ${field.label.toLowerCase()}`}
-                            className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900 pl-10"
-                            required={field.required}
-                        />
-                        <Type className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    </div>
-                );
-        }
-    };
 
     const getFieldIcon = (fieldType) => {
         const fieldIcons = {
@@ -868,6 +508,243 @@ export default function ManagerFormsPage() {
         return fieldIcons[fieldType] || Type;
     };
 
+    const togglePasswordVisibility = (fieldName) => {
+        setShowPasswords(prev => ({
+            ...prev,
+            [fieldName]: !prev[fieldName]
+        }));
+    };
+
+    const renderFormField = (field) => {
+        const fieldValue = dynamicFormData[field.name] || "";
+        const IconComponent = getFieldIcon(field.type);
+
+        switch (field.type) {
+            case "text":
+            case "email":
+            case "number":
+            case "tel":
+            case "url":
+                return (
+                    <div className="relative">
+                        <IconComponent className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500" />
+                        <Input
+                            type={field.type}
+                            value={fieldValue}
+                            onChange={(e) => handleDynamicFieldChange(field.name, e.target.value)}
+                            placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}`}
+                            className="pl-10 bg-white border-gray-300 text-gray-900 focus:border-gray-800 focus:ring-gray-800 h-11"
+                            required={field.required}
+                        />
+                    </div>
+                );
+            case "password":
+                return (
+                    <div className="relative">
+                        <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500" />
+                        <Input
+                            type={showPasswords[field.name] ? "text" : "password"}
+                            value={fieldValue}
+                            onChange={(e) => handleDynamicFieldChange(field.name, e.target.value)}
+                            placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}`}
+                            className="pl-10 pr-10 bg-white border-gray-300 text-gray-900 focus:border-gray-800 focus:ring-gray-800 h-11"
+                            required={field.required}
+                        />
+                        <button
+                            type="button"
+                            onClick={() => togglePasswordVisibility(field.name)}
+                            className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                        >
+                            {showPasswords[field.name] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                    </div>
+                );
+            case "textarea":
+                return (
+                    <div className="relative">
+                        <TextQuote className="absolute left-3 top-3 w-4 h-4 text-gray-500" />
+                        <Textarea
+                            value={fieldValue}
+                            onChange={(e) => handleDynamicFieldChange(field.name, e.target.value)}
+                            placeholder={field.placeholder || `Enter ${field.label.toLowerCase()}`}
+                            className="pl-10 bg-white border-gray-300 text-gray-900 focus:border-gray-800 focus:ring-gray-800 min-h-[100px]"
+                            required={field.required}
+                        />
+                    </div>
+                );
+            case "select":
+                return (
+                    <div className="relative">
+                        <List className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500 z-10" />
+                        <Select
+                            value={fieldValue}
+                            onValueChange={(value) => handleDynamicFieldChange(field.name, value)}
+                        >
+                            <SelectTrigger className="pl-10 bg-white border-gray-300 text-gray-900 focus:border-gray-800 focus:ring-gray-800 h-11">
+                                <SelectValue placeholder={field.placeholder || `Select ${field.label.toLowerCase()}`} />
+                            </SelectTrigger>
+                            <SelectContent className="bg-white border-gray-200">
+                                {field.options?.map((option, index) => (
+                                    <SelectItem key={index} value={option} className="text-gray-900 hover:bg-gray-100">
+                                        {option}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                );
+            case "date":
+                return (
+                    <div className="relative">
+                        <CalendarDays className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500" />
+                        <Input
+                            type="date"
+                            value={fieldValue}
+                            onChange={(e) => handleDynamicFieldChange(field.name, e.target.value)}
+                            className="pl-10 bg-white border-gray-300 text-gray-900 focus:border-gray-800 focus:ring-gray-800 h-11"
+                            required={field.required}
+                        />
+                    </div>
+                );
+            case "checkbox":
+                return (
+                    <div className="flex items-center space-x-3">
+                        <input
+                            type="checkbox"
+                            checked={fieldValue}
+                            onChange={(e) => handleDynamicFieldChange(field.name, e.target.checked)}
+                            className="w-4 h-4 text-gray-800 bg-gray-100 border-gray-300 rounded focus:ring-gray-800 focus:ring-2"
+                            required={field.required}
+                        />
+                        <Label className="text-gray-900 cursor-pointer">{field.label}</Label>
+                    </div>
+                );
+            case "radio":
+                return (
+                    <div className="space-y-3">
+                        {field.options?.map((option, idx) => (
+                            <div key={idx} className="flex items-center space-x-3">
+                                <input
+                                    type="radio"
+                                    name={field.name}
+                                    value={option}
+                                    checked={fieldValue === option}
+                                    onChange={(e) => handleDynamicFieldChange(field.name, e.target.value)}
+                                    className="w-4 h-4 text-gray-800 bg-gray-100 border-gray-300 focus:ring-gray-800"
+                                    required={field.required}
+                                />
+                                <Label className="text-gray-900 cursor-pointer">{option}</Label>
+                            </div>
+                        ))}
+                    </div>
+                );
+            case "range":
+                return (
+                    <div className="space-y-3">
+                        <div className="relative">
+                            <SlidersHorizontal className="absolute left-0 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500" />
+                            <input
+                                type="range"
+                                min={field.min || 0}
+                                max={field.max || 100}
+                                step={field.step || 1}
+                                value={fieldValue}
+                                onChange={(e) => handleDynamicFieldChange(field.name, parseInt(e.target.value))}
+                                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider pl-6"
+                                required={field.required}
+                            />
+                        </div>
+                        <div className="flex justify-between text-sm text-gray-600">
+                            <span>{field.min || 0}</span>
+                            <span className="font-semibold text-gray-900">{fieldValue}</span>
+                            <span>{field.max || 100}</span>
+                        </div>
+                    </div>
+                );
+            case "rating":
+                return (
+                    <div className="flex space-x-1 items-center">
+                        <Star className="w-4 h-4 text-gray-500 mr-2" />
+                        {Array.from({ length: field.maxRating || 5 }, (_, i) => (
+                            <button
+                                key={i}
+                                type="button"
+                                onClick={() => handleDynamicFieldChange(field.name, i + 1)}
+                                className="focus:outline-none"
+                            >
+                                <Star
+                                    className={`w-6 h-6 transition-colors ${i < fieldValue
+                                        ? 'text-amber-500 fill-amber-500'
+                                        : 'text-gray-300 hover:text-amber-300'
+                                        }`}
+                                />
+                            </button>
+                        ))}
+                    </div>
+                );
+            case "toggle":
+                return (
+                    <div className="flex items-center space-x-3">
+                        <button
+                            type="button"
+                            onClick={() => handleDynamicFieldChange(field.name, !fieldValue)}
+                            className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${fieldValue ? 'bg-gray-800' : 'bg-gray-300'
+                                }`}
+                        >
+                            <span
+                                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow transition duration-200 ease-in-out ${fieldValue ? 'translate-x-5' : 'translate-x-0'
+                                    }`}
+                            />
+                        </button>
+                        <Label className="text-gray-900">{fieldValue ? 'On' : 'Off'}</Label>
+                    </div>
+                );
+            default:
+                return (
+                    <div className="relative">
+                        <Type className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500" />
+                        <Input
+                            type="text"
+                            value={fieldValue}
+                            onChange={(e) => handleDynamicFieldChange(field.name, e.target.value)}
+                            placeholder={`Enter ${field.label.toLowerCase()}`}
+                            className="pl-10 bg-white border-gray-300 text-gray-900 focus:border-gray-800 focus:ring-gray-800 h-11"
+                            required={field.required}
+                        />
+                    </div>
+                );
+        }
+    };
+
+    const resetForm = () => {
+        setFormData({
+            clientName: "",
+            assignmentType: "single",
+            assignedTo: "",
+            multipleTeamLeadAssigned: [],
+            teamLeadFeedback: "",
+            priority: "medium",
+            dueDate: "",
+            notes: ""
+        });
+        setDynamicFormData({});
+        setAttachments({
+            files: [],
+            folders: [],
+            notes: "",
+            isEncrypted: false,
+            shareWithClient: false,
+            printCopy: false
+        });
+        setSelectedForm(null);
+        setShowForm(false);
+        setActiveTab("form");
+        setShowPasswords({});
+        setDragOver(false);
+        setIsDragging(false);
+        setUploadProgress({});
+    };
+
     const filteredForms = forms.filter(form =>
         form.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         form.description?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -884,9 +761,9 @@ export default function ManagerFormsPage() {
     if (status === "loading") {
         return (
             <div className="min-h-screen flex items-center justify-center bg-white">
-                <div className="flex items-center gap-2">
-                    <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
-                    <span className="text-gray-900">Loading...</span>
+                <div className="flex items-center gap-3">
+                    <Loader2 className="w-6 h-6 animate-spin text-gray-800" />
+                    <span className="text-gray-900 font-medium">Loading...</span>
                 </div>
             </div>
         );
@@ -897,95 +774,161 @@ export default function ManagerFormsPage() {
     }
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 p-6">
+        <div className="min-h-screen bg-white p-4 md:p-6">
             <Toaster position="top-right" />
 
             <div className="max-w-7xl mx-auto">
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
-                    <div className="text-center sm:text-left">
-                        <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-indigo-700 bg-clip-text text-transparent">
-                            Form Management
-                        </h1>
-                        <p className="text-gray-800 mt-3 text-lg">
-                            Create and assign forms to your team leads
-                        </p>
+                {/* Header */}
+                <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 mb-8">
+                    <div className="text-center lg:text-left">
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="p-3 rounded-xl bg-gray-900 shadow-lg">
+                                <FileCog className="w-8 h-8 text-white" />
+                            </div>
+                            <div>
+                                <h1 className="text-3xl font-bold text-gray-900">
+                                    Form Management
+                                </h1>
+                                <p className="text-gray-600 mt-1">
+                                    Assign forms with attachments to team leads
+                                </p>
+                            </div>
+                        </div>
+                        <div className="flex flex-wrap gap-2 mt-3">
+                            <Badge variant="secondary" className="bg-gray-100 text-gray-800 border-gray-200">
+                                <FolderArchive className="w-3 h-3 mr-1" />
+                                Auto-attachments
+                            </Badge>
+                            <Badge variant="secondary" className="bg-gray-100 text-gray-800 border-gray-200">
+                                <HardDrive className="w-3 h-3 mr-1" />
+                                Secure Storage
+                            </Badge>
+                        </div>
+                    </div>
+                    
+                    <div className="relative w-full lg:w-96">
+                        <div className="relative">
+                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-500" />
+                            <Input
+                                placeholder="Search forms..."
+                                className="pl-10 bg-white border-gray-300 text-gray-900 focus:border-gray-800 focus:ring-gray-800 h-12 shadow-sm"
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                            />
+                        </div>
                     </div>
                 </div>
 
-                <Card className="shadow-2xl shadow-blue-500/10 border-0 bg-gradient-to-br from-white to-blue-50/50 backdrop-blur-sm overflow-hidden mb-8">
-                    <CardHeader className="bg-gradient-to-r from-white to-blue-50 border-b border-blue-100/50">
-                        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                {/* Stats Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                    <Card className="border border-gray-200 shadow-sm">
+                        <CardContent className="p-5">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-sm font-medium text-gray-600">Total Forms</p>
+                                    <h3 className="text-2xl font-bold text-gray-900 mt-1">{forms.length}</h3>
+                                </div>
+                                <div className="p-3 rounded-lg bg-gray-100">
+                                    <FileText className="w-6 h-6 text-gray-700" />
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                    
+                    <Card className="border border-gray-200 shadow-sm">
+                        <CardContent className="p-5">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-sm font-medium text-gray-600">Team Leads</p>
+                                    <h3 className="text-2xl font-bold text-gray-900 mt-1">{teamLeads.length}</h3>
+                                </div>
+                                <div className="p-3 rounded-lg bg-gray-100">
+                                    <Users className="w-6 h-6 text-gray-700" />
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                    
+                    <Card className="border border-gray-200 shadow-sm">
+                        <CardContent className="p-5">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <p className="text-sm font-medium text-gray-600">Active Assignments</p>
+                                    <h3 className="text-2xl font-bold text-gray-900 mt-1">0</h3>
+                                </div>
+                                <div className="p-3 rounded-lg bg-gray-100">
+                                    <Send className="w-6 h-6 text-gray-700" />
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+
+                {/* Main Forms Table */}
+                <Card className="border border-gray-200 shadow-sm bg-white">
+                    <CardHeader className="border-b border-gray-200">
+                        <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
                             <div>
-                                <CardTitle className="text-2xl font-bold text-gray-900">
+                                <CardTitle className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                                    <FolderTree className="w-5 h-5 text-gray-700" />
                                     Available Forms
                                 </CardTitle>
-                                <CardDescription className="text-gray-700 text-base">
-                                    {forms.length} form{forms.length !== 1 ? 's' : ''} available
+                                <CardDescription className="text-gray-600">
+                                    Select a form to assign with attachments
                                 </CardDescription>
-                            </div>
-                            <div className="relative w-full sm:w-80">
-                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                                <Input
-                                    placeholder="Search forms..."
-                                    className="pl-10 pr-4 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 shadow-sm h-11 text-base text-gray-900"
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                />
                             </div>
                         </div>
                     </CardHeader>
                     <CardContent className="p-0">
                         {fetching ? (
                             <div className="flex justify-center items-center py-16">
-                                <div className="flex items-center gap-3 text-gray-800">
-                                    <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
-                                    <span className="text-lg">Loading forms...</span>
+                                <div className="flex items-center gap-3">
+                                    <Loader2 className="w-6 h-6 animate-spin text-gray-800" />
+                                    <span className="text-gray-700">Loading forms...</span>
                                 </div>
                             </div>
                         ) : filteredForms.length === 0 ? (
                             <div className="text-center py-16">
-                                <div className="text-gray-300 mb-4">
-                                    <FileText className="w-20 h-20 mx-auto" />
-                                </div>
-                                <h3 className="text-2xl font-bold text-gray-900 mb-3">
+                                <FileSearch className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                                <h3 className="text-lg font-semibold text-gray-900 mb-2">
                                     {forms.length === 0 ? "No forms available" : "No matches found"}
                                 </h3>
-                                <p className="text-gray-700 text-lg max-w-md mx-auto mb-6">
+                                <p className="text-gray-600 max-w-md mx-auto">
                                     {forms.length === 0
                                         ? "No forms have been created for your department yet."
-                                        : "Try adjusting your search terms to find what you're looking for."
+                                        : "Try adjusting your search terms."
                                     }
                                 </p>
                             </div>
                         ) : (
                             <div className="overflow-x-auto">
                                 <Table>
-                                    <TableHeader className="bg-gradient-to-r from-gray-50 to-blue-50/50">
-                                        <TableRow className="hover:bg-transparent">
-                                            <TableHead className="font-bold text-gray-900 text-sm uppercase tracking-wide py-4">Form Details</TableHead>
-                                            <TableHead className="font-bold text-gray-900 text-sm uppercase tracking-wide py-4">Fields</TableHead>
-                                            <TableHead className="font-bold text-gray-900 text-sm uppercase tracking-wide py-4">Created</TableHead>
-                                            <TableHead className="font-bold text-gray-900 text-sm uppercase tracking-wide py-4">Actions</TableHead>
+                                    <TableHeader className="bg-gray-50">
+                                        <TableRow>
+                                            <TableHead className="font-semibold text-gray-900 py-4">Form Details</TableHead>
+                                            <TableHead className="font-semibold text-gray-900 py-4">Fields</TableHead>
+                                            <TableHead className="font-semibold text-gray-900 py-4">Created</TableHead>
+                                            <TableHead className="font-semibold text-gray-900 py-4">Actions</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {filteredForms.map((form, index) => (
+                                        {filteredForms.map((form) => (
                                             <TableRow
                                                 key={form._id}
-                                                className="group hover:bg-gradient-to-r hover:from-blue-50/80 hover:to-indigo-50/80 transition-all duration-300 border-b border-gray-100/50"
+                                                className="hover:bg-gray-50"
                                             >
                                                 <TableCell className="py-4">
                                                     <div className="flex items-center gap-4">
-                                                        <Avatar className="border-2 border-white shadow-lg shadow-blue-500/20 group-hover:shadow-xl group-hover:shadow-blue-600/30 transition-all duration-300">
-                                                            <AvatarFallback className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-bold">
-                                                                <FileText className="w-4 h-4" />
+                                                        <Avatar className="border border-gray-200">
+                                                            <AvatarFallback className="bg-gray-100 text-gray-800 font-semibold">
+                                                                {form.title?.charAt(0) || 'F'}
                                                             </AvatarFallback>
                                                         </Avatar>
                                                         <div>
-                                                            <div className="font-bold text-gray-900 text-lg group-hover:text-blue-700 transition-colors duration-200">
+                                                            <div className="font-semibold text-gray-900">
                                                                 {form.title}
                                                             </div>
-                                                            <div className="text-sm text-gray-700 font-medium max-w-md">
+                                                            <div className="text-sm text-gray-600 mt-1">
                                                                 {form.description}
                                                             </div>
                                                         </div>
@@ -993,36 +936,35 @@ export default function ManagerFormsPage() {
                                                 </TableCell>
                                                 <TableCell className="py-4">
                                                     <div className="flex flex-wrap gap-2">
-                                                        {form.fields.slice(0, 3).map((field, idx) => {
+                                                        {form.fields?.slice(0, 4).map((field, idx) => {
                                                             const IconComponent = getFieldIcon(field.type);
                                                             return (
-                                                                <Badge key={idx} variant="outline" className="text-xs text-gray-700 flex items-center gap-1">
-                                                                    <IconComponent className="w-3 h-3" />
+                                                                <Badge key={idx} variant="outline" className="text-xs border-gray-200 text-gray-700">
+                                                                    <IconComponent className="w-3 h-3 mr-1" />
                                                                     {field.label}
                                                                 </Badge>
                                                             );
                                                         })}
-                                                        {form.fields.length > 3 && (
-                                                            <Badge variant="secondary" className="text-xs text-gray-700">
-                                                                +{form.fields.length - 3} more
+                                                        {form.fields?.length > 4 && (
+                                                            <Badge variant="secondary" className="text-xs bg-gray-100 text-gray-700">
+                                                                +{form.fields.length - 4} more
                                                             </Badge>
                                                         )}
                                                     </div>
                                                 </TableCell>
                                                 <TableCell className="py-4">
-                                                    <div className="flex items-center gap-3 text-gray-700 group-hover:text-gray-900 transition-colors duration-200">
-                                                        <Calendar className="w-5 h-5 text-blue-500" />
-                                                        <span className="text-base font-medium">{formatDate(form.createdAt)}</span>
+                                                    <div className="flex items-center gap-2 text-gray-600">
+                                                        <Calendar className="w-4 h-4 text-gray-500" />
+                                                        <span>{formatDate(form.createdAt)}</span>
                                                     </div>
                                                 </TableCell>
                                                 <TableCell className="py-4">
                                                     <Button
                                                         onClick={() => handleFormSelect(form)}
-                                                        className="bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-600/30 transition-all duration-300 transform hover:scale-105"
-                                                        size="sm"
+                                                        className="bg-gray-900 hover:bg-gray-800 text-white shadow-sm"
                                                     >
                                                         <Send className="w-4 h-4 mr-2" />
-                                                        Assign
+                                                        Assign Form
                                                     </Button>
                                                 </TableCell>
                                             </TableRow>
@@ -1034,238 +976,770 @@ export default function ManagerFormsPage() {
                     </CardContent>
                 </Card>
 
+                {/* Form Submission Modal */}
                 {showForm && selectedForm && (
-                    <Card className="border-0 shadow-2xl shadow-blue-500/10 bg-gradient-to-br from-white to-blue-50/50 backdrop-blur-sm">
-                        <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white rounded-t-lg">
-                            <div className="flex justify-between items-center">
-                                <div>
-                                    <CardTitle className="text-white text-2xl">{selectedForm.title}</CardTitle>
-                                    <CardDescription className="text-blue-100">
-                                        {selectedForm.description}
-                                    </CardDescription>
-                                </div>
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={resetForm}
-                                    className="h-8 w-8 text-white hover:bg-white/20"
-                                >
-                                    <X className="w-4 h-4" />
-                                </Button>
-                            </div>
-                        </CardHeader>
-                        <CardContent className="pt-8">
-                            <form onSubmit={handleSubmit} className="space-y-6">
-                                {/* Client Name Field (Compulsory) */}
-                                <div className="space-y-3 p-4 border border-gray-200 rounded-lg bg-white/50">
-                                    <Label htmlFor="clinetName" className="text-gray-800 font-semibold flex items-center gap-2">
-                                        <UserCircle className="w-4 h-4 text-blue-600" />
-                                        Client Name *
-                                    </Label>
-                                    <div className="relative">
-                                        <Input
-                                            id="clinetName"
-                                            type="text"
-                                            value={formData.clinetName}
-                                            onChange={(e) => setFormData({ ...formData, clinetName: e.target.value })}
-                                            placeholder="Enter client name"
-                                            className="focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900 pl-10"
-                                            required
-                                        />
-                                        <UserCircle className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                        <Card className="border border-gray-200 shadow-2xl bg-white w-full max-w-6xl max-h-[90vh] overflow-hidden">
+                            <CardHeader className="bg-gray-900 text-white sticky top-0 z-10">
+                                <div className="flex justify-between items-center">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2 rounded-lg bg-white/10">
+                                            <FileSignature className="w-6 h-6" />
+                                        </div>
+                                        <div>
+                                            <CardTitle className="text-white">
+                                                Assign: {selectedForm.title}
+                                            </CardTitle>
+                                            <CardDescription className="text-gray-300">
+                                                Fill form and add attachments
+                                            </CardDescription>
+                                        </div>
                                     </div>
-                                    <p className="text-sm text-gray-500">
-                                        This is a required field for all form submissions
-                                    </p>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={resetForm}
+                                        className="h-8 w-8 text-white hover:bg-white/10"
+                                    >
+                                        <X className="w-4 h-4" />
+                                    </Button>
                                 </div>
-
-                                <div className="space-y-6">
-                                    <h3 className="text-lg font-semibold text-gray-900">Form Details</h3>
-                                    {selectedForm.fields.map((field, index) => (
-                                        <div key={field.name} className="space-y-3 p-4 border border-gray-200 rounded-lg bg-white/50">
-                                            <Label htmlFor={field.name} className="text-gray-800 font-semibold flex items-center gap-2">
-                                                {getFieldIcon(field.type) && React.createElement(getFieldIcon(field.type), { className: "w-4 h-4" })}
-                                                {field.label} {field.required && <span className="text-red-500">*</span>}
-                                            </Label>
-                                            {field.description && (
-                                                <p className="text-sm text-gray-600 mb-2">{field.description}</p>
-                                            )}
-                                            {renderFormField(field)}
-                                            {field.placeholder && !field.description && (
-                                                <p className="text-xs text-gray-500 mt-1">{field.placeholder}</p>
+                                
+                                {/* Tabs */}
+                                <div className="flex border-b border-white/20 mt-4">
+                                    <button
+                                        onClick={() => setActiveTab("form")}
+                                        className={`px-4 py-2 font-medium text-sm transition-all ${activeTab === "form" 
+                                            ? "text-white border-b-2 border-white" 
+                                            : "text-gray-300 hover:text-white"}`}
+                                    >
+                                        <div className="flex items-center gap-2">
+                                            <FileText className="w-4 h-4" />
+                                            Form Details
+                                        </div>
+                                    </button>
+                                    <button
+                                        onClick={() => setActiveTab("attachments")}
+                                        className={`px-4 py-2 font-medium text-sm transition-all ${activeTab === "attachments" 
+                                            ? "text-white border-b-2 border-white" 
+                                            : "text-gray-300 hover:text-white"}`}
+                                    >
+                                        <div className="flex items-center gap-2">
+                                            <Paperclip className="w-4 h-4" />
+                                            Attachments
+                                            {attachments.files.length > 0 && (
+                                                <Badge className="ml-1 bg-white text-gray-900 px-1.5 py-0.5 min-w-5 h-5 flex items-center justify-center text-xs">
+                                                    {attachments.files.length}
+                                                </Badge>
                                             )}
                                         </div>
-                                    ))}
+                                    </button>
+                                    <button
+                                        onClick={() => setActiveTab("assignment")}
+                                        className={`px-4 py-2 font-medium text-sm transition-all ${activeTab === "assignment" 
+                                            ? "text-white border-b-2 border-white" 
+                                            : "text-gray-300 hover:text-white"}`}
+                                    >
+                                        <div className="flex items-center gap-2">
+                                            <Users className="w-4 h-4" />
+                                            Assignment
+                                        </div>
+                                    </button>
                                 </div>
-
-                                {/* Assignment Type Selection */}
-                                <div className="space-y-3 p-4 border border-gray-200 rounded-lg bg-white/50">
-                                    <Label className="text-gray-800 font-semibold">
-                                        Assignment Type *
-                                    </Label>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                        <div
-                                            className={`p-4 border-2 rounded-lg cursor-pointer transition-all duration-200 ${formData.assignmentType === 'single'
-                                                ? 'border-blue-500 bg-blue-50'
-                                                : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                                                }`}
-                                            onClick={() => handleAssignmentTypeChange('single')}
-                                        >
-                                            <div className="flex items-center gap-3">
-                                                <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${formData.assignmentType === 'single'
-                                                    ? 'border-blue-500'
-                                                    : 'border-gray-300'
-                                                    }`}>
-                                                    {formData.assignmentType === 'single' && (
-                                                        <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-                                                    )}
-                                                </div>
-                                                <div>
-                                                    <div className="flex items-center gap-2">
-                                                        <User className="w-5 h-5 text-gray-700" />
-                                                        <span className="font-semibold text-gray-900">Single Team Lead</span>
-                                                    </div>
-                                                    <p className="text-sm text-gray-600 mt-1">
-                                                        Assign to one team lead
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div
-                                            className={`p-4 border-2 rounded-lg cursor-pointer transition-all duration-200 ${formData.assignmentType === 'multiple'
-                                                ? 'border-blue-500 bg-blue-50'
-                                                : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                                                }`}
-                                            onClick={() => handleAssignmentTypeChange('multiple')}
-                                        >
-                                            <div className="flex items-center gap-3">
-                                                <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${formData.assignmentType === 'multiple'
-                                                    ? 'border-blue-500'
-                                                    : 'border-gray-300'
-                                                    }`}>
-                                                    {formData.assignmentType === 'multiple' && (
-                                                        <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-                                                    )}
-                                                </div>
-                                                <div>
-                                                    <div className="flex items-center gap-2">
-                                                        <Users className="w-5 h-5 text-gray-700" />
-                                                        <span className="font-semibold text-gray-900">Multiple Team Leads</span>
-                                                    </div>
-                                                    <p className="text-sm text-gray-600 mt-1">
-                                                        Assign to multiple team leads
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Team Lead Assignment - Based on Type */}
-                                {formData.assignmentType === 'single' ? (
-                                    <div className="space-y-3 p-4 border border-gray-200 rounded-lg bg-white/50">
-                                        <Label htmlFor="assignedTo" className="text-gray-800 font-semibold">
-                                            Select Team Lead *
-                                        </Label>
-                                        <div className="relative">
-                                            <Users className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                                            <select
-                                                id="assignedTo"
-                                                value={formData.assignedTo}
-                                                onChange={(e) => setFormData({ ...formData, assignedTo: e.target.value })}
-                                                className="w-full p-3 pl-10 border border-gray-300 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 bg-white transition-all duration-200 shadow-sm appearance-none text-gray-900"
-                                                required
-                                            >
-                                                <option value="">Select a team lead</option>
-                                                {teamLeads.map((tl) => (
-                                                    <option key={tl._id} value={tl._id}>
-                                                        {tl.email} {" "} ({tl.depId?.name})
-                                                    </option>
-                                                ))}
-                                            </select>
-                                        </div>
-                                        <p className="text-sm text-gray-500">
-                                            The form will be assigned to a single team lead
-                                        </p>
-                                    </div>
-                                ) : (
-                                    <div className="space-y-3 p-4 border border-gray-200 rounded-lg bg-white/50">
-                                        <Label className="text-gray-800 font-semibold">
-                                            Select Team Leads *
-                                        </Label>
-                                        <p className="text-sm text-gray-600 mb-3">
-                                            Select one or more team leads to assign this form
-                                        </p>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-64 overflow-y-auto p-2">
-                                            {teamLeads.map((tl) => (
-                                                <div
-                                                    key={tl._id}
-                                                    className={`p-3 border rounded-lg cursor-pointer transition-all duration-200 flex items-center justify-between ${formData.multipleTeamLeadAssigned.includes(tl._id)
-                                                        ? 'border-blue-500 bg-blue-50'
-                                                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                                                        }`}
-                                                    onClick={() => handleMultipleTeamLeadToggle(tl._id)}
-                                                >
-                                                    <div className="flex items-center gap-3">
-                                                        <Avatar className="h-8 w-8">
-                                                            <AvatarFallback className="bg-blue-100 text-blue-600 text-xs">
-                                                                {tl.name?.charAt(0) || tl.email?.charAt(0) || 'U'}
-                                                            </AvatarFallback>
-                                                        </Avatar>
-                                                        <div>
-                                                            <div className="font-medium text-gray-900">{tl.name}</div>
-                                                            <div className="text-lg text-green-900">{tl.email}</div> 
-                                                            <div className="text-xs text-gray-900">({tl.depId?.name})</div>
-                                                            
+                            </CardHeader>
+                            
+                            <CardContent className="p-6 overflow-y-auto max-h-[60vh]">
+                                <form onSubmit={handleSubmit}>
+                                    {/* Form Tab */}
+                                    {activeTab === "form" && (
+                                        <div className="space-y-6">
+                                            {/* Client Name */}
+                                            <div className="space-y-4 p-5 border border-gray-200 rounded-lg bg-white">
+                                                <Label className="text-gray-900 font-semibold flex items-center gap-2">
+                                                    <UserCircle className="w-5 h-5 text-gray-700" />
+                                                    Client Information *
+                                                </Label>
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                    <div className="space-y-2">
+                                                        <Label className="text-gray-700">Client Name *</Label>
+                                                        <div className="relative">
+                                                            <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500" />
+                                                            <Input
+                                                                value={formData.clientName}
+                                                                onChange={(e) => setFormData({ ...formData, clientName: e.target.value })}
+                                                                placeholder="Enter client name"
+                                                                className="pl-10 h-11 bg-white border-gray-300 text-gray-900 focus:border-gray-800 focus:ring-gray-800"
+                                                                required
+                                                            />
                                                         </div>
                                                     </div>
-                                                    <div className={`w-5 h-5 border rounded flex items-center justify-center ${formData.multipleTeamLeadAssigned.includes(tl._id)
-                                                        ? 'bg-blue-500 border-blue-500'
-                                                        : 'border-gray-300'
-                                                        }`}>
-                                                        {formData.multipleTeamLeadAssigned.includes(tl._id) && (
-                                                            <CheckSquare className="w-3 h-3 text-white" />
-                                                        )}
+                                                    <div className="space-y-2">
+                                                        <Label className="text-gray-700">Priority</Label>
+                                                        <Select value={formData.priority} onValueChange={(value) => setFormData({...formData, priority: value})}>
+                                                            <SelectTrigger className="h-11 bg-white border-gray-300 text-gray-900 focus:border-gray-800 focus:ring-gray-800">
+                                                                <SelectValue placeholder="Select priority" />
+                                                            </SelectTrigger>
+                                                            <SelectContent className="bg-white border-gray-200">
+                                                                <SelectItem value="low" className="text-gray-900">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                                                                        Low Priority
+                                                                    </div>
+                                                                </SelectItem>
+                                                                <SelectItem value="medium" className="text-gray-900">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <div className="w-2 h-2 rounded-full bg-amber-500"></div>
+                                                                        Medium Priority
+                                                                    </div>
+                                                                </SelectItem>
+                                                                <SelectItem value="high" className="text-gray-900">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <div className="w-2 h-2 rounded-full bg-red-500"></div>
+                                                                        High Priority
+                                                                    </div>
+                                                                </SelectItem>
+                                                            </SelectContent>
+                                                        </Select>
                                                     </div>
                                                 </div>
-                                            ))}
+                                                <div className="space-y-2">
+                                                    <Label className="text-gray-700">Notes (Optional)</Label>
+                                                    <Textarea
+                                                        value={formData.notes}
+                                                        onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                                                        placeholder="Additional notes about this assignment..."
+                                                        className="min-h-[100px] bg-white border-gray-300 text-gray-900 focus:border-gray-800 focus:ring-gray-800"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            {/* Form Fields */}
+                                            <div className="space-y-6">
+                                                <div className="flex items-center gap-2">
+                                                    <FileDigit className="w-5 h-5 text-gray-700" />
+                                                    <h3 className="text-lg font-semibold text-gray-900">
+                                                        Form Fields
+                                                    </h3>
+                                                </div>
+                                                {selectedForm.fields?.map((field, index) => (
+                                                    <div key={field.name} className="space-y-3 p-5 border border-gray-200 rounded-lg bg-white">
+                                                        <Label className="text-gray-900 font-semibold flex items-center gap-2">
+                                                            {getFieldIcon(field.type) && React.createElement(getFieldIcon(field.type), { className: "w-4 h-4 text-gray-700" })}
+                                                            {field.label} {field.required && <span className="text-red-500">*</span>}
+                                                        </Label>
+                                                        {field.description && (
+                                                            <p className="text-sm text-gray-600 mb-2">{field.description}</p>
+                                                        )}
+                                                        {renderFormField(field)}
+                                                    </div>
+                                                ))}
+                                            </div>
                                         </div>
-                                        <p className="text-sm text-gray-500">
-                                            {formData.multipleTeamLeadAssigned.length} team lead{formData.multipleTeamLeadAssigned.length !== 1 ? 's' : ''} selected
-                                        </p>
+                                    )}
+
+                                    {/* Attachments Tab */}
+                                    {activeTab === "attachments" && (
+                                        <div className="space-y-6">
+                                            {/* Header */}
+                                            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 p-5 bg-gray-50 rounded-lg border border-gray-200">
+                                                <div>
+                                                    <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                                                        <FolderArchive className="w-5 h-5 text-gray-700" />
+                                                        Attachments Section
+                                                    </h3>
+                                                    <p className="text-gray-600 mt-1">
+                                                        Add files, documents, or images related to this form
+                                                    </p>
+                                                </div>
+                                                <div className="flex flex-wrap gap-2">
+                                                    <Badge variant="outline" className="border-gray-200 text-gray-700">
+                                                        <Shield className="w-3 h-3 mr-1" />
+                                                        Secure
+                                                    </Badge>
+                                                </div>
+                                            </div>
+
+                                            {/* Upload Area */}
+                                            <div
+                                                onDragOver={handleDragOver}
+                                                onDragLeave={handleDragLeave}
+                                                onDrop={handleDrop}
+                                                onClick={() => document.getElementById('file-upload').click()}
+                                                className={`
+                                                    border-2 border-dashed rounded-lg p-8 text-center bg-white
+                                                    cursor-pointer transition-all
+                                                    ${isDragging 
+                                                        ? 'border-gray-800 bg-gray-50' 
+                                                        : 'border-gray-300 hover:border-gray-400'
+                                                    }
+                                                `}
+                                            >
+                                                <input
+                                                    type="file"
+                                                    id="file-upload"
+                                                    multiple
+                                                    className="hidden"
+                                                    onChange={(e) => handleFileUpload(e.target.files)}
+                                                    accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.gif,.mp4,.mp3,.zip"
+                                                />
+                                                
+                                                <div>
+                                                    <div className={`w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center
+                                                        ${isDragging 
+                                                            ? 'bg-gray-900' 
+                                                            : 'bg-gray-100'
+                                                        }`}
+                                                    >
+                                                        {isDragging ? (
+                                                            <CloudUpload className="w-8 h-8 text-white" />
+                                                        ) : (
+                                                            <FileUp className="w-8 h-8 text-gray-700" />
+                                                        )}
+                                                    </div>
+                                                    
+                                                    <p className={`font-semibold mb-2
+                                                        ${isDragging ? 'text-gray-900' : 'text-gray-800'}`}
+                                                    >
+                                                        {isDragging ? 'Drop files here!' : 'Click or drag & drop to upload'}
+                                                    </p>
+                                                    
+                                                    <p className="text-gray-600 mb-4 text-sm">
+                                                        Support PDF, Word, Excel, Images, Videos, and more
+                                                    </p>
+                                                    
+                                                    {attachments.files.length > 0 && (
+                                                        <div className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-full border border-gray-200">
+                                                            <CheckCircle className="w-4 h-4 text-gray-700" />
+                                                            <span className="font-medium text-gray-800">
+                                                                {attachments.files.length} file{attachments.files.length !== 1 ? 's' : ''} ready
+                                                            </span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {/* File Type Filter */}
+                                            {attachments.files.length > 0 && (
+                                                <div className="space-y-3">
+                                                    <Label className="text-gray-700 font-medium">Filter by type:</Label>
+                                                    <div className="flex flex-wrap gap-2">
+                                                        <Button
+                                                            type="button"
+                                                            variant={selectedAttachmentType === "all" ? "default" : "outline"}
+                                                            size="sm"
+                                                            onClick={() => handleAttachmentTypeFilter("all")}
+                                                            className="flex items-center gap-1"
+                                                        >
+                                                            <File className="w-3 h-3" />
+                                                            All Files
+                                                        </Button>
+                                                        <Button
+                                                            type="button"
+                                                            variant={selectedAttachmentType === "images" ? "default" : "outline"}
+                                                            size="sm"
+                                                            onClick={() => handleAttachmentTypeFilter("images")}
+                                                            className="flex items-center gap-1"
+                                                        >
+                                                            <FileImage className="w-3 h-3" />
+                                                            Images
+                                                        </Button>
+                                                        <Button
+                                                            type="button"
+                                                            variant={selectedAttachmentType === "documents" ? "default" : "outline"}
+                                                            size="sm"
+                                                            onClick={() => handleAttachmentTypeFilter("documents")}
+                                                            className="flex items-center gap-1"
+                                                        >
+                                                            <FileText className="w-3 h-3" />
+                                                            Documents
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Files List */}
+                                            {filteredAttachments().length > 0 && (
+                                                <div className="space-y-4">
+                                                    <div className="flex items-center justify-between">
+                                                        <h4 className="font-semibold text-gray-900 flex items-center gap-2">
+                                                            <Paperclip className="w-5 h-5" />
+                                                            Uploaded Files ({filteredAttachments().length})
+                                                        </h4>
+                                                        <Button
+                                                            type="button"
+                                                            variant="outline"
+                                                            size="sm"
+                                                            onClick={handleCreateFolder}
+                                                            className="flex items-center gap-1 border-gray-300"
+                                                        >
+                                                            <FolderPlus className="w-4 h-4" />
+                                                            New Folder
+                                                        </Button>
+                                                    </div>
+                                                    
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                                        {filteredAttachments().map((fileObj) => (
+                                                            <div
+                                                                key={fileObj.id}
+                                                                className="group relative p-4 bg-white rounded-lg border border-gray-200 hover:border-gray-300 hover:shadow-sm transition-all"
+                                                            >
+                                                                {fileObj.status === 'uploading' && (
+                                                                    <div className="absolute top-2 right-2">
+                                                                        <Loader2 className="w-4 h-4 animate-spin text-gray-700" />
+                                                                    </div>
+                                                                )}
+                                                                {fileObj.status === 'completed' && (
+                                                                    <div className="absolute top-2 right-2">
+                                                                        <CheckCircle className="w-4 h-4 text-gray-700" />
+                                                                    </div>
+                                                                )}
+                                                                
+                                                                <div className="flex items-start gap-3">
+                                                                    <div className="p-3 rounded-lg bg-gray-100">
+                                                                        {getFileIcon(fileObj.type)}
+                                                                    </div>
+                                                                    <div className="flex-1 min-w-0">
+                                                                        <p className="font-medium text-gray-900 truncate">
+                                                                            {fileObj.name}
+                                                                        </p>
+                                                                        <div className="flex items-center justify-between mt-2">
+                                                                            <span className="text-xs text-gray-500">
+                                                                                {formatFileSize(fileObj.size)}
+                                                                            </span>
+                                                                            <span className="text-xs text-gray-500">
+                                                                                {new Date(fileObj.uploadedAt).toLocaleTimeString()}
+                                                                            </span>
+                                                                        </div>
+                                                                        
+                                                                        {fileObj.status === 'uploading' && (
+                                                                            <div className="mt-2">
+                                                                                <div className="w-full bg-gray-200 rounded-full h-1.5">
+                                                                                    <div 
+                                                                                        className="bg-gray-800 h-1.5 rounded-full transition-all"
+                                                                                        style={{ width: `${fileObj.progress}%` }}
+                                                                                    ></div>
+                                                                                </div>
+                                                                                <span className="text-xs text-gray-700 mt-1">
+                                                                                    {fileObj.progress}% uploaded
+                                                                                </span>
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                                
+                                                                <div className="flex items-center gap-2 mt-3 pt-3 border-t border-gray-100">
+                                                                    <Button
+                                                                        type="button"
+                                                                        variant="ghost"
+                                                                        size="sm"
+                                                                        className="flex-1 text-xs text-gray-700 hover:text-gray-900 hover:bg-gray-100"
+                                                                    >
+                                                                        <EyeIcon className="w-3 h-3 mr-1" />
+                                                                        Preview
+                                                                    </Button>
+                                                                    <Button
+                                                                        type="button"
+                                                                        variant="ghost"
+                                                                        size="sm"
+                                                                        className="flex-1 text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            handleRemoveFile(fileObj.id);
+                                                                        }}
+                                                                    >
+                                                                        <Trash2 className="w-3 h-3 mr-1" />
+                                                                        Remove
+                                                                    </Button>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Security Options */}
+                                            <div className="space-y-4 p-5 bg-gray-50 rounded-lg border border-gray-200">
+                                                <h4 className="font-semibold text-gray-900 flex items-center gap-2">
+                                                    <Shield className="w-5 h-5" />
+                                                    Security & Sharing Options
+                                                </h4>
+                                                
+                                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                                    <div className="flex items-center space-x-2">
+                                                        <Checkbox
+                                                            id="encrypt"
+                                                            checked={attachments.isEncrypted}
+                                                            onCheckedChange={(checked) => 
+                                                                setAttachments({...attachments, isEncrypted: checked})
+                                                            }
+                                                            className="border-gray-300"
+                                                        />
+                                                        <Label htmlFor="encrypt" className="flex items-center gap-2 cursor-pointer text-gray-900">
+                                                            <LockKeyhole className="w-4 h-4" />
+                                                            <span>Encrypt files</span>
+                                                        </Label>
+                                                    </div>
+                                                    
+                                                    <div className="flex items-center space-x-2">
+                                                        <Checkbox
+                                                            id="share-client"
+                                                            checked={attachments.shareWithClient}
+                                                            onCheckedChange={(checked) => 
+                                                                setAttachments({...attachments, shareWithClient: checked})
+                                                            }
+                                                            className="border-gray-300"
+                                                        />
+                                                        <Label htmlFor="share-client" className="flex items-center gap-2 cursor-pointer text-gray-900">
+                                                            <Share2 className="w-4 h-4" />
+                                                            <span>Share with client</span>
+                                                        </Label>
+                                                    </div>
+                                                    
+                                                    <div className="flex items-center space-x-2">
+                                                        <Checkbox
+                                                            id="print-copy"
+                                                            checked={attachments.printCopy}
+                                                            onCheckedChange={(checked) => 
+                                                                setAttachments({...attachments, printCopy: checked})
+                                                            }
+                                                            className="border-gray-300"
+                                                        />
+                                                        <Label htmlFor="print-copy" className="flex items-center gap-2 cursor-pointer text-gray-900">
+                                                            <Printer className="w-4 h-4" />
+                                                            <span>Print copy</span>
+                                                        </Label>
+                                                    </div>
+                                                </div>
+                                                
+                                                <div className="space-y-2">
+                                                    <Label htmlFor="attachment-notes" className="text-gray-700">Attachment Notes</Label>
+                                                    <Textarea
+                                                        id="attachment-notes"
+                                                        value={attachments.notes}
+                                                        onChange={(e) => setAttachments({...attachments, notes: e.target.value})}
+                                                        placeholder="Add notes about these attachments..."
+                                                        className="min-h-[80px] bg-white border-gray-300 text-gray-900 focus:border-gray-800 focus:ring-gray-800"
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Assignment Tab */}
+                                    {activeTab === "assignment" && (
+                                        <div className="space-y-6">
+                                            {/* Assignment Type */}
+                                            <div className="space-y-4 p-5 border border-gray-200 rounded-lg bg-white">
+                                                <Label className="text-gray-900 font-semibold">
+                                                    Assignment Configuration
+                                                </Label>
+                                                
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                    <div
+                                                        className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${formData.assignmentType === 'single'
+                                                            ? 'border-gray-800 bg-gray-50'
+                                                            : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                                                            }`}
+                                                        onClick={() => handleAssignmentTypeChange('single')}
+                                                    >
+                                                        <div className="flex items-center gap-3">
+                                                            <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${formData.assignmentType === 'single'
+                                                                ? 'border-gray-800'
+                                                                : 'border-gray-300'
+                                                                }`}>
+                                                                {formData.assignmentType === 'single' && (
+                                                                    <div className="w-2.5 h-2.5 rounded-full bg-gray-800"></div>
+                                                                )}
+                                                            </div>
+                                                            <div>
+                                                                <div className="flex items-center gap-2">
+                                                                    <User className="w-5 h-5 text-gray-700" />
+                                                                    <span className="font-semibold text-gray-900">Single Team Lead</span>
+                                                                </div>
+                                                                <p className="text-sm text-gray-600 mt-1">
+                                                                    Assign to one primary team lead
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <div
+                                                        className={`p-4 border-2 rounded-lg cursor-pointer transition-all ${formData.assignmentType === 'multiple'
+                                                            ? 'border-gray-800 bg-gray-50'
+                                                            : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                                                            }`}
+                                                        onClick={() => handleAssignmentTypeChange('multiple')}
+                                                    >
+                                                        <div className="flex items-center gap-3">
+                                                            <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${formData.assignmentType === 'multiple'
+                                                                ? 'border-gray-800'
+                                                                : 'border-gray-300'
+                                                                }`}>
+                                                                {formData.assignmentType === 'multiple' && (
+                                                                    <div className="w-2.5 h-2.5 rounded-full bg-gray-800"></div>
+                                                                )}
+                                                            </div>
+                                                            <div>
+                                                                <div className="flex items-center gap-2">
+                                                                    <Users className="w-5 h-5 text-gray-700" />
+                                                                    <span className="font-semibold text-gray-900">Multiple Team Leads</span>
+                                                                </div>
+                                                                <p className="text-sm text-gray-600 mt-1">
+                                                                    Assign to multiple team leads
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Single Assignment */}
+                                            {formData.assignmentType === 'single' && (
+                                                <div className="space-y-4 p-5 border border-gray-200 rounded-lg bg-white">
+                                                    <Label className="text-gray-900 font-semibold flex items-center gap-2">
+                                                        <User className="w-5 h-5" />
+                                                        Select Team Lead *
+                                                    </Label>
+                                                    <div className="relative">
+                                                        <Users className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-500" />
+                                                        <select
+                                                            value={formData.assignedTo}
+                                                            onChange={(e) => setFormData({ ...formData, assignedTo: e.target.value })}
+                                                            className="w-full p-3 pl-10 border border-gray-300 rounded-lg focus:border-gray-800 focus:ring-gray-800 bg-white text-gray-900 h-11 appearance-none"
+                                                            required
+                                                        >
+                                                            <option value="" className="text-gray-500">Select a team lead...</option>
+                                                            {teamLeads.map((tl) => (
+                                                                <option key={tl._id} value={tl._id} className="text-gray-900">
+                                                                    {tl.name || tl.email} • {tl.depId?.name || 'No Department'}
+                                                                </option>
+                                                            ))}
+                                                        </select>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Multiple Assignment */}
+                                            {formData.assignmentType === 'multiple' && (
+                                                <div className="space-y-4 p-5 border border-gray-200 rounded-lg bg-white">
+                                                    <div className="flex items-center justify-between">
+                                                        <Label className="text-gray-900 font-semibold flex items-center gap-2">
+                                                            <Users className="w-5 h-5" />
+                                                            Select Team Leads *
+                                                        </Label>
+                                                        <Badge variant="outline" className="text-gray-700 border-gray-300">
+                                                            {formData.multipleTeamLeadAssigned.length} selected
+                                                        </Badge>
+                                                    </div>
+                                                    
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-64 overflow-y-auto p-3 bg-gray-50 rounded-lg">
+                                                        {teamLeads.map((tl) => {
+                                                            const isSelected = formData.multipleTeamLeadAssigned.includes(tl._id);
+                                                            return (
+                                                                <div
+                                                                    key={tl._id}
+                                                                    className={`p-3 border rounded-lg cursor-pointer transition-all flex items-center justify-between ${isSelected
+                                                                        ? 'border-gray-800 bg-gray-100'
+                                                                        : 'border-gray-200 hover:border-gray-300 hover:bg-white'
+                                                                        }`}
+                                                                    onClick={() => {
+                                                                        setFormData(prev => {
+                                                                            const isSelected = prev.multipleTeamLeadAssigned.includes(tl._id);
+                                                                            return {
+                                                                                ...prev,
+                                                                                multipleTeamLeadAssigned: isSelected
+                                                                                    ? prev.multipleTeamLeadAssigned.filter(id => id !== tl._id)
+                                                                                    : [...prev.multipleTeamLeadAssigned, tl._id]
+                                                                            };
+                                                                        });
+                                                                    }}
+                                                                >
+                                                                    <div className="flex items-center gap-3">
+                                                                        <Avatar className="h-8 w-8">
+                                                                            <AvatarFallback className={`${isSelected ? 'bg-gray-800 text-white' : 'bg-gray-100 text-gray-800'}`}>
+                                                                                {tl.name?.charAt(0) || tl.email?.charAt(0) || 'U'}
+                                                                            </AvatarFallback>
+                                                                        </Avatar>
+                                                                        <div>
+                                                                            <div className="font-medium text-gray-900">{tl.name || 'No Name'}</div>
+                                                                            <div className="text-xs text-gray-600">{tl.email}</div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className={`w-5 h-5 border rounded flex items-center justify-center ${isSelected
+                                                                        ? 'bg-gray-800 border-gray-800'
+                                                                        : 'border-gray-300'
+                                                                        }`}>
+                                                                        {isSelected && (
+                                                                            <Check className="w-3 h-3 text-white" />
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Due Date */}
+                                            <div className="space-y-4 p-5 border border-gray-200 rounded-lg bg-white">
+                                                <Label className="text-gray-900 font-semibold flex items-center gap-2">
+                                                    <CalendarFold className="w-5 h-5" />
+                                                    Due Date (Optional)
+                                                </Label>
+                                                <div className="relative">
+                                                    <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-500" />
+                                                    <Input
+                                                        type="date"
+                                                        value={formData.dueDate}
+                                                        onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
+                                                        className="pl-10 h-11 bg-white border-gray-300 text-gray-900 focus:border-gray-800 focus:ring-gray-800"
+                                                        min={new Date().toISOString().split('T')[0]}
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            {/* Summary Card */}
+                                            <div className="p-5 bg-gray-50 rounded-lg border border-gray-200">
+                                                <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                                                    <CheckCircle className="w-5 h-5" />
+                                                    Assignment Summary
+                                                </h4>
+                                                <div className="space-y-2 text-sm text-gray-700">
+                                                    <div className="flex justify-between">
+                                                        <span>Form:</span>
+                                                        <span className="font-semibold text-gray-900">{selectedForm.title}</span>
+                                                    </div>
+                                                    <div className="flex justify-between">
+                                                        <span>Client:</span>
+                                                        <span className="font-semibold text-gray-900">{formData.clientName || 'Not set'}</span>
+                                                    </div>
+                                                    <div className="flex justify-between">
+                                                        <span>Attachments:</span>
+                                                        <span className="font-semibold text-gray-900">{attachments.files.length} files</span>
+                                                    </div>
+                                                    <div className="flex justify-between">
+                                                        <span>Assignment Type:</span>
+                                                        <span className="font-semibold text-gray-900 capitalize">{formData.assignmentType}</span>
+                                                    </div>
+                                                    <div className="flex justify-between">
+                                                        <span>Team Leads:</span>
+                                                        <span className="font-semibold text-gray-900">
+                                                            {formData.assignmentType === 'single' 
+                                                                ? (teamLeads.find(tl => tl._id === formData.assignedTo)?.name || 'Not selected')
+                                                                : `${formData.multipleTeamLeadAssigned.length} selected`
+                                                            }
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex justify-between">
+                                                        <span>Priority:</span>
+                                                        <Badge variant="outline" className={
+                                                            formData.priority === 'high' ? 'bg-red-50 text-red-800 border-red-200' :
+                                                            formData.priority === 'medium' ? 'bg-amber-50 text-amber-800 border-amber-200' :
+                                                            'bg-green-50 text-green-800 border-green-200'
+                                                        }>
+                                                            {formData.priority}
+                                                        </Badge>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </form>
+                            </CardContent>
+                            
+                            {/* Footer with Navigation and Submit */}
+                            <CardFooter className="bg-gray-50 border-t border-gray-200 p-6 sticky bottom-0">
+                                <div className="flex flex-col sm:flex-row justify-between items-center w-full gap-4">
+                                    {/* Navigation */}
+                                    <div className="flex items-center gap-3">
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            onClick={() => {
+                                                if (activeTab === "attachments") setActiveTab("form");
+                                                else if (activeTab === "assignment") setActiveTab("attachments");
+                                            }}
+                                            className="flex items-center gap-2 border-gray-300 text-gray-700 hover:text-gray-900"
+                                            disabled={activeTab === "form"}
+                                        >
+                                            <ChevronLeft className="w-4 h-4" />
+                                            Previous
+                                        </Button>
+                                        
+                                        <div className="flex items-center gap-1">
+                                            <div className={`w-2 h-2 rounded-full ${activeTab === "form" ? "bg-gray-800" : "bg-gray-300"}`}></div>
+                                            <div className={`w-2 h-2 rounded-full ${activeTab === "attachments" ? "bg-gray-800" : "bg-gray-300"}`}></div>
+                                            <div className={`w-2 h-2 rounded-full ${activeTab === "assignment" ? "bg-gray-800" : "bg-gray-300"}`}></div>
+                                        </div>
+                                        
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            onClick={() => {
+                                                if (activeTab === "form") setActiveTab("attachments");
+                                                else if (activeTab === "attachments") setActiveTab("assignment");
+                                            }}
+                                            className="flex items-center gap-2 border-gray-300 text-gray-700 hover:text-gray-900"
+                                            disabled={activeTab === "assignment"}
+                                        >
+                                            Next
+                                            <ChevronRight className="w-4 h-4" />
+                                        </Button>
+                                    </div>
+                                    
+                                    {/* Submit Button */}
+                                    <div className="flex items-center gap-3">
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            onClick={resetForm}
+                                            className="px-6 border-gray-300 text-gray-700 hover:text-gray-900"
+                                        >
+                                            Cancel
+                                        </Button>
+                                        <Button
+                                            type="submit"
+                                            disabled={loading || uploadProgress.isUploading}
+                                            onClick={handleSubmit}
+                                            className="bg-gray-900 hover:bg-gray-800 text-white px-8 shadow-sm"
+                                        >
+                                            {loading || uploadProgress.isUploading ? (
+                                                <>
+                                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                                    {uploadProgress.isUploading ? 'Uploading...' : 'Submitting...'}
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Rocket className="w-4 h-4 mr-2" />
+                                                    Submit Assignment
+                                                </>
+                                            )}
+                                        </Button>
+                                    </div>
+                                </div>
+                                
+                                {/* Progress Bar for Upload */}
+                                {uploadProgress.isUploading && (
+                                    <div className="w-full mt-4">
+                                        <div className="flex items-center justify-between mb-1">
+                                            <span className="text-sm font-medium text-gray-700">
+                                                Uploading attachments...
+                                            </span>
+                                            <span className="text-sm font-medium text-gray-700">
+                                                {Math.round(uploadProgress.progress)}%
+                                            </span>
+                                        </div>
+                                        <div className="w-full bg-gray-200 rounded-full h-2">
+                                            <div 
+                                                className="bg-gray-800 h-2 rounded-full transition-all"
+                                                style={{ width: `${uploadProgress.progress}%` }}
+                                            ></div>
+                                        </div>
                                     </div>
                                 )}
-
-                                <div className="flex gap-3 pt-6">
-                                    <Button
-                                        type="submit"
-                                        disabled={loading}
-                                        className="bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white px-8 py-2.5 shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-600/30 transition-all duration-300 transform hover:scale-105 disabled:transform-none disabled:hover:scale-100"
-                                    >
-                                        {loading ? (
-                                            <>
-                                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                                Submitting...
-                                            </>
-                                        ) : (
-                                            <>
-                                                <Send className="w-4 h-4 mr-2" />
-                                                {formData.assignmentType === 'multiple' ? 'Assign to Multiple Leads' : 'Assign to Team Lead'}
-                                            </>
-                                        )}
-                                    </Button>
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        onClick={resetForm}
-                                        className="border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400 px-6 py-2.5 transition-all duration-200 shadow-sm"
-                                    >
-                                        Cancel
-                                    </Button>
-                                </div>
-                            </form>
-                        </CardContent>
-                    </Card>
+                            </CardFooter>
+                        </Card>
+                    </div>
                 )}
             </div>
         </div>

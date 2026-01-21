@@ -22,6 +22,11 @@ import {
   Users,
   Building,
   FileText,
+  FilePlus,
+  X,
+  Image,
+  Video,
+  Play,
   CheckCircle,
   XCircle,
   AlertCircle,
@@ -85,6 +90,7 @@ import {
   Puzzle,
   Cpu,
   Zap as ZapIcon,
+
   Wind,
   Waves,
   Fire,
@@ -204,6 +210,24 @@ export default function SubmissionDetailPage() {
   const [editableData, setEditableData] = useState({});
   const [feedback, setFeedback] = useState("");
   const [saving, setSaving] = useState(false);
+
+  const [zoom, setZoom] = useState(1);
+  
+      const [previewFile, setPreviewFile] = useState(null);
+  
+    const downloadFile = (url, name) => {
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = name;
+      link.click();
+    };
+
+    const getFileIcon = (fileType) => {
+    if (fileType?.includes('image')) return <Image className="w-5 h-5 text-blue-500" />;
+    if (fileType?.includes('video')) return <Video className="w-5 h-5 text-purple-500" />;
+    if (fileType?.includes('pdf')) return <FileText className="w-5 h-5 text-red-500" />;
+    return <File className="w-5 h-5 text-gray-500" />;
+  };
 
   // Fetch submission details
   const fetchSubmissionDetails = useCallback(async () => {
@@ -582,7 +606,7 @@ export default function SubmissionDetailPage() {
             </TabsTrigger>
             <TabsTrigger value="form-data" className="data-[state=active]:bg-white data-[state=active]:text-emerald-600 rounded-lg">
               <FileText className="mr-2 h-4 w-4" />
-              Form Data
+              Form Data & Attachments
             </TabsTrigger>
             <TabsTrigger value="team" className="data-[state=active]:bg-white data-[state=active]:text-sky-600 rounded-lg">
               <Users className="mr-2 h-4 w-4" />
@@ -894,31 +918,7 @@ export default function SubmissionDetailPage() {
                       All submitted form fields and values
                     </CardDescription>
                   </div>
-                  {!isEditing ? (
-                    <Button 
-                      onClick={() => setIsEditing(true)} 
-                      className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700"
-                    >
-                      <Edit className="mr-2 h-4 w-4" />
-                      Edit Form Data
-                    </Button>
-                  ) : (
-                    <div className="flex gap-2">
-                      <Button variant="outline" onClick={() => setIsEditing(false)} className="border-gray-300">
-                        Cancel
-                      </Button>
-                      <Button onClick={handleSaveEdit} disabled={saving} className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700">
-                        {saving ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Saving...
-                          </>
-                        ) : (
-                          "Save Changes"
-                        )}
-                      </Button>
-                    </div>
-                  )}
+                 
                 </div>
               </CardHeader>
               <CardContent className="pt-6">
@@ -958,10 +958,79 @@ export default function SubmissionDetailPage() {
                         )}
                       </div>
                     ))}
+
+
+                    {/* File Attachments */}
+                
                   </div>
+
+                  
                 )}
+
+                   
               </CardContent>
             </Card>
+
+
+            <Card className="mt-6 border border-emerald-200 shadow-lg">
+  <CardHeader className="bg-emerald-50">
+    <CardTitle className="text-lg font-semibold text-emerald-900">
+      Attachments
+    </CardTitle>
+  </CardHeader>
+
+  <CardContent>
+    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+      {submission.fileAttachments?.map((file) => {
+        const { url, name, type, publicId } = file;
+        const isImage = type.startsWith("image/");
+        const isVideo = type.startsWith("video/");
+
+        return (
+          <div
+            key={publicId}
+            className="rounded-lg border border-emerald-200 overflow-hidden shadow hover:shadow-xl transition"
+          >
+            <div className="h-40 bg-emerald-100 flex items-center justify-center">
+              {isImage ? (
+                <img src={url} className="object-cover w-full h-full" />
+              ) : isVideo ? (
+                <video src={url} className="object-cover w-full h-full" />
+              ) : (
+                <FileText className="w-12 h-12 text-emerald-600" />
+              )}
+            </div>
+
+            <div className="p-3 bg-white text-center space-y-2">
+              <p className="text-sm font-medium text-emerald-800 truncate">
+                {name}
+              </p>
+              <div className="flex justify-center gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+                  onClick={() => setPreviewFile(file)}
+                >
+                  Preview
+                </Button>
+                <Button
+                  size="sm"
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                  onClick={() => window.open(url, "_blank")}
+                >
+                  Download
+                </Button>
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  </CardContent>
+</Card>
+
+
           </TabsContent>
 
           {/* Team Tab */}
@@ -1376,6 +1445,95 @@ export default function SubmissionDetailPage() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {previewFile && (
+  <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 overflow-y-auto">
+    <div className="bg-white rounded-2xl w-full max-w-[95vw] max-h-[95vh] overflow-hidden flex flex-col shadow-lg">
+      {/* Header */}
+      <div className="flex items-center justify-between p-4 border-b">
+        <div className="flex items-center gap-2">
+          {getFileIcon(previewFile.type)}
+          <h3 className="font-bold text-gray-900 truncate">{previewFile.name}</h3>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setZoom((prev) => prev + 0.2)}
+            className="text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+          >
+            Zoom In +
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setZoom((prev) => Math.max(prev - 0.2, 0.2))}
+            className="text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+          >
+            Zoom Out -
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => downloadFile(previewFile.url, previewFile.name)}
+            className="text-green-600 hover:text-green-800 hover:bg-green-50"
+          >
+            <Download className="w-4 h-4 mr-2" /> Download
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setPreviewFile(null)}
+            className="text-gray-600 hover:text-gray-800 hover:bg-gray-100"
+          >
+            <X className="w-4 h-4" />
+          </Button>
+        </div>
+      </div>
+
+      {/* Body */}
+      <div className="flex-1 p-4 overflow-auto flex items-center justify-center bg-gray-50">
+        {previewFile.type?.includes('image') ? (
+          <img
+            src={previewFile.url}
+            alt={previewFile.name}
+            className="rounded-lg mx-auto transition-transform"
+            style={{ transform: `scale(${zoom})` }}
+          />
+        ) : previewFile.type?.includes('video') ? (
+          <video
+            controls
+            autoPlay
+            className="rounded-lg mx-auto transition-transform"
+            style={{ transform: `scale(${zoom})` }}
+          >
+            <source src={previewFile.url} type={previewFile.type} />
+            Your browser does not support the video tag.
+          </video>
+        ) : previewFile.type?.includes('pdf') ? (
+          <iframe
+            src={previewFile.url}
+            className="w-full h-[90vh] border rounded-lg"
+            title={previewFile.name}
+          />
+        ) : (
+          <div className="text-center py-12">
+            <File className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+            <p className="text-gray-700">Preview not available for this file type</p>
+            <Button
+              variant="outline"
+              onClick={() => downloadFile(previewFile.url, previewFile.name)}
+              className="mt-4"
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Download File
+            </Button>
+          </div>
+        )}
+      </div>
+    </div>
+  </div>
+)}
     </div>
   );
 }

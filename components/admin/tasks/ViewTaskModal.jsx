@@ -35,6 +35,8 @@ import {
   FileUp,
 } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
+import FilePreviewDownload from "../../shared/FilePreviewDownload";
+import FileCard from "./FilePreviewDownload";
 
 export default function ViewTaskModal({ isOpen, onClose, task }) {
   const [activeTab, setActiveTab] = useState("details");
@@ -163,6 +165,12 @@ export default function ViewTaskModal({ isOpen, onClose, task }) {
   };
 
   const stats = getCompletionStats();
+// Inside your Task Modal component
+
+const allFiles = [
+  ...(task.fileAttachments || []).map(f => ({ ...f, category: "file" })),
+  ...(task.audioFiles || []).map(a => ({ ...a, category: "audio" })),
+];
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -516,29 +524,7 @@ export default function ViewTaskModal({ isOpen, onClose, task }) {
                                     </p>
                                   </div>
                                 </div>
-                                <div className="flex gap-2">
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => window.open(file.url, "_blank")}
-                                  >
-                                    <Eye className="w-4 h-4" />
-                                  </Button>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => {
-                                      const link = document.createElement("a");
-                                      link.href = file.url;
-                                      link.download = file.name;
-                                      document.body.appendChild(link);
-                                      link.click();
-                                      document.body.removeChild(link);
-                                    }}
-                                  >
-                                    <Download className="w-4 h-4" />
-                                  </Button>
-                                </div>
+                                <FilePreviewDownload file={file} />
                               </div>
                             ))}
                           </div>
@@ -546,7 +532,21 @@ export default function ViewTaskModal({ isOpen, onClose, task }) {
                       )}
 
                       {/* Admin Feedback Input */}
-                     
+                      <div className="mt-4">
+                        <Label className="font-medium mb-2">Add Feedback (Admin)</Label>
+                        <div className="flex gap-2">
+                          <Textarea
+                            placeholder="Add your feedback here..."
+                            value={feedback}
+                            onChange={(e) => setFeedback(e.target.value)}
+                            className="flex-1"
+                          />
+                          <Button>
+                            <Send className="w-4 h-4 mr-2" />
+                            Send
+                          </Button>
+                        </div>
+                      </div>
                     </CardContent>
                   </Card>
                 );
@@ -559,123 +559,15 @@ export default function ViewTaskModal({ isOpen, onClose, task }) {
         {activeTab === "files" && (
           <div className="space-y-6">
             {/* Original Files */}
-            {task.fileAttachments && task.fileAttachments.length > 0 && (
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold flex items-center gap-2 text-gray-700">
-                  <FileText className="w-5 h-5" />
-                  Original Files ({task.fileAttachments.length})
-                </h3>
-                <div className="space-y-2">
-                  {task.fileAttachments.map((file, index) => (
-                    <Card key={index} className="hover:shadow-md transition-shadow">
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className="p-2 bg-blue-100 rounded-lg">
-                              <FileText className="w-6 h-6 text-blue-600" />
-                            </div>
-                            <div>
-                              <p className="font-medium text-gray-900">{file.name}</p>
-                              <div className="flex items-center gap-3 text-sm text-gray-500">
-                                <span>{formatFileSize(file.size)}</span>
-                                <span>•</span>
-                                <span>{file.type}</span>
-                                <span>•</span>
-                                <span>Uploaded {formatTimeAgo(file.createdAt)}</span>
-                              </div>
-                            </div>
-                          </div>
-                          <div className="flex gap-2">
-                            <Button
-                              className="bg-gradient-to-r from-blue-600 to-purple-600 text-white"
-                              size="sm"
-                              onClick={() => window.open(file.url, "_blank")}
-                            >
-                              <Eye className="w-4 h-4 mr-2" />
-                              View
-                            </Button>
-                            <Button
-                              variant="outline"
-                              className="bg-gradient-to-r from-gray-600 to-gray-600 text-white"
-                              size="sm"
-                              onClick={() => {
-                                const link = document.createElement("a");
-                                link.href = file.url;
-                                link.download = file.name;
-                                document.body.appendChild(link);
-                                link.click();
-                                document.body.removeChild(link);
-                              }}
-                            >
-                              <Download className="w-4 h-4 mr-2" />
-                              Download
-                            </Button>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </div>
-            )}
+             {/* FILE ATTACHMENTS */}
+       
+                  {/* ✅ CORRECT USAGE */}
+     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mt-4">
+  {allFiles.map((file) => (
+    <FileCard key={file._id || file.url} file={file} />
+  ))}
+</div>
 
-            {/* Audio Files */}
-            {task.audioFiles && task.audioFiles.length > 0 && (
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold flex items-center gap-2">
-                  <AudioLines className="w-5 h-5" />
-                  Audio Files ({task.audioFiles.length})
-                </h3>
-                <div className="space-y-2">
-                  {task.audioFiles.map((audio, index) => (
-                    <Card key={index} className="hover:shadow-md transition-shadow">
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className="p-2 bg-purple-100 rounded-lg">
-                              <AudioLines className="w-6 h-6 text-purple-600" />
-                            </div>
-                            <div>
-                              <p className="font-medium text-gray-900">{audio.name}</p>
-                              <div className="flex items-center gap-3 text-sm text-gray-500">
-                                <span>{formatFileSize(audio.size)}</span>
-                                <span>•</span>
-                                <span>{audio.type}</span>
-                                <span>•</span>
-                                {audio.duration && (
-                                  <>
-                                    <span>{Math.floor(audio.duration / 60)}:{(audio.duration % 60).toString().padStart(2, '0')}</span>
-                                    <span>•</span>
-                                  </>
-                                )}
-                                <span>Uploaded {formatTimeAgo(audio.createdAt)}</span>
-                              </div>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-3">
-                            <audio controls src={audio.url} className="w-64" />
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                const link = document.createElement("a");
-                                link.href = audio.url;
-                                link.download = audio.name;
-                                document.body.appendChild(link);
-                                link.click();
-                                document.body.removeChild(link);
-                              }}
-                            >
-                              <Download className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </div>
-            )}
 
             {/* Submitted Files from Managers */}
             {task.managerResponses?.some(r => r.submittedFiles && r.submittedFiles.length > 0) && (
@@ -724,29 +616,7 @@ export default function ViewTaskModal({ isOpen, onClose, task }) {
                                     </p>
                                   </div>
                                 </div>
-                                <div className="flex gap-2">
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => window.open(file.url, "_blank")}
-                                  >
-                                    <Eye className="w-4 h-4" />
-                                  </Button>
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => {
-                                      const link = document.createElement("a");
-                                      link.href = file.url;
-                                      link.download = file.name;
-                                      document.body.appendChild(link);
-                                      link.click();
-                                      document.body.removeChild(link);
-                                    }}
-                                  >
-                                    <Download className="w-4 h-4" />
-                                  </Button>
-                                </div>
+                                <FilePreviewDownload file={file} />
                               </div>
                             ))}
                           </div>

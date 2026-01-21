@@ -1,53 +1,59 @@
-import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import Subtask from "@/models/Subtask";
-import FormSubmission from "@/models/FormSubmission";
-import Employee from "@/models/Employee";
-import Manager from "@/models/Manager";
-import { authOptions } from "@/lib/auth";
-import dbConnect from "@/lib/db";
-import { sendNotification } from "@/lib/sendNotification";
-import { sendMail } from "@/lib/mail";
-import { createdSubtaskMailTemplate } from "@/helper/emails/teamlead/createdSubtaskMailTemplate";
-import TeamLead from "@/models/TeamLead";
+  import { NextResponse } from "next/server";
+  import { getServerSession } from "next-auth";
+  import Subtask from "@/models/Subtask";
+  import FormSubmission from "@/models/FormSubmission";
+  import Employee from "@/models/Employee";
+  import Manager from "@/models/Manager";
+  import { authOptions } from "@/lib/auth";
+  import dbConnect from "@/lib/db";
+  import { sendNotification } from "@/lib/sendNotification";
+  import { sendMail } from "@/lib/mail";
+  import { createdSubtaskMailTemplate } from "@/helper/emails/teamlead/createdSubtaskMailTemplate";
+  import TeamLead from "@/models/TeamLead";
+  import { Upload } from "@aws-sdk/lib-storage";
+  import { GetObjectCommand } from "@aws-sdk/client-s3";
+  import s3 from "@/lib/aws"
+  import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
-export async function GET(req) {
-  try {
-    await dbConnect();
-    const session = await getServerSession(authOptions);
+  export async function GET(req) {
+    try {
+      await dbConnect();
+      const session = await getServerSession(authOptions);
 
-    if (!session || session.user.role !== "TeamLead") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      if (!session || session.user.role !== "TeamLead") {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
+
+      const subtasks = await Subtask.find({ teamLeadId: session.user.id })
+        .populate("submissionId", "title description")
+        .populate({
+          path: "assignedEmployees.employeeId",
+          select: "firstName lastName email",
+        })
+        .populate({
+          path: "assignedManagers.managerId",
+          select: "firstName lastName email",
+        })
+        .populate({
+          path: "assignedTeamLeads.teamLeadId",
+          select: "firstName lastName email",
+        });
+
+      return NextResponse.json({ subtasks }, { status: 200 });
+    } catch (error) {
+      console.error("GET Subtask Error:", error);
+      return NextResponse.json(
+        { error: "Failed to fetch subtasks" },
+        { status: 500 }
+      );
     }
-
-    const subtasks = await Subtask.find({ teamLeadId: session.user.id })
-      .populate("submissionId", "title description")
-      .populate({
-        path: "assignedEmployees.employeeId",
-        select: "firstName lastName email",
-      })
-      .populate({
-        path: "assignedManagers.managerId",
-        select: "firstName lastName email",
-      })
-      .populate({
-        path: "assignedTeamLeads.teamLeadId",
-        select: "firstName lastName email",
-      });
-
-    return NextResponse.json({ subtasks }, { status: 200 });
-  } catch (error) {
-    console.error("GET Subtask Error:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch subtasks" },
-      { status: 500 }
-    );
   }
-}
 
-// app/api/teamlead/subtasks/route.js - Update the POST function
+
+
 export async function POST(request) {
   try {
+    const formData = await request.formData();
     const session = await getServerSession(authOptions);
 
     if (!session || session.user.role !== "TeamLead") {
@@ -56,23 +62,25 @@ export async function POST(request) {
 
     await dbConnect();
 
-    const body = await request.json();
-    const {
-      title,
-      description,
-      submissionId,
-      assignedEmployees = [],
-      assignedManagers = [],
-      assignedTeamLeads = [], // NEW
-      startDate,
-      endDate,
-      startTime,
-      endTime,
-      priority,
-      totalLeadsRequired,
-      teamLeadId,
-      hasLeadsTarget = false,
-    } = body;
+    // Extract form fields
+    const title = formData.get("title");
+    const description = formData.get("description");
+    const submissionId = formData.get("submissionId");
+    const startDate = formData.get("startDate");
+    const endDate = formData.get("endDate");
+    const startTime = formData.get("startTime");
+    const endTime = formData.get("endTime");
+    const priority = formData.get("priority");
+    const totalLeadsRequired = formData.get("totalLeadsRequired");
+    const teamLeadId = formData.get("teamLeadId");
+    const hasLeadsTarget = formData.get("hasLeadsTarget") === "true";
+    const teamLeadName = formData.get("teamLeadName");
+    const teamLeadDepId = formData.get("teamLeadDepId");
+
+    // Parse JSON arrays for assignees
+    const assignedEmployees = JSON.parse(formData.get("assignedEmployees") || "[]");
+    const assignedManagers = JSON.parse(formData.get("assignedManagers") || "[]");
+    const assignedTeamLeads = JSON.parse(formData.get("assignedTeamLeads") || "[]");
 
     // Submission optional
     let submission = null;
@@ -89,7 +97,7 @@ export async function POST(request) {
       );
     }
 
-    const depId = teamLead.depId;
+    const depId = teamLead.depId || teamLeadDepId;
 
     // Validate employees if assigned
     if (assignedEmployees.length > 0) {
@@ -119,7 +127,7 @@ export async function POST(request) {
       }
     }
 
-    // Validate team leads if assigned (NEW)
+    // Validate team leads if assigned
     if (assignedTeamLeads.length > 0) {
       const teamLeads = await TeamLead.find({
         _id: { $in: assignedTeamLeads.map((tl) => tl.teamLeadId) },
@@ -143,7 +151,7 @@ export async function POST(request) {
       );
     }
 
-    const leadName = `${teamLead.firstName} ${teamLead.lastName}`;
+    const leadName = teamLeadName || `${teamLead.firstName} ${teamLead.lastName}`;
     const leadValue = totalLeadsRequired ? totalLeadsRequired.toString() : "1";
 
     // Calculate leads distribution
@@ -151,7 +159,7 @@ export async function POST(request) {
                           assignedManagers.length + 
                           assignedTeamLeads.length;
     const leadsPerAssignee = hasLeadsTarget && totalLeadsRequired && totalAssignees > 0 
-      ? Math.ceil(totalLeadsRequired / totalAssignees)
+      ? Math.ceil(parseInt(totalLeadsRequired) / totalAssignees)
       : 0;
 
     // Prepare assigned employees data
@@ -174,7 +182,7 @@ export async function POST(request) {
       leadsAssigned: hasLeadsTarget ? leadsPerAssignee : 0,
     }));
 
-    // Prepare assigned team leads data (NEW)
+    // Prepare assigned team leads data
     const teamLeadAssignments = assignedTeamLeads.map((tl) => ({
       teamLeadId: tl.teamLeadId,
       email: tl.email,
@@ -184,6 +192,52 @@ export async function POST(request) {
       leadsAssigned: hasLeadsTarget ? leadsPerAssignee : 0,
     }));
 
+    // -------------------------------
+    // MULTIPLE FILE UPLOADS
+    // -------------------------------
+    const files = formData.getAll("files");
+    const uploadedFiles = [];
+
+    for (const file of files) {
+      if (file && file.size > 0) {
+        const buffer = Buffer.from(await file.arrayBuffer());
+        const fileName = file.name;
+        const fileType = file.type;
+        const fileSize = file.size;
+        const fileKey = `teamlead_tasks/files/${Date.now()}_${fileName}`;
+
+        const upload = new Upload({
+          client: s3,
+          params: {
+            Bucket: process.env.AWS_BUCKET_NAME,
+            Key: fileKey,
+            Body: buffer,
+            ContentType: fileType,
+            Metadata: {
+              originalName: encodeURIComponent(fileName),
+              uploadedBy: session.user.id,
+              uploadedAt: Date.now().toString(),
+            },
+          },
+        });
+        await upload.done();
+
+        const command = new GetObjectCommand({
+          Bucket: process.env.AWS_BUCKET_NAME,
+          Key: fileKey,
+        });
+        const fileUrl = await getSignedUrl(s3, command, { expiresIn: 604800 }); // 1 week
+
+        uploadedFiles.push({
+          url: fileUrl,
+          name: fileName,
+          type: fileType,
+          size: fileSize,
+          publicId: fileKey,
+        });
+      }
+    }
+
     const subtask = new Subtask({
       title,
       description,
@@ -192,14 +246,15 @@ export async function POST(request) {
       depId,
       assignedEmployees: employeeAssignments,
       assignedManagers: managerAssignments,
-      assignedTeamLeads: teamLeadAssignments, // NEW
+      assignedTeamLeads: teamLeadAssignments,
       startDate,
       endDate,
       startTime,
       endTime,
+      fileAttachments: uploadedFiles,
       priority: priority || "medium",
       lead: leadValue,
-      totalLeadsRequired: hasLeadsTarget ? totalLeadsRequired : 0,
+      totalLeadsRequired: hasLeadsTarget ? parseInt(totalLeadsRequired) : 0,
       hasLeadsTarget,
       teamLeadName: leadName,
     });
@@ -210,7 +265,7 @@ export async function POST(request) {
       .populate("submissionId", "title description")
       .populate("assignedEmployees.employeeId", "firstName lastName email")
       .populate("assignedManagers.managerId", "firstName lastName email")
-      .populate("assignedTeamLeads.teamLeadId", "firstName lastName email"); // NEW
+      .populate("assignedTeamLeads.teamLeadId", "firstName lastName email");
 
     // Send notifications and emails to assigned employees
     if (assignedEmployees.length > 0) {
@@ -282,7 +337,7 @@ export async function POST(request) {
       }
     }
 
-    // Send notifications and emails to assigned team leads (NEW)
+    // Send notifications and emails to assigned team leads
     if (assignedTeamLeads.length > 0) {
       const teamLeads = await TeamLead.find({
         _id: { $in: assignedTeamLeads.map((tl) => tl.teamLeadId) },

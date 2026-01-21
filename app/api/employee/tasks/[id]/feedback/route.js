@@ -395,8 +395,8 @@ export async function GET(req, { params }) {
     }
 
     const task = await FormSubmission.findById(id)
-      .populate("teamLeadFeedbacks.teamLeadId", "firstName lastName email department profilePic")
-      .populate("teamLeadFeedbacks.replies.repliedBy", "firstName lastName email profilePic")
+      .populate("teamLeadFeedbacks.teamLeadId", "firstName lastName email department profileImage")
+      .populate("teamLeadFeedbacks.replies.repliedBy", "firstName lastName email profileImage")
       .select("teamLeadFeedbacks assignedEmployees");
 
     if (!task) {

@@ -1,0 +1,62 @@
+/* Custom scrollbar for table */
+.MuiTableContainer-root::-webkit-scrollbar {
+  height: 8px;
+  width: 8px;
+}
+
+.MuiTableContainer-root::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.MuiTableContainer-root::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+.MuiTableContainer-root::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* Hover effects */
+.task-row:hover {
+  background-color: rgba(0, 0, 0, 0.04) !important;
+  transform: translateY(-1px);
+  transition: all 0.2s ease;
+}
+
+/* Status badge animations */
+.status-badge {
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(33, 150, 243, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(33, 150, 243, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(33, 150, 243, 0);
+  }
+}
+
+/* Progress bar animation */
+.MuiLinearProgress-bar {
+  transition: transform 0.4s linear;
+}
+
+/* Avatar group styling */
+.avatar-group-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+/* Card hover effect */
+.task-card:hover {
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15) !important;
+  transform: translateY(-4px);
+  transition: all 0.3s ease;
+}

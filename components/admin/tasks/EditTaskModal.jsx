@@ -104,10 +104,10 @@ export default function EditTaskModal({
 
   const handleFileSelect = (e) => {
     const newFilesArray = Array.from(e.target.files);
-    const validFiles = newFilesArray.filter((file) => file.size <= 50 * 1024 * 1024);
+    const validFiles = newFilesArray.filter((file) => file.size <= 200 * 1024 * 1024);
     
     if (validFiles.length !== newFilesArray.length) {
-      toast.error("Some files exceed the 50MB limit");
+      toast.error("Some files exceed the 200MB limit");
     }
 
     setNewFiles((prev) => [...prev, ...validFiles]);

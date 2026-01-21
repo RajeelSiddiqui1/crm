@@ -30,6 +30,7 @@ export async function GET(req, { params }) {
       .populate("assignedEmployees.employeeId", "firstName lastName email avatar designation department")
       .populate("assignedManagers.managerId", "firstName lastName email avatar")
       .populate("assignedTeamLeads.teamLeadId", "firstName lastName email avatar designation")
+      .select("+fileAttachments")
       .lean();
 
     if (!subtask) return NextResponse.json({ error: "Task not found" }, { status: 404 });

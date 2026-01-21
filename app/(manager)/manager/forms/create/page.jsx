@@ -52,6 +52,7 @@ import {
     CreditCard,
     UserCircle // Added UserCircle icon
 } from "lucide-react";
+import MediaSection from "@/components/manager/admin-task/MediaSection";
 import axios from "axios";
 
 export default function ManagerCreateFormPage() {
@@ -1027,77 +1028,8 @@ export default function ManagerCreateFormPage() {
                                         </div>
 
                                         {/* Media Attachments */}
-                                        {(adminTask.audioUrl || adminTask.fileAttachments) && (
-                                            <div className="space-y-4">
-                                                <h4 className="font-semibold text-gray-900 text-lg">Attachments</h4>
-
-                                                {adminTask.audioUrl && (
-                                                    <div className="p-4 bg-white rounded-xl border border-gray-200 shadow-sm">
-                                                        <div className="flex items-center justify-between">
-                                                            <div className="flex items-center gap-3">
-                                                                <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-md">
-                                                                    <Volume2 className="h-6 w-6 text-white" />
-                                                                </div>
-                                                                <div>
-                                                                    <p className="font-semibold text-gray-900">Voice Instructions</p>
-                                                                    <p className="text-sm text-gray-700">Audio recording</p>
-                                                                </div>
-                                                            </div>
-                                                            <Button
-                                                                onClick={() => playAudio(adminTask.audioUrl)}
-                                                                variant={audioPlaying ? "secondary" : "outline"}
-                                                                size="sm"
-                                                                className={`gap-2 font-semibold ${audioPlaying ? 'bg-purple-100 text-purple-800 border-purple-300 hover:bg-purple-200' : 'border-purple-300 text-purple-700 hover:bg-purple-50'}`}
-                                                            >
-                                                                {audioPlaying ? (
-                                                                    <>
-                                                                        <Pause className="h-4 w-4" />
-                                                                        Pause
-                                                                    </>
-                                                                ) : (
-                                                                    <>
-                                                                        <Play className="h-4 w-4" />
-                                                                        Play Audio
-                                                                    </>
-                                                                )}
-                                                            </Button>
-                                                        </div>
-                                                        <audio
-                                                            id="admin-task-audio"
-                                                            src={adminTask.audioUrl}
-                                                            onEnded={() => setAudioPlaying(null)}
-                                                            className="hidden"
-                                                        />
-                                                    </div>
-                                                )}
-
-                                                {adminTask.fileAttachments && (
-                                                    <div className="p-4 bg-white rounded-xl border border-gray-200 shadow-sm">
-                                                        <div className="flex items-center justify-between">
-                                                            <div className="flex items-center gap-3">
-                                                                <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center shadow-md">
-                                                                    <Download className="h-6 w-6 text-white" />
-                                                                </div>
-                                                                <div>
-                                                                    <p className="font-semibold text-gray-900">File Attachment</p>
-                                                                    <p className="text-sm text-gray-700">Supporting document</p>
-                                                                </div>
-                                                            </div>
-                                                            <Button
-                                                                onClick={() => downloadFile(adminTask.fileAttachments, `task_${adminTask.title}_attachment`)}
-                                                                variant="outline"
-                                                                size="sm"
-                                                                className="gap-2 border-green-300 text-green-800 hover:bg-green-50 font-semibold"
-                                                            >
-                                                                <Download className="h-4 w-4" />
-                                                                Download
-                                                            </Button>
-                                                        </div>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        )}
-                                    </div>
+                                           <MediaSection task={adminTask}/>
+                                          </div>
                                 ) : (
                                     <div className="text-center py-12">
                                         <FileText className="h-16 w-16 mx-auto mb-6 text-gray-400" />

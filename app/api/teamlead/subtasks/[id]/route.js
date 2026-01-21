@@ -7,8 +7,12 @@ import { authOptions } from "@/lib/auth";
 import dbConnect from "@/lib/db";
 import { sendNotification } from "@/lib/sendNotification";
 import { sendMail } from "@/lib/mail";
+import { Upload } from "@aws-sdk/lib-storage";
+  import { getSignedUrl } from "@aws-sdk/s3-request-presigner";     
 import { updatedSubtaskMailTemplate, deletedSubtaskMailTemplate } from "@/helper/emails/teamlead/subtaskMailTemplates";
 import TeamLead from "@/models/TeamLead";
+import s3 from "@/lib/aws";
+import { GetObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 
 export async function GET(req, { params }) {
     try {
@@ -19,7 +23,8 @@ export async function GET(req, { params }) {
             .populate("submissionId", "title description")
             .populate("assignedEmployees.employeeId", "firstName lastName email")
             .populate("assignedManagers.managerId", "firstName lastName email")
-            .populate("assignedTeamLeads.teamLeadId", "firstName lastName email");
+            .populate("assignedTeamLeads.teamLeadId", "firstName lastName email")
+            .select('+fileAttachments');
 
         if (!subtask) {
             return NextResponse.json({ error: "Subtask not found" }, { status: 404 });
@@ -56,8 +61,11 @@ export async function GET(req, { params }) {
     }
 }
 
+
+
 export async function PUT(request, { params }) {
     try {
+        const formData = await request.formData();
         const session = await getServerSession(authOptions);
 
         if (!session || session.user.role !== "TeamLead") {
@@ -67,22 +75,28 @@ export async function PUT(request, { params }) {
         await dbConnect();
 
         const { id } = await params;
-        const body = await request.json();
-        const {
-            title,
-            description,
-            assignedEmployees = [],
-            assignedManagers = [],
-            startDate,
-            endDate,
-            startTime,
-            endTime,
-            priority,
-            totalLeadsRequired,
-            teamLeadId,
-            teamLeadName,
-            hasLeadsTarget = false,
-        } = body;
+
+        // Extract form fields
+        const title = formData.get("title");
+        const description = formData.get("description");
+        const startDate = formData.get("startDate");
+        const endDate = formData.get("endDate");
+        const startTime = formData.get("startTime");
+        const endTime = formData.get("endTime");
+        const priority = formData.get("priority");
+        const totalLeadsRequired = formData.get("totalLeadsRequired");
+        const teamLeadId = formData.get("teamLeadId");
+        const teamLeadName = formData.get("teamLeadName");
+        const teamLeadDepId = formData.get("teamLeadDepId");
+        const hasLeadsTarget = formData.get("hasLeadsTarget") === "true";
+
+        // Parse JSON arrays for assignees
+        const assignedEmployees = JSON.parse(formData.get("assignedEmployees") || "[]");
+        const assignedManagers = JSON.parse(formData.get("assignedManagers") || "[]");
+        const assignedTeamLeads = JSON.parse(formData.get("assignedTeamLeads") || "[]");
+
+        // Files to remove
+        const removeFiles = JSON.parse(formData.get("removeFiles") || "[]");
 
         // Find existing subtask
         const existingSubtask = await Subtask.findById(id);
@@ -107,17 +121,21 @@ export async function PUT(request, { params }) {
             }, { status: 400 });
         }
 
-        // Get old and new employee lists
+        // Get old and new user lists
         const oldEmployeeIds = existingSubtask.assignedEmployees?.map(emp =>
             emp.employeeId?.toString() || emp.employeeId) || [];
 
         const newEmployeeIds = assignedEmployees.map(emp => emp.employeeId);
 
-        // Get old and new manager lists
         const oldManagerIds = existingSubtask.assignedManagers?.map(mgr =>
             mgr.managerId?.toString() || mgr.managerId) || [];
 
         const newManagerIds = assignedManagers.map(mgr => mgr.managerId);
+
+        const oldTeamLeadIds = existingSubtask.assignedTeamLeads?.map(tl =>
+            tl.teamLeadId?.toString() || tl.teamLeadId) || [];
+
+        const newTeamLeadIds = assignedTeamLeads.map(tl => tl.teamLeadId);
 
         // Find added and removed users
         const addedEmployees = newEmployeeIds.filter(id => !oldEmployeeIds.includes(id));
@@ -126,10 +144,13 @@ export async function PUT(request, { params }) {
         const addedManagers = newManagerIds.filter(id => !oldManagerIds.includes(id));
         const removedManagers = oldManagerIds.filter(id => !newManagerIds.includes(id));
 
+        const addedTeamLeads = newTeamLeadIds.filter(id => !oldTeamLeadIds.includes(id));
+        const removedTeamLeads = oldTeamLeadIds.filter(id => !newTeamLeadIds.includes(id));
+
         // Calculate leads per assignee
-        const totalAssignees = assignedEmployees.length + assignedManagers.length;
+        const totalAssignees = assignedEmployees.length + assignedManagers.length + assignedTeamLeads.length;
         const leadsPerAssignee = hasLeadsTarget && totalLeadsRequired && totalAssignees > 0
-            ? Math.ceil(totalLeadsRequired / totalAssignees)
+            ? Math.ceil(parseInt(totalLeadsRequired) / totalAssignees)
             : 0;
 
         // Prepare assigned employees data
@@ -170,12 +191,102 @@ export async function PUT(request, { params }) {
             };
         });
 
+        // Prepare assigned team leads data
+        const formattedAssignedTeamLeads = assignedTeamLeads.map(tl => {
+            const existingTl = existingSubtask.assignedTeamLeads?.find(e => {
+                const existingTlId = e.teamLeadId?.toString() || e.teamLeadId;
+                return existingTlId === tl.teamLeadId;
+            });
+
+            return {
+                teamLeadId: tl.teamLeadId,
+                email: tl.email || "",
+                name: tl.name || "",
+                status: existingTl?.status || 'pending',
+                leadsCompleted: existingTl?.leadsCompleted || 0,
+                leadsAssigned: hasLeadsTarget ? leadsPerAssignee : 0,
+                assignedAt: existingTl?.assignedAt || new Date(),
+                completedAt: existingTl?.completedAt
+            };
+        });
+
+        // -------------------------------
+        // FILE HANDLING
+        // -------------------------------
+        let uploadedFiles = [...existingSubtask.fileAttachments];
+
+        // Remove specified files
+        if (removeFiles.length > 0) {
+            for (const fileId of removeFiles) {
+                const fileIndex = uploadedFiles.findIndex(f => f._id.toString() === fileId);
+                if (fileIndex > -1) {
+                    const file = uploadedFiles[fileIndex];
+                    if (file.publicId) {
+                        try {
+                            await s3.send(
+                                new DeleteObjectCommand({
+                                    Bucket: process.env.AWS_BUCKET_NAME,
+                                    Key: file.publicId,
+                                })
+                            );
+                        } catch (e) {
+                            console.error("S3 delete error:", e);
+                        }
+                    }
+                    uploadedFiles.splice(fileIndex, 1);
+                }
+            }
+        }
+
+        // Add new files
+        const newFiles = formData.getAll("files");
+        for (const file of newFiles) {
+            if (file && file.size > 0) {
+                const buffer = Buffer.from(await file.arrayBuffer());
+                const fileName = file.name;
+                const fileType = file.type;
+                const fileSize = file.size;
+                const fileKey = `teamlead_tasks/files/${Date.now()}_${fileName}`;
+
+                const upload = new Upload({
+                    client: s3,
+                    params: {
+                        Bucket: process.env.AWS_BUCKET_NAME,
+                        Key: fileKey,
+                        Body: buffer,
+                        ContentType: fileType,
+                        Metadata: {
+                            originalName: encodeURIComponent(fileName),
+                            uploadedBy: session.user.id,
+                            uploadedAt: Date.now().toString(),
+                        },
+                    },
+                });
+                await upload.done();
+
+                const command = new GetObjectCommand({
+                    Bucket: process.env.AWS_BUCKET_NAME,
+                    Key: fileKey,
+                });
+                const fileUrl = await getSignedUrl(s3, command, { expiresIn: 604800 }); // 1 week
+
+                uploadedFiles.push({
+                    url: fileUrl,
+                    name: fileName,
+                    type: fileType,
+                    size: fileSize,
+                    publicId: fileKey,
+                });
+            }
+        }
+
         // Update subtask
         const updateData = {
             title,
             description,
             assignedEmployees: formattedAssignedEmployees,
             assignedManagers: formattedAssignedManagers,
+            assignedTeamLeads: formattedAssignedTeamLeads,
             startDate,
             endDate,
             startTime,
@@ -183,7 +294,8 @@ export async function PUT(request, { params }) {
             priority,
             teamLeadName,
             hasLeadsTarget,
-            totalLeadsRequired: hasLeadsTarget ? totalLeadsRequired : 0,
+            totalLeadsRequired: hasLeadsTarget ? parseInt(totalLeadsRequired) : 0,
+            fileAttachments: uploadedFiles,
             status: existingSubtask.status === 'completed' ? 'completed' : 'in_progress',
             updatedAt: new Date()
         };
@@ -194,7 +306,8 @@ export async function PUT(request, { params }) {
             { new: true }
         )
             .populate("assignedEmployees.employeeId", "firstName lastName email")
-            .populate("assignedManagers.managerId", "firstName lastName email");
+            .populate("assignedManagers.managerId", "firstName lastName email")
+            .populate("assignedTeamLeads.teamLeadId", "firstName lastName email");
 
         // Send notifications and emails for added employees
         if (addedEmployees.length > 0) {
@@ -266,6 +379,41 @@ export async function PUT(request, { params }) {
             }
         }
 
+        // Send notifications and emails for added team leads
+        if (addedTeamLeads.length > 0) {
+            const addedTeamLeadDetails = await TeamLead.find({ _id: { $in: addedTeamLeads } });
+
+            for (const tl of addedTeamLeadDetails) {
+                sendNotification({
+                    senderId: teamLead._id,
+                    senderModel: "TeamLead",
+                    senderName: teamLeadName,
+                    receiverId: tl._id,
+                    receiverModel: "TeamLead",
+                    type: "new_subtask",
+                    title: "New Subtask Assignment",
+                    message: `You have been assigned to subtask by ${teamLeadName}: "${title}".`,
+                    link: `/teamlead/assigned-subtasks/${id}`,
+                    referenceId: id,
+                    referenceModel: "Subtask"
+                });
+
+                if (tl.email) {
+                    const html = updatedSubtaskMailTemplate(
+                        tl.firstName,
+                        title,
+                        description,
+                        teamLeadName,
+                        startDate,
+                        endDate,
+                        "You have been added to this subtask",
+                        `${process.env.NEXTAUTH_URL}/teamlead/assigned-subtasks/${id}`
+                    );
+                    sendMail(tl.email, "New Subtask Assignment", html);
+                }
+            }
+        }
+
         // Send notifications for removed employees
         if (removedEmployees.length > 0) {
             const removedEmployeeDetails = await Employee.find({ _id: { $in: removedEmployees } });
@@ -332,6 +480,41 @@ export async function PUT(request, { params }) {
                         `${process.env.NEXTAUTH_URL}/manager/subtasks`
                     );
                     sendMail(mgr.email, "Removed from Subtask", html);
+                }
+            }
+        }
+
+        // Send notifications for removed team leads
+        if (removedTeamLeads.length > 0) {
+            const removedTeamLeadDetails = await TeamLead.find({ _id: { $in: removedTeamLeads } });
+
+            for (const tl of removedTeamLeadDetails) {
+                sendNotification({
+                    senderId: teamLead._id,
+                    senderModel: "TeamLead",
+                    senderName: teamLeadName,
+                    receiverId: tl._id,
+                    receiverModel: "TeamLead",
+                    type: "subtask_update",
+                    title: "Removed from Subtask",
+                    message: `You have been removed from subtask: "${title}".`,
+                    link: `/teamlead/assigned-subtasks`,
+                    referenceId: id,
+                    referenceModel: "Subtask"
+                });
+
+                if (tl.email) {
+                    const html = updatedSubtaskMailTemplate(
+                        tl.firstName,
+                        title,
+                        description,
+                        teamLeadName,
+                        startDate,
+                        endDate,
+                        "You have been removed from this subtask",
+                        `${process.env.NEXTAUTH_URL}/teamlead/assigned-subtasks`
+                    );
+                    sendMail(tl.email, "Removed from Subtask", html);
                 }
             }
         }
@@ -408,6 +591,42 @@ export async function PUT(request, { params }) {
             }
         }
 
+        // Send update notification to existing team leads
+        const existingTeamLeads = newTeamLeadIds.filter(id => !addedTeamLeads.includes(id));
+        if (existingTeamLeads.length > 0) {
+            const existingTeamLeadDetails = await TeamLead.find({ _id: { $in: existingTeamLeads } });
+
+            for (const tl of existingTeamLeadDetails) {
+                sendNotification({
+                    senderId: teamLead._id,
+                    senderModel: "TeamLead",
+                    senderName: teamLeadName,
+                    receiverId: tl._id,
+                    receiverModel: "TeamLead",
+                    type: "subtask_update",
+                    title: "Subtask Updated",
+                    message: `Subtask "${title}" has been updated.`,
+                    link: `/teamlead/assigned-subtasks/${id}`,
+                    referenceId: id,
+                    referenceModel: "Subtask"
+                });
+
+                if (tl.email) {
+                    const html = updatedSubtaskMailTemplate(
+                        tl.firstName,
+                        title,
+                        description,
+                        teamLeadName,
+                        startDate,
+                        endDate,
+                        "This subtask has been updated",
+                        `${process.env.NEXTAUTH_URL}/teamlead/assigned-subtasks/${id}`
+                    );
+                    sendMail(tl.email, "Subtask Updated", html);
+                }
+            }
+        }
+
         return NextResponse.json({
             message: "Subtask updated successfully",
             subtask: updatedSubtask
@@ -449,6 +668,24 @@ export async function DELETE(request, { params }) {
 
         const assignedEmployees = await Employee.find({ _id: { $in: employeeIds } });
         const assignedManagers = await Manager.find({ _id: { $in: managerIds } });
+
+         // Delete all files from S3
+           const allMedia = [...existingSubtask.fileAttachments];
+
+            for (const item of allMedia) {
+              if (item.publicId) {
+                try {
+                  await s3.send(
+                    new DeleteObjectCommand({
+                      Bucket: process.env.AWS_BUCKET_NAME,
+                      Key: item.publicId,
+                    })
+                  );
+                } catch (e) {
+                  console.error("S3 delete error during task deletion:", e);
+                }
+              }
+            }
 
         // Send notifications and emails to employees before deletion
         for (const emp of assignedEmployees) {

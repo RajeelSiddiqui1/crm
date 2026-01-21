@@ -73,6 +73,7 @@ export async function GET(req, { params }) {
         path: "teamLeadFeedbacks.replies.repliedBy",
         select: "firstName lastName email profilePic",
       })
+      .select('+fileAttachments')
 
       .lean();
 

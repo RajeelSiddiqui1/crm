@@ -51,6 +51,7 @@ export async function GET(req, { params }) {
       })
       .populate("employeeFeedbacks.employeeId", "firstName lastName email")
       .populate("teamLeadFeedbacks.teamLeadId", "firstName lastName email department")
+      .select("+fileAttachments")
       .lean();
 
     if (!task) {

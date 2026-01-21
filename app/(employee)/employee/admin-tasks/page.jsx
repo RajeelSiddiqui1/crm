@@ -127,6 +127,7 @@ import {
   LogOut,
   Menu,
 } from "lucide-react";
+import MediaSection from "@/components/employee/admin-task/MediaSection";
 
 export default function EmployeeAdminTasks() {
   const { data: session, status } = useSession();
@@ -1877,102 +1878,7 @@ export default function EmployeeAdminTasks() {
                 </div>
 
                 {/* Attachments Section */}
-                {((taskDetails.fileAttachments && taskDetails.fileAttachments.length > 0) || 
-                  (taskDetails.audioFiles && taskDetails.audioFiles.length > 0)) && (
-                  <div className="mt-8 pt-8 border-t border-gray-100">
-                    <h3 className="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2">
-                      <Paperclip className="w-5 h-5 text-blue-600" />
-                      Task Attachments
-                    </h3>
-                    
-                    <div className="space-y-8">
-                      {/* File Attachments */}
-                      {taskDetails.fileAttachments?.length > 0 && (
-                        <div className="space-y-3">
-                          <p className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2">
-                            Documents ({taskDetails.fileAttachments.length})
-                          </p>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            {taskDetails.fileAttachments.map((file, idx) => (
-                              <div key={idx} className="group bg-white border border-gray-200 rounded-xl p-4 hover:border-blue-200 hover:shadow-md transition-all duration-200">
-                                <div className="flex items-center gap-3">
-                                  <div className="p-2 bg-blue-50 rounded-lg group-hover:bg-blue-100 transition-colors">
-                                    <FileText className="w-6 h-6 text-blue-600" />
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <p className="font-semibold text-gray-900 truncate text-sm" title={file.name}>
-                                      {file.name}
-                                    </p>
-                                    <p className="text-[11px] text-gray-500 mt-0.5">
-                                      {file.type?.split('/')[1]?.toUpperCase() || 'FILE'} • {(file.size / 1024).toFixed(1)} KB
-                                    </p>
-                                  </div>
-                                  <Button
-                                    onClick={() => downloadFile(file.url, file.name)}
-                                    size="sm"
-                                    variant="ghost"
-                                    className="h-8 w-8 p-0 text-blue-600 hover:bg-blue-50 hover:text-blue-700"
-                                  >
-                                    <Download className="w-4 h-4" />
-                                  </Button>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Audio Attachments */}
-                      {taskDetails.audioFiles?.length > 0 && (
-                        <div className="space-y-4">
-                          <p className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-2">
-                            Audio Recordings ({taskDetails.audioFiles.length})
-                          </p>
-                          <div className="grid grid-cols-1 gap-4">
-                            {taskDetails.audioFiles.map((audio, idx) => (
-                              <div key={idx} className="bg-blue-50/50 border border-blue-100 rounded-xl p-4 hover:bg-blue-50 transition-all duration-200">
-                                <div className="flex flex-col gap-4">
-                                  <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-2">
-                                      <div className="p-1.5 bg-white rounded-md shadow-sm">
-                                        <Mic className="w-4 h-4 text-blue-600" />
-                                      </div>
-                                      <p className="font-semibold text-sm text-gray-900 truncate max-w-[200px]" title={audio.name}>
-                                        {audio.name || "Voice Note"}
-                                      </p>
-                                      {audio.isRecording && (
-                                        <Badge className="bg-rose-100 text-rose-600 border-rose-200 hover:bg-rose-100 px-1.5 py-0 text-[10px]">
-                                          RECORDED
-                                        </Badge>
-                                      )}
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                      <span className="text-[11px] text-blue-600/70 font-medium">
-                                        {(audio.size / 1024).toFixed(1)} KB
-                                      </span>
-                                      <Button
-                                        onClick={() => downloadFile(audio.url, audio.name || "recording.webm")}
-                                        size="sm"
-                                        variant="ghost"
-                                        className="h-8 w-8 p-0 text-blue-600 hover:bg-white"
-                                      >
-                                        <Download className="w-4 h-4" />
-                                      </Button>
-                                    </div>
-                                  </div>
-                                  <audio controls className="w-full h-10 custom-audio-player">
-                                    <source src={audio.url} type={audio.type || "audio/webm"} />
-                                    Your browser does not support the audio element.
-                                  </audio>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
+            <MediaSection task={taskDetails} />
               </div>
             </div>
           )}

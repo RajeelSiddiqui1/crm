@@ -1,4 +1,3 @@
-// app/teamlead/subtasks/edit/[id]/page.jsx
 "use client";
 import React, { useState, useEffect, useMemo } from "react";
 import { useSession } from "next-auth/react";
@@ -41,23 +40,28 @@ import {
   ArrowLeft,
   Save,
   Trash2,
-  Edit,
   Calendar,
   Clock,
   Loader2,
   AlertCircle,
   Users,
-  UserRound,
-  Phone,
   Target,
   Eye,
   Pencil,
-  CheckCircle,
-  XCircle,
   Building,
   UserCog,
   Crown,
   Sparkles,
+  Upload,
+  File,
+  Paperclip,
+  X,
+  Image,
+  Video,
+  FileText,
+  Download,
+  XCircle,
+  CheckCircle,
 } from "lucide-react";
 import axios from "axios";
 import { format } from "date-fns";
@@ -79,7 +83,12 @@ export default function EditSubtaskPage() {
   const [teamLeads, setTeamLeads] = useState([]);
   const [subtask, setSubtask] = useState(null);
   const [originalSubtask, setOriginalSubtask] = useState(null);
-  const [activeTab, setActiveTab] = useState("employees"); // "employees", "managers", or "teamleads"
+  const [files, setFiles] = useState([]);
+  const [existingFiles, setExistingFiles] = useState([]);
+  const [filesToRemove, setFilesToRemove] = useState([]);
+  const [previewFile, setPreviewFile] = useState(null);
+  const [activeTab, setActiveTab] = useState("employees");
+  const [zoom, setZoom] = useState(1);
 
   const [formData, setFormData] = useState({
     title: "",
@@ -125,6 +134,11 @@ export default function EditSubtaskPage() {
         const subtaskData = response.data.subtask;
         setSubtask(subtaskData);
         setOriginalSubtask(subtaskData);
+
+        // Set existing files
+        if (subtaskData.fileAttachments) {
+          setExistingFiles(subtaskData.fileAttachments);
+        }
 
         // Format dates for input fields
         const formattedStartDate = format(
@@ -332,6 +346,83 @@ export default function EditSubtaskPage() {
     setSelectedTeamLeads(selectedTeamLeads.filter((tl) => tl.teamLeadId !== teamLeadId));
   };
 
+  // File Handling Functions
+  const handleFileChange = (e) => {
+    const selectedFiles = Array.from(e.target.files);
+    
+    // Check file sizes (limit to 10MB per file)
+    const oversizedFiles = selectedFiles.filter(file => file.size > 10 * 1024 * 1024);
+    
+    if (oversizedFiles.length > 0) {
+      toast.error(`Some files exceed 10MB limit`);
+      return;
+    }
+    
+    // Add new files to state
+    setFiles(prev => [...prev, ...selectedFiles.map(file => ({
+      file,
+      id: Date.now() + Math.random(),
+      name: file.name,
+      size: file.size,
+      type: file.type,
+    }))]);
+    
+    // Clear the input
+    e.target.value = '';
+  };
+
+  const removeNewFile = (id) => {
+    setFiles(prev => prev.filter(file => file.id !== id));
+  };
+
+  const removeExistingFile = (fileId) => {
+    const file = existingFiles.find(f => f._id === fileId);
+    if (file) {
+      setFilesToRemove(prev => [...prev, fileId]);
+      setExistingFiles(prev => prev.filter(f => f._id !== fileId));
+      toast.info("File marked for removal", {
+        description: "File will be deleted when you save changes"
+      });
+    }
+  };
+
+  const formatFileSize = (bytes) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
+  const getFileIcon = (fileType) => {
+    if (fileType?.includes('image')) return <Image className="w-5 h-5 text-blue-500" />;
+    if (fileType?.includes('video')) return <Video className="w-5 h-5 text-purple-500" />;
+    if (fileType?.includes('pdf')) return <FileText className="w-5 h-5 text-red-500" />;
+    return <File className="w-5 h-5 text-gray-500" />;
+  };
+
+  const handlePreview = (file) => {
+    setPreviewFile(file);
+  };
+
+  const downloadFile = async (fileUrl, fileName) => {
+    try {
+      const response = await fetch(fileUrl);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName || 'download';
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error('Error downloading file:', error);
+      toast.error('Failed to download file');
+    }
+  };
+
   const getEmployeeDetails = (employeeId) => {
     return employees.find((emp) => emp._id === employeeId);
   };
@@ -449,6 +540,9 @@ export default function EditSubtaskPage() {
       if (formData[field] !== originalValue) return true;
     }
 
+    // Check file changes
+    if (files.length > 0 || filesToRemove.length > 0) return true;
+
     return false;
   };
 
@@ -508,19 +602,42 @@ export default function EditSubtaskPage() {
     setIsSubmitting(true);
 
     try {
-      const subtaskData = {
-        ...formData,
-        teamLeadId: session.user.id,
-        teamLeadName: session.user.name || `${session.user.firstName} ${session.user.lastName}`,
-        teamLeadDepId: session.user.depId,
-        assignedEmployees: selectedEmployees,
-        assignedManagers: selectedManagers,
-        assignedTeamLeads: selectedTeamLeads,
-        hasLeadsTarget: shouldShowLeadsField && formData.totalLeadsRequired > 0,
-        totalLeadsRequired: shouldShowLeadsField ? parseInt(formData.totalLeadsRequired) : 0,
-      };
+      // Create FormData for file upload
+      const formDataToSend = new FormData();
+      
+      // Add form fields
+      formDataToSend.append("title", formData.title);
+      formDataToSend.append("description", formData.description);
+      formDataToSend.append("startDate", formData.startDate);
+      formDataToSend.append("endDate", formData.endDate);
+      formDataToSend.append("startTime", formData.startTime);
+      formDataToSend.append("endTime", formData.endTime);
+      formDataToSend.append("priority", formData.priority);
+      formDataToSend.append("teamLeadId", session.user.id);
+      formDataToSend.append("teamLeadName", session.user.name || `${session.user.firstName} ${session.user.lastName}`);
+      formDataToSend.append("teamLeadDepId", session.user.depId);
+      formDataToSend.append("assignedEmployees", JSON.stringify(selectedEmployees));
+      formDataToSend.append("assignedManagers", JSON.stringify(selectedManagers));
+      formDataToSend.append("assignedTeamLeads", JSON.stringify(selectedTeamLeads));
+      formDataToSend.append("hasLeadsTarget", shouldShowLeadsField && formData.totalLeadsRequired > 0);
+      
+      if (shouldShowLeadsField) {
+        formDataToSend.append("totalLeadsRequired", formData.totalLeadsRequired);
+      }
 
-      const response = await axios.put(`/api/teamlead/subtasks/${subtaskId}`, subtaskData);
+      // Add new files
+      files.forEach(file => {
+        formDataToSend.append("files", file.file);
+      });
+
+      // Add files to remove
+      formDataToSend.append("removeFiles", JSON.stringify(filesToRemove));
+
+      const response = await axios.put(`/api/teamlead/subtasks/${subtaskId}`, formDataToSend, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
 
       if (response.status === 200) {
         toast.success("Subtask updated successfully!", {
@@ -699,9 +816,11 @@ export default function EditSubtaskPage() {
   }
 
   return (
+    <>
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 p-4 md:p-6">
       <Toaster position="top-right" />
 
+    
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-8">
@@ -817,8 +936,8 @@ export default function EditSubtaskPage() {
           <CardContent className="p-6">
             <form onSubmit={handleSubmit} className="space-y-8">
               {/* Basic Information */}
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <Label htmlFor="title" className="text-gray-900 font-semibold">
                       Title *
@@ -880,9 +999,150 @@ export default function EditSubtaskPage() {
                     onChange={(e) => handleInputChange("description", e.target.value)}
                     placeholder="Enter detailed description of the subtask"
                     className="border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900 min-h-[120px] rounded-xl"
-                    required
+                    
                     disabled={isSubmitting}
                   />
+                </div>
+
+                {/* File Upload Section */}
+                <div className="space-y-4">
+                  <Label className="text-gray-900 font-semibold">
+                    Attachments
+                  </Label>
+                  
+                  {/* Existing Files */}
+                  {existingFiles.length > 0 && (
+                    <div className="space-y-3">
+                      <Label className="text-gray-700 font-medium">
+                        Current Files ({existingFiles.length})
+                      </Label>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {existingFiles.map((file) => (
+                          <div
+                            key={file._id}
+                            className="flex items-center justify-between p-3 border border-gray-200 rounded-xl bg-white hover:bg-gray-50 transition-colors"
+                          >
+                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                              <div className="p-2 bg-blue-100 rounded-lg">
+                                {getFileIcon(file.type)}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="font-medium text-gray-900 text-sm truncate">
+                                  {file.name}
+                                </p>
+                                <p className="text-xs text-gray-500">
+                                  {formatFileSize(file.size)}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handlePreview(file)}
+                                className="h-8 w-8 p-0 text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+                                disabled={isSubmitting}
+                              >
+                                <Eye className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => downloadFile(file.url, file.name)}
+                                className="h-8 w-8 p-0 text-green-600 hover:text-green-800 hover:bg-green-50"
+                                disabled={isSubmitting}
+                              >
+                                <Download className="w-4 h-4" />
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => removeExistingFile(file._id)}
+                                className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                                disabled={isSubmitting}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* New Files Upload */}
+                  <div className="border-2 border-dashed border-blue-300 rounded-xl p-4 text-center hover:border-blue-400 transition-colors bg-blue-50/50">
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      <Upload className="w-8 h-8 text-blue-500" />
+                      <div>
+                        <p className="text-gray-700 font-medium">Upload new files</p>
+                        <p className="text-sm text-gray-500">Drag & drop or click to browse</p>
+                        <p className="text-xs text-gray-400 mt-1">Maximum file size: 10MB</p>
+                      </div>
+                      <Input
+                        type="file"
+                        multiple
+                        onChange={handleFileChange}
+                        className="hidden"
+                        id="file-upload"
+                        accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.jpg,.jpeg,.png,.gif,.mp4,.avi,.mov"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => document.getElementById('file-upload').click()}
+                        className="mt-2 bg-white hover:bg-blue-50 border-blue-200 text-blue-700 rounded-xl"
+                        disabled={isSubmitting}
+                      >
+                        <Paperclip className="w-4 h-4 mr-2" />
+                        Add Files
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* New Files Preview */}
+                  {files.length > 0 && (
+                    <div className="space-y-3">
+                      <Label className="text-gray-700 font-medium">
+                        New Files to Upload ({files.length})
+                      </Label>
+                      <div className="space-y-2">
+                        {files.map((file) => (
+                          <div
+                            key={file.id}
+                            className="flex items-center justify-between p-3 border border-blue-200 rounded-xl bg-blue-50/50"
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="p-2 bg-blue-100 rounded-lg">
+                                {getFileIcon(file.type)}
+                              </div>
+                              <div>
+                                <p className="font-medium text-gray-900 text-sm">
+                                  {file.name}
+                                </p>
+                                <p className="text-xs text-gray-500">
+                                  {formatFileSize(file.size)}
+                                </p>
+                              </div>
+                            </div>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => removeNewFile(file.id)}
+                              className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+                              disabled={isSubmitting}
+                            >
+                              <X className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Leads Field */}
@@ -892,7 +1152,7 @@ export default function EditSubtaskPage() {
                       Number of Leads Required *
                     </Label>
                     <div className="relative">
-                      <Phone className="absolute left-3 top-3 h-4 w-4 text-emerald-600" />
+                      <Target className="absolute left-3 top-3 h-4 w-4 text-emerald-600" />
                       <Input
                         id="totalLeadsRequired"
                         type="number"
@@ -902,7 +1162,7 @@ export default function EditSubtaskPage() {
                         onChange={(e) => handleInputChange("totalLeadsRequired", e.target.value)}
                         placeholder="Enter total number of leads/calls/targets"
                         className="border-2 border-emerald-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 text-gray-900 pl-10 rounded-xl"
-                        required
+                        
                         disabled={isSubmitting}
                       />
                     </div>
@@ -921,7 +1181,7 @@ export default function EditSubtaskPage() {
               </div>
 
               {/* Assignees Section */}
-              <div className="space-y-4">
+              <div className="space-y-6">
                 <div className="flex items-center justify-between">
                   <Label className="text-gray-900 font-semibold text-lg">
                     Assign To *
@@ -1324,7 +1584,7 @@ export default function EditSubtaskPage() {
                         value={formData.startDate}
                         onChange={(e) => handleInputChange("startDate", e.target.value)}
                         className="border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900 pl-10 rounded-xl"
-                        required
+                        
                         disabled={isSubmitting}
                       />
                     </div>
@@ -1341,7 +1601,7 @@ export default function EditSubtaskPage() {
                         value={formData.endDate}
                         onChange={(e) => handleInputChange("endDate", e.target.value)}
                         className="border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900 pl-10 rounded-xl"
-                        required
+                        
                         disabled={isSubmitting}
                       />
                     </div>
@@ -1360,7 +1620,7 @@ export default function EditSubtaskPage() {
                         value={formData.startTime}
                         onChange={(e) => handleInputChange("startTime", e.target.value)}
                         className="border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900 pl-10 rounded-xl"
-                        required
+                        
                         disabled={isSubmitting}
                       />
                     </div>
@@ -1377,7 +1637,7 @@ export default function EditSubtaskPage() {
                         value={formData.endTime}
                         onChange={(e) => handleInputChange("endTime", e.target.value)}
                         className="border-2 border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900 pl-10 rounded-xl"
-                        required
+                        
                         disabled={isSubmitting}
                       />
                     </div>
@@ -1499,6 +1759,100 @@ export default function EditSubtaskPage() {
           </Card>
         </div>
       </div>
+      
     </div>
+      {/* Preview Modal */}
+      {previewFile && (
+    <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 overflow-auto">
+      <div className="bg-white rounded-2xl w-full max-w-[95vw] max-h-[95vh] flex flex-col shadow-lg overflow-hidden">
+        
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b">
+          <div className="flex items-center gap-2">
+            {getFileIcon(previewFile.type)}
+            <h3 className="font-bold text-gray-900 truncate">{previewFile.name}</h3>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setZoom((prev) => prev + 0.2)}
+              className="text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+            >
+              Zoom In +
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setZoom((prev) => Math.max(prev - 0.2, 0.2))}
+              className="text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+            >
+              Zoom Out -
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => downloadFile(previewFile.url, previewFile.name)}
+              className="text-green-600 hover:text-green-800 hover:bg-green-50"
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Download
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setPreviewFile(null)}
+              className="text-gray-600 hover:text-gray-800 hover:bg-gray-100"
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
+        </div>
+
+        {/* Body */}
+        <div className="flex-1 p-4 overflow-auto flex items-center justify-center bg-gray-50">
+          {previewFile.type?.includes('image') ? (
+            <img
+              src={previewFile.url}
+              alt={previewFile.name}
+              className="rounded-lg mx-auto transition-transform"
+              style={{ transform: `scale(${zoom})` }}
+            />
+          ) : previewFile.type?.includes('video') ? (
+            <video
+              controls
+              autoPlay
+              className="rounded-lg mx-auto transition-transform"
+              style={{ transform: `scale(${zoom})` }}
+            >
+              <source src={previewFile.url} type={previewFile.type} />
+              Your browser does not support the video tag.
+            </video>
+          ) : previewFile.type?.includes('pdf') ? (
+            <iframe
+              src={previewFile.url}
+              className="w-full h-[90vh] border rounded-lg"
+              title={previewFile.name}
+            />
+          ) : (
+            <div className="text-center py-12">
+              <File className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-700">Preview not available for this file type</p>
+              <Button
+                variant="outline"
+                onClick={() => downloadFile(previewFile.url, previewFile.name)}
+                className="mt-4"
+              >
+                <Download className="w-4 h-4 mr-2" />
+                Download File
+              </Button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+      )}
+
+    </>
   );
 }

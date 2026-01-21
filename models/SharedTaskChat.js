@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 
+// Message subdocument schema
 const messageSchema = new mongoose.Schema(
   {
     senderId: {
@@ -53,18 +54,17 @@ const messageSchema = new mongoose.Schema(
       type: Date
     }
   },
-  {
-    timestamps: true
-  }
+  { timestamps: true }
 );
 
+// SharedTaskChat main schema
 const sharedTaskChatSchema = new mongoose.Schema(
   {
     sharedTaskId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "SharedTask",
       required: true,
-      unique: true
+      unique: true // unique index automatically created
     },
     taskTitle: {
       type: String,
@@ -119,13 +119,10 @@ const sharedTaskChatSchema = new mongoose.Schema(
       default: true
     }
   },
-  {
-    timestamps: true
-  }
+  { timestamps: true }
 );
 
-// Create index for faster queries
-sharedTaskChatSchema.index({ sharedTaskId: 1 });
+// Indexes for faster queries
 sharedTaskChatSchema.index({ lastActivity: -1 });
 sharedTaskChatSchema.index({ 'participants.email': 1 });
 

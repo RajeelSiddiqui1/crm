@@ -44,6 +44,7 @@ import {
 } from "lucide-react";
 import axios from "axios";
 import ViewTaskModal from "@/components/manager/viewTaskModal"
+import MediaSection from "@/components/manager/admin-task/MediaSection";
 
 export default function ManagerAdminTasksPage() {
   const { data: session, status } = useSession();
@@ -959,90 +960,9 @@ export default function ManagerAdminTasksPage() {
               </div>
 
               {/* Media Section */}
-              <div className="space-y-6">
+              <div className="space-y-6 bg-white">
                 {/* Audio Section */}
-                {selectedTask.audioUrl && (
-                  <Card className="border-0 shadow-sm">
-                    <CardContent className="p-6">
-                      <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                        <Volume2 className="w-5 h-5 text-purple-600" />
-                        Voice Instructions
-                      </h3>
-                      <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-4">
-                        <div className="flex items-center justify-between mb-4">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-pink-600 rounded-lg flex items-center justify-center">
-                              <AudioLines className="w-5 h-5 text-white" />
-                            </div>
-                            <div>
-                              <p className="font-semibold text-gray-900">Audio Recording</p>
-                              <p className="text-sm text-gray-600">Click play to listen</p>
-                            </div>
-                          </div>
-                          <Button
-                            onClick={() => playAudio(selectedTask._id, selectedTask.audioUrl)}
-                            variant={audioPlaying === selectedTask._id ? "destructive" : "default"}
-                            className={`gap-2 ${
-                              audioPlaying === selectedTask._id
-                                ? "bg-gradient-to-r from-red-500 to-pink-600"
-                                : "bg-gradient-to-r from-purple-500 to-pink-600"
-                            } text-white`}
-                          >
-                            {audioPlaying === selectedTask._id ? (
-                              <Pause className="w-4 h-4" />
-                            ) : (
-                              <Play className="w-4 h-4" />
-                            )}
-                            {audioPlaying === selectedTask._id ? "Pause" : "Play Audio"}
-                          </Button>
-                        </div>
-                        <audio
-                          id={`audio-${selectedTask._id}`}
-                          src={selectedTask.audioUrl}
-                          controls
-                          className="w-full rounded-lg"
-                        />
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {/* File Attachments */}
-                {selectedTask.fileAttachments && (
-                  <Card className="border-0 shadow-sm">
-                    <CardContent className="p-6">
-                      <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                        <FileText className="w-5 h-5 text-green-600" />
-                        File Attachments
-                      </h3>
-                      <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-4">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-gradient-to-r from-green-500 to-emerald-600 rounded-lg flex items-center justify-center">
-                              <FileText className="w-5 h-5 text-white" />
-                            </div>
-                            <div>
-                              <p className="font-semibold text-gray-900">Supporting Document</p>
-                              <p className="text-sm text-gray-600">Download the attached file</p>
-                            </div>
-                          </div>
-                          <Button
-                            onClick={() =>
-                              downloadFile(
-                                selectedTask.fileAttachments,
-                                `task_${selectedTask.title}_attachment_${new Date().getTime()}`
-                              )
-                            }
-                            className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white gap-2"
-                          >
-                            <Download className="w-4 h-4" />
-                            Download File
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
+                 <MediaSection task={selectedTask} />
               </div>
 
               {/* Action Buttons */}
