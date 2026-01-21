@@ -76,6 +76,35 @@
                 }
             }
         ],
+
+         fileAttachments: [
+      {
+        url: {
+          type: String,
+          required: true,
+        },
+        name: {
+          type: String,
+          required: true,
+        },
+        type: {
+          type: String,
+          required: true,
+        },
+        size: {
+          type: Number,
+          required: true,
+        },
+        publicId: {
+          type: String,
+          required: true,
+        },
+        createdAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
     }, {
         timestamps: true
     })
