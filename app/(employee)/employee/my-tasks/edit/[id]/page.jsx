@@ -518,7 +518,7 @@ export default function EditEmployeeTaskPage() {
         setUploadedFiles([]);
         setFilesToDelete([]);
         fetchTask();
-        setTimeout(() => router.push(`/employee/my-tasks/detail${taskId}`), 1500);
+        setTimeout(() => router.push(`/employee/my-tasks/detail/${taskId}`), 1500);
       }
     } catch (error) {
       console.error("Error updating task:", error);

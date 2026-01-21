@@ -19,6 +19,33 @@ const BUCKET = process.env.AWS_BUCKET_NAME;
 /* ======================================================
    PUT — UPDATE TASK + FILE MANAGEMENT (Individual File Delete Support)
 ====================================================== */
+function mergeAssignments(existing = [], incoming = [], idKey) {
+  const map = new Map();
+
+  // Preserve existing data
+  existing.forEach(item => {
+    map.set(item[idKey].toString(), item);
+  });
+
+  // Add new ones
+  incoming.forEach(id => {
+    if (!map.has(id)) {
+      map.set(id, {
+        [idKey]: id,
+        status: "pending",
+        feedback: "",
+        assignedAt: new Date(),
+      });
+    }
+  });
+
+  // Keep only selected IDs
+  return Array.from(map.values()).filter(item =>
+    incoming.includes(item[idKey].toString())
+  );
+}
+
+/* ---------------- PUT ROUTE ---------------- */
 export async function PUT(req, { params }) {
   try {
     const session = await getServerSession(authOptions);
@@ -29,7 +56,9 @@ export async function PUT(req, { params }) {
     await dbConnect();
 
     const task = await EmployeeTask.findById(params.id);
-    if (!task) return NextResponse.json({ error: "Task not found" }, { status: 404 });
+    if (!task) {
+      return NextResponse.json({ error: "Task not found" }, { status: 404 });
+    }
 
     if (task.submittedBy.toString() !== session.user.id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -38,84 +67,90 @@ export async function PUT(req, { params }) {
     const formData = await req.formData();
 
     /* ---------------- BASIC FIELDS ---------------- */
-    task.title = formData.get("title") || task.title;
-    task.description = formData.get("description") || task.description;
-    task.startDate = formData.get("startDate") || task.startDate;
-    task.endDate = formData.get("endDate") || task.endDate;
-    task.startTime = formData.get("startTime") || task.startTime;
-    task.endTime = formData.get("endTime") || task.endTime;
-    task.status = formData.get("status") || task.status;
+    task.title = formData.get("title") ?? task.title;
+    task.description = formData.get("description") ?? task.description;
+    task.startDate = formData.get("startDate") ?? task.startDate;
+    task.endDate = formData.get("endDate") ?? task.endDate;
+    task.startTime = formData.get("startTime") ?? task.startTime;
+    task.endTime = formData.get("endTime") ?? task.endTime;
+    task.status = formData.get("status") ?? task.status;
 
-    /* ---------------- ASSIGNEES ---------------- */
+    /* ---------------- ASSIGNEES (SAFE MERGE) ---------------- */
     const assignedTeamLead = JSON.parse(formData.get("assignedTeamLead") || "[]");
     const assignedManager = JSON.parse(formData.get("assignedManager") || "[]");
     const assignedEmployee = JSON.parse(formData.get("assignedEmployee") || "[]");
 
-    task.assignedTeamLead = assignedTeamLead.map(id => ({ teamLeadId: id }));
-    task.assignedManager = assignedManager.map(id => ({ managerId: id }));
-    task.assignedEmployee = assignedEmployee.map(id => ({ employeeId: id }));
+    task.assignedTeamLead = mergeAssignments(
+      task.assignedTeamLead,
+      assignedTeamLead,
+      "teamLeadId"
+    );
+
+    task.assignedManager = mergeAssignments(
+      task.assignedManager,
+      assignedManager,
+      "managerId"
+    );
+
+    task.assignedEmployee = mergeAssignments(
+      task.assignedEmployee,
+      assignedEmployee,
+      "employeeId"
+    );
 
     /* ---------------- FILE DELETE ---------------- */
     const filesToDelete = JSON.parse(formData.get("filesToDelete") || "[]");
+
     if (filesToDelete.length) {
       task.fileAttachments = task.fileAttachments.filter(
         file => !filesToDelete.includes(file.publicId)
       );
 
       for (const key of filesToDelete) {
-        await s3.send(new DeleteObjectCommand({ Bucket: BUCKET, Key: key }));
+        await s3.send(new DeleteObjectCommand({
+          Bucket: BUCKET,
+          Key: key
+        }));
       }
     }
 
     /* ---------------- FILE UPLOAD ---------------- */
-    /* ---------------- FILE UPLOAD ---------------- */
-const files = formData.getAll("files");
+    const files = formData.getAll("files");
 
-for (const file of files) {
-  if (!file || !file.size) continue;
+    for (const file of files) {
+      if (!file || !file.size) continue;
 
-  const buffer = Buffer.from(await file.arrayBuffer());
-  const key = `employee_tasks/${Date.now()}_${file.name.replace(/\s+/g, "_")}`;
+      const buffer = Buffer.from(await file.arrayBuffer());
+      const key = `employee_tasks/${Date.now()}_${file.name.replace(/\s+/g, "_")}`;
 
-  const upload = new Upload({
-    client: s3,
-    params: {
-      Bucket: BUCKET,
-      Key: key,
-      Body: buffer,
-      ContentType: file.type || "application/octet-stream",
-    },
-  });
+      const upload = new Upload({
+        client: s3,
+        params: {
+          Bucket: BUCKET,
+          Key: key,
+          Body: buffer,
+          ContentType: file.type || "application/octet-stream",
+        },
+      });
 
-  await upload.done();
+      await upload.done();
 
-  // ✅ Generate signed URL for the uploaded file (7 days)
-  const signedUrl = await getSignedUrl(
-    s3,
-    new GetObjectCommand({ Bucket: BUCKET, Key: key }),
-    { expiresIn: 604800 } // 7 days
-  );
+      const signedUrl = await getSignedUrl(
+        s3,
+        new GetObjectCommand({ Bucket: BUCKET, Key: key }),
+        { expiresIn: 604800 }
+      );
 
-  task.fileAttachments.push({
-    name: file.name,
-    type: file.type,
-    size: file.size,
-    publicId: key,
-    url: signedUrl, // <- signed URL here
-  });
-}
-
+      task.fileAttachments.push({
+        name: file.name,
+        type: file.type,
+        size: file.size,
+        publicId: key,
+        url: signedUrl,
+      });
+    }
 
     await task.save();
-
-    /* ---------------- NOTIFICATIONS ---------------- */
-    if (formData.get("notifyEmail")) {
-      await sendMail(
-        formData.get("notifyEmail"),
-        "Task Updated",
-        employeeTaskUpdatedTemplate(session.user.name, task.title)
-      );
-    }
 
     /* ---------------- RESPONSE ---------------- */
     const populatedTask = await EmployeeTask.findById(task._id)
@@ -125,12 +160,15 @@ for (const file of files) {
       .populate("assignedTeamLead.teamLeadId", "firstName lastName email");
 
     return NextResponse.json(populatedTask, { status: 200 });
+
   } catch (error) {
     console.error("PUT EmployeeTask Error:", error);
-    return NextResponse.json({ error: error.message || "Failed to update task" }, { status: 500 });
+    return NextResponse.json(
+      { error: error.message || "Failed to update task" },
+      { status: 500 }
+    );
   }
 }
-
 
 
 /* ======================================================
@@ -205,7 +243,6 @@ export async function PATCH(req, { params }) {
 ====================================================== */
 
 
-
 export async function GET(req, { params }) {
   try {
     const session = await getServerSession(authOptions);
@@ -218,23 +255,53 @@ export async function GET(req, { params }) {
 
     const task = await EmployeeTask.findById(params.id)
       .populate("submittedBy", "firstName lastName email")
-      .populate("assignedTeamLead.teamLeadId", "firstName lastName email")
-      .populate("assignedManager.managerId", "firstName lastName email")
-      .populate("assignedEmployee.employeeId", "firstName lastName email")
+
+      // ✅ Team Lead + Department
+      .populate({
+        path: "assignedTeamLead.teamLeadId",
+        select: "firstName lastName email depId",
+        populate: {
+          path: "depId",
+          select: "name",
+        },
+      })
+
+      // ✅ Manager + Departments[]
+      .populate({
+        path: "assignedManager.managerId",
+        select: "firstName lastName email departments",
+        populate: {
+          path: "departments",
+          select: "name",
+        },
+      })
+
+      // ✅ Employee + Department
+      .populate({
+        path: "assignedEmployee.employeeId",
+        select: "firstName lastName email depId",
+        populate: {
+          path: "depId",
+          select: "name",
+        },
+      })
+
       .select("+fileAttachments");
 
     if (!task) {
       return NextResponse.json({ error: "Task not found" }, { status: 404 });
     }
 
-    // 🔐 Only the employee who submitted the task can view it
     if (task.submittedBy._id.toString() !== session.user.id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     return NextResponse.json(task);
   } catch (error) {
-    console.error(error);
-    return NextResponse.json({ error: "Failed to fetch task" }, { status: 500 });
+    console.error("GET EmployeeTask Error:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch task" },
+      { status: 500 }
+    );
   }
 }
