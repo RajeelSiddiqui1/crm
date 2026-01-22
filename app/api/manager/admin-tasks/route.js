@@ -39,6 +39,9 @@ export async function GET(req) {
         }
       })
       
+      .select("+audioFiles")
+      .select("+fileAttachments")
+      
       .sort({ createdAt: -1 })
       .lean();
 

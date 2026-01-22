@@ -113,7 +113,7 @@ export async function POST(req) {
     const submissionData = {
       formId: form._id,
       depId: form.depId,
-      clientName: clientName.trim(),
+      clinetName: clientName.trim(),
       formData: dynamicFormData,
       status: "pending",
       status2: "pending",
