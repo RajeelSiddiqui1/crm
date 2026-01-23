@@ -2,14 +2,14 @@
 FROM node:22-alpine AS builder
 WORKDIR /app
 
-# Copy only package files and install dependencies
+# Copy package files & install dependencies
 COPY package*.json ./
 RUN npm install
 
 # Copy rest of the project
 COPY . .
 
-# Build the Next.js app
+# Build Next.js app
 RUN npm run build
 
 # Stage 2: Production stage
@@ -27,4 +27,6 @@ ENV NODE_ENV=production
 ENV PORT=5000
 
 EXPOSE 5000
-CMD ["npm", "run", "dev"]
+
+# Run production server
+CMD ["npm", "start"]
