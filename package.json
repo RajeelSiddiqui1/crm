@@ -2,11 +2,11 @@
   "name": "crm",
   "version": "0.1.0",
   "private": true,
-  "scripts": {
-    "dev": "next dev --turbopack",
-    "build": "next build --turbopack",
-    "start": "next start"
-  },
+ "scripts": {
+  "dev": "next dev -p 4000",
+  "build": "next build",
+  "start": "next start -p 4000"
+},
   "dependencies": {
     "@aws-sdk/client-s3": "^3.962.0",
     "@aws-sdk/lib-storage": "^3.962.0",
