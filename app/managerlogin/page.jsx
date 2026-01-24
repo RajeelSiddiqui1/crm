@@ -54,7 +54,7 @@ export default function ManagerLoginPage() {
               <UserPlus className="h-8 w-8 text-white" />
             </div>
             <h2 className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
-              Manager Login
+              Managers Login
             </h2>
             <p className="text-gray-600 mt-2">Access manager dashboard</p>
           </div>
