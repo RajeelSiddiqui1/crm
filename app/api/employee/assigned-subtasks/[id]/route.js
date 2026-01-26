@@ -241,13 +241,9 @@ export async function PATCH(req, { params }) {
 /* ======================================================
    GET — SINGLE TASK
 ====================================================== */
-
-
-
 export async function GET(req, { params }) {
-try {
+  try {
     const session = await getServerSession(authOptions);
-
     if (!session || session.user.role !== "Employee") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -256,53 +252,31 @@ try {
 
     const task = await EmployeeTask.findById(params.id)
       .populate("submittedBy", "firstName lastName email")
-
-      // ✅ Team Lead + Department
       .populate({
         path: "assignedTeamLead.teamLeadId",
         select: "firstName lastName email depId",
-        populate: {
-          path: "depId",
-          select: "name",
-        },
+        populate: { path: "depId", select: "name" },
       })
-
-      // ✅ Manager + Departments[]
       .populate({
         path: "assignedManager.managerId",
         select: "firstName lastName email departments",
-        populate: {
-          path: "departments",
-          select: "name",
-        },
+        populate: { path: "departments", select: "name" },
       })
-
-      // ✅ Employee + Department
       .populate({
         path: "assignedEmployee.employeeId",
         select: "firstName lastName email depId",
-        populate: {
-          path: "depId",
-          select: "name",
-        },
+        populate: { path: "depId", select: "name" },
       })
-
       .select("+fileAttachments");
 
-    if (!task) {
-      return NextResponse.json({ error: "Task not found" }, { status: 404 });
-    }
-
+    if (!task) return NextResponse.json({ error: "Task not found" }, { status: 404 });
     if (task.submittedBy._id.toString() !== session.user.id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    return NextResponse.json(task);
+    return NextResponse.json(task, { status: 200 });
   } catch (error) {
     console.error("GET EmployeeTask Error:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch task" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch task" }, { status: 500 });
   }
 }

@@ -61,7 +61,7 @@ export async function PUT(req, { params }) {
 
         const { id } = await params;
         const body = await req.json();
-        const { status, feedback, leadsCompleted, sendNotification: shouldSendNotification } = body;
+        const { status, feedback, leadsCompleted, feedbackType = "general", sendNotification: shouldSendNotification } = body;
 
         const subtask = await Subtask.findById(id)
             .populate("teamLeadId", "firstName lastName email")
@@ -89,8 +89,22 @@ export async function PUT(req, { params }) {
             }
         }
 
-        if (feedback !== undefined) {
-            subtask.assignedTeamLeads[teamLeadAssignmentIndex].feedback = feedback;
+        // ✅ Add new feedback to feedbacks array
+        if (feedback && feedback.trim()) {
+            const newFeedback = {
+                feedback: feedback.trim(),
+                sentAt: new Date(),
+                status: status || subtask.assignedTeamLeads[teamLeadAssignmentIndex].status,
+                feedbackType: feedbackType || "general"
+            };
+
+            // Initialize feedbacks array if it doesn't exist
+            if (!subtask.assignedTeamLeads[teamLeadAssignmentIndex].feedbacks) {
+                subtask.assignedTeamLeads[teamLeadAssignmentIndex].feedbacks = [];
+            }
+
+            // Add new feedback
+            subtask.assignedTeamLeads[teamLeadAssignmentIndex].feedbacks.push(newFeedback);
         }
 
         if (leadsCompleted !== undefined) {
@@ -128,12 +142,11 @@ export async function PUT(req, { params }) {
 
         await subtask.save();
 
-        // Send notification to task creator
+        // Send notification to task creator (existing code)
         if (shouldSendNotification && subtask.teamLeadId) {
             const currentTeamLead = await TeamLead.findById(session.user.id);
             const currentTeamLeadName = `${currentTeamLead.firstName} ${currentTeamLead.lastName}`;
 
-            // Send notification to creator
             await sendNotification({
                 senderId: session.user.id,
                 senderModel: "TeamLead",
@@ -141,8 +154,8 @@ export async function PUT(req, { params }) {
                 receiverId: subtask.teamLeadId._id,
                 receiverModel: "TeamLead",
                 type: "subtask_updated",
-                title: "Task Progress Updated",
-                message: `${currentTeamLeadName} has updated progress on task "${subtask.title}"`,
+                title: "New Feedback Added",
+                message: `${currentTeamLeadName} added feedback on task "${subtask.title}"`,
                 link: `/teamlead/subtasks/${subtask._id}`,
                 referenceId: subtask._id,
                 referenceModel: "Subtask",
@@ -157,7 +170,7 @@ export async function PUT(req, { params }) {
                     feedback || "No feedback provided",
                     currentTeamLeadName
                 );
-                await sendMail(subtask.teamLeadId.email, "Task Progress Updated", html);
+                await sendMail(subtask.teamLeadId.email, "New Feedback on Task", html);
             }
         }
 

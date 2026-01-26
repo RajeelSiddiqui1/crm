@@ -548,17 +548,23 @@ const [zoom, setZoom] = useState(1);
                                 <StatusBadge status={assignment.status} />
                               </div>
                               
-                              {assignment.feedback && (
-                                <div className="mt-3 pt-3 border-t border-gray-200">
-                                  <div className="flex items-center gap-2 mb-2">
-                                    <MessageSquare className="w-4 h-4 text-gray-400" />
-                                    <span className="text-sm font-medium text-gray-700">Feedback:</span>
-                                  </div>
-                                  <p className="text-sm text-gray-600 bg-white p-3 rounded-lg border">
-                                    {assignment.feedback}
-                                  </p>
-                                </div>
-                              )}
+                           
+{assignment.feedbacks && assignment.feedbacks.length > 0 && (
+  <div className="mt-3 pt-3 border-t border-gray-200">
+    <div className="flex items-center gap-2 mb-2">
+      <MessageSquare className="w-4 h-4 text-gray-400" />
+      <span className="text-sm font-medium text-gray-700">Feedback:</span>
+    </div>
+    <div className="space-y-2">
+      {assignment.feedbacks.map((f, index) => (
+        <p key={index} className="text-sm text-gray-600 bg-white p-3 rounded-lg border">
+          {f.feedback} <span className="text-xs text-gray-400 ml-2">({new Date(f.sentAt).toLocaleString()})</span>
+        </p>
+      ))}
+    </div>
+  </div>
+)}
+
                             </div>
                           ))}
                         </div>
@@ -602,17 +608,21 @@ const [zoom, setZoom] = useState(1);
                                 <StatusBadge status={assignment.status} />
                               </div>
                               
-                              {assignment.feedback && (
-                                <div className="mt-3 pt-3 border-t border-gray-200">
-                                  <div className="flex items-center gap-2 mb-2">
-                                    <MessageSquare className="w-4 h-4 text-gray-400" />
-                                    <span className="text-sm font-medium text-gray-700">Feedback:</span>
-                                  </div>
-                                  <p className="text-sm text-gray-600 bg-white p-3 rounded-lg border">
-                                    {assignment.feedback}
-                                  </p>
-                                </div>
-                              )}
+                       {assignment.feedbacks && assignment.feedbacks.length > 0 && (
+  <div className="mt-3 pt-3 border-t border-gray-200">
+    <div className="flex items-center gap-2 mb-2">
+      <MessageSquare className="w-4 h-4 text-gray-400" />
+      <span className="text-sm font-medium text-gray-700">Feedback:</span>
+    </div>
+    <div className="space-y-2">
+      {assignment.feedbacks.map((f, index) => (
+        <p key={index} className="text-sm text-gray-600 bg-white p-3 rounded-lg border">
+          {f.feedback} <span className="text-xs text-gray-400 ml-2">({new Date(f.sentAt).toLocaleString()})</span>
+        </p>
+      ))}
+    </div>
+  </div>
+)}
                             </div>
                           ))}
                         </div>
@@ -656,17 +666,21 @@ const [zoom, setZoom] = useState(1);
                                 <StatusBadge status={assignment.status} />
                               </div>
                               
-                              {assignment.feedback && (
-                                <div className="mt-3 pt-3 border-t border-gray-200">
-                                  <div className="flex items-center gap-2 mb-2">
-                                    <MessageSquare className="w-4 h-4 text-gray-400" />
-                                    <span className="text-sm font-medium text-gray-700">Feedback:</span>
-                                  </div>
-                                  <p className="text-sm text-gray-600 bg-white p-3 rounded-lg border">
-                                    {assignment.feedback}
-                                  </p>
-                                </div>
-                              )}
+                             {assignment.feedbacks && assignment.feedbacks.length > 0 && (
+  <div className="mt-3 pt-3 border-t border-gray-200">
+    <div className="flex items-center gap-2 mb-2">
+      <MessageSquare className="w-4 h-4 text-gray-400" />
+      <span className="text-sm font-medium text-gray-700">Feedback:</span>
+    </div>
+    <div className="space-y-2">
+      {assignment.feedbacks.map((f, index) => (
+        <p key={index} className="text-sm text-gray-600 bg-white p-3 rounded-lg border">
+          {f.feedback} <span className="text-xs text-gray-400 ml-2">({new Date(f.sentAt).toLocaleString()})</span>
+        </p>
+      ))}
+    </div>
+  </div>
+)}
                             </div>
                           ))}
                         </div>

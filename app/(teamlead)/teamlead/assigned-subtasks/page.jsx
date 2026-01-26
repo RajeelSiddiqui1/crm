@@ -840,6 +840,213 @@ export default function TeamLeadAssignedSubtasksPage() {
                                                           </div>
 
                                                           
+                                                          {/* Feedback History Section - Modal के Right Column में जोड़ें */}
+<Card className="border border-gray-200/50 shadow-lg rounded-xl overflow-hidden">
+  <CardHeader className="bg-gradient-to-r from-gray-50 to-white border-b border-gray-100">
+    <div className="flex items-center justify-between">
+      <div className="flex items-center gap-3">
+        <div className="p-2 bg-gradient-to-r from-blue-500 to-cyan-600 rounded-lg">
+          <MessageSquare className="w-5 h-5 text-white" />
+        </div>
+        <CardTitle className="text-xl font-bold text-gray-900">
+          Feedback History
+        </CardTitle>
+      </div>
+      <Badge variant="outline" className="border-blue-200 text-blue-800">
+        {selectedSubtask?.assignedTeamLeads?.find(tl => 
+          tl.teamLeadId?._id === session.user.id || tl.teamLeadId === session.user.id
+        )?.feedbacks?.length || 0} feedbacks
+      </Badge>
+    </div>
+  </CardHeader>
+  
+  <CardContent className="p-6">
+    <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
+      {(() => {
+        // Find current team lead's assignment
+        const teamLeadAssignment = selectedSubtask?.assignedTeamLeads?.find(tl => 
+          tl.teamLeadId?._id === session.user.id || tl.teamLeadId === session.user.id
+        );
+        
+        const feedbacks = teamLeadAssignment?.feedbacks || [];
+        
+        if (feedbacks.length === 0) {
+          return (
+            <div className="text-center py-8">
+              <MessageSquare className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+              <h4 className="text-lg font-semibold text-gray-900 mb-2">No Feedback Yet</h4>
+              <p className="text-gray-800 text-sm">
+                You haven't submitted any feedback for this task yet.
+                Add your first feedback above!
+              </p>
+            </div>
+          );
+        }
+        
+        return feedbacks
+          .sort((a, b) => new Date(b.sentAt) - new Date(a.sentAt))
+          .map((feedbackItem, index) => (
+            <div key={index} className="group relative">
+              {/* Feedback Card */}
+              <div className={`p-4 rounded-xl border transition-all duration-300 ${
+                index === 0 
+                  ? 'bg-gradient-to-r from-blue-50 to-cyan-50 border-blue-200 shadow-sm' 
+                  : 'bg-white border-gray-200 hover:border-blue-300 hover:bg-blue-50/30'
+              }`}>
+                {/* Feedback Header */}
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-center gap-3">
+                    <Avatar className="w-10 h-10 border-2 border-white shadow-sm">
+                      <AvatarFallback className="bg-gradient-to-r from-yellow-500 to-amber-600 text-white font-bold">
+                        {session?.user?.name?.charAt(0) || 'Y'}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <div className="font-bold text-gray-900 text-sm">
+                        {session?.user?.name || 'You'}
+                        {index === 0 && (
+                          <Badge className="ml-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white text-xs">
+                            Latest
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="text-xs text-gray-900 flex items-center gap-2">
+                        <Calendar className="w-3 h-3" />
+                        {new Date(feedbackItem.sentAt).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <Badge className={`text-xs px-2 py-1 ${
+                    feedbackItem.status === 'completed' ? 'bg-gradient-to-r from-emerald-500 to-green-600 text-white' :
+                    feedbackItem.status === 'in_progress' ? 'bg-gradient-to-r from-blue-500 to-cyan-600 text-white' :
+                    feedbackItem.status === 'pending' ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white' :
+                    'bg-gradient-to-r from-gray-500 to-slate-600 text-white'
+                  }`}>
+                    {feedbackItem.status ? feedbackItem.status.replace('_', ' ') : 'Feedback'}
+                  </Badge>
+                </div>
+                
+                {/* Feedback Content */}
+                <div className="mb-4">
+                  <div className="text-sm text-gray-900 font-medium mb-1">Feedback:</div>
+                  <div className="text-gray-900 bg-white/70 p-3 rounded-lg border border-gray-100">
+                    {feedbackItem.feedback}
+                  </div>
+                </div>
+                
+                {/* Feedback Metadata */}
+                <div className="flex items-center justify-between text-xs text-gray-900">
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
+                      <span>
+                        {(() => {
+                          const sentTime = new Date(feedbackItem.sentAt);
+                          const now = new Date();
+                          const diffMs = now - sentTime;
+                          const diffMins = Math.floor(diffMs / 60000);
+                          const diffHours = Math.floor(diffMins / 60);
+                          const diffDays = Math.floor(diffHours / 24);
+                          
+                          if (diffDays > 0) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+                          if (diffHours > 0) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+                          if (diffMins > 0) return `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`;
+                          return 'Just now';
+                        })()}
+                      </span>
+                    </div>
+                    
+                    {feedbackItem.feedbackType && (
+                      <Badge variant="outline" className="border-gray-200 text-gray-800">
+                        {feedbackItem.feedbackType.charAt(0).toUpperCase() + feedbackItem.feedbackType.slice(1)}
+                      </Badge>
+                    )}
+                  </div>
+                  
+                  {feedbackItem.leadsCompleted > 0 && (
+                    <div className="flex items-center gap-1">
+                      <Target className="w-3 h-3 text-emerald-600" />
+                      <span className="font-semibold text-emerald-700">
+                        {feedbackItem.leadsCompleted} leads
+                      </span>
+                    </div>
+                  )}
+                </div>
+                
+                {/* Timeline Indicator */}
+                {index !== feedbacks.length - 1 && (
+                  <div className="absolute left-7 top-full w-0.5 h-4 bg-gradient-to-b from-blue-300 to-transparent"></div>
+                )}
+              </div>
+            </div>
+          ));
+      })()}
+    </div>
+    
+    {/* Feedback Summary */}
+    {(() => {
+      const teamLeadAssignment = selectedSubtask?.assignedTeamLeads?.find(tl => 
+        tl.teamLeadId?._id === session.user.id || tl.teamLeadId === session.user.id
+      );
+      const feedbacks = teamLeadAssignment?.feedbacks || [];
+      
+      if (feedbacks.length > 0) {
+        const lastFeedback = feedbacks[feedbacks.length - 1];
+        const firstFeedback = feedbacks[0];
+        
+        return (
+          <div className="mt-6 pt-6 border-t border-gray-200">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="text-center p-3 bg-blue-50/50 rounded-lg">
+                <div className="text-lg font-bold text-blue-700">
+                  {feedbacks.length}
+                </div>
+                <div className="text-xs text-gray-900">Total Feedbacks</div>
+              </div>
+              <div className="text-center p-3 bg-emerald-50/50 rounded-lg">
+                <div className="text-lg font-bold text-emerald-700">
+                  {(() => {
+                    const completedFeedbacks = feedbacks.filter(f => f.status === 'completed').length;
+                    return completedFeedbacks;
+                  })()}
+                </div>
+                <div className="text-xs text-gray-900">Completed Updates</div>
+              </div>
+            </div>
+            
+            <div className="mt-4 text-xs text-gray-900 space-y-1">
+              <div className="flex items-center justify-between">
+                <span>First Feedback:</span>
+                <span className="font-semibold">
+                  {new Date(firstFeedback.sentAt).toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric'
+                  })}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span>Last Feedback:</span>
+                <span className="font-semibold">
+                  {new Date(lastFeedback.sentAt).toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric'
+                  })}
+                </span>
+              </div>
+            </div>
+          </div>
+        );
+      }
+    })()}
+  </CardContent>
+</Card>
                       <div className="space-y-4 pt-4 border-t border-gray-200">
                         <div className="flex items-center justify-between">
                           <h4 className="font-semibold text-gray-900">Feedback / Comments</h4>
@@ -869,94 +1076,7 @@ export default function TeamLeadAssignedSubtasksPage() {
                                                       </Card>
                   
 
-                  {/* Team Collaboration & Feedback Section */}
-                  <Card className="border border-gray-200/50 shadow-lg rounded-xl overflow-hidden">
-                    <CardHeader className="bg-gradient-to-r from-gray-50 to-white border-b border-gray-100">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-lg">
-                          <MessageSquare className="w-5 h-5 text-white" />
-                        </div>
-                        <CardTitle className="text-xl font-bold text-gray-900">
-                          Team Feedback & Activity
-                        </CardTitle>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="p-6">
-                      <div className="space-y-6">
-                        {/* Merge all assignees for a unified feedback feed */}
-                        {(() => {
-                          const getDisplayName = (a) => {
-                            if (a.name) return a.name;
-                            const user = a.employeeId || a.managerId || a.teamLeadId;
-                            if (user && user.firstName) {
-                              return `${user.firstName} ${user.lastName || ''}`.trim();
-                            }
-                            return a.email?.split('@')[0] || "Unknown User";
-                          };
-
-                          const allAssignees = [
-                            ...(selectedSubtask.assignedEmployees || []).map(a => ({ ...a, type: 'Employee', displayName: getDisplayName(a) })),
-                            ...(selectedSubtask.assignedManagers || []).map(a => ({ ...a, type: 'Manager', displayName: getDisplayName(a) })),
-                            ...(selectedSubtask.assignedTeamLeads || []).map(a => ({ ...a, type: 'Team Lead', displayName: getDisplayName(a) }))
-                          ];
-
-                          if (allAssignees.length === 0) {
-                            return (
-                              <div className="text-center py-8 text-gray-500 italic bg-gray-50 rounded-lg border border-dashed border-gray-300">
-                                No feedback or activity reported yet.
-                              </div>
-                            );
-                          }
-
-                          return allAssignees.map((assignee, idx) => (
-                            <div key={idx} className="flex gap-4 p-4 rounded-xl bg-gray-50 border border-gray-200 hover:border-indigo-200 transition-colors shadow-sm">
-                              <Avatar className="w-10 h-10 border-2 border-white shadow-sm shrink-0">
-                                <AvatarFallback className={`text-xs font-bold text-white
-                                  ${assignee.type === 'Employee' ? 'bg-blue-600' : 
-                                    assignee.type === 'Manager' ? 'bg-indigo-600' : 'bg-amber-600'}
-                                `}>
-                                  {assignee.displayName?.[0] || assignee.type[0]}
-                                </AvatarFallback>
-                              </Avatar>
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center justify-between gap-2 mb-1">
-                                  <div className="flex items-center gap-2">
-                                    <span className="font-bold text-gray-900 text-sm">
-                                      {assignee.displayName}
-                                    </span>
-                                    <Badge variant="outline" className="text-[10px] px-2 py-0 h-5 border-gray-300 bg-white">
-                                      {assignee.type}
-                                    </Badge>
-                                  </div>
-                                  <Badge className={`text-[10px] h-5 px-2 py-0 ${getStatusVariant(assignee.status)}`}>
-                                    {formatStatus(assignee.status)}
-                                  </Badge>
-                                </div>
-                                
-                                {assignee.feedback ? (
-                                  <div className="mt-2 text-sm text-gray-950 font-medium bg-white p-3 rounded-lg border border-gray-200 shadow-sm italic relative">
-                                    <div className="absolute -left-1 top-3 w-2 h-2 bg-white border-l border-b border-gray-200 rotate-45"></div>
-                                    "{assignee.feedback}"
-                                  </div>
-                                ) : (
-                                  <div className="mt-2 text-xs text-gray-500 italic">
-                                    No feedback provided yet.
-                                  </div>
-                                )}
-                                
-                                <div className="mt-3 flex items-center justify-between text-[10px] text-gray-500">
-                                  <span>{assignee.assignedAt ? `Assigned: ${formatDate(assignee.assignedAt)}` : ''}</span>
-                                  {assignee.completedAt && (
-                                    <span className="text-emerald-600 font-medium">Completed: {formatDate(assignee.completedAt)}</span>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          ));
-                        })()}
-                      </div>
-                    </CardContent>
-                  </Card>
+                
                 </div>
 
                 {/* Right Column */}

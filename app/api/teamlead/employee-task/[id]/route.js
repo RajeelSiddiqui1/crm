@@ -3,18 +3,22 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import dbConnect from "@/lib/db";
 import EmployeeTask from "@/models/EmployeeTask";
+import Notification from "@/models/Notification";
 import mongoose from "mongoose";
 
-// GET: Fetch single employee task details
-export async function GET(request, { params }) {
+/* =========================
+   GET: Single Task (TeamLead)
+========================= */
+export async function GET(request, context) {
   try {
     await dbConnect();
-    const session = await getServerSession(authOptions);
 
+    const session = await getServerSession(authOptions);
     if (!session || session.user.role !== "TeamLead") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { params } = context;
     const { id } = params;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -22,18 +26,18 @@ export async function GET(request, { params }) {
     }
 
     const task = await EmployeeTask.findById(id)
-      .populate("submittedBy", "firstName lastName email avatar")
+      .populate("submittedBy", "firstName lastName email avatar role")
       .populate({
         path: "assignedEmployee.employeeId",
-        select: "firstName lastName email avatar"
+        select: "firstName lastName email avatar",
       })
       .populate({
         path: "assignedManager.managerId",
-        select: "firstName lastName email avatar"
+        select: "firstName lastName email avatar",
       })
       .populate({
         path: "assignedTeamLead.teamLeadId",
-        select: "firstName lastName email avatar"
+        select: "firstName lastName email avatar",
       })
       .lean();
 
@@ -41,36 +45,48 @@ export async function GET(request, { params }) {
       return NextResponse.json({ error: "Task not found" }, { status: 404 });
     }
 
-    // Check if this team lead is assigned to this task
-    const isAssigned = task.assignedTeamLead?.some(
+    const teamLeadAssignment = task.assignedTeamLead.find(
       tl => tl.teamLeadId?._id?.toString() === session.user.id
     );
 
-    if (!isAssigned) {
+    if (!teamLeadAssignment) {
       return NextResponse.json({ error: "You are not assigned to this task" }, { status: 403 });
     }
 
-    return NextResponse.json(task, { status: 200 });
+    return NextResponse.json(
+      {
+        success: true,
+        task: {
+          ...task,
+          teamLeadStatus: teamLeadAssignment.status,
+          teamLeadFeedbacks: teamLeadAssignment.feedbacks || [],
+          assignedAt: teamLeadAssignment.assignedAt,
+          completedAt: teamLeadAssignment.completedAt,
+        },
+      },
+      { status: 200 }
+    );
   } catch (error) {
-    console.error("GET Employee Task Error:", error);
-    return NextResponse.json({
-      error: "Failed to fetch task details"
-    }, { status: 500 });
+    console.error("GET TeamLead Task Error:", error);
+    return NextResponse.json({ success: false, error: "Failed to fetch task" }, { status: 500 });
   }
 }
 
-// PUT: Update team lead's status and feedback for the task
-export async function PUT(request, { params }) {
+/* =========================
+   PUT: Update Task (TeamLead)
+========================= */
+export async function PUT(request, context) {
   try {
     await dbConnect();
-    const session = await getServerSession(authOptions);
 
+    const session = await getServerSession(authOptions);
     if (!session || session.user.role !== "TeamLead") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { params } = context;
     const { id } = params;
-    const { status, feedback } = await request.json();
+    const { status, feedback, sendNotification } = await request.json();
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return NextResponse.json({ error: "Invalid task ID" }, { status: 400 });
@@ -82,54 +98,93 @@ export async function PUT(request, { params }) {
     }
 
     const task = await EmployeeTask.findById(id);
-
     if (!task) {
       return NextResponse.json({ error: "Task not found" }, { status: 404 });
     }
 
-    // Find the team lead's assignment in the array
     const teamLeadIndex = task.assignedTeamLead.findIndex(
       tl => tl.teamLeadId?.toString() === session.user.id
     );
-
     if (teamLeadIndex === -1) {
-      return NextResponse.json({
-        error: "You are not assigned to this task"
-      }, { status: 403 });
+      return NextResponse.json({ error: "You are not assigned to this task" }, { status: 403 });
     }
 
-    // Update the team lead's status and feedback
+    const teamLead = task.assignedTeamLead[teamLeadIndex];
+    const oldStatus = teamLead.status;
+
+    // ===== STATUS UPDATE =====
     if (status) {
-      task.assignedTeamLead[teamLeadIndex].status = status;
-    }
-    if (feedback !== undefined) {
-      task.assignedTeamLead[teamLeadIndex].feedback = feedback;
+      teamLead.status = status;
+      if (["completed", "approved"].includes(status)) {
+        teamLead.completedAt = new Date();
+      }
     }
 
+    // ===== ADD FEEDBACK =====
+    if (feedback && feedback.trim()) {
+      teamLead.feedbacks.push({ feedback, sentAt: new Date() });
+    }
+
+    console.log(feedback)
+    
     await task.save();
 
-    // Populate the task before returning
+    // ===== NOTIFICATION =====
+    if (sendNotification && task.submittedBy) {
+      await Notification.create({
+        title: "Task Status Updated",
+        message: `${session.user.name} (TeamLead) updated task "${task.title}" from ${oldStatus} to ${status}`,
+        type: "task_update",
+        sender: {
+          id: session.user.id,
+          model: "TeamLead",
+          name: session.user.name,
+        },
+        receiver: {
+          id: task.submittedBy,
+          model: "Employee",
+        },
+        link: `/my-tasks/${task._id}`,
+        relatedId: task._id,
+        read: false,
+      });
+    }
+
     const updatedTask = await EmployeeTask.findById(id)
-      .populate("submittedBy", "firstName lastName email avatar")
+      .populate("submittedBy", "firstName lastName email avatar role")
       .populate({
         path: "assignedEmployee.employeeId",
-        select: "firstName lastName email avatar"
+        select: "firstName lastName email avatar",
       })
       .populate({
         path: "assignedManager.managerId",
-        select: "firstName lastName email avatar"
+        select: "firstName lastName email avatar",
       })
       .populate({
         path: "assignedTeamLead.teamLeadId",
-        select: "firstName lastName email avatar"
+        select: "firstName lastName email avatar",
       })
       .lean();
 
-    return NextResponse.json(updatedTask, { status: 200 });
+    const updatedTeamLead = updatedTask.assignedTeamLead.find(
+      tl => tl.teamLeadId?._id?.toString() === session.user.id
+    );
+
+    return NextResponse.json(
+      {
+        success: true,
+        task: {
+          ...updatedTask,
+          teamLeadStatus: updatedTeamLead.status,
+          teamLeadFeedbacks: updatedTeamLead.feedbacks || [],
+          assignedAt: updatedTeamLead.assignedAt,
+          completedAt: updatedTeamLead.completedAt,
+        },
+      },
+      { status: 200 }
+    );
   } catch (error) {
-    console.error("PUT Employee Task Error:", error);
-    return NextResponse.json({
-      error: "Failed to update task"
-    }, { status: 500 });
+    console.error("PUT TeamLead Task Error:", error);
+    return NextResponse.json({ success: false, error: "Failed to update task" }, { status: 500 });
   }
 }

@@ -25,7 +25,7 @@ async function sendSubtaskUpdateNotification({ session, subtask, status, feedbac
         receiverModel: "TeamLead",
         type: "subtask_status_updated",
         title: status ? "Subtask Status Updated" : "New Feedback Received",
-        message: status 
+        message: status
             ? `Employee ${session.user.name} updated status of "${subtask.title}" to "${status}".`
             : `Employee ${session.user.name} submitted feedback for "${subtask.title}".`,
         link: `${process.env.NEXT_PUBLIC_DOMAIN}/teamlead/subtasks`,
@@ -34,7 +34,7 @@ async function sendSubtaskUpdateNotification({ session, subtask, status, feedbac
     });
 
     // Send email to team lead
-    const emailHtml = status 
+    const emailHtml = status
         ? subtaskStatusUpdateMailTemplate(
             teamLead.firstName,
             subtask.title,
@@ -48,7 +48,7 @@ async function sendSubtaskUpdateNotification({ session, subtask, status, feedbac
             session.user.name || "Employee",
             feedback
         );
-    
+
     await sendMail(teamLead.email, status ? "Subtask Status Updated" : "New Feedback Received", emailHtml);
 }
 
@@ -62,7 +62,7 @@ export async function PUT(req, { params }) {
 
         await dbConnect();
 
-        const { id } = params; 
+        const { id } = params;
         if (!id || !mongoose.Types.ObjectId.isValid(id)) {
             return NextResponse.json(
                 { error: "Invalid or missing Subtask ID" },
@@ -71,15 +71,15 @@ export async function PUT(req, { params }) {
         }
 
         const { status, feedback } = await req.json();
-        
+
         // Validate at least one update
         if (!status && !feedback) {
-            return NextResponse.json({ 
-                error: "Either status or feedback is required" 
+            return NextResponse.json({
+                error: "Either status or feedback is required"
             }, { status: 400 });
         }
 
-        const validStatuses = ["pending", "in_progress", "completed", "approved", "rejected"];
+        const validStatuses = ["pending", "in_progress", "completed"];
         if (status && !validStatuses.includes(status)) {
             return NextResponse.json({ error: "Invalid status" }, { status: 400 });
         }
@@ -103,7 +103,6 @@ export async function PUT(req, { params }) {
         // Track changes for notification
         const hasStatusChange = status && subtask.assignedEmployees[employeeIndex].status !== status;
         const hasFeedbackChange = feedback && feedback.trim() !== "";
-        const previousFeedback = subtask.assignedEmployees[employeeIndex].feedback || "";
 
         // Update employee-specific data
         if (status) {
@@ -112,22 +111,29 @@ export async function PUT(req, { params }) {
                 subtask.assignedEmployees[employeeIndex].completedAt = new Date();
             }
         }
-        
-        if (feedback !== undefined) {
-            subtask.assignedEmployees[employeeIndex].feedback = feedback.trim();
+
+        if (feedback !== undefined && feedback.trim() !== "") {
+            // Push feedback to feedbacks array
+            subtask.assignedEmployees[employeeIndex].feedbacks.push({
+                feedback: feedback.trim(),
+                sentAt: new Date()
+            });
+            subtask.assignedEmployees[employeeIndex].feedbackUpdatedAt = new Date();
         }
 
         // Update subtask overall status if needed
-        if (status && subtask.assignedEmployees[employeeIndex].status === "completed") {
+        if (status === "completed") {
             // Check if all employees have completed
             const allEmployeesCompleted = subtask.assignedEmployees.every(
-                emp => emp.status === "completed" || emp.status === "approved"
+                emp => emp.status === "completed"
             );
-            
+
             if (allEmployeesCompleted) {
                 subtask.status = "completed";
                 subtask.completedAt = new Date();
             }
+        } else if (status === "in_progress") {
+            subtask.status = "in_progress";
         }
 
         await subtask.save();
@@ -152,26 +158,33 @@ export async function PUT(req, { params }) {
             });
         }
 
+        // Get employee assignment after update
+        const updatedEmployeeAssignment = updatedSubtask.assignedEmployees.find(
+            emp => emp.employeeId._id.toString() === session.user.id
+        );
+
         // Prepare response data
         const responseData = {
             success: true,
-            message: hasStatusChange 
+            message: hasStatusChange
                 ? `Task ${hasFeedbackChange ? 'status updated and feedback submitted' : 'status updated'}, notification sent to team lead`
                 : "Feedback submitted successfully, notification sent to team lead",
             subtask: {
                 _id: updatedSubtask._id,
                 title: updatedSubtask.title,
                 description: updatedSubtask.description,
-                employeeStatus: subtask.assignedEmployees[employeeIndex].status,
-                employeeFeedback: subtask.assignedEmployees[employeeIndex].feedback,
+                employeeStatus: updatedEmployeeAssignment?.status,
+                employeeFeedbacks: updatedEmployeeAssignment?.feedbacks || [],
+                feedbackUpdatedAt: updatedEmployeeAssignment?.feedbackUpdatedAt,
                 subtaskStatus: updatedSubtask.status,
                 teamLeadId: updatedSubtask.teamLeadId,
                 assignedEmployees: updatedSubtask.assignedEmployees,
-                completedAt: subtask.assignedEmployees[employeeIndex].completedAt,
+                completedAt: updatedEmployeeAssignment?.completedAt,
                 priority: updatedSubtask.priority,
                 startDate: updatedSubtask.startDate,
                 endDate: updatedSubtask.endDate,
-                updatedAt: updatedSubtask.updatedAt
+                updatedAt: updatedSubtask.updatedAt,
+                fileAttachments: updatedSubtask.fileAttachments || []
             }
         };
 
@@ -186,8 +199,7 @@ export async function PUT(req, { params }) {
     }
 }
 
-// New route for feedback-only updates
-export async function PATCH(req, { params }) {
+export async function GET(req, { params }) {
     try {
         const session = await getServerSession(authOptions);
 
@@ -198,92 +210,7 @@ export async function PATCH(req, { params }) {
         await dbConnect();
 
         const { id } = params;
-        if (!id || !mongoose.Types.ObjectId.isValid(id)) {
-            return NextResponse.json(
-                { error: "Invalid or missing Subtask ID" },
-                { status: 400 }
-            );
-        }
 
-        const { feedback } = await req.json();
-        
-        if (!feedback || !feedback.trim()) {
-            return NextResponse.json({ 
-                error: "Feedback is required" 
-            }, { status: 400 });
-        }
-
-        const subtask = await Subtask.findById(id);
-        if (!subtask) {
-            return NextResponse.json({ error: "Subtask not found" }, { status: 404 });
-        }
-
-        // Find employee assignment
-        const employeeIndex = subtask.assignedEmployees.findIndex(
-            emp => emp.employeeId.toString() === session.user.id
-        );
-        if (employeeIndex === -1) {
-            return NextResponse.json(
-                { error: "You are not assigned to this subtask" },
-                { status: 403 }
-            );
-        }
-
-        // Update feedback
-        const previousFeedback = subtask.assignedEmployees[employeeIndex].feedback || "";
-        subtask.assignedEmployees[employeeIndex].feedback = feedback.trim();
-        subtask.assignedEmployees[employeeIndex].feedbackUpdatedAt = new Date();
-
-        await subtask.save();
-
-        const updatedSubtask = await Subtask.findById(id)
-            .populate({
-                path: "teamLeadId",
-                select: "firstName lastName email",
-            });
-
-        // Send notification to team lead for feedback
-        await sendSubtaskUpdateNotification({
-            session,
-            subtask: updatedSubtask,
-            status: null,
-            feedback: feedback.trim()
-        });
-
-        return NextResponse.json({
-            success: true,
-            message: "Feedback submitted successfully, notification sent to team lead",
-            subtask: {
-                _id: updatedSubtask._id,
-                title: updatedSubtask.title,
-                employeeFeedback: subtask.assignedEmployees[employeeIndex].feedback,
-                feedbackUpdatedAt: subtask.assignedEmployees[employeeIndex].feedbackUpdatedAt,
-                teamLeadId: updatedSubtask.teamLeadId,
-                updatedAt: updatedSubtask.updatedAt
-            }
-        });
-
-    } catch (error) {
-        console.error("Error submitting feedback:", error);
-        return NextResponse.json(
-            { error: "Failed to submit feedback", details: error.message },
-            { status: 500 }
-        );
-    }
-}
-
-export async function GET(req, { params }) {
-    try {
-        const session = await getServerSession(authOptions);
-        
-        if (!session || session.user.role !== "Employee") {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
-
-        await dbConnect();
-        
-        const { id } = await params;
-        
         if (!id) {
             return NextResponse.json({ error: "Subtask ID is required" }, { status: 400 });
         }
@@ -326,7 +253,7 @@ export async function GET(req, { params }) {
         return NextResponse.json({
             ...subtask,
             employeeStatus: employeeAssignment.status,
-            employeeFeedback: employeeAssignment.feedback || "",
+            employeeFeedbacks: employeeAssignment.feedbacks || [],
             assignedAt: employeeAssignment.assignedAt,
             completedAt: employeeAssignment.completedAt,
             feedbackUpdatedAt: employeeAssignment.feedbackUpdatedAt,
