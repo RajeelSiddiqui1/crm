@@ -1262,7 +1262,7 @@ export default function ManagerEditSubmissionPage() {
 
                   <div className="space-y-4 max-h-[500px] overflow-y-auto p-4 border border-gray-200 rounded-xl bg-gray-50/50">
                     {formFields.length > 0 ? (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
                         {formFields.map((field, index) => (
                           <div
                             key={field.name}
