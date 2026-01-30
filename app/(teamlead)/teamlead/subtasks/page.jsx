@@ -790,7 +790,7 @@ export default function AllSubtasksPage() {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
           <div className="text-center sm:text-left">
             <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-indigo-700 bg-clip-text text-transparent">
-              All Subtasks
+              All Subtasks 2
             </h1>
             <p className="text-black mt-3 text-lg">
               Manage all your assigned subtasks
