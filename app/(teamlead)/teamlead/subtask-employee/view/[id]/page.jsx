@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect,useMemo  } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter, useParams } from "next/navigation";
 import { Toaster } from "@/components/ui/sonner";
@@ -56,8 +56,8 @@ import {
   ThumbsDown,
   Check,
   X,
-    Image,
-    Video,
+  Image,
+  Video,
   MoreVertical,
   Send,
   ClipboardCheck,
@@ -97,9 +97,9 @@ export default function ViewSubtaskPage() {
   const [selectedFeedback, setSelectedFeedback] = useState(null);
   const [teamLeadFeedback, setTeamLeadFeedback] = useState("");
   const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
-const [zoom, setZoom] = useState(1);
-
-    const [previewFile, setPreviewFile] = useState(null);
+  const [zoom, setZoom] = useState(1);
+  const [previewFile, setPreviewFile] = useState(null);
+  
 
   const downloadFile = (url, name) => {
     const link = document.createElement("a");
@@ -188,7 +188,7 @@ const [zoom, setZoom] = useState(1);
     }
   };
 
-    const getFileIcon = (fileType) => {
+  const getFileIcon = (fileType) => {
     if (fileType?.includes('image')) return <Image className="w-5 h-5 text-blue-500" />;
     if (fileType?.includes('video')) return <Video className="w-5 h-5 text-purple-500" />;
     if (fileType?.includes('pdf')) return <FileText className="w-5 h-5 text-red-500" />;
@@ -291,7 +291,10 @@ const [zoom, setZoom] = useState(1);
           break;
       }
 
-      if (assignee.feedback) totalFeedback++;
+      // Check if there are any feedbacks
+      if (assignee.feedbacks && assignee.feedbacks.length > 0) {
+        totalFeedback += assignee.feedbacks.length;
+      }
     });
 
     return {
@@ -315,30 +318,35 @@ const [zoom, setZoom] = useState(1);
       ...(subtask?.assignedTeamLeads || []),
     ];
 
-    const feedbacks = allAssignees
-      .filter(assignee => assignee.feedback)
-      .map(assignee => ({
-        ...assignee,
-        type: assignee.feedbackType || "neutral",
-        role: assignee.employeeId ? "employee" : 
-              assignee.managerId ? "manager" : "teamlead",
-        name: assignee.name || "Unknown",
-      }));
+    const allFeedbacks = [];
+    
+    allAssignees.forEach(assignee => {
+      if (assignee.feedbacks && assignee.feedbacks.length > 0) {
+        assignee.feedbacks.forEach(feedback => {
+          allFeedbacks.push({
+            ...feedback,
+            assigneeName: assignee.name,
+            assigneeRole: assignee.role,
+            assigneeEmail: assignee.email,
+            assigneeStatus: assignee.status,
+            leadsCompleted: assignee.leadsCompleted,
+            leadsAssigned: assignee.leadsAssigned,
+            type: feedback.type || "neutral"
+          });
+        });
+      }
+    });
 
-    return feedbacks;
+    return allFeedbacks;
   };
 
   const getAssigneeDisplayName = (assignee) => {
-    const userObj = assignee.employeeId || assignee.managerId || assignee.teamLeadId;
-    if (typeof userObj === "object" && userObj !== null) {
-      if (userObj.firstName && userObj.lastName) {
-        return `${userObj.firstName} ${userObj.lastName}`;
-      }
-      if (userObj.name) {
-        return userObj.name;
-      }
-    }
     return assignee.name || "Unknown";
+  };
+
+  const getAssigneeAvatarFallback = (assignee) => {
+    const name = getAssigneeDisplayName(assignee);
+    return `${name[0] || "U"}${name.split(" ")[1]?.[0] || ""}`;
   };
 
   if (status === "loading" || loading) {
@@ -515,7 +523,7 @@ const [zoom, setZoom] = useState(1);
             </AlertDialog>
             <Button
               onClick={() =>
-                router.push(`/teamlead/subtasks/edit/${subtaskId}`)
+                router.push(`/teamlead/subtask-employee/edit/${subtaskId}`)
               }
               className="border-slate-300 text-slate-800 hover:bg-slate-50 hover:text-slate-900 hover:border-slate-400 font-medium shadow-sm"
             >
@@ -544,7 +552,7 @@ const [zoom, setZoom] = useState(1);
                     )}
                   </CardTitle>
                   <CardDescription className="text-slate-300 mt-2">
-                    Created by {subtask.teamLeadName || session.user.name} •{" "}
+                    Created by {subtask.teamLeadId?.name || session.user.name} •{" "}
                     {format(new Date(subtask.createdAt), "MMMM dd, yyyy")}
                   </CardDescription>
                 </div>
@@ -601,79 +609,76 @@ const [zoom, setZoom] = useState(1);
                   </div>
                 </div>
 
-<Card className="mt-4">
-  <CardHeader>
-    <CardTitle className="text-lg font-semibold text-gray-900">Attachments</CardTitle>
-  </CardHeader>
-  <CardContent>
-    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-      {subtask.fileAttachments?.map((file) => {
-        const { url, name, type, publicId } = file;
+                {/* Attachments Section */}
+                {subtask.fileAttachments && subtask.fileAttachments.length > 0 && (
+                  <Card className="mt-4">
+                    <CardHeader>
+                      <CardTitle className="text-lg font-semibold text-gray-900">Attachments</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                        {subtask.fileAttachments?.map((file) => {
+                          const { url, name, type, publicId } = file;
 
-        const isImage = type.startsWith("image/");
-        const isVideo = type.startsWith("video/");
-        const isPDF = type.includes("pdf");
-        const isWord = type.includes("word") || type.includes("doc");
-        const isExcel = type.includes("excel") || type.includes("sheet") || type.includes("xlsx");
+                          const isImage = type.startsWith("image/");
+                          const isVideo = type.startsWith("video/");
+                          const isPDF = type.includes("pdf");
+                          const isWord = type.includes("word") || type.includes("doc");
+                          const isExcel = type.includes("excel") || type.includes("sheet") || type.includes("xlsx");
 
-        // Color and icon for file type
-        let bgColor = "bg-purple-100 text-purple-800";
-        let Icon = FilePlus;
+                          let bgColor = "bg-purple-100 text-purple-800";
+                          let Icon = FilePlus;
 
-        if (isImage) bgColor = "bg-green-100 text-green-800";
-        else if (isVideo) bgColor = "bg-blue-100 text-blue-800";
-        else if (isPDF) { bgColor = "bg-red-100 text-red-800"; Icon = FileText; }
-        else if (isWord) { bgColor = "bg-blue-100 text-blue-800"; Icon = FileText; }
-        else if (isExcel) { bgColor = "bg-green-100 text-green-800"; Icon = FileSpreadsheet; }
+                          if (isImage) bgColor = "bg-green-100 text-green-800";
+                          else if (isVideo) bgColor = "bg-blue-100 text-blue-800";
+                          else if (isPDF) { bgColor = "bg-red-100 text-red-800"; Icon = FileText; }
+                          else if (isWord) { bgColor = "bg-blue-100 text-blue-800"; Icon = FileText; }
+                          else if (isExcel) { bgColor = "bg-green-100 text-green-800"; Icon = FileSpreadsheet; }
 
-        return (
-          <div
-            key={publicId}
-            className={`w-full rounded shadow flex flex-col overflow-hidden ${bgColor}`}
-          >
-            {/* Preview area */}
-            <div className="flex-1 w-full h-40 flex items-center justify-center overflow-hidden">
-              {isImage ? (
-                <img src={url} alt={name} className="object-cover w-full h-full" />
-              ) : isVideo ? (
-                <div className="relative w-full h-full">
-                  <video src={url} className="object-cover w-full h-full opacity-80" />
-                  <Play className="absolute w-8 h-8 text-white top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
-                </div>
-              ) : (
-                <Icon className="w-12 h-12" />
-              )}
-            </div>
+                          return (
+                            <div
+                              key={publicId}
+                              className={`w-full rounded shadow flex flex-col overflow-hidden ${bgColor}`}
+                            >
+                              <div className="flex-1 w-full h-40 flex items-center justify-center overflow-hidden">
+                                {isImage ? (
+                                  <img src={url} alt={name} className="object-cover w-full h-full" />
+                                ) : isVideo ? (
+                                  <div className="relative w-full h-full">
+                                    <video src={url} className="object-cover w-full h-full opacity-80" />
+                                    <Play className="absolute w-8 h-8 text-white top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+                                  </div>
+                                ) : (
+                                  <Icon className="w-12 h-12" />
+                                )}
+                              </div>
 
-            {/* Bottom: file name + buttons */}
-            <div className="p-2 bg-white flex flex-col items-center gap-2">
-              <p className="text-sm font-medium truncate w-full text-center">{name}</p>
-              <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setPreviewFile(file)}
-                >
-                  Preview
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={() => window.open(url, "_blank")}
-                >
-                  Download
-                </Button>
-              </div>
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  </CardContent>
-</Card>
+                              <div className="p-2 bg-white flex flex-col items-center gap-2">
+                                <p className="text-sm font-medium truncate w-full text-center">{name}</p>
+                                <div className="flex gap-2">
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => setPreviewFile(file)}
+                                  >
+                                    Preview
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    onClick={() => window.open(url, "_blank")}
+                                  >
+                                    Download
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
 
-
-      {/* Preview Modal */}
-     
                 {/* Assignees Summary */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {/* Employees Summary */}
@@ -703,11 +708,7 @@ const [zoom, setZoom] = useState(1);
                                 variant="outline"
                                 className="bg-blue-50 text-blue-700 text-xs border-blue-200"
                               >
-                                {
-                                  getAssigneeDisplayName(emp).split(
-                                    " "
-                                  )[0]
-                                }
+                                {getAssigneeDisplayName(emp).split(" ")[0]}
                               </Badge>
                             ))}
                           {subtask.assignedEmployees.length > 4 && (
@@ -751,11 +752,7 @@ const [zoom, setZoom] = useState(1);
                                 variant="outline"
                                 className="bg-purple-50 text-purple-700 text-xs border-purple-200"
                               >
-                                {
-                                  getAssigneeDisplayName(mgr).split(
-                                    " "
-                                  )[0]
-                                }
+                                {getAssigneeDisplayName(mgr).split(" ")[0]}
                               </Badge>
                             ))}
                           {subtask.assignedManagers.length > 4 && (
@@ -799,11 +796,7 @@ const [zoom, setZoom] = useState(1);
                                 variant="outline"
                                 className="bg-amber-50 text-amber-700 text-xs border-amber-200"
                               >
-                                {
-                                  getAssigneeDisplayName(tl).split(
-                                    " "
-                                  )[0]
-                                }
+                                {getAssigneeDisplayName(tl).split(" ")[0]}
                               </Badge>
                             ))}
                           {subtask.assignedTeamLeads.length > 4 && (
@@ -854,40 +847,36 @@ const [zoom, setZoom] = useState(1);
                 onValueChange={setActiveAssigneeTab}
               >
                 <TabsList className="grid w-full grid-cols-3 mb-6 bg-gray-100 rounded-lg p-1">
-  <TabsTrigger
-    value="employees"
-    className="flex items-center gap-2 justify-center rounded-md px-4 py-2 
-               text-gray-900
-               transition-colors duration-200 
-               data-[state=active]:bg-blue-600 data-[state=active]:text-white"
-  >
-    <Users className="w-4 h-4" />
-    Employees ({subtask.assignedEmployees?.length || 0})
-  </TabsTrigger>
+                  <TabsTrigger
+                    value="employees"
+                    className="flex items-center gap-2 justify-center rounded-md px-4 py-2 
+                             text-gray-900 transition-colors duration-200 
+                             data-[state=active]:bg-blue-600 data-[state=active]:text-white"
+                  >
+                    <Users className="w-4 h-4" />
+                    Employees ({subtask.assignedEmployees?.length || 0})
+                  </TabsTrigger>
 
-  <TabsTrigger
-    value="managers"
-    className="flex items-center gap-2 justify-center rounded-md px-4 py-2 
-               text-gray-900
-               transition-colors duration-200 
-               data-[state=active]:bg-purple-600 data-[state=active]:text-white"
-  >
-    <Building className="w-4 h-4" />
-    Managers ({subtask.assignedManagers?.length || 0})
-  </TabsTrigger>
+                  <TabsTrigger
+                    value="managers"
+                    className="flex items-center gap-2 justify-center rounded-md px-4 py-2 
+                             text-gray-900 transition-colors duration-200 
+                             data-[state=active]:bg-purple-600 data-[state=active]:text-white"
+                  >
+                    <Building className="w-4 h-4" />
+                    Managers ({subtask.assignedManagers?.length || 0})
+                  </TabsTrigger>
 
-  <TabsTrigger
-    value="teamleads"
-    className="flex items-center gap-2 justify-center rounded-md px-4 py-2 
-               text-gray-900
-               transition-colors duration-200 
-               data-[state=active]:bg-amber-600 data-[state=active]:text-white"
-  >
-    <Shield className="w-4 h-4" />
-    Team Leads ({subtask.assignedTeamLeads?.length || 0})
-  </TabsTrigger>
-</TabsList>
-
+                  <TabsTrigger
+                    value="teamleads"
+                    className="flex items-center gap-2 justify-center rounded-md px-4 py-2 
+                             text-gray-900 transition-colors duration-200 
+                             data-[state=active]:bg-amber-600 data-[state=active]:text-white"
+                  >
+                    <Shield className="w-4 h-4" />
+                    Team Leads ({subtask.assignedTeamLeads?.length || 0})
+                  </TabsTrigger>
+                </TabsList>
 
                 {/* Employees Tab Content */}
                 <TabsContent value="employees" className="space-y-4">
@@ -912,12 +901,7 @@ const [zoom, setZoom] = useState(1);
                             <div className="flex items-center gap-4">
                               <Avatar className="w-10 h-10 border-2 border-white shadow-sm">
                                 <AvatarFallback className="bg-gradient-to-br from-blue-500 to-blue-600 text-white font-semibold">
-                                  {getAssigneeDisplayName(assignment)[0]}
-                                  {
-                                    getAssigneeDisplayName(assignment).split(
-                                      " "
-                                    )[1]?.[0]
-                                  }
+                                  {getAssigneeAvatarFallback(assignment)}
                                 </AvatarFallback>
                               </Avatar>
                               <div>
@@ -954,14 +938,18 @@ const [zoom, setZoom] = useState(1);
                                     {assignment.email || "No email"}
                                   </span>
                                 </div>
-                                {assignment.feedback && (
+                                {assignment.latestFeedback && (
                                   <div className="mt-2">
                                     <Button
                                       variant="ghost"
                                       size="sm"
                                       className="h-6 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                                       onClick={() => {
-                                        setSelectedFeedback(assignment);
+                                        setSelectedFeedback({
+                                          ...assignment,
+                                          feedback: assignment.latestFeedback,
+                                          feedbackType: assignment.feedbackType
+                                        });
                                         setFeedbackDialogOpen(true);
                                       }}
                                     >
@@ -1043,12 +1031,7 @@ const [zoom, setZoom] = useState(1);
                             <div className="flex items-center gap-4">
                               <Avatar className="w-10 h-10 border-2 border-white shadow-sm">
                                 <AvatarFallback className="bg-gradient-to-br from-purple-500 to-purple-600 text-white font-semibold">
-                                  {getAssigneeDisplayName(assignment)[0]}
-                                  {
-                                    getAssigneeDisplayName(assignment).split(
-                                      " "
-                                    )[1]?.[0]
-                                  }
+                                  {getAssigneeAvatarFallback(assignment)}
                                 </AvatarFallback>
                               </Avatar>
                               <div>
@@ -1085,14 +1068,18 @@ const [zoom, setZoom] = useState(1);
                                     {assignment.email || "No email"}
                                   </span>
                                 </div>
-                                {assignment.feedback && (
+                                {assignment.latestFeedback && (
                                   <div className="mt-2">
                                     <Button
                                       variant="ghost"
                                       size="sm"
                                       className="h-6 text-xs text-purple-600 hover:text-purple-700 hover:bg-purple-50"
                                       onClick={() => {
-                                        setSelectedFeedback(assignment);
+                                        setSelectedFeedback({
+                                          ...assignment,
+                                          feedback: assignment.latestFeedback,
+                                          feedbackType: assignment.feedbackType
+                                        });
                                         setFeedbackDialogOpen(true);
                                       }}
                                     >
@@ -1174,12 +1161,7 @@ const [zoom, setZoom] = useState(1);
                             <div className="flex items-center gap-4">
                               <Avatar className="w-10 h-10 border-2 border-white shadow-sm">
                                 <AvatarFallback className="bg-gradient-to-br from-amber-500 to-amber-600 text-white font-semibold">
-                                  {getAssigneeDisplayName(assignment)[0]}
-                                  {
-                                    getAssigneeDisplayName(assignment).split(
-                                      " "
-                                    )[1]?.[0]
-                                  }
+                                  {getAssigneeAvatarFallback(assignment)}
                                 </AvatarFallback>
                               </Avatar>
                               <div>
@@ -1216,14 +1198,18 @@ const [zoom, setZoom] = useState(1);
                                     {assignment.email || "No email"}
                                   </span>
                                 </div>
-                                {assignment.feedback && (
+                                {assignment.latestFeedback && (
                                   <div className="mt-2">
                                     <Button
                                       variant="ghost"
                                       size="sm"
                                       className="h-6 text-xs text-amber-600 hover:text-amber-700 hover:bg-amber-50"
                                       onClick={() => {
-                                        setSelectedFeedback(assignment);
+                                        setSelectedFeedback({
+                                          ...assignment,
+                                          feedback: assignment.latestFeedback,
+                                          feedbackType: assignment.feedbackType
+                                        });
                                         setFeedbackDialogOpen(true);
                                       }}
                                     >
@@ -1285,307 +1271,174 @@ const [zoom, setZoom] = useState(1);
             </CardContent>
           </Card>
 
-          {/* Feedback Section */}
-          {(allFeedbacks.length > 0 || subtask.teamLeadFeedback) && (
-            <Card className="border-0 shadow-xl bg-white/90 backdrop-blur-sm">
-              <CardHeader className="border-b border-slate-200 p-6">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-green-100 rounded-lg">
-                      <MessageSquare className="w-5 h-5 text-green-600" />
+        {/* Feedback Section */}
+{(allFeedbacks.length > 0 || subtask.teamLeadFeedback) && (
+  <Card className="border-0 shadow-xl bg-white/90 backdrop-blur-sm">
+    <CardHeader className="border-b border-slate-200 p-6">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-green-100 rounded-lg">
+            <MessageSquare className="w-5 h-5 text-green-600" />
+          </div>
+          <div>
+            <CardTitle className="text-xl font-bold text-gray-900">
+              Feedback & Reviews
+            </CardTitle>
+            <CardDescription className="text-gray-700">
+              Feedback from team members and your review
+            </CardDescription>
+          </div>
+        </div>
+        <Badge className="bg-green-100 text-green-800 border-green-200 font-medium">
+          {allFeedbacks.length} Feedback{allFeedbacks.length !== 1 ? 's' : ''}
+        </Badge>
+      </div>
+    </CardHeader>
+    <CardContent className="p-6">
+      {/* Team Member Feedback */}
+      {allFeedbacks.length > 0 ? (
+        <div className="space-y-4">
+          {allFeedbacks.map((feedback, index) => (
+            <div
+              key={index}
+              className="p-4 border border-slate-200 rounded-xl bg-white hover:shadow-sm transition-shadow duration-200"
+            >
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  <Avatar className="w-8 h-8">
+                    <AvatarFallback className={`
+                      ${feedback.assigneeRole === 'employee' ? 'bg-blue-100 text-blue-700' : 
+                        feedback.assigneeRole === 'manager' ? 'bg-purple-100 text-purple-700' : 
+                        'bg-amber-100 text-amber-700'}
+                    `}>
+                      {feedback.assigneeName[0]}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <p className="font-semibold text-gray-900 text-sm">
+                        {feedback.assigneeName}
+                      </p>
+                      <Badge
+                        variant="outline"
+                        className={`
+                          ${getFeedbackTypeColor(feedback.type)}
+                          text-xs flex items-center gap-1
+                        `}
+                      >
+                        {getFeedbackTypeIcon(feedback.type)}
+                        {getFeedbackTypeText(feedback.type)}
+                      </Badge>
                     </div>
-                    <div>
-                      <CardTitle className="text-xl font-bold text-gray-900">
-                        Feedback & Reviews
-                      </CardTitle>
-                      <CardDescription className="text-gray-700">
-                        Feedback from team members and your review
-                      </CardDescription>
-                    </div>
+                    <p className="text-xs text-gray-500">
+                      {feedback.assigneeRole === 'employee' ? 'Employee' : 
+                       feedback.assigneeRole === 'manager' ? 'Manager' : 'Team Lead'}
+                    </p>
                   </div>
-                  <Badge className="bg-green-100 text-green-800 border-green-200 font-medium">
-                    {allFeedbacks.length} Feedback{allFeedbacks.length !== 1 ? 's' : ''}
+                </div>
+              
+              </div>
+              <p className="text-gray-700 text-sm line-clamp-2">
+                {feedback.feedback}
+              </p>
+              <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-100">
+                <div className="flex items-center gap-2">
+                  <Badge
+                    variant="outline"
+                    className={`
+                      ${feedback.assigneeStatus === 'completed' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 
+                        feedback.assigneeStatus === 'in_progress' ? 'bg-blue-50 text-blue-700 border-blue-200' : 
+                        'bg-amber-50 text-amber-700 border-amber-200'}
+                      text-xs
+                    `}
+                  >
+                    {feedback.assigneeStatus?.replace('_', ' ')}
                   </Badge>
                 </div>
-              </CardHeader>
-              <CardContent className="p-6">
-                <Tabs
-                  defaultValue="all"
-                  value={activeFeedbackTab}
-                  onValueChange={setActiveFeedbackTab}
-                >
-                 <TabsList className="grid w-full grid-cols-3 mb-6 bg-gray-100 rounded-lg p-1">
-  <TabsTrigger
-    value="all"
-    className="flex items-center gap-2 justify-center rounded-md px-4 py-2 
-               text-gray-900
-               transition-colors duration-200 
-               data-[state=active]:bg-green-600 data-[state=active]:text-white"
-  >
-    All Feedback
-  </TabsTrigger>
+                <span className="text-xs text-gray-500">
+                  {feedback.sentAt 
+                    ? format(new Date(feedback.sentAt), 'MMM dd, yyyy')
+                    : 'No date'}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-8">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-slate-100 rounded-full mb-4">
+            <MessageSquare className="w-8 h-8 text-slate-400" />
+          </div>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            No Feedback Yet
+          </h3>
+          <p className="text-gray-600 mb-6 max-w-md mx-auto">
+            No team members have provided feedback on this subtask yet.
+          </p>
+        </div>
+      )}
 
-  <TabsTrigger
-    value="employees"
-    className="flex items-center gap-2 justify-center rounded-md px-4 py-2 
-               text-gray-900
-               transition-colors duration-200 
-               data-[state=active]:bg-blue-600 data-[state=active]:text-white"
-  >
-    Employees
-  </TabsTrigger>
+      {/* Team Lead Feedback Section */}
+      
 
-  <TabsTrigger
-    value="managers"
-    className="flex items-center gap-2 justify-center rounded-md px-4 py-2 
-               text-gray-900
-               transition-colors duration-200 
-               data-[state=active]:bg-purple-600 data-[state=active]:text-white"
-  >
-    Managers
-  </TabsTrigger>
-
-  
-</TabsList>
-
-
-                  {/* All Feedback Tab */}
-                  <TabsContent value="all" className="space-y-4">
-                    {allFeedbacks.length > 0 ? (
-                      <div className="space-y-4">
-                        {allFeedbacks.map((feedback, index) => (
-                          <div
-                            key={index}
-                            className="p-4 border border-slate-200 rounded-xl bg-white hover:shadow-sm transition-shadow duration-200"
-                          >
-                            <div className="flex items-start justify-between mb-3">
-                              <div className="flex items-center gap-3">
-                                <Avatar className="w-8 h-8">
-                                  <AvatarFallback className={`
-                                    ${feedback.role === 'employee' ? 'bg-blue-100 text-blue-700' : 
-                                      feedback.role === 'manager' ? 'bg-purple-100 text-purple-700' : 
-                                      'bg-amber-100 text-amber-700'}
-                                  `}>
-                                    {feedback.name[0]}
-                                  </AvatarFallback>
-                                </Avatar>
-                                <div>
-                                  <div className="flex items-center gap-2">
-                                    <p className="font-semibold text-gray-900 text-sm">
-                                      {feedback.name}
-                                    </p>
-                                    <Badge
-                                      variant="outline"
-                                      className={`
-                                        ${getFeedbackTypeColor(feedback.type)}
-                                        text-xs flex items-center gap-1
-                                      `}
-                                    >
-                                      {getFeedbackTypeIcon(feedback.type)}
-                                      {getFeedbackTypeText(feedback.type)}
-                                    </Badge>
-                                  </div>
-                                  <p className="text-xs text-gray-500">
-                                    {feedback.role === 'employee' ? 'Employee' : 
-                                     feedback.role === 'manager' ? 'Manager' : 'Team Lead'}
-                                  </p>
-                                </div>
-                              </div>
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                                    <MoreVertical className="w-4 h-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuItem
-                                    onClick={() => {
-                                      setSelectedFeedback(feedback);
-                                      setFeedbackDialogOpen(true);
-                                    }}
-                                  >
-                                    <MessageSquare className="w-4 h-4 mr-2" />
-                                    View Details
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </div>
-                            <p className="text-gray-700 text-sm line-clamp-2">
-                              {feedback.feedback}
-                            </p>
-                            <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-100">
-                              <div className="flex items-center gap-2">
-                                <Badge
-                                  variant="outline"
-                                  className={`
-                                    ${feedback.status === 'completed' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 
-                                      feedback.status === 'in_progress' ? 'bg-blue-50 text-blue-700 border-blue-200' : 
-                                      'bg-amber-50 text-amber-700 border-amber-200'}
-                                    text-xs
-                                  `}
-                                >
-                                  {feedback.status?.replace('_', ' ')}
-                                </Badge>
-                              </div>
-                              <span className="text-xs text-gray-500">
-                                {feedback.completedAt 
-                                  ? format(new Date(feedback.completedAt), 'MMM dd, yyyy')
-                                  : 'No completion date'}
-                              </span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-center py-8">
-                        <div className="inline-flex items-center justify-center w-16 h-16 bg-slate-100 rounded-full mb-4">
-                          <MessageSquare className="w-8 h-8 text-slate-400" />
-                        </div>
-                        <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                          No Feedback Yet
-                        </h3>
-                        <p className="text-gray-600 mb-6 max-w-md mx-auto">
-                          No team members have provided feedback on this subtask yet.
-                        </p>
-                      </div>
-                    )}
-                  </TabsContent>
-
-                  {/* Team Lead Review Tab */}
-                  <TabsContent value="teamlead" className="space-y-6">
-                    <div className="space-y-4">
-                      <div>
-                        <h4 className="text-sm font-semibold text-gray-900 mb-3">
-                          Your Review
-                        </h4>
-                        <div className="bg-slate-50/80 border border-slate-200 rounded-xl p-5">
-                          <Textarea
-                            placeholder="Add your feedback for the team..."
-                            value={teamLeadFeedback}
-                            onChange={(e) => setTeamLeadFeedback(e.target.value)}
-                            className="min-h-[120px] bg-white"
-                          />
-                          <div className="flex justify-between items-center mt-4">
-                            <p className="text-xs text-gray-500">
-                              This feedback will be visible to all assigned team members.
-                            </p>
-                            <Button
-                              onClick={handleSubmitTeamLeadFeedback}
-                              disabled={isSubmittingFeedback || !teamLeadFeedback.trim()}
-                              className="bg-green-600 hover:bg-green-700 text-white"
-                            >
-                              {isSubmittingFeedback ? (
-                                <>
-                                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                  Submitting...
-                                </>
-                              ) : (
-                                <>
-                                  <Send className="w-4 h-4 mr-2" />
-                                  Submit Review
-                                </>
-                              )}
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-
-                      {subtask.teamLeadFeedback && (
-                        <div className="border-t border-slate-200 pt-6">
-                          <h4 className="text-sm font-semibold text-gray-900 mb-3">
-                            Previous Review
-                          </h4>
-                          <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-5">
-                            <div className="flex items-start gap-3">
-                              <div className="p-2 bg-green-100 rounded-lg">
-                                <ClipboardCheck className="w-5 h-5 text-green-600" />
-                              </div>
-                              <div className="flex-1">
-                                <div className="flex items-center justify-between mb-2">
-                                  <p className="font-semibold text-gray-900">
-                                    Your Review
-                                  </p>
-                                  <Badge className="bg-green-100 text-green-800 border-green-200">
-                                    Team Lead
-                                  </Badge>
-                                </div>
-                                <p className="text-gray-700 whitespace-pre-line">
-                                  {subtask.teamLeadFeedback}
-                                </p>
-                                {subtask.updatedAt && (
-                                  <p className="text-xs text-gray-500 mt-3">
-                                    Last updated: {format(new Date(subtask.updatedAt), 'PPP p')}
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </TabsContent>
-                </Tabs>
-              </CardContent>
-            </Card>
-          )}
+    </CardContent>
+  </Card>
+)}
         </div>
 
         {/* Sidebar */}
         <div className="space-y-6">
           {/* Timeline Info Card */}
           <Card className="border-0 shadow-xl bg-white/90 backdrop-blur-sm">
-      <CardHeader className="border-b border-slate-200 p-6">
-  <CardTitle className="text-lg font-bold text-gray-900">
-    Timeline Details
-  </CardTitle>
-</CardHeader>
-<CardContent className="p-6">
-  <div className="space-y-4">
-    {/* Start Date */}
-    <div className="space-y-2">
-      <div className="text-sm text-gray-600 font-medium">Start Date</div>
-      <div className="text-gray-900 font-semibold">
-        {format(new Date(subtask.startDate), "PPP")} • {subtask.startTime}
-      </div>
-    </div>
+            <CardHeader className="border-b border-slate-200 p-6">
+              <CardTitle className="text-lg font-bold text-gray-900">
+                Timeline Details
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              <div className="space-y-4">
+                {/* Start Date */}
+                <div className="space-y-2">
+                  <div className="text-sm text-gray-600 font-medium">Start Date</div>
+                  <div className="text-gray-900 font-semibold">
+                    {format(new Date(subtask.startDate), "PPP")} • {subtask.startTime}
+                  </div>
+                </div>
 
-    {/* End Date */}
-    <div className="space-y-2">
-      <div className="text-sm text-gray-600 font-medium">End Date</div>
-      <div className="text-gray-900 font-semibold">
-        {format(new Date(subtask.endDate), "PPP")} • {subtask.endTime}
-      </div>
-    </div>
+                {/* End Date */}
+                <div className="space-y-2">
+                  <div className="text-sm text-gray-600 font-medium">End Date</div>
+                  <div className="text-gray-900 font-semibold">
+                    {format(new Date(subtask.endDate), "PPP")} • {subtask.endTime}
+                  </div>
+                </div>
 
-    {/* Duration */}
-    <div className="space-y-2">
-      <div className="text-sm text-gray-600 font-medium">Duration</div>
-      <div className="text-gray-900 font-semibold">{duration}</div>
-    </div>
+                {/* Duration */}
+                <div className="space-y-2">
+                  <div className="text-sm text-gray-600 font-medium">Duration</div>
+                  <div className="text-gray-900 font-semibold">{duration}</div>
+                </div>
 
-    {/* Time Remaining */}
-    <div className="space-y-2">
-      <div className="text-sm text-gray-600 font-medium">Time Remaining</div>
-      <div
-        className={`font-semibold ${
-          isOverdue ? "text-rose-600" : "text-emerald-600"
-        }`}
-      >
-        {isOverdue ? (
-          <span className="flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4" />
-            Overdue by {formatDistance(new Date(subtask.endDate), new Date())}
-          </span>
-        ) : (
-          timeRemaining
-        )}
-      </div>
-    </div>
-
-
-  </div>
-</CardContent>
-
+                {/* Time Remaining */}
+                <div className="space-y-2">
+                  <div className="text-sm text-gray-600 font-medium">Time Remaining</div>
+                  <div
+                    className={`font-semibold ${
+                      isOverdue ? "text-rose-600" : "text-emerald-600"
+                    }`}
+                  >
+                    {isOverdue ? (
+                      <span className="flex items-center gap-2">
+                        <AlertTriangle className="w-4 h-4" />
+                        Overdue by {formatDistance(new Date(subtask.endDate), new Date())}
+                      </span>
+                    ) : (
+                      timeRemaining
+                    )}
+                  </div>
+                </div>
+              </div>
+            </CardContent>
           </Card>
 
           {/* Performance Stats Card */}
@@ -1727,11 +1580,11 @@ const [zoom, setZoom] = useState(1);
                 <div className="flex items-center gap-3">
                   <Avatar className="w-12 h-12">
                     <AvatarFallback className={`
-                      ${selectedFeedback.employeeId ? 'bg-blue-100 text-blue-700' : 
-                        selectedFeedback.managerId ? 'bg-purple-100 text-purple-700' : 
+                      ${selectedFeedback.role === 'employee' ? 'bg-blue-100 text-blue-700' : 
+                        selectedFeedback.role === 'manager' ? 'bg-purple-100 text-purple-700' : 
                         'bg-amber-100 text-amber-700'}
                     `}>
-                      {getAssigneeDisplayName(selectedFeedback)[0]}
+                      {getAssigneeAvatarFallback(selectedFeedback)}
                     </AvatarFallback>
                   </Avatar>
                   <div>
@@ -1740,8 +1593,8 @@ const [zoom, setZoom] = useState(1);
                     </DialogTitle>
                     <DialogDescription className="flex items-center gap-2">
                       <Badge variant="outline">
-                        {selectedFeedback.employeeId ? 'Employee' : 
-                         selectedFeedback.managerId ? 'Manager' : 'Team Lead'}
+                        {selectedFeedback.role === 'employee' ? 'Employee' : 
+                         selectedFeedback.role === 'manager' ? 'Manager' : 'Team Lead'}
                       </Badge>
                       <span className="text-gray-500">
                         {selectedFeedback.email}
@@ -1833,97 +1686,96 @@ const [zoom, setZoom] = useState(1);
           )}
         </DialogContent>
       </Dialog>
-{/* Full Page Preview Modal with Zoom */}
-{previewFile && (
-  <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 overflow-y-auto">
-    <div className="bg-white rounded-2xl w-full max-w-[95vw] max-h-[95vh] overflow-hidden flex flex-col shadow-lg">
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b">
-        <div className="flex items-center gap-2">
-          {getFileIcon(previewFile.type)}
-          <h3 className="font-bold text-gray-900 truncate">{previewFile.name}</h3>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setZoom((prev) => prev + 0.2)}
-            className="text-blue-600 hover:text-blue-800 hover:bg-blue-50"
-          >
-            Zoom In +
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setZoom((prev) => Math.max(prev - 0.2, 0.2))}
-            className="text-blue-600 hover:text-blue-800 hover:bg-blue-50"
-          >
-            Zoom Out -
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => downloadFile(previewFile.url, previewFile.name)}
-            className="text-green-600 hover:text-green-800 hover:bg-green-50"
-          >
-            <Download className="w-4 h-4 mr-2" /> Download
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setPreviewFile(null)}
-            className="text-gray-600 hover:text-gray-800 hover:bg-gray-100"
-          >
-            <X className="w-4 h-4" />
-          </Button>
-        </div>
-      </div>
 
-      {/* Body */}
-      <div className="flex-1 p-4 overflow-auto flex items-center justify-center bg-gray-50">
-        {previewFile.type?.includes('image') ? (
-          <img
-            src={previewFile.url}
-            alt={previewFile.name}
-            className="rounded-lg mx-auto transition-transform"
-            style={{ transform: `scale(${zoom})` }}
-          />
-        ) : previewFile.type?.includes('video') ? (
-          <video
-            controls
-            autoPlay
-            className="rounded-lg mx-auto transition-transform"
-            style={{ transform: `scale(${zoom})` }}
-          >
-            <source src={previewFile.url} type={previewFile.type} />
-            Your browser does not support the video tag.
-          </video>
-        ) : previewFile.type?.includes('pdf') ? (
-          <iframe
-            src={previewFile.url}
-            className="w-full h-[90vh] border rounded-lg"
-            title={previewFile.name}
-          />
-        ) : (
-          <div className="text-center py-12">
-            <File className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-700">Preview not available for this file type</p>
-            <Button
-              variant="outline"
-              onClick={() => downloadFile(previewFile.url, previewFile.name)}
-              className="mt-4"
-            >
-              <Download className="w-4 h-4 mr-2" />
-              Download File
-            </Button>
+      {/* Full Page Preview Modal with Zoom */}
+      {previewFile && (
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl w-full max-w-[95vw] max-h-[95vh] overflow-hidden flex flex-col shadow-lg">
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 border-b">
+              <div className="flex items-center gap-2">
+                {getFileIcon(previewFile.type)}
+                <h3 className="font-bold text-gray-900 truncate">{previewFile.name}</h3>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setZoom((prev) => prev + 0.2)}
+                  className="text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+                >
+                  Zoom In +
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setZoom((prev) => Math.max(prev - 0.2, 0.2))}
+                  className="text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+                >
+                  Zoom Out -
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => downloadFile(previewFile.url, previewFile.name)}
+                  className="text-green-600 hover:text-green-800 hover:bg-green-50"
+                >
+                  <Download className="w-4 h-4 mr-2" /> Download
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setPreviewFile(null)}
+                  className="text-gray-600 hover:text-gray-800 hover:bg-gray-100"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+
+            {/* Body */}
+            <div className="flex-1 p-4 overflow-auto flex items-center justify-center bg-gray-50">
+              {previewFile.type?.includes('image') ? (
+                <img
+                  src={previewFile.url}
+                  alt={previewFile.name}
+                  className="rounded-lg mx-auto transition-transform"
+                  style={{ transform: `scale(${zoom})` }}
+                />
+              ) : previewFile.type?.includes('video') ? (
+                <video
+                  controls
+                  autoPlay
+                  className="rounded-lg mx-auto transition-transform"
+                  style={{ transform: `scale(${zoom})` }}
+                >
+                  <source src={previewFile.url} type={previewFile.type} />
+                  Your browser does not support the video tag.
+                </video>
+              ) : previewFile.type?.includes('pdf') ? (
+                <iframe
+                  src={previewFile.url}
+                  className="w-full h-[90vh] border rounded-lg"
+                  title={previewFile.name}
+                />
+              ) : (
+                <div className="text-center py-12">
+                  <File className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-700">Preview not available for this file type</p>
+                  <Button
+                    variant="outline"
+                    onClick={() => downloadFile(previewFile.url, previewFile.name)}
+                    className="mt-4"
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Download File
+                  </Button>
+                </div>
+              )}
+            </div>
           </div>
-        )}
-      </div>
-    </div>
-  </div>
-)}
-
-
+        </div>
+      )}
     </div>
   );
 }

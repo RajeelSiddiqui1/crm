@@ -83,6 +83,7 @@ export async function GET(req, { params }) {
 }
 
 // ✅ PUT: Update manager's subtask status
+// ✅ PUT: Update manager's subtask (status, feedback, leads, notes)
 export async function PUT(req, { params }) {
   try {
     const session = await getServerSession(authOptions);
@@ -92,40 +93,103 @@ export async function PUT(req, { params }) {
 
     await dbConnect();
     const { id } = params;
-    if (!id || !mongoose.Types.ObjectId.isValid(id))
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
       return NextResponse.json({ error: "Invalid Task ID" }, { status: 400 });
+    }
 
     const { status, feedback, leadsCompleted, notes } = await req.json();
+
+    // Validate status
     const validStatuses = ["pending", "in_progress", "completed", "rejected"];
-    if (status && !validStatuses.includes(status))
+    if (status && !validStatuses.includes(status)) {
       return NextResponse.json({ error: "Invalid status" }, { status: 400 });
+    }
 
     const subtask = await Subtask.findById(id);
-    if (!subtask) return NextResponse.json({ error: "Task not found" }, { status: 404 });
+    if (!subtask) {
+      return NextResponse.json({ error: "Task not found" }, { status: 404 });
+    }
 
-    const managerIndex = subtask.assignedManagers.findIndex(mgr => mgr.managerId.toString() === session.user.id);
-    if (managerIndex === -1) return NextResponse.json({ error: "You are not assigned to this task" }, { status: 403 });
+    const managerIndex = subtask.assignedManagers.findIndex(
+      mgr => mgr.managerId.toString() === session.user.id
+    );
+    if (managerIndex === -1) {
+      return NextResponse.json({ error: "You are not assigned to this task" }, { status: 403 });
+    }
 
-    // ✅ Update manager assignment
-    if (status) subtask.assignedManagers[managerIndex].status = status;
-    if (status === "completed") subtask.assignedManagers[managerIndex].completedAt = new Date();
-    if (feedback !== undefined) subtask.assignedManagers[managerIndex].feedback = feedback;
-    if (leadsCompleted !== undefined) subtask.assignedManagers[managerIndex].leadsCompleted = parseInt(leadsCompleted) || 0;
-    if (notes) {
+    // ✅ Update status
+    if (status) {
+      subtask.assignedManagers[managerIndex].status = status;
+      if (status === "completed") {
+        subtask.assignedManagers[managerIndex].completedAt = new Date();
+      }
+    }
+
+    // ✅ Add feedback (push into feedbacks array)
+    if (feedback && feedback.trim()) {
+      subtask.assignedManagers[managerIndex].feedbacks.push({
+        feedback: feedback.trim(),
+        sentAt: new Date(),
+      });
+    }
+
+    // ✅ Update leadsCompleted
+    if (leadsCompleted !== undefined) {
+      subtask.assignedManagers[managerIndex].leadsCompleted = parseInt(leadsCompleted) || 0;
+    }
+
+    // ✅ Add notes
+    if (notes && notes.trim()) {
       if (!subtask.notes) subtask.notes = [];
-      subtask.notes.push({ managerId: session.user.id, managerName: session.user.name, note: notes, createdAt: new Date() });
+      subtask.notes.push({
+        managerId: session.user.id,
+        managerName: session.user.name || "",
+        note: notes.trim(),
+        createdAt: new Date(),
+      });
     }
 
     // ✅ Recalculate total leads completed
-    subtask.leadsCompleted = subtask.assignedEmployees.reduce((sum, emp) => sum + (emp.leadsCompleted || 0), 0) +
-      subtask.assignedManagers.reduce((sum, mgr) => sum + (mgr.leadsCompleted || 0), 0);
+    const totalLeads =
+      subtask.assignedEmployees.reduce((sum, emp) => sum + (emp.leadsCompleted || 0), 0) +
+      subtask.assignedManagers.reduce((sum, mgr) => sum + (mgr.leadsCompleted || 0), 0) +
+      subtask.assignedTeamLeads.reduce((sum, tl) => sum + (tl.leadsCompleted || 0), 0);
 
+    subtask.leadsCompleted = totalLeads;
+
+    // Save subtask
     await subtask.save();
-    return NextResponse.json({ success: true, message: "Task updated successfully", task: subtask });
+
+    // Populate manager info for response
+    const updatedSubtask = await Subtask.findById(id)
+      .populate("assignedManagers.managerId", "firstName lastName email avatar")
+      .populate("assignedEmployees.employeeId", "firstName lastName email avatar")
+      .populate("assignedTeamLeads.teamLeadId", "firstName lastName email avatar")
+      .lean();
+
+    const managerAssignment = updatedSubtask.assignedManagers.find(
+      mgr => mgr.managerId._id.toString() === session.user.id
+    );
+
+    return NextResponse.json({
+      success: true,
+      message: "Task updated successfully",
+      task: updatedSubtask,
+      managerInfo: {
+        status: managerAssignment.status,
+        completedAt: managerAssignment.completedAt,
+        leadsCompleted: managerAssignment.leadsCompleted,
+        leadsAssigned: managerAssignment.leadsAssigned,
+        feedbacks: managerAssignment.feedbacks || [],
+      },
+    });
 
   } catch (error) {
     console.error("Error updating manager subtask:", error);
-    return NextResponse.json({ error: "Failed to update task", details: error.message }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to update task", details: error.message },
+      { status: 500 }
+    );
   }
 }
 

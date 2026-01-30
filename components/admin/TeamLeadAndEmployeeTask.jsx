@@ -117,7 +117,7 @@ export default function TeamLeadAndEmployeeTask() {
     setLoading(true);
     try {
       console.log(`Updating task ${taskId}...`);
-      const response = await axios.put(`/api/admin/tasks2/${taskId}`, formData);
+      const response = await axios.patch(`/api/admin/tasks2/${taskId}`, formData);
       console.log("Update response:", response.data);
 
       if (response.data.success) {

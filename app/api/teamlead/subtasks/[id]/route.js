@@ -17,22 +17,47 @@ import { GetObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 export async function GET(req, { params }) {
     try {
         const { id } = await params;
-        await dbConnect();
-
-        const subtask = await Subtask.findById(id)
-            .populate("submissionId", "title description")
-            .populate("assignedEmployees.employeeId", "firstName lastName email")
-            .populate("assignedManagers.managerId", "firstName lastName email")
-            .populate("assignedTeamLeads.teamLeadId", "firstName lastName email")
-            .select('+fileAttachments');
-
-        if (!subtask) {
-            return NextResponse.json({ error: "Subtask not found" }, { status: 404 });
+        
+        // Check authentication
+        const session = await getServerSession(authOptions);
+        if (!session || session.user.role !== "TeamLead") {
+            return NextResponse.json(
+                { error: "Unauthorized. Team Lead access required." },
+                { status: 401 }
+            );
         }
 
-        // Calculate leads data
+        await dbConnect();
+
+        // Find the subtask and populate all necessary fields
+        const subtask = await Subtask.findById(id)
+            .populate("submissionId", "title description")
+            .populate("teamLeadId", "firstName lastName email department")
+            .populate("depId", "name code")
+            .populate("assignedEmployees.employeeId", "firstName lastName email department position")
+            .populate("assignedManagers.managerId", "firstName lastName email department position")
+            .populate("assignedTeamLeads.teamLeadId", "firstName lastName email department")
+            .lean();
+
+        if (!subtask) {
+            return NextResponse.json(
+                { error: "Subtask not found" },
+                { status: 404 }
+            );
+        }
+
+        // Check if the current team lead owns this subtask
+        if (subtask.teamLeadId._id.toString() !== session.user.id) {
+            return NextResponse.json(
+                { error: "You are not authorized to view this subtask" },
+                { status: 403 }
+            );
+        }
+
+        // Calculate leads progress
         let totalLeadsRequired = 0;
         let leadsCompleted = 0;
+        let leadsProgress = 0;
 
         if (subtask.hasLeadsTarget) {
             totalLeadsRequired = subtask.totalLeadsRequired || parseInt(subtask.lead || "1");
@@ -44,23 +69,172 @@ export async function GET(req, { params }) {
             const managerLeads = subtask.assignedManagers?.reduce((total, mgr) =>
                 total + (mgr.leadsCompleted || 0), 0) || 0;
 
-            leadsCompleted = employeeLeads + managerLeads;
+            const teamLeadLeads = subtask.assignedTeamLeads?.reduce((total, tl) =>
+                total + (tl.leadsCompleted || 0), 0) || 0;
+
+            leadsCompleted = employeeLeads + managerLeads + teamLeadLeads;
+            
+            if (totalLeadsRequired > 0) {
+                leadsProgress = Math.round((leadsCompleted / totalLeadsRequired) * 100);
+            }
         }
 
-        // Add calculated fields to response
-        const subtaskWithCalculations = {
-            ...subtask.toObject(),
-            totalLeadsRequired,
-            leadsCompleted
+        // Calculate overall status statistics
+        const allAssignees = [
+            ...(subtask.assignedEmployees || []),
+            ...(subtask.assignedManagers || []),
+            ...(subtask.assignedTeamLeads || [])
+        ];
+
+        const statusStats = {
+            completed: allAssignees.filter(a => a.status === 'completed' || a.status === 'approved').length,
+            in_progress: allAssignees.filter(a => a.status === 'in_progress').length,
+            pending: allAssignees.filter(a => a.status === 'pending').length,
+            rejected: allAssignees.filter(a => a.status === 'rejected').length,
+            total: allAssignees.length
         };
 
-        return NextResponse.json({ subtask: subtaskWithCalculations }, { status: 200 });
+        // Format assignee data
+        const formatAssignee = (assignee, type) => {
+            const userObj = assignee.employeeId || assignee.managerId || assignee.teamLeadId;
+            return {
+                id: userObj?._id || assignee._id,
+                name: userObj?.firstName && userObj?.lastName 
+                    ? `${userObj.firstName} ${userObj.lastName}`
+                    : userObj?.name || assignee.name || "Unknown",
+                email: assignee.email,
+                status: assignee.status,
+                role: type,
+                leadsCompleted: assignee.leadsCompleted || 0,
+                leadsAssigned: assignee.leadsAssigned || 0,
+                progress: assignee.leadsAssigned > 0 
+                    ? Math.round((assignee.leadsCompleted / assignee.leadsAssigned) * 100)
+                    : 0,
+                assignedAt: assignee.assignedAt,
+                completedAt: assignee.completedAt,
+                feedbacks: assignee.feedbacks || [], // Changed from feedback to feedbacks
+                latestFeedback: assignee.feedbacks?.length > 0 
+                    ? assignee.feedbacks[assignee.feedbacks.length - 1]?.feedback 
+                    : null,
+                feedbackType: assignee.feedbacks?.length > 0 
+                    ? assignee.feedbacks[assignee.feedbacks.length - 1]?.type || "neutral"
+                    : "neutral",
+                department: userObj?.department || "Unknown"
+            };
+        };
+
+        // Format all assignees
+        const formattedEmployees = subtask.assignedEmployees?.map(emp => 
+            formatAssignee(emp, 'employee')) || [];
+        
+        const formattedManagers = subtask.assignedManagers?.map(mgr => 
+            formatAssignee(mgr, 'manager')) || [];
+        
+        const formattedTeamLeads = subtask.assignedTeamLeads?.map(tl => 
+            formatAssignee(tl, 'teamlead')) || [];
+
+        // Combine all assignees
+        const allAssigneesFormatted = [
+            ...formattedEmployees,
+            ...formattedManagers,
+            ...formattedTeamLeads
+        ];
+
+        // Check if subtask is overdue
+        const now = new Date();
+        const endDate = new Date(subtask.endDate);
+        const isOverdue = now > endDate;
+
+        // Calculate time remaining
+        const timeRemaining = isOverdue 
+            ? `Overdue by ${Math.floor((now - endDate) / (1000 * 60 * 60 * 24))} days`
+            : `${Math.floor((endDate - now) / (1000 * 60 * 60 * 24))} days remaining`;
+
+        // Prepare response object
+        const response = {
+            subtask: {
+                _id: subtask._id,
+                title: subtask.title,
+                description: subtask.description,
+                teamLeadId: {
+                    _id: subtask.teamLeadId?._id,
+                    name: subtask.teamLeadId?.firstName && subtask.teamLeadId?.lastName
+                        ? `${subtask.teamLeadId.firstName} ${subtask.teamLeadId.lastName}`
+                        : subtask.teamLeadId?.name || "Unknown",
+                    email: subtask.teamLeadId?.email,
+                    department: subtask.teamLeadId?.department
+                },
+                department: subtask.depId ? {
+                    _id: subtask.depId._id,
+                    name: subtask.depId.name,
+                    code: subtask.depId.code
+                } : null,
+                startDate: subtask.startDate,
+                endDate: subtask.endDate,
+                startTime: subtask.startTime,
+                endTime: subtask.endTime,
+                status: subtask.status,
+                priority: subtask.priority,
+                lead: subtask.lead,
+                fileAttachmentUrl: subtask.fileAttachmentUrl,
+                fileAttachments: subtask.fileAttachments || [],
+                teamLeadFeedback: subtask.teamLeadFeedback,
+                completedAt: subtask.completedAt,
+                teamLeadApproved: subtask.teamLeadApproved,
+                teamLeadApprovedAt: subtask.teamLeadApprovedAt,
+                createdAt: subtask.createdAt,
+                updatedAt: subtask.updatedAt,
+                
+                // Leads tracking
+                hasLeadsTarget: subtask.hasLeadsTarget,
+                totalLeadsRequired,
+                leadsCompleted,
+                leadsProgress,
+                
+                // Assignees
+                assignedEmployees: formattedEmployees,
+                assignedManagers: formattedManagers,
+                assignedTeamLeads: formattedTeamLeads,
+                allAssignees: allAssigneesFormatted,
+                
+                // Statistics
+                statusStats,
+                totalAssignees: allAssignees.length,
+                
+                // Timeline
+                isOverdue,
+                timeRemaining,
+                duration: subtask.endDate && subtask.startDate
+                    ? `${Math.floor((new Date(subtask.endDate) - new Date(subtask.startDate)) / (1000 * 60 * 60 * 24))} days`
+                    : "Not specified",
+                
+                // Submission info
+                submission: subtask.submissionId ? {
+                    _id: subtask.submissionId._id,
+                    title: subtask.submissionId.title,
+                    description: subtask.submissionId.description
+                } : null
+            },
+            metadata: {
+                requestedBy: session.user.id,
+                requestedAt: new Date().toISOString(),
+                role: session.user.role
+            }
+        };
+
+        return NextResponse.json(response, { status: 200 });
+
     } catch (error) {
         console.error("Error fetching subtask:", error);
-        return NextResponse.json({ error: "Failed to fetch subtask" }, { status: 500 });
+        return NextResponse.json(
+            { 
+                error: "Failed to fetch subtask details",
+                details: error.message 
+            }, 
+            { status: 500 }
+        );
     }
 }
-
 
 
 export async function PUT(request, { params }) {
@@ -268,7 +442,8 @@ export async function PUT(request, { params }) {
                     Bucket: process.env.AWS_BUCKET_NAME,
                     Key: fileKey,
                 });
-                const fileUrl = await getSignedUrl(s3, command, { expiresIn: 604800 }); // 1 week
+        const fileUrl = `https://s3.${process.env.AWS_REGION}.amazonaws.com/${process.env.AWS_BUCKET_NAME}/${fileKey}`;
+// 1 week
 
                 uploadedFiles.push({
                     url: fileUrl,
@@ -296,7 +471,6 @@ export async function PUT(request, { params }) {
             hasLeadsTarget,
             totalLeadsRequired: hasLeadsTarget ? parseInt(totalLeadsRequired) : 0,
             fileAttachments: uploadedFiles,
-            status: existingSubtask.status === 'completed' ? 'completed' : 'in_progress',
             updatedAt: new Date()
         };
 

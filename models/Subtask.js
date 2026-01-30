@@ -24,27 +24,21 @@ const subtaskSchema = new mongoose.Schema(
     },
 
     // ✅ Employees ke liye
-    assignedEmployees: [
-      {
-        employeeId: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "Employee",
-          required: false,
-        },
-        email: { type: String, required: true, trim: true },
-        name: { type: String, required: false },
-        status: {
-          type: String,
-          enum: ["pending", "in_progress", "completed", "rejected"],
-          default: "pending",
-        },
-        assignedAt: { type: Date, default: Date.now },
-        completedAt: { type: Date },
-        feedback: { type: String },
-        leadsCompleted: { type: Number, default: 0 },
-        leadsAssigned: { type: Number, default: 0 },
-      },
+  assignedEmployees: [
+  {
+    employeeId: { type: mongoose.Schema.Types.ObjectId, ref: "Employee" },
+    email: { type: String, required: true, trim: true },
+    name: { type: String },
+    status: { type: String, enum: ["pending","in_progress","completed","rejected"], default:"pending" },
+    assignedAt: { type: Date, default: Date.now },
+    completedAt: { type: Date },
+    feedbacks: [
+      { feedback: { type: String }, sentAt: { type: Date, default: Date.now } }
     ],
+    leadsCompleted: { type: Number, default: 0 },
+    leadsAssigned: { type: Number, default: 0 },
+  }
+],
 
     // ✅ Managers ke liye
     assignedManagers: [
@@ -63,34 +57,42 @@ const subtaskSchema = new mongoose.Schema(
         },
         assignedAt: { type: Date, default: Date.now },
         completedAt: { type: Date },
-        feedback: { type: String },
+         feedbacks: [
+      { feedback: { type: String }, sentAt: { type: Date, default: Date.now } }
+    ],
         leadsCompleted: { type: Number, default: 0 },
         leadsAssigned: { type: Number, default: 0 },
       },
     ],
 
     // ✅ TeamLeads ke liye (NEW)
-    assignedTeamLeads: [
+assignedTeamLeads: [
+  {
+    teamLeadId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "TeamLead",
+      required: false,
+    },
+    email: { type: String, required: true, trim: true },
+    name: { type: String, required: false },
+    status: {
+      type: String,
+      enum: ["pending", "in_progress", "completed", "rejected"],
+      default: "pending",
+    },
+    assignedAt: { type: Date, default: Date.now },
+    completedAt: { type: Date },
+    feedbacks: [   // <-- multiple feedbacks
       {
-        teamLeadId: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "TeamLead",
-          required: false,
-        },
-        email: { type: String, required: true, trim: true },
-        name: { type: String, required: false },
-        status: {
-          type: String,
-          enum: ["pending", "in_progress", "completed", "rejected"],
-          default: "pending",
-        },
-        assignedAt: { type: Date, default: Date.now },
-        completedAt: { type: Date },
         feedback: { type: String },
-        leadsCompleted: { type: Number, default: 0 },
-        leadsAssigned: { type: Number, default: 0 },
+        sentAt: { type: Date, default: Date.now },
       },
     ],
+    leadsCompleted: { type: Number, default: 0 },
+    leadsAssigned: { type: Number, default: 0 },
+  },
+],
+
 
     // Rest of the schema remains same...
     startDate: { type: Date, required: false },

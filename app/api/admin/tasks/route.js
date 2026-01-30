@@ -74,7 +74,8 @@ export async function POST(req) {
           Bucket: process.env.AWS_BUCKET_NAME,
           Key: fileKey,
         });
-        const fileUrl = await getSignedUrl(s3, command, { expiresIn: 604800 }); // 1 year
+        const fileUrl = `https://s3.${process.env.AWS_REGION}.amazonaws.com/${process.env.AWS_BUCKET_NAME}/${fileKey}`;
+; // 1 year
 
         uploadedFiles.push({
           url: fileUrl,
@@ -118,7 +119,7 @@ export async function POST(req) {
             Bucket: process.env.AWS_BUCKET_NAME,
             Key: audioKey,
           });
-          const audioUrl = await getSignedUrl(s3, command, { expiresIn: 604800 });
+          const audioUrl = `https://s3.${process.env.AWS_REGION}.amazonaws.com/${process.env.AWS_BUCKET_NAME}/${audioKey}`;
 
           uploadedAudio.push({
             url: audioUrl,
@@ -169,7 +170,8 @@ export async function POST(req) {
             Bucket: process.env.AWS_BUCKET_NAME,
             Key: audioKey,
           });
-          const audioUrl = await getSignedUrl(s3, command, { expiresIn: 604800 });
+            const audioUrl = `https://s3.${process.env.AWS_REGION}.amazonaws.com/${process.env.AWS_BUCKET_NAME}/${audioKey}`;
+
 
           uploadedAudio.push({
             url: audioUrl,

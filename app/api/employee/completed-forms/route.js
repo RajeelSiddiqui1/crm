@@ -46,77 +46,58 @@ export async function GET(req) {
       employeeId: session.user.id
     };
 
-    // Apply filters (model ke hisab se)
-    if (filter === "approved") {
-      query.teamleadstatus = "approved";
-    } else if (filter === "pending") {
-      query.teamleadstatus = "pending";
-    } else if (filter === "rejected") {
-      query.teamleadstatus = "rejected";
-    } else if (filter === "late") {
-      query.teamleadstatus = "late";
-    } else if (filter === "in_progress") {
-      query.teamleadstatus = "in_progress";
-    } else if (filter === "completed") {
-      query.teamleadstatus = "completed";
+    // Apply filters
+    if (filter !== "all") {
+      if (["approved", "pending", "rejected", "late", "in_progress", "completed"].includes(filter)) {
+        query.teamleadstatus = filter;
+      }
     }
 
-    // Fetch submissions
+    // Fetch submissions with proper population
     const submissions = await EmployeeFormSubmission.find(query)
-      .populate("formId", "title description fields")
+      .populate({
+        path: "formId",
+        select: "title description fields"
+      })
       .populate("employeeId", "firstName lastName email")
       .sort({ createdAt: -1 })
       .lean();
 
-    // Process submissions
-    const completedForms = await Promise.all(submissions.map(async (submission) => {
-      let formData = {};
-      
-      if (!submission.formId) {
-        // Try to fetch form separately
-        const form = await EmployeeForm.findById(submission.formId);
-        if (form) {
-          formData = {
-            _id: form._id,
-            title: form.title,
-            description: form.description,
-            fields: form.fields
-          };
-        } else {
-          formData = {
-            _id: submission._id,
-            title: "Form Not Available",
-            description: "This form has been removed",
-            fields: []
-          };
-        }
-      } else {
-        formData = submission.formId;
-      }
+    console.log("Fetched submissions count:", submissions.length); // Debug log
 
+    // Transform submissions to match frontend expectations
+    const completedForms = submissions.map(submission => {
+      // Handle case where formId might not be populated
+      const formData = submission.formId || {};
+      
       return {
-        _id: formData._id,
-        title: formData.title,
-        description: formData.description,
-        fields: formData.fields,
+        _id: formData._id || submission._id,
+        title: formData.title || "Unknown Form",
+        description: formData.description || "",
+        fields: formData.fields || [],
         submissionId: submission._id,
         submittedAt: submission.createdAt,
         submittedBy: submission.submittedBy,
         assignedTo: submission.assignedTo,
         formData: submission.formData || {},
         teamleadstatus: submission.teamleadstatus,
-        managerStatus: submission.managerStatus, // ✅ Model ke hisab se capital S
+        managerStatus: submission.managerStatus,
         completedAt: submission.completedAt,
-        status: submission.teamleadstatus // Main status teamleadstatus se le rahe hain
+        status: submission.teamleadstatus,
+        // IMPORTANT: Include fileAttachments
+        fileAttachments: submission.fileAttachments || []
       };
-    }));
+    });
 
+    console.log("Processed completed forms:", completedForms.length); // Debug log
+    
+    // Return as array
     return NextResponse.json(completedForms);
 
   } catch (error) {
     console.error("Completed Forms API Error:", error);
     return NextResponse.json(
-      { error: "Failed to fetch completed forms" },
+      { error: "Failed to fetch completed forms", details: error.message },
       { status: 500 }
     );
   }

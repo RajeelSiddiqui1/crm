@@ -6,7 +6,13 @@ import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -40,10 +46,10 @@ import {
   ChevronRight,
   ExternalLink,
   MessageSquare,
-  Mail
+  Mail,
 } from "lucide-react";
 import axios from "axios";
-import ViewTaskModal from "@/components/manager/viewTaskModal"
+import ViewTaskModal from "@/components/manager/viewTaskModal";
 import MediaSection from "@/components/manager/admin-task/MediaSection";
 
 export default function ManagerAdminTasksPage() {
@@ -61,7 +67,7 @@ export default function ManagerAdminTasksPage() {
   const [assigning, setAssigning] = useState(false);
   const [searchManager, setSearchManager] = useState("");
   const [refreshing, setRefreshing] = useState(false);
- const [selectedTaskForModal, setSelectedTaskForModal] = useState(null);
+  const [selectedTaskForModal, setSelectedTaskForModal] = useState(null);
   const [viewTaskModalOpen, setViewTaskModalOpen] = useState(false);
 
   const audioRef = useRef(null);
@@ -78,7 +84,6 @@ export default function ManagerAdminTasksPage() {
     fetchAllManagers();
   }, [session, status, router]);
 
-
   const handleViewWithStatus = (task) => {
     setSelectedTaskForModal(task);
     setViewTaskModalOpen(true);
@@ -89,7 +94,7 @@ export default function ManagerAdminTasksPage() {
       setLoading(true);
       const response = await axios.get("/api/manager/admin-tasks");
       console.log("Fetched tasks:", response.data);
-      
+
       if (response.data.success) {
         setTasks(response.data.tasks || []);
       } else {
@@ -110,7 +115,7 @@ export default function ManagerAdminTasksPage() {
       if (response.data.success) {
         // Exclude current manager from the list
         const otherManagers = response.data.managers.filter(
-          manager => manager._id !== session?.user?.id
+          (manager) => manager._id !== session?.user?.id,
         );
         setManagers(otherManagers || []);
       }
@@ -141,21 +146,21 @@ export default function ManagerAdminTasksPage() {
 
   const handleAssignClick = (task) => {
     setSelectedTask(task);
-    
+
     // Pre-select already assigned managers (excluding current user)
     const alreadyAssigned = (task.managers || [])
-      .filter(manager => manager._id !== session?.user?.id)
-      .map(manager => manager._id);
-    
+      .filter((manager) => manager._id !== session?.user?.id)
+      .map((manager) => manager._id);
+
     setSelectedManagers(alreadyAssigned);
     setSearchManager("");
     setAssignDialogOpen(true);
   };
 
   const handleManagerToggle = (managerId) => {
-    setSelectedManagers(prev => {
+    setSelectedManagers((prev) => {
       if (prev.includes(managerId)) {
-        return prev.filter(id => id !== managerId);
+        return prev.filter((id) => id !== managerId);
       } else {
         return [...prev, managerId];
       }
@@ -173,7 +178,7 @@ export default function ManagerAdminTasksPage() {
       console.log("Submitting PUT request with:", {
         taskId: selectedTask._id,
         managerIds: selectedManagers,
-        currentManager: session.user.id
+        currentManager: session.user.id,
       });
 
       const response = await axios.put(
@@ -181,35 +186,37 @@ export default function ManagerAdminTasksPage() {
         { managerIds: selectedManagers },
         {
           headers: {
-            'Content-Type': 'application/json',
-          }
-        }
+            "Content-Type": "application/json",
+          },
+        },
       );
 
       console.log("PUT Response:", response.data);
 
       if (response.data.success) {
         toast.success(response.data.message);
-        
+
         // Update local task with new managers
         const newManagers = response.data.data.newManagers || [];
         const allAssignedManagers = response.data.data.assignedManagers || [];
-        
-        setTasks(prev => prev.map(task => {
-          if (task._id === selectedTask._id) {
-            return {
-              ...task,
-              managers: allAssignedManagers,
-              updatedAt: response.data.data.updatedAt
-            };
-          }
-          return task;
-        }));
-        
+
+        setTasks((prev) =>
+          prev.map((task) => {
+            if (task._id === selectedTask._id) {
+              return {
+                ...task,
+                managers: allAssignedManagers,
+                updatedAt: response.data.data.updatedAt,
+              };
+            }
+            return task;
+          }),
+        );
+
         // Refresh task list to get updated data
         setRefreshing(true);
         await fetchTasks();
-        
+
         setAssignDialogOpen(false);
         setSelectedManagers([]);
         setSelectedTask(null);
@@ -220,13 +227,14 @@ export default function ManagerAdminTasksPage() {
       console.error("Error in PUT request:", {
         message: error.message,
         response: error.response?.data,
-        status: error.response?.status
+        status: error.response?.status,
       });
-      
+
       if (error.response) {
-        const errorMsg = error.response.data?.error || 
-                        error.response.data?.message || 
-                        "Failed to share task";
+        const errorMsg =
+          error.response.data?.error ||
+          error.response.data?.message ||
+          "Failed to share task";
         toast.error(`Error: ${errorMsg}`);
       } else if (error.request) {
         toast.error("Network error. Please check your connection.");
@@ -272,7 +280,7 @@ export default function ManagerAdminTasksPage() {
       }
     };
 
-    audio.play().catch(err => {
+    audio.play().catch((err) => {
       console.error("Error playing audio:", err);
       toast.error("Failed to play audio");
     });
@@ -302,7 +310,7 @@ export default function ManagerAdminTasksPage() {
         month: "short",
         day: "numeric",
         hour: "2-digit",
-        minute: "2-digit"
+        minute: "2-digit",
       });
     } catch (error) {
       return "Invalid date";
@@ -340,13 +348,14 @@ export default function ManagerAdminTasksPage() {
       task.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       task.clientName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       task.priority?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      task.managers?.some(manager => 
-        manager.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        manager.email?.toLowerCase().includes(searchTerm.toLowerCase())
-      )
+      task.managers?.some(
+        (manager) =>
+          manager.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          manager.email?.toLowerCase().includes(searchTerm.toLowerCase()),
+      ),
   );
 
-  const filteredManagers = managers.filter(manager => {
+  const filteredManagers = managers.filter((manager) => {
     if (!searchManager) return true;
     const searchLower = searchManager.toLowerCase();
     return (
@@ -404,8 +413,12 @@ export default function ManagerAdminTasksPage() {
             <FileText className="w-6 h-6 text-blue-600 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" />
           </div>
           <div className="text-center">
-            <p className="text-lg font-semibold text-gray-900">Loading Manager Dashboard</p>
-            <p className="text-sm text-gray-600 mt-1">Preparing your tasks...</p>
+            <p className="text-lg font-semibold text-gray-900">
+              Loading Manager Dashboard
+            </p>
+            <p className="text-sm text-gray-600 mt-1">
+              Preparing your tasks...
+            </p>
           </div>
         </div>
       </div>
@@ -430,14 +443,15 @@ export default function ManagerAdminTasksPage() {
               <span className="text-gray-900 font-semibold">Admin Tasks</span>
             </div>
           </div>
-          
+
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
             <div>
               <h1 className="text-3xl sm:text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-700 bg-clip-text text-transparent">
                 Admin Tasks
               </h1>
               <p className="text-gray-600 mt-3 text-base sm:text-lg max-w-2xl">
-                Tasks assigned by Admin with voice instructions and files. Share with other managers or create forms.
+                Tasks assigned by Admin with voice instructions and files. Share
+                with other managers or create forms.
               </p>
             </div>
 
@@ -463,7 +477,6 @@ export default function ManagerAdminTasksPage() {
                   </div>
                 </CardContent>
               </Card>
-
             </div>
           </div>
         </div>
@@ -474,8 +487,12 @@ export default function ManagerAdminTasksPage() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Total Tasks</p>
-                  <p className="text-3xl font-bold text-gray-900 mt-1">{tasks.length}</p>
+                  <p className="text-sm font-medium text-gray-600">
+                    Total Tasks
+                  </p>
+                  <p className="text-3xl font-bold text-gray-900 mt-1">
+                    {tasks.length}
+                  </p>
                   <p className="text-xs text-gray-500 mt-1">Assigned to you</p>
                 </div>
                 <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
@@ -489,11 +506,15 @@ export default function ManagerAdminTasksPage() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">High Priority</p>
+                  <p className="text-sm font-medium text-gray-600">
+                    High Priority
+                  </p>
                   <p className="text-3xl font-bold text-gray-900 mt-1">
                     {tasks.filter((t) => t.priority === "high").length}
                   </p>
-                  <p className="text-xs text-gray-500 mt-1">Require attention</p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Require attention
+                  </p>
                 </div>
                 <div className="w-12 h-12 bg-gradient-to-br from-red-500 to-pink-600 rounded-xl flex items-center justify-center shadow-lg">
                   <AlertCircle className="w-6 h-6 text-white" />
@@ -506,11 +527,15 @@ export default function ManagerAdminTasksPage() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">With Audio</p>
+                  <p className="text-sm font-medium text-gray-600">
+                    With Audio
+                  </p>
                   <p className="text-3xl font-bold text-gray-900 mt-1">
                     {tasks.filter((t) => t.audioUrl).length}
                   </p>
-                  <p className="text-xs text-gray-500 mt-1">Voice instructions</p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Voice instructions
+                  </p>
                 </div>
                 <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-violet-600 rounded-xl flex items-center justify-center shadow-lg">
                   <Volume2 className="w-6 h-6 text-white" />
@@ -523,11 +548,18 @@ export default function ManagerAdminTasksPage() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Shared Tasks</p>
-                  <p className="text-3xl font-bold text-gray-900 mt-1">
-                    {tasks.filter((t) => t.managers && t.managers.length > 1).length}
+                  <p className="text-sm font-medium text-gray-600">
+                    Shared Tasks
                   </p>
-                  <p className="text-xs text-gray-500 mt-1">With other managers</p>
+                  <p className="text-3xl font-bold text-gray-900 mt-1">
+                    {
+                      tasks.filter((t) => t.managers && t.managers.length > 1)
+                        .length
+                    }
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    With other managers
+                  </p>
                 </div>
                 <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg">
                   <Users className="w-6 h-6 text-white" />
@@ -546,7 +578,8 @@ export default function ManagerAdminTasksPage() {
                   Your Assigned Tasks
                 </CardTitle>
                 <CardDescription className="text-gray-600 text-base mt-2">
-                  {tasks.length} task{tasks.length !== 1 ? "s" : ""} • Click to view details or share with managers
+                  {tasks.length} task{tasks.length !== 1 ? "s" : ""} • Click to
+                  view details or share with managers
                 </CardDescription>
               </div>
               <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
@@ -569,7 +602,9 @@ export default function ManagerAdminTasksPage() {
                   <div className="w-16 h-16 rounded-full border-4 border-blue-200 border-t-blue-600 animate-spin"></div>
                   <FileText className="w-8 h-8 text-blue-600 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" />
                 </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">Loading Tasks</h3>
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                  Loading Tasks
+                </h3>
                 <p className="text-gray-600 max-w-md text-center">
                   Fetching your assigned tasks from the server...
                 </p>
@@ -580,7 +615,9 @@ export default function ManagerAdminTasksPage() {
                   <FileText className="w-24 h-24 mx-auto" />
                 </div>
                 <h3 className="text-2xl font-bold text-gray-900 mb-3">
-                  {tasks.length === 0 ? "No tasks assigned yet" : "No matches found"}
+                  {tasks.length === 0
+                    ? "No tasks assigned yet"
+                    : "No matches found"}
                 </h3>
                 <p className="text-gray-600 text-lg max-w-md mx-auto mb-6">
                   {tasks.length === 0
@@ -674,7 +711,9 @@ export default function ManagerAdminTasksPage() {
                         <TableCell className="py-4 px-6">
                           <div className="space-y-2">
                             {task.priority && (
-                              <Badge className={`${getPriorityColor(task.priority)} px-3 py-1.5 rounded-lg font-semibold`}>
+                              <Badge
+                                className={`${getPriorityColor(task.priority)} px-3 py-1.5 rounded-lg font-semibold`}
+                              >
                                 {getPriorityIcon(task.priority)}
                                 {task.priority.toUpperCase()}
                               </Badge>
@@ -692,24 +731,28 @@ export default function ManagerAdminTasksPage() {
                             {task.managers && task.managers.length > 0 ? (
                               <>
                                 <div className="flex flex-wrap gap-2 items-center">
-                                  {task.managers.slice(0, 3).map((manager, index) => (
-                                    <Avatar 
-                                      key={manager._id || index} 
-                                      className="w-8 h-8 border-2 border-white shadow-sm hover:scale-110 transition-transform duration-200 cursor-pointer"
-                                      title={`${getManagerName(manager)}\n${getManagerEmail(manager)}`}
-                                    >
-                                      <AvatarFallback className={`text-xs font-medium ${
-                                        manager._id === session?.user?.id
-                                          ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white'
-                                          : 'bg-gradient-to-r from-green-500 to-emerald-600 text-white'
-                                      }`}>
-                                        {getManagerInitials(manager)}
-                                      </AvatarFallback>
-                                    </Avatar>
-                                  ))}
+                                  {task.managers
+                                    .slice(0, 3)
+                                    .map((manager, index) => (
+                                      <Avatar
+                                        key={manager._id || index}
+                                        className="w-8 h-8 border-2 border-white shadow-sm hover:scale-110 transition-transform duration-200 cursor-pointer"
+                                        title={`${getManagerName(manager)}\n${getManagerEmail(manager)}`}
+                                      >
+                                        <AvatarFallback
+                                          className={`text-xs font-medium ${
+                                            manager._id === session?.user?.id
+                                              ? "bg-gradient-to-r from-blue-500 to-indigo-600 text-white"
+                                              : "bg-gradient-to-r from-green-500 to-emerald-600 text-white"
+                                          }`}
+                                        >
+                                          {getManagerInitials(manager)}
+                                        </AvatarFallback>
+                                      </Avatar>
+                                    ))}
                                   {task.managers.length > 3 && (
-                                    <Badge 
-                                      variant="outline" 
+                                    <Badge
+                                      variant="outline"
                                       className="border-gray-300 text-gray-600 text-xs"
                                       title={`${task.managers.length - 3} more managers`}
                                     >
@@ -719,11 +762,15 @@ export default function ManagerAdminTasksPage() {
                                   )}
                                 </div>
                                 <p className="text-xs text-gray-500">
-                                  {task.managers.length} manager{task.managers.length !== 1 ? 's' : ''}
+                                  {task.managers.length} manager
+                                  {task.managers.length !== 1 ? "s" : ""}
                                 </p>
                               </>
                             ) : (
-                              <Badge variant="outline" className="border-gray-300 text-gray-600">
+                              <Badge
+                                variant="outline"
+                                className="border-gray-300 text-gray-600"
+                              >
                                 Only you
                               </Badge>
                             )}
@@ -752,19 +799,19 @@ export default function ManagerAdminTasksPage() {
                             </Button>
 
                             <Button
-  onClick={() => handleViewWithStatus(task)}
-  variant="outline"
-  size="sm"
-  className="rounded-lg border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400"
->
-  <Eye className="w-4 h-4 mr-2" />
-  Feedback & Update Status
-</Button>
+                              onClick={() => handleViewWithStatus(task)}
+                              variant="outline"
+                              size="sm"
+                              className="rounded-lg border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400"
+                            >
+                              <Eye className="w-4 h-4 mr-2" />
+                              Feedback & Update Status
+                            </Button>
 
                             <Button
                               onClick={() =>
                                 router.push(
-                                  `/manager/forms/create?taskId=${task._id}`
+                                  `/manager/forms/create?taskId=${task._id}`,
                                 )
                               }
                               variant="outline"
@@ -776,7 +823,9 @@ export default function ManagerAdminTasksPage() {
                             </Button>
                             {task.audioUrl && (
                               <Button
-                                onClick={() => playAudio(task._id, task.audioUrl)}
+                                onClick={() =>
+                                  playAudio(task._id, task.audioUrl)
+                                }
                                 variant="outline"
                                 size="sm"
                                 className={`rounded-lg ${
@@ -798,7 +847,7 @@ export default function ManagerAdminTasksPage() {
                                 onClick={() =>
                                   downloadFile(
                                     task.fileAttachments,
-                                    `task_${task.title}_attachment`
+                                    `task_${task.title}_attachment`,
                                   )
                                 }
                                 variant="outline"
@@ -822,7 +871,14 @@ export default function ManagerAdminTasksPage() {
 
         {/* Footer Info */}
         <div className="mt-8 text-center text-sm text-gray-500">
-          <p>Showing {filteredTasks.length} of {tasks.length} tasks • Last updated: {new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
+          <p>
+            Showing {filteredTasks.length} of {tasks.length} tasks • Last
+            updated:{" "}
+            {new Date().toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+          </p>
         </div>
       </div>
 
@@ -837,13 +893,17 @@ export default function ManagerAdminTasksPage() {
                     <FileText className="w-6 h-6 text-white" />
                   </div>
                   <div>
-                    <h2 className="text-2xl font-bold text-gray-900">{selectedTask.title}</h2>
+                    <h2 className="text-2xl font-bold text-gray-900">
+                      {selectedTask.title}
+                    </h2>
                     <p className="text-gray-600">Task Details</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
                   {selectedTask.priority && (
-                    <Badge className={`${getPriorityColor(selectedTask.priority)} px-3 py-1.5 rounded-lg font-semibold`}>
+                    <Badge
+                      className={`${getPriorityColor(selectedTask.priority)} px-3 py-1.5 rounded-lg font-semibold`}
+                    >
                       {getPriorityIcon(selectedTask.priority)}
                       {selectedTask.priority.toUpperCase()}
                     </Badge>
@@ -878,11 +938,17 @@ export default function ManagerAdminTasksPage() {
                     </h3>
                     <div className="space-y-4">
                       <div>
-                        <label className="text-sm font-medium text-gray-600 block mb-1">Title</label>
-                        <p className="text-gray-900 font-semibold text-lg">{selectedTask.title}</p>
+                        <label className="text-sm font-medium text-gray-600 block mb-1">
+                          Title
+                        </label>
+                        <p className="text-gray-900 font-semibold text-lg">
+                          {selectedTask.title}
+                        </p>
                       </div>
                       <div>
-                        <label className="text-sm font-medium text-gray-600 block mb-1">Client</label>
+                        <label className="text-sm font-medium text-gray-600 block mb-1">
+                          Client
+                        </label>
                         <p className="text-gray-900 font-semibold flex items-center gap-2">
                           <Building className="w-4 h-4" />
                           {selectedTask.clientName || "No client specified"}
@@ -890,12 +956,20 @@ export default function ManagerAdminTasksPage() {
                       </div>
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <label className="text-sm font-medium text-gray-600 block mb-1">Created</label>
-                          <p className="text-gray-900 font-medium">{formatDate(selectedTask.createdAt)}</p>
+                          <label className="text-sm font-medium text-gray-600 block mb-1">
+                            Created
+                          </label>
+                          <p className="text-gray-900 font-medium">
+                            {formatDate(selectedTask.createdAt)}
+                          </p>
                         </div>
                         <div>
-                          <label className="text-sm font-medium text-gray-600 block mb-1">Due Date</label>
-                          <p className="text-gray-900 font-medium">{formatDate(selectedTask.endDate)}</p>
+                          <label className="text-sm font-medium text-gray-600 block mb-1">
+                            Due Date
+                          </label>
+                          <p className="text-gray-900 font-medium">
+                            {formatDate(selectedTask.endDate)}
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -910,31 +984,38 @@ export default function ManagerAdminTasksPage() {
                       Assigned Managers ({selectedTask.managers?.length || 0})
                     </h3>
                     <div className="space-y-3 max-h-60 overflow-y-auto pr-2">
-                      {selectedTask.managers && selectedTask.managers.length > 0 ? (
+                      {selectedTask.managers &&
+                      selectedTask.managers.length > 0 ? (
                         selectedTask.managers.map((manager, index) => (
                           <div
                             key={manager._id || index}
                             className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors group"
                           >
                             <Avatar className="w-10 h-10 border-2 border-white shadow-sm">
-                              <AvatarFallback className={`font-medium ${
-                                manager._id === session?.user?.id
-                                  ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white'
-                                  : 'bg-gradient-to-r from-green-500 to-emerald-600 text-white'
-                              }`}>
+                              <AvatarFallback
+                                className={`font-medium ${
+                                  manager._id === session?.user?.id
+                                    ? "bg-gradient-to-r from-blue-500 to-indigo-600 text-white"
+                                    : "bg-gradient-to-r from-green-500 to-emerald-600 text-white"
+                                }`}
+                              >
                                 {getManagerInitials(manager)}
                               </AvatarFallback>
                             </Avatar>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center justify-between">
-                                <p className="font-semibold text-gray-900 truncate">
-                                  {getManagerName(manager)}
+                                <div className="font-semibold text-gray-900 truncate flex items-center gap-2">
+                                  <span className="truncate">
+                                    {getManagerName(manager)}
+                                  </span>
+
                                   {manager._id === session?.user?.id && (
-                                    <Badge className="ml-2 bg-blue-100 text-blue-800 border-blue-200 text-xs">
+                                    <Badge className="bg-blue-100 text-blue-800 border-blue-200 text-xs shrink-0">
                                       You
                                     </Badge>
                                   )}
-                                </p>
+                                </div>
+
                                 <a
                                   href={`mailto:${manager.email}`}
                                   className="opacity-0 group-hover:opacity-100 transition-opacity"
@@ -943,7 +1024,9 @@ export default function ManagerAdminTasksPage() {
                                   <Mail className="w-4 h-4 text-gray-500 hover:text-blue-600" />
                                 </a>
                               </div>
-                              <p className="text-sm text-gray-600 truncate">{getManagerEmail(manager)}</p>
+                              <p className="text-sm text-gray-600 truncate">
+                                {getManagerEmail(manager)}
+                              </p>
                             </div>
                           </div>
                         ))
@@ -951,7 +1034,9 @@ export default function ManagerAdminTasksPage() {
                         <div className="text-center py-8 text-gray-500">
                           <Users className="w-12 h-12 mx-auto mb-3 text-gray-300" />
                           <p>No managers assigned yet</p>
-                          <p className="text-sm mt-1">Only you have access to this task</p>
+                          <p className="text-sm mt-1">
+                            Only you have access to this task
+                          </p>
                         </div>
                       )}
                     </div>
@@ -960,9 +1045,9 @@ export default function ManagerAdminTasksPage() {
               </div>
 
               {/* Media Section */}
+              {/* Media Section */}
               <div className="space-y-6 bg-white">
-                {/* Audio Section */}
-                 <MediaSection task={selectedTask} />
+                {selectedTask && <MediaSection task={selectedTask} />}
               </div>
 
               {/* Action Buttons */}
@@ -977,7 +1062,9 @@ export default function ManagerAdminTasksPage() {
                 </Button>
                 <Button
                   onClick={() => {
-                    router.push(`/manager/forms/create?taskId=${selectedTask._id}`);
+                    router.push(
+                      `/manager/forms/create?taskId=${selectedTask._id}`,
+                    );
                     setViewDialogOpen(false);
                   }}
                   className="flex-1 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white"
@@ -1005,9 +1092,14 @@ export default function ManagerAdminTasksPage() {
             <div className="sticky top-0 bg-white border-b border-gray-200 p-6 z-10">
               <div className="flex justify-between items-center">
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-900">Share Task with Managers</h2>
+                  <h2 className="text-2xl font-bold text-gray-900">
+                    Share Task with Managers
+                  </h2>
                   <p className="text-gray-600 mt-1">
-                    Select managers to share: <strong className="text-gray-900">{selectedTask.title}</strong>
+                    Select managers to share:{" "}
+                    <strong className="text-gray-900">
+                      {selectedTask.title}
+                    </strong>
                   </p>
                 </div>
                 <Button
@@ -1040,9 +1132,12 @@ export default function ManagerAdminTasksPage() {
                   </div>
                   <div>
                     <p className="font-semibold text-gray-900">
-                      {selectedManagers.length} manager{selectedManagers.length !== 1 ? 's' : ''} selected
+                      {selectedManagers.length} manager
+                      {selectedManagers.length !== 1 ? "s" : ""} selected
                     </p>
-                    <p className="text-sm text-gray-600">Managers will receive notifications</p>
+                    <p className="text-sm text-gray-600">
+                      Managers will receive notifications
+                    </p>
                   </div>
                 </div>
                 {selectedManagers.length > 0 && (
@@ -1064,35 +1159,43 @@ export default function ManagerAdminTasksPage() {
                     <Users className="w-12 h-12 mx-auto mb-3 text-gray-300" />
                     <p>No managers found</p>
                     <p className="text-sm mt-1">
-                      {searchManager ? "Try a different search" : "All managers are already assigned to this task"}
+                      {searchManager
+                        ? "Try a different search"
+                        : "All managers are already assigned to this task"}
                     </p>
                   </div>
                 ) : (
                   filteredManagers.map((manager) => {
                     const isSelected = selectedManagers.includes(manager._id);
                     const isAlreadyAssigned = selectedTask.managers?.some(
-                      m => m._id === manager._id
+                      (m) => m._id === manager._id,
                     );
-                    
+
                     return (
                       <div
                         key={manager._id}
                         className={`p-4 border-2 rounded-xl cursor-pointer transition-all duration-200 flex items-center justify-between group ${
                           isSelected
-                            ? 'border-blue-500 bg-blue-50 shadow-sm'
+                            ? "border-blue-500 bg-blue-50 shadow-sm"
                             : isAlreadyAssigned
-                            ? 'border-gray-300 bg-gray-100 opacity-75 cursor-not-allowed'
-                            : 'border-gray-200 hover:border-blue-300 hover:bg-blue-50/50 hover:shadow-sm'
+                              ? "border-gray-300 bg-gray-100 opacity-75 cursor-not-allowed"
+                              : "border-gray-200 hover:border-blue-300 hover:bg-blue-50/50 hover:shadow-sm"
                         }`}
-                        onClick={() => !isAlreadyAssigned && handleManagerToggle(manager._id)}
+                        onClick={() =>
+                          !isAlreadyAssigned && handleManagerToggle(manager._id)
+                        }
                       >
                         <div className="flex items-center gap-3 flex-1">
                           <Avatar className="h-10 w-10 border-2 border-white shadow-sm">
-                            <AvatarFallback className={`font-medium transition-all ${
-                              isSelected ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white scale-110' : 
-                              isAlreadyAssigned ? 'bg-gray-400 text-white' : 
-                              'bg-gradient-to-r from-gray-200 to-gray-300 text-gray-700 group-hover:bg-blue-100'
-                            }`}>
+                            <AvatarFallback
+                              className={`font-medium transition-all ${
+                                isSelected
+                                  ? "bg-gradient-to-r from-blue-500 to-indigo-600 text-white scale-110"
+                                  : isAlreadyAssigned
+                                    ? "bg-gray-400 text-white"
+                                    : "bg-gradient-to-r from-gray-200 to-gray-300 text-gray-700 group-hover:bg-blue-100"
+                              }`}
+                            >
                               {getManagerInitials(manager)}
                             </AvatarFallback>
                           </Avatar>
@@ -1112,11 +1215,13 @@ export default function ManagerAdminTasksPage() {
                           </div>
                         </div>
                         {!isAlreadyAssigned && (
-                          <div className={`ml-3 h-6 w-6 rounded border flex items-center justify-center transition-all ${
-                            isSelected 
-                              ? 'bg-gradient-to-r from-blue-500 to-indigo-600 border-blue-500' 
-                              : 'border-gray-300 group-hover:border-blue-400'
-                          }`}>
+                          <div
+                            className={`ml-3 h-6 w-6 rounded border flex items-center justify-center transition-all ${
+                              isSelected
+                                ? "bg-gradient-to-r from-blue-500 to-indigo-600 border-blue-500"
+                                : "border-gray-300 group-hover:border-blue-400"
+                            }`}
+                          >
                             {isSelected && (
                               <Check className="h-3.5 w-3.5 text-white" />
                             )}
@@ -1143,7 +1248,8 @@ export default function ManagerAdminTasksPage() {
                   ) : (
                     <>
                       <Send className="w-5 h-5 mr-2" />
-                      Share with {selectedManagers.length} Manager{selectedManagers.length !== 1 ? 's' : ''}
+                      Share with {selectedManagers.length} Manager
+                      {selectedManagers.length !== 1 ? "s" : ""}
                     </>
                   )}
                 </Button>
@@ -1163,8 +1269,9 @@ export default function ManagerAdminTasksPage() {
                   <div>
                     <p className="font-medium text-yellow-800">Note</p>
                     <p className="text-sm text-yellow-700 mt-1">
-                      Selected managers will receive email notifications and in-app alerts. 
-                      They can then create forms for their team leads based on this task.
+                      Selected managers will receive email notifications and
+                      in-app alerts. They can then create forms for their team
+                      leads based on this task.
                     </p>
                   </div>
                 </div>

@@ -238,28 +238,50 @@ export default function CreateTaskModal({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="description" className="font-semibold">Description (Optional)</Label>
-            <Textarea
-              id="description"
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              placeholder="Add detailed description for the task..."
-              rows={5}
-            />
+            <Label htmlFor="description" className="font-semibold ">Description (Optional)</Label>
+         <Textarea
+  id="description"
+  value={formData.description}
+  className="text-gray-900 placeholder:text-gray-900"
+  onChange={(e) =>
+    setFormData({ ...formData, description: e.target.value })
+  }
+  placeholder="Add detailed description for the task..."
+  rows={5}
+/>
+
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="priority" className="font-semibold">Priority</Label>
-              <Select value={formData.priority} onValueChange={(v) => setFormData({ ...formData, priority: v })}>
-                <SelectTrigger><SelectValue placeholder="Select priority" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="low">Low Priority</SelectItem>
-                  <SelectItem value="medium">Medium Priority</SelectItem>
-                  <SelectItem value="high">High Priority</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+         <div className="space-y-2">
+  <Label htmlFor="priority" className="font-semibold text-gray-900">
+    Priority
+  </Label>
+
+  <Select
+    value={formData.priority}
+    onValueChange={(v) =>
+      setFormData({ ...formData, priority: v })
+    }
+  >
+    <SelectTrigger className="text-gray-900">
+      <SelectValue placeholder="Select priority" />
+    </SelectTrigger>
+
+    <SelectContent className="text-gray-900">
+      <SelectItem value="low" className="text-gray-900">
+        Low Priority
+      </SelectItem>
+      <SelectItem value="medium" className="text-gray-900">
+        Medium Priority
+      </SelectItem>
+      <SelectItem value="high" className="text-gray-900">
+        High Priority
+      </SelectItem>
+    </SelectContent>
+  </Select>
+</div>
+
             <div className="space-y-2">
               <Label htmlFor="endDate" className="font-semibold">Due Date</Label>
               <Input

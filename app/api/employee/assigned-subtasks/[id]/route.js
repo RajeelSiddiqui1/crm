@@ -115,40 +115,38 @@ export async function PUT(req, { params }) {
     }
 
     /* ---------------- FILE UPLOAD ---------------- */
-    const files = formData.getAll("files");
+   const files = formData.getAll("files");
 
-    for (const file of files) {
-      if (!file || !file.size) continue;
+for (const file of files) {
+  if (!file || !file.size) continue;
 
-      const buffer = Buffer.from(await file.arrayBuffer());
-      const key = `employee_tasks/${Date.now()}_${file.name.replace(/\s+/g, "_")}`;
+  const buffer = Buffer.from(await file.arrayBuffer());
+  const key = `employee_tasks/${Date.now()}_${file.name.replace(/\s+/g, "_")}`;
 
-      const upload = new Upload({
-        client: s3,
-        params: {
-          Bucket: BUCKET,
-          Key: key,
-          Body: buffer,
-          ContentType: file.type || "application/octet-stream",
-        },
-      });
+  const upload = new Upload({
+    client: s3,
+    params: {
+      Bucket: BUCKET,
+      Key: key,
+      Body: buffer,
+      ContentType: file.type || "application/octet-stream",
+    },
+  });
 
-      await upload.done();
+  await upload.done();
 
-      const signedUrl = await getSignedUrl(
-        s3,
-        new GetObjectCommand({ Bucket: BUCKET, Key: key }),
-        { expiresIn: 604800 }
-      );
+  // Use `key` instead of undefined `fileKey`
+  const fileUrl = `https://s3.${process.env.AWS_REGION}.amazonaws.com/${process.env.AWS_BUCKET_NAME}/${key}`;
 
-      task.fileAttachments.push({
-        name: file.name,
-        type: file.type,
-        size: file.size,
-        publicId: key,
-        url: signedUrl,
-      });
-    }
+  task.fileAttachments.push({
+    name: file.name,
+    type: file.type,
+    size: file.size,
+    publicId: key,
+    url: fileUrl,
+  });
+}
+
 
     await task.save();
 
@@ -241,13 +239,9 @@ export async function PATCH(req, { params }) {
 /* ======================================================
    GET — SINGLE TASK
 ====================================================== */
-
-
-
 export async function GET(req, { params }) {
-try {
+  try {
     const session = await getServerSession(authOptions);
-
     if (!session || session.user.role !== "Employee") {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -256,53 +250,31 @@ try {
 
     const task = await EmployeeTask.findById(params.id)
       .populate("submittedBy", "firstName lastName email")
-
-      // ✅ Team Lead + Department
       .populate({
         path: "assignedTeamLead.teamLeadId",
         select: "firstName lastName email depId",
-        populate: {
-          path: "depId",
-          select: "name",
-        },
+        populate: { path: "depId", select: "name" },
       })
-
-      // ✅ Manager + Departments[]
       .populate({
         path: "assignedManager.managerId",
         select: "firstName lastName email departments",
-        populate: {
-          path: "departments",
-          select: "name",
-        },
+        populate: { path: "departments", select: "name" },
       })
-
-      // ✅ Employee + Department
       .populate({
         path: "assignedEmployee.employeeId",
         select: "firstName lastName email depId",
-        populate: {
-          path: "depId",
-          select: "name",
-        },
+        populate: { path: "depId", select: "name" },
       })
-
       .select("+fileAttachments");
 
-    if (!task) {
-      return NextResponse.json({ error: "Task not found" }, { status: 404 });
-    }
-
+    if (!task) return NextResponse.json({ error: "Task not found" }, { status: 404 });
     if (task.submittedBy._id.toString() !== session.user.id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    return NextResponse.json(task);
+    return NextResponse.json(task, { status: 200 });
   } catch (error) {
     console.error("GET EmployeeTask Error:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch task" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch task" }, { status: 500 });
   }
 }

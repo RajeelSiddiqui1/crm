@@ -84,6 +84,7 @@ import {
   Send,
   RefreshCw,
   MessageSquare,
+  Play,
   Check,
   X,
   Plus,
@@ -1572,10 +1573,20 @@ export default function TeamLeadTaskDetailPage() {
                             </div>
 
                             {/* Date */}
-                            <p className="text-xs text-gray-400 mt-2">
-                              Submitted on{" "}
-                              {new Date(fb.submittedAt).toLocaleString()}
-                            </p>
+                         <p className="text-xs text-gray-400 mt-2">
+  Submitted on{" "}
+  {new Date(fb.submittedAt).toLocaleString("en-GB", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: true
+  })}
+</p>
+
                           </div>
                         ))}
                       </div>
@@ -1705,8 +1716,18 @@ export default function TeamLeadTaskDetailPage() {
                                     {teamLead?.firstName} {teamLead?.lastName}
                                   </span>
                                   <span className="text-xs md:text-sm text-gray-500">
-                                    {formatRelativeDate(fb.submittedAt)}
-                                  </span>
+  {new Date(fb.submittedAt).toLocaleString("en-GB", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: true,
+  })}
+</span>
+
                                 </div>
                                 <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 md:p-4">
                                   <p className="text-gray-800 text-sm md:text-base">

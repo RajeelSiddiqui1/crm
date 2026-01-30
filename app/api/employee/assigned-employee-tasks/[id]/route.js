@@ -3,10 +3,12 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import dbConnect from "@/lib/db";
 import EmployeeTask from "@/models/EmployeeTask";
-import mongoose from "mongoose";
 import Notification from "@/models/Notification";
+import mongoose from "mongoose";
 
-// GET: Fetch single task details
+/* =========================
+   GET: Single Task (Employee)
+========================= */
 export async function GET(request, { params }) {
   try {
     await dbConnect();
@@ -24,57 +26,43 @@ export async function GET(request, { params }) {
 
     const task = await EmployeeTask.findById(id)
       .populate("submittedBy", "firstName lastName email avatar role")
-      .populate({
-        path: "assignedEmployee.employeeId",
-        select: "firstName lastName email avatar"
-      })
-      .populate({
-        path: "assignedManager.managerId",
-        select: "firstName lastName email avatar"
-      })
-      .populate({
-        path: "assignedTeamLead.teamLeadId",
-        select: "firstName lastName email avatar"
-      })
+      .populate({ path: "assignedEmployee.employeeId", select: "firstName lastName email avatar" })
+      .populate({ path: "assignedManager.managerId", select: "firstName lastName email avatar" })
+      .populate({ path: "assignedTeamLead.teamLeadId", select: "firstName lastName email avatar" })
       .lean();
 
     if (!task) {
       return NextResponse.json({ error: "Task not found" }, { status: 404 });
     }
 
-    // Check if this employee is assigned to this task
     const employeeAssignment = task.assignedEmployee?.find(
       emp => emp.employeeId?._id?.toString() === session.user.id
     );
 
     if (!employeeAssignment) {
-      return NextResponse.json({ 
-        error: "You are not assigned to this task" 
-      }, { status: 403 });
+      return NextResponse.json({ error: "You are not assigned to this task" }, { status: 403 });
     }
-
-    // Add employee-specific data
-    const taskWithEmployeeData = {
-      ...task,
-      employeeStatus: employeeAssignment.status,
-      employeeFeedback: employeeAssignment.feedback,
-      assignedAt: employeeAssignment.assignedAt,
-      completedAt: employeeAssignment.completedAt
-    };
 
     return NextResponse.json({
       success: true,
-      task: taskWithEmployeeData
+      task: {
+        ...task,
+        employeeStatus: employeeAssignment.status,
+        employeeFeedbacks: employeeAssignment.feedbacks || [], // ✅ Array now
+        assignedAt: employeeAssignment.assignedAt,
+        completedAt: employeeAssignment.completedAt
+      }
     }, { status: 200 });
+
   } catch (error) {
-    console.error("GET Employee Task Details Error:", error);
-    return NextResponse.json({
-      success: false,
-      error: "Failed to fetch task details"
-    }, { status: 500 });
+    console.error("GET Employee Task Error:", error);
+    return NextResponse.json({ success: false, error: "Failed to fetch task" }, { status: 500 });
   }
 }
 
+/* =========================
+   PUT: Update Task (Employee)
+========================= */
 export async function PUT(request, { params }) {
   try {
     await dbConnect();
@@ -104,24 +92,30 @@ export async function PUT(request, { params }) {
     );
     if (employeeIndex === -1) return NextResponse.json({ error: "Not assigned" }, { status: 403 });
 
-    const oldStatus = task.assignedEmployee[employeeIndex].status;
+    const employee = task.assignedEmployee[employeeIndex];
+    const oldStatus = employee.status;
 
-    // Update employee's status & feedback
+    // ===== STATUS UPDATE =====
     if (status) {
-      task.assignedEmployee[employeeIndex].status = status;
+      employee.status = status;
       if (["completed", "approved"].includes(status)) {
-        task.assignedEmployee[employeeIndex].completedAt = new Date();
+        employee.completedAt = new Date();
       }
     }
-    if (feedback !== undefined) {
-      task.assignedEmployee[employeeIndex].feedback = feedback;
+
+    // ===== ADD FEEDBACK (ARRAY PUSH) =====
+    if (feedback && feedback.trim()) {
+      employee.feedbacks.push({
+        feedback,
+        sentAt: new Date()
+      });
     }
 
     await task.save();
 
-    // Send notification
+    // ===== SEND NOTIFICATION =====
     if (sendNotification && task.submittedBy) {
-      const notification = new Notification({
+      await Notification.create({
         sender: {
           id: session.user.id,
           model: "Employee",
@@ -129,20 +123,18 @@ export async function PUT(request, { params }) {
         },
         receiver: {
           id: task.submittedBy._id,
-          model: "Employee" // adjust if your creator is TeamLead/Manager
+          model: "Employee" // adjust if creator might be TeamLead/Manager
         },
         title: "Task Status Updated",
-        message: `${session.user.name} has updated status of task "${task.title}" from ${oldStatus} to ${status}`,
+        message: `${session.user.name} updated task "${task.title}" from ${oldStatus} to ${status}`,
         type: "task_update",
         relatedId: task._id,
         link: `/employee/my-tasks/${task._id}`,
         read: false
       });
-
-      await notification.save();
     }
 
-    // Populate and return updated task
+    // ===== Return updated task =====
     const updatedTask = await EmployeeTask.findById(id)
       .populate("submittedBy", "firstName lastName email avatar role")
       .populate({ path: "assignedEmployee.employeeId", select: "firstName lastName email avatar" })
@@ -150,7 +142,7 @@ export async function PUT(request, { params }) {
       .populate({ path: "assignedTeamLead.teamLeadId", select: "firstName lastName email avatar" })
       .lean();
 
-    const employeeAssignment = updatedTask.assignedEmployee.find(
+    const updatedEmployee = updatedTask.assignedEmployee.find(
       emp => emp.employeeId?._id?.toString() === session.user.id
     );
 
@@ -158,10 +150,10 @@ export async function PUT(request, { params }) {
       success: true,
       task: {
         ...updatedTask,
-        employeeStatus: employeeAssignment.status,
-        employeeFeedback: employeeAssignment.feedback,
-        assignedAt: employeeAssignment.assignedAt,
-        completedAt: employeeAssignment.completedAt
+        employeeStatus: updatedEmployee.status,
+        employeeFeedbacks: updatedEmployee.feedbacks || [],
+        assignedAt: updatedEmployee.assignedAt,
+        completedAt: updatedEmployee.completedAt
       }
     }, { status: 200 });
 

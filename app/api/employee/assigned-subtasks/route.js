@@ -58,42 +58,39 @@ export async function POST(req) {
     const files = formData.getAll("files");
     const uploadedFiles = [];
 
-    for (const file of files) {
-      if (!file || !file.size) continue;
+   for (const file of files) {
+  if (!file || !file.size) continue;
 
-      const buffer = Buffer.from(await file.arrayBuffer());
-      const key = `employee_tasks/${Date.now()}_${file.name.replace(/\s+/g, "_")}`;
+  const buffer = Buffer.from(await file.arrayBuffer());
+  const key = `employee_tasks/${Date.now()}_${file.name.replace(/\s+/g, "_")}`;
 
-      const upload = new Upload({
-        client: s3,
-        params: {
-          Bucket: BUCKET,
-          Key: key,
-          Body: buffer,
-          ContentType: file.type,
-          Metadata: {
-            uploadedBy: session.user.id,
-            uploadedAt: Date.now().toString(),
-          },
-        },
-      });
+  const upload = new Upload({
+    client: s3,
+    params: {
+      Bucket: BUCKET,
+      Key: key,
+      Body: buffer,
+      ContentType: file.type,
+      Metadata: {
+        uploadedBy: session.user.id,
+        uploadedAt: Date.now().toString(),
+      },
+    },
+  });
 
-      await upload.done();
+  await upload.done();
 
-      const signedUrl = await getSignedUrl(
-        s3,
-        new GetObjectCommand({ Bucket: BUCKET, Key: key }),
-        { expiresIn: 604800 } // 7 days
-      );
+  // Correct key usage
+  const fileUrl = `https://s3.${process.env.AWS_REGION}.amazonaws.com/${process.env.AWS_BUCKET_NAME}/${key}`;
 
-      uploadedFiles.push({
-        url: signedUrl,
-        name: file.name,
-        type: file.type,
-        size: file.size,
-        publicId: key,
-      });
-    }
+  uploadedFiles.push({
+    url: fileUrl,
+    name: file.name,
+    type: file.type,
+    size: file.size,
+    publicId: key,
+  });
+}
 
     /* ---------------- CREATE TASK ---------------- */
     const task = await EmployeeTask.create({

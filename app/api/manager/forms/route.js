@@ -82,7 +82,8 @@ export async function POST(req) {
             Key: fileKey,
           });
 
-          const fileUrl = await getSignedUrl(s3, command, { expiresIn: 604800 });
+           const fileUrl = `https://s3.${process.env.AWS_REGION}.amazonaws.com/${process.env.AWS_BUCKET_NAME}/${fileKey}`;
+
           uploadedFiles.push({
             url: fileUrl,
             name: fileName,
@@ -113,7 +114,7 @@ export async function POST(req) {
     const submissionData = {
       formId: form._id,
       depId: form.depId,
-      clientName: clientName.trim(),
+      clinetName: clientName.trim(),
       formData: dynamicFormData,
       status: "pending",
       status2: "pending",
