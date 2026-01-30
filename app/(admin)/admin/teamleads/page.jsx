@@ -183,9 +183,9 @@ export default function AdminTeamLeadsPage() {
                       <TableHead className="font-bold text-gray-900 text-xs sm:text-sm uppercase tracking-wide py-3 sm:py-4 whitespace-nowrap">
                         Work Hours
                       </TableHead>
-                      <TableHead className="font-bold text-gray-900 text-xs sm:text-sm uppercase tracking-wide py-3 sm:py-4 whitespace-nowrap">
+                      {/* <TableHead className="font-bold text-gray-900 text-xs sm:text-sm uppercase tracking-wide py-3 sm:py-4 whitespace-nowrap">
                         Join Date
-                      </TableHead>
+                      </TableHead> */}
                       <TableHead className="font-bold text-gray-900 text-xs sm:text-sm uppercase tracking-wide py-3 sm:py-4 whitespace-nowrap">
                         Actions
                       </TableHead>
@@ -247,14 +247,14 @@ export default function AdminTeamLeadsPage() {
                             </span>
                           </div>
                         </TableCell>
-                        <TableCell className="py-3 sm:py-4">
+                        {/* <TableCell className="py-3 sm:py-4">
                           <div className="flex items-center gap-2 sm:gap-3 text-gray-600 group-hover:text-gray-800 transition-colors duration-200">
                             <Calendar className="w-4 h-4 text-blue-500" />
                             <span className="text-xs sm:text-sm font-medium whitespace-nowrap">
                               {formatDate(teamLead.createdAt)}
                             </span>
                           </div>
-                        </TableCell>
+                        </TableCell> */}
                         <TableCell className="py-3 sm:py-4">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>

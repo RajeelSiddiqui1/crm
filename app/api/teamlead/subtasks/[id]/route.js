@@ -442,7 +442,8 @@ export async function PUT(request, { params }) {
                     Bucket: process.env.AWS_BUCKET_NAME,
                     Key: fileKey,
                 });
-                const fileUrl = await getSignedUrl(s3, command, { expiresIn: 604800 }); // 1 week
+        const fileUrl = `https://s3.${process.env.AWS_REGION}.amazonaws.com/${process.env.AWS_BUCKET_NAME}/${fileKey}`;
+// 1 week
 
                 uploadedFiles.push({
                     url: fileUrl,
@@ -470,7 +471,6 @@ export async function PUT(request, { params }) {
             hasLeadsTarget,
             totalLeadsRequired: hasLeadsTarget ? parseInt(totalLeadsRequired) : 0,
             fileAttachments: uploadedFiles,
-            status: existingSubtask.status === 'completed' ? 'completed' : 'in_progress',
             updatedAt: new Date()
         };
 

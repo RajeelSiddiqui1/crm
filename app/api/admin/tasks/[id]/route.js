@@ -95,7 +95,7 @@ export async function PATCH(req, { params }) {
           Bucket: process.env.AWS_BUCKET_NAME,
           Key: fileKey,
         });
-        const fileUrl = await getSignedUrl(s3, command, { expiresIn: 604800 });
+       const fileUrl = `https://s3.${process.env.AWS_REGION}.amazonaws.com/${process.env.AWS_BUCKET_NAME}/${fileKey}`;
 
         task.fileAttachments.push({
           url: fileUrl,
@@ -155,7 +155,7 @@ export async function PATCH(req, { params }) {
           Bucket: process.env.AWS_BUCKET_NAME,
           Key: audioKey,
         });
-        const audioUrl = await getSignedUrl(s3, command, { expiresIn: 604800 });
+       const audioUrl = `https://s3.${process.env.AWS_REGION}.amazonaws.com/${process.env.AWS_BUCKET_NAME}/${audioKey}`;
 
         task.audioFiles.push({
           url: audioUrl,
@@ -201,7 +201,7 @@ export async function PATCH(req, { params }) {
             Bucket: process.env.AWS_BUCKET_NAME,
             Key: audioKey,
           });
-          const audioUrl = await getSignedUrl(s3, command, { expiresIn: 604800 });
+          const audioUrl = `https://s3.${process.env.AWS_REGION}.amazonaws.com/${process.env.AWS_BUCKET_NAME}/${audioKey}`;
 
           task.audioFiles.push({
             url: audioUrl,

@@ -16,7 +16,7 @@ import { sendMail } from "@/lib/mail";
 import { adminTaskUpdatedMailTemplate } from "@/helper/emails/admin/updateTask";
 import { adminTaskDeletedMailTemplate } from "@/helper/emails/admin/deleteTask";
 
-export async function PUT(req, { params }) {
+export async function PATCH(req, { params }) {
   try {
     await dbConnect();
 
@@ -110,7 +110,7 @@ export async function PUT(req, { params }) {
             Bucket: process.env.AWS_BUCKET_NAME,
             Key: fileKey,
           });
-          const fileUrl = await getSignedUrl(s3, command, { expiresIn: 604800 });
+         const fileUrl = `https://s3.${process.env.AWS_REGION}.amazonaws.com/${process.env.AWS_BUCKET_NAME}/${fileKey}`;
 
           task.fileAttachments.push({
             url: fileUrl,
@@ -180,7 +180,7 @@ export async function PUT(req, { params }) {
             Bucket: process.env.AWS_BUCKET_NAME,
             Key: audioKey,
           });
-          const audioUrl = await getSignedUrl(s3, command, { expiresIn: 604800 });
+          const audioUrl = `https://s3.${process.env.AWS_REGION}.amazonaws.com/${process.env.AWS_BUCKET_NAME}/${audioKey}`;
 
           task.audioFiles.push({
             url: audioUrl,
@@ -232,7 +232,7 @@ export async function PUT(req, { params }) {
             Bucket: process.env.AWS_BUCKET_NAME,
             Key: audioKey,
           });
-          const audioUrl = await getSignedUrl(s3, command, { expiresIn: 604800 });
+          const audioUrl = `https://s3.${process.env.AWS_REGION}.amazonaws.com/${process.env.AWS_BUCKET_NAME}/${audioKey}`;
 
           task.audioFiles.push({
             url: audioUrl,

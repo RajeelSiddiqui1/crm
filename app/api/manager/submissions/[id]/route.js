@@ -171,45 +171,42 @@ export async function PUT(req, { params }) {
 
     // 🔥 ADD NEW FILES
     const newFiles = formData.getAll("files");
+for (const file of newFiles) {
+  if (!file || !file.size) continue;
 
-    for (const file of newFiles) {
-      if (!file || !file.size) continue;
+  const buffer = Buffer.from(await file.arrayBuffer());
+  const key = `manager_tasks/${Date.now()}_${file.name.replace(/\s+/g, "_")}`;
 
-      const buffer = Buffer.from(await file.arrayBuffer());
-      const key = `manager_tasks/${Date.now()}_${file.name.replace(/\s+/g, "_")}`;
-
-      const upload = new Upload({
-        client: s3,
-        params: {
-          Bucket: BUCKET,
-          Key: key,
-          Body: buffer,
-          ContentType: file.type,
-          Metadata: {
-            uploadedBy: session.user.id,
-            submissionId: id,
-          },
-        },
-      });
-
-      await upload.done();
-
-      const signedUrl = await getSignedUrl(
-        s3,
-        new GetObjectCommand({ Bucket: BUCKET, Key: key }),
-        { expiresIn: 604800 } // 7 days
-      );
-
-      files.push({
-        url: signedUrl,
-        name: file.name,
-        size: file.size,
-        type: file.type,
-        publicId: key,
+  const upload = new Upload({
+    client: s3,
+    params: {
+      Bucket: BUCKET,
+      Key: key,
+      Body: buffer,
+      ContentType: file.type,
+      Metadata: {
         uploadedBy: session.user.id,
-        uploadedAt: new Date(),
-      });
-    }
+        submissionId: id,
+      },
+    },
+  });
+
+  await upload.done();
+
+  // Use correct key here
+  const fileUrl = `https://s3.${process.env.AWS_REGION}.amazonaws.com/${process.env.AWS_BUCKET_NAME}/${key}`;
+
+  files.push({
+    url: fileUrl,
+    name: file.name,
+    size: file.size,
+    type: file.type,
+    publicId: key,
+    uploadedBy: session.user.id,
+    uploadedAt: new Date(),
+  });
+}
+
 
     // 🔥 UPDATE FILE NAMES
     files = files.map(file => {

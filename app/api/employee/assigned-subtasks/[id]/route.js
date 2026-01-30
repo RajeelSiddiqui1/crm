@@ -115,40 +115,38 @@ export async function PUT(req, { params }) {
     }
 
     /* ---------------- FILE UPLOAD ---------------- */
-    const files = formData.getAll("files");
+   const files = formData.getAll("files");
 
-    for (const file of files) {
-      if (!file || !file.size) continue;
+for (const file of files) {
+  if (!file || !file.size) continue;
 
-      const buffer = Buffer.from(await file.arrayBuffer());
-      const key = `employee_tasks/${Date.now()}_${file.name.replace(/\s+/g, "_")}`;
+  const buffer = Buffer.from(await file.arrayBuffer());
+  const key = `employee_tasks/${Date.now()}_${file.name.replace(/\s+/g, "_")}`;
 
-      const upload = new Upload({
-        client: s3,
-        params: {
-          Bucket: BUCKET,
-          Key: key,
-          Body: buffer,
-          ContentType: file.type || "application/octet-stream",
-        },
-      });
+  const upload = new Upload({
+    client: s3,
+    params: {
+      Bucket: BUCKET,
+      Key: key,
+      Body: buffer,
+      ContentType: file.type || "application/octet-stream",
+    },
+  });
 
-      await upload.done();
+  await upload.done();
 
-      const signedUrl = await getSignedUrl(
-        s3,
-        new GetObjectCommand({ Bucket: BUCKET, Key: key }),
-        { expiresIn: 604800 }
-      );
+  // Use `key` instead of undefined `fileKey`
+  const fileUrl = `https://s3.${process.env.AWS_REGION}.amazonaws.com/${process.env.AWS_BUCKET_NAME}/${key}`;
 
-      task.fileAttachments.push({
-        name: file.name,
-        type: file.type,
-        size: file.size,
-        publicId: key,
-        url: signedUrl,
-      });
-    }
+  task.fileAttachments.push({
+    name: file.name,
+    type: file.type,
+    size: file.size,
+    publicId: key,
+    url: fileUrl,
+  });
+}
+
 
     await task.save();
 
