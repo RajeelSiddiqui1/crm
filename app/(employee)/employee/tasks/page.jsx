@@ -71,6 +71,7 @@ import {
   File,
   Shield,
   UserCog,
+  Play,
   Users2,
   FolderTree,
   FileCheck,

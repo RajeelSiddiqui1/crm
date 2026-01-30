@@ -32,7 +32,7 @@ const employeeFormSubmissionSchema = new mongoose.Schema(
         },
         teamleadstatus: {
             type: String,
-            enum: ["pending", "in_progress", "completed", "approved", "rejected","late"],
+            enum: ["pending", "in_progress", "completed", "approved", "rejected", "late"],
             default: "pending"
         },
         managerStatus: {
@@ -42,7 +42,35 @@ const employeeFormSubmissionSchema = new mongoose.Schema(
         },
         completedAt: {
             type: Date
-        }
+        },
+        fileAttachments: [
+            {
+                url: {
+                    type: String,
+                    required: true,
+                },
+                name: {
+                    type: String,
+                    required: true,
+                },
+                type: {
+                    type: String,
+                    required: true,
+                },
+                size: {
+                    type: Number,
+                    required: true,
+                },
+                publicId: {
+                    type: String,
+                    required: true,
+                },
+                createdAt: {
+                    type: Date,
+                    default: Date.now,
+                },
+            },
+        ],
     },
     { timestamps: true }
 );

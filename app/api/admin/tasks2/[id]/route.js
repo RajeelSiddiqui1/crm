@@ -305,7 +305,7 @@ export async function PATCH(req, { params }) {
               `${tl.firstName} ${tl.lastName}`,
               task.title,
               session.user.name || "Admin",
-              taskLink
+              teamleadTaskLink
             )
           ),
         ])

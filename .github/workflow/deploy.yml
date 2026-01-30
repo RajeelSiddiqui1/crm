@@ -1,9 +1,8 @@
-name: Deploy CRM to VPS
+name: Deploy NodeJS Application to Hostinger
 
 on:
   push:
     branches:
-      - master
       - vps-deploy
 
 jobs:
@@ -11,30 +10,16 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Setup SSH
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
-
-      - name: Deploy on VPS
-        run: |
-          ssh ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} << 'EOF'
-            cd ~/apps/crm
-            git pull origin $(git branch --show-current)
-
-            docker stop crm || true
-            docker rm crm || true
-
-            docker build -t crm-app .
-            docker run -d \
-              --name crm \
-              -p 3001:5000 \
-              --restart unless-stopped \
-              --env-file .env \
-              crm-app
-          EOF
+      - name: Deploy Via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: devop                 
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            cd /home/devop/crm  
+            git pull
+            docker compose up -d --build
