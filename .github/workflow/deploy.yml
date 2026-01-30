@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - vps-deploy
+      - master
 
 jobs:
   deploy:
