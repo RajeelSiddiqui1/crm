@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import dbConnect from "@/lib/dbConnect";
+
 import TaskSubmission from "@/models/TaskSubmission";
+import dbConnect from "@/lib/db";
 
 export async function DELETE(req, { params }) {
   try {
