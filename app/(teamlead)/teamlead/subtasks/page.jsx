@@ -214,19 +214,34 @@ export default function AllSubtasksPage() {
   };
 
   const filteredSubtasks = subtasks.filter((subtask) => {
-    const matchesSearch =
-      subtask.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      subtask.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      subtask.submissionId?.title
-        ?.toLowerCase()
-        .includes(searchTerm.toLowerCase()) ||
-      subtask.teamLeadName?.toLowerCase().includes(searchTerm.toLowerCase());
+  const term = searchTerm.toLowerCase();
 
-    const matchesStatus =
-      statusFilter === "all" || subtask.status === statusFilter;
+  const matchesSearch =
+    subtask.title?.toLowerCase().includes(term) ||
+    subtask.description?.toLowerCase().includes(term) ||
+    subtask.submissionId?.title?.toLowerCase().includes(term) ||
 
-    return matchesSearch && matchesStatus;
-  });
+    // ✅ Employees name
+    subtask.assignedEmployees?.some(emp =>
+      emp.name?.toLowerCase().includes(term)
+    ) ||
+
+    // ✅ Managers name
+    subtask.assignedManagers?.some(mgr =>
+      mgr.name?.toLowerCase().includes(term)
+    ) ||
+
+    // ✅ Team leads name
+    subtask.assignedTeamLeads?.some(tl =>
+      tl.name?.toLowerCase().includes(term)
+    );
+
+  const matchesStatus =
+    statusFilter === "all" || subtask.status === statusFilter;
+
+  return matchesSearch && matchesStatus;
+});
+
 
   const formatDate = (dateString) => {
     if (!dateString) return "N/A";
@@ -340,24 +355,33 @@ export default function AllSubtasksPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 p-6">
+    <div className="min-h-screen bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-100 via-indigo-50 to-purple-100 p-6 font-sans relative overflow-hidden">
+      {/* Ambient Background Glows */}
+      <div className="fixed inset-0 pointer-events-none">
+        <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] rounded-full bg-purple-400/20 blur-[120px] animate-pulse" />
+        <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] rounded-full bg-blue-400/20 blur-[120px] animate-pulse delay-75" />
+        <div className="absolute top-[40%] left-[40%] w-[30%] h-[30%] rounded-full bg-indigo-300/20 blur-[100px] animate-pulse delay-150" />
+      </div>
+      <div className="relative z-10">
       <Toaster position="top-right" />
 
       {/* Subtask Detail Modal */}
       {isModalOpen && selectedSubtask && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+        <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-300">
+          <div className="bg-white/90 backdrop-blur-2xl border border-white/50 rounded-3xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden animate-in zoom-in-95 duration-300 transform transition-all ring-1 ring-white/50">
             {/* Modal Header */}
-            <div className="bg-gradient-to-r from-blue-600 to-indigo-700 p-6 text-white">
+            <div className="bg-gradient-to-r from-blue-600/90 to-indigo-700/90 backdrop-blur-md p-6 text-white border-b border-white/10">
               <div className="flex justify-between items-start">
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
-                    <FileText className="w-6 h-6" />
-                    <h2 className="text-2xl font-bold truncate text-white">
+                    <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
+                      <FileText className="w-6 h-6 text-white" />
+                    </div>
+                    <h2 className="text-2xl font-bold truncate text-white tracking-tight">
                       {selectedSubtask.title}
                     </h2>
                   </div>
-                  <p className="text-blue-100 text-sm line-clamp-2">
+                  <p className="text-blue-50/90 text-sm line-clamp-2 font-medium">
                     {selectedSubtask.description}
                   </p>
                 </div>
@@ -365,7 +389,7 @@ export default function AllSubtasksPage() {
                   onClick={closeModal}
                   variant="ghost"
                   size="icon"
-                  className="text-white hover:bg-white hover:bg-opacity-20 rounded-full"
+                  className="text-white hover:bg-white/20 hover:scale-110 transition-all rounded-full"
                 >
                   <X className="w-5 h-5" />
                 </Button>
@@ -789,8 +813,8 @@ export default function AllSubtasksPage() {
       <div className="max-w-7xl mx-auto">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
           <div className="text-center sm:text-left">
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-indigo-700 bg-clip-text text-transparent">
-              All Subtasks 233
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-700 to-indigo-800 bg-clip-text text-transparent drop-shadow-sm">
+              All Subtasks
             </h1>
             <p className="text-black mt-3 text-lg">
               Manage all your assigned subtasks
@@ -802,7 +826,7 @@ export default function AllSubtasksPage() {
               type="button"
               onClick={() => router.push("/teamlead/subtask-employee")}
               variant="outline"
-              className="border-blue-200 text-blue-700 hover:bg-blue-50"
+              className="bg-white/60 backdrop-blur-sm border-blue-200/50 text-blue-700 hover:bg-white/80 hover:shadow-md transition-all duration-300"
               disabled={fetching}
             >
               <Plus className="w-4 h-4 mr-2" />
@@ -812,7 +836,7 @@ export default function AllSubtasksPage() {
             <Button
               onClick={fetchSubtasks}
               variant="outline"
-              className="border-blue-200 text-blue-700 hover:bg-blue-50"
+              className="bg-white/60 backdrop-blur-sm border-blue-200/50 text-blue-700 hover:bg-white/80 hover:shadow-md transition-all duration-300"
               disabled={fetching}
             >
               <RefreshCw
@@ -823,54 +847,63 @@ export default function AllSubtasksPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 mb-8">
-          <Card className="bg-white border-0 shadow-lg">
-            <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-black">
-                {statusStats.total}
-              </div>
-              <div className="text-sm text-gray-700">Total Subtasks</div>
-            </CardContent>
-          </Card>
-          <Card className="bg-white border-0 shadow-lg">
-            <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-yellow-600">
-                {statusStats.pending}
-              </div>
-              <div className="text-sm text-gray-700">Pending</div>
-            </CardContent>
-          </Card>
-          <Card className="bg-white border-0 shadow-lg">
-            <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-blue-600">
-                {statusStats.in_progress}
-              </div>
-              <div className="text-sm text-gray-700">In Progress</div>
-            </CardContent>
-          </Card>
-          <Card className="bg-white border-0 shadow-lg">
-            <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-green-600">
-                {statusStats.completed}
-              </div>
-              <div className="text-sm text-gray-700">Completed</div>
-            </CardContent>
-          </Card>
-          <Card className="bg-white border-0 shadow-lg">
-            <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-indigo-600">
-                {subtasks.filter(s => s.hasLeadsTarget).length}
-              </div>
-              <div className="text-sm text-gray-700 flex items-center justify-center gap-1">
-                <Target className="w-4 h-4" />
-                Lead Tracking
-              </div>
-            </CardContent>
-          </Card>
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6 mb-10">
+          {[
+            { 
+              title: "Total Subtasks", 
+              value: statusStats.total, 
+              color: "text-blue-700", 
+              bg: "from-blue-50 to-blue-100/50",
+              icon: FileText
+            },
+            { 
+              title: "Pending", 
+              value: statusStats.pending, 
+              color: "text-yellow-600", 
+              bg: "from-yellow-50 to-orange-100/50",
+              icon: Clock 
+            },
+            { 
+              title: "In Progress", 
+              value: statusStats.in_progress, 
+              color: "text-blue-600", 
+              bg: "from-cyan-50 to-blue-100/50",
+              icon: Loader2
+            },
+            { 
+              title: "Completed", 
+              value: statusStats.completed, 
+              color: "text-green-600", 
+              bg: "from-green-50 to-emerald-100/50",
+              icon: CheckCircle
+            },
+            { 
+              title: "Lead Tracking", 
+              value: subtasks.filter(s => s.hasLeadsTarget).length, 
+              color: "text-indigo-600", 
+              bg: "from-indigo-50 to-purple-100/50",
+              icon: Target
+            }
+          ].map((stat, index) => (
+            <Card key={index} className="bg-white/60 backdrop-blur-xl border border-white/50 shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 group">
+              <CardContent className="p-5 flex flex-col items-center justify-center text-center relative overflow-hidden">
+                <div className={`absolute inset-0 bg-gradient-to-br ${stat.bg} opacity-50 group-hover:opacity-80 transition-opacity`} />
+                <div className="relative z-10 p-3 rounded-full bg-white/50 mb-3 group-hover:scale-110 transition-transform shadow-sm">
+                  <stat.icon className={`w-6 h-6 ${stat.color}`} />
+                </div>
+                <div className={`text-3xl font-bold ${stat.color} mb-1 relative z-10`}>
+                  {stat.value}
+                </div>
+                <div className="text-sm font-semibold text-gray-600 relative z-10 uppercase tracking-wide text-[10px]">
+                  {stat.title}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
         </div>
 
-        <Card className="shadow-2xl shadow-blue-500/10 border-0 bg-gradient-to-br from-white to-blue-50/50 backdrop-blur-sm overflow-hidden">
-          <CardHeader className="bg-gradient-to-r from-white to-blue-50 border-b border-blue-100/50">
+        <Card className="shadow-2xl shadow-indigo-500/10 border border-white/40 bg-white/70 backdrop-blur-xl overflow-hidden rounded-3xl">
+          <CardHeader className="bg-white/40 border-b border-indigo-100/30 p-6">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <div>
                 <CardTitle className="text-2xl font-bold text-black">
@@ -887,14 +920,14 @@ export default function AllSubtasksPage() {
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
                   <Input
                     placeholder="Search subtasks..."
-                    className="pl-10 pr-4 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 shadow-sm h-11 text-base text-black bg-white"
+                    className="pl-10 pr-4 border-white/50 focus:border-blue-500 focus:ring-2 focus:ring-blue-200/50 transition-all duration-200 shadow-sm h-11 text-base text-black bg-white/60 backdrop-blur-sm hover:bg-white/80"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                   />
                 </div>
 
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-full sm:w-40 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-black bg-white">
+                  <SelectTrigger className="w-full sm:w-40 border-white/50 focus:border-blue-500 focus:ring-2 focus:ring-blue-200/50 text-black bg-white/60 backdrop-blur-sm hover:bg-white/80">
                     <SelectValue placeholder="Filter Status" />
                   </SelectTrigger>
                   <SelectContent className="text-black bg-white">
@@ -947,27 +980,27 @@ export default function AllSubtasksPage() {
             ) : (
               <div className="overflow-x-auto">
                 <Table>
-                  <TableHeader className="bg-gradient-to-r from-gray-50 to-blue-50/50">
-                    <TableRow className="hover:bg-transparent">
-                      <TableHead className="font-bold text-black text-sm uppercase tracking-wide py-4">
+                  <TableHeader className="bg-gray-50/50 backdrop-blur-md">
+                    <TableRow className="hover:bg-transparent border-b border-indigo-100/50">
+                      <TableHead className="font-bold text-indigo-900 text-xs uppercase tracking-wider py-5 pl-6">
                         Subtask Details
                       </TableHead>
-                      <TableHead className="font-bold text-black text-sm uppercase tracking-wide py-4">
+                      <TableHead className="font-bold text-indigo-900 text-xs uppercase tracking-wider py-5">
                         Assigned To
                       </TableHead>
-                      <TableHead className="font-bold text-black text-sm uppercase tracking-wide py-4">
+                      <TableHead className="font-bold text-indigo-900 text-xs uppercase tracking-wider py-5">
                         Lead Target
                       </TableHead>
-                      <TableHead className="font-bold text-black text-sm uppercase tracking-wide py-4">
+                      <TableHead className="font-bold text-indigo-900 text-xs uppercase tracking-wider py-5">
                         Status
                       </TableHead>
-                      <TableHead className="font-bold text-black text-sm uppercase tracking-wide py-4">
+                      <TableHead className="font-bold text-indigo-900 text-xs uppercase tracking-wider py-5">
                         Priority
                       </TableHead>
-                      <TableHead className="font-bold text-black text-sm uppercase tracking-wide py-4">
+                      <TableHead className="font-bold text-indigo-900 text-xs uppercase tracking-wider py-5">
                         Timeline
                       </TableHead>
-                      <TableHead className="font-bold text-black text-sm uppercase tracking-wide py-4">
+                      <TableHead className="font-bold text-indigo-900 text-xs uppercase tracking-wider py-5 pr-6">
                         Actions
                       </TableHead>
                     </TableRow>
@@ -981,10 +1014,10 @@ export default function AllSubtasksPage() {
                         (subtask.assignedTeamLeads?.length || 0);
                       
                       return (
-                      <TableRow
-                        key={subtask._id}
-                        className="group hover:bg-gradient-to-r hover:from-blue-50/80 hover:to-indigo-50/80 transition-all duration-300 border-b border-gray-100/50"
-                      >
+                        <TableRow
+                          key={subtask._id}
+                          className="group hover:bg-white/60 transition-all duration-300 border-b border-indigo-50/50 last:border-0"
+                        >
                         <TableCell className="py-4">
                           <div className="flex items-center gap-4">
                             <Avatar className="border-2 border-white shadow-lg shadow-blue-500/20 group-hover:shadow-xl group-hover:shadow-blue-600/30 transition-all duration-300">
@@ -1208,6 +1241,7 @@ export default function AllSubtasksPage() {
             )}
           </CardContent>
         </Card>
+      </div>
       </div>
     </div>
   );
