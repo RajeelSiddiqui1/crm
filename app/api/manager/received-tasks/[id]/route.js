@@ -57,10 +57,12 @@ export async function PATCH(request, context) {
       .populate({
         path: "formId",
         populate: {
+        
           path: "employeeId",
           select: "firstName lastName email department",
         },
       })
+      
       .lean();
 
     // Send notification + email to Team Lead
@@ -124,6 +126,8 @@ export async function PATCH(request, context) {
 
 
 
+// manager/received-tasks/[id]/route.js - GET method
+
 export async function GET(request, context) {
   try {
     const session = await getServerSession(authOptions);
@@ -136,7 +140,6 @@ export async function GET(request, context) {
 
     await dbConnect();
 
-    // Next.js 15 fix: params is a property of context, no need to await context
     const { params } = context;
     const { id } = params;
 
@@ -146,6 +149,7 @@ export async function GET(request, context) {
     })
       .populate({
         path: "formId",
+        select: "+fileAttachments", // This is key - selects fileAttachments
         populate: {
           path: "employeeId",
           select: "firstName lastName email department phoneNumber address",
@@ -155,6 +159,7 @@ export async function GET(request, context) {
       .populate("sharedTeamlead", "firstName lastName email department depId")
       .populate("sharedEmployee", "firstName lastName email")
       .populate("sharedBy", "firstName lastName email")
+      .select("+fileAttachments")
       .lean();
 
     if (!task) {
@@ -163,6 +168,10 @@ export async function GET(request, context) {
         { status: 404 }
       );
     }
+
+    // Log for debugging
+    console.log("Task formId data:", task.formId);
+    console.log("File attachments:", task.formId?.fileAttachments);
 
     return NextResponse.json({ success: true, task }, { status: 200 });
   } catch (error) {

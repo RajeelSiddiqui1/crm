@@ -45,9 +45,15 @@ import {
   RefreshCw,
   Share2,
   Users,
+  Play,
+  X,
+  File,
+  FileSpreadsheet,
   Flag,
   Upload,
   Download,
+  ImageIcon,
+  VideoIcon,
 } from "lucide-react";
 import axios from "axios";
 import Link from "next/link";
@@ -81,7 +87,22 @@ export default function ManagerEmployeeTaskPage() {
     priority: "medium",
     notes: "",
   });
+  const [zoom, setZoom] = useState(1);
+  const [previewFile, setPreviewFile] = useState(null);
+  
 
+  const downloadFile = (url, name) => {
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = name;
+    link.click();
+  };
+  const getFileIcon = (type) => {
+    if (type.startsWith("image/")) return <ImageIcon className="w-4 h-4 text-blue-600" />;
+    if (type.startsWith("video/")) return <VideoIcon className="w-4 h-4 text-red-600" />;
+    if (type.includes("pdf")) return <FileText className="w-4 h-4 text-green-600" />;
+    return <File className="w-4 h-4 text-gray-600" />;
+  };
   useEffect(() => {
     if (status === "loading") return;
 
@@ -547,6 +568,138 @@ export default function ManagerEmployeeTaskPage() {
                         key={submission._id}
                         className="border border-gray-200 rounded-lg p-6 bg-white hover:bg-gray-50 transition-colors duration-200"
                       >
+
+   {/* Attachments Section - Moved to top for better visibility */}
+      {submission.fileAttachments && submission.fileAttachments.length > 0 && (
+        <Card className="mb-6 border border-gray-200">
+          <CardHeader className="bg-gray-50 border-b">
+            <CardTitle className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+              <FileText className="w-5 h-5" />
+              Attachments ({submission.fileAttachments.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {submission.fileAttachments.map((file, index) => {
+                const { url, name, type, publicId } = file;
+
+                // Determine file type for styling
+                const isImage = type?.startsWith("image/");
+                const isVideo = type?.startsWith("video/");
+                const isPDF = type?.includes("pdf") || name?.endsWith(".pdf");
+                const isWord = type?.includes("word") || 
+                              type?.includes("doc") || 
+                              name?.endsWith(".doc") || 
+                              name?.endsWith(".docx");
+                const isExcel = type?.includes("excel") || 
+                               type?.includes("sheet") || 
+                               name?.endsWith(".xls") || 
+                               name?.endsWith(".xlsx");
+
+                // Determine colors and icons
+                let bgColor = "bg-gray-100";
+                let textColor = "text-gray-800";
+                let Icon = File;
+                
+                if (isImage) {
+                  bgColor = "bg-green-50";
+                  textColor = "text-green-800";
+                  Icon = ImageIcon;
+                } else if (isVideo) {
+                  bgColor = "bg-blue-50";
+                  textColor = "text-blue-800";
+                  Icon = VideoIcon;
+                } else if (isPDF) {
+                  bgColor = "bg-red-50";
+                  textColor = "text-red-800";
+                  Icon = FileText;
+                } else if (isWord) {
+                  bgColor = "bg-blue-50";
+                  textColor = "text-blue-800";
+                  Icon = FileText;
+                } else if (isExcel) {
+                  bgColor = "bg-green-50";
+                  textColor = "text-green-800";
+                  Icon = FileSpreadsheet;
+                }
+
+                return (
+                  <div
+                    key={publicId || index}
+                    className={`${bgColor} border rounded-lg overflow-hidden hover:shadow-md transition-all duration-200`}
+                  >
+                    {/* File Preview Area */}
+                    <div 
+                      className="h-40 w-full overflow-hidden relative cursor-pointer"
+                      onClick={() => setPreviewFile(file)}
+                    >
+                      {isImage ? (
+                        <img 
+                          src={url} 
+                          alt={name} 
+                          className="w-full h-full object-cover hover:scale-105 transition-transform duration-200"
+                        />
+                      ) : isVideo ? (
+                        <div className="relative w-full h-full bg-black">
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <Play className="w-12 h-12 text-white/70" />
+                          </div>
+                          <div className="absolute bottom-2 right-2">
+                            <Badge className="bg-black/70 text-white text-xs">
+                              Video
+                            </Badge>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="h-full flex flex-col items-center justify-center p-4">
+                          <Icon className={`w-12 h-12 ${textColor} mb-2`} />
+                          <span className={`text-xs font-medium ${textColor}`}>
+                            {type?.split('/')[1]?.toUpperCase() || 'FILE'}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* File Info and Actions */}
+                    <div className="p-3 bg-white border-t">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-900 truncate mb-1">
+                            {name}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {type || 'Unknown type'}
+                          </p>
+                        </div>
+                        <div className="flex gap-1">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 w-8 p-0 hover:bg-gray-100"
+                            onClick={() => setPreviewFile(file)}
+                            title="Preview"
+                          >
+                            <Eye className="w-4 h-4 text-gray-600" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 w-8 p-0 hover:bg-gray-100"
+                            onClick={() => downloadFile(url, name)}
+                            title="Download"
+                          >
+                            <Download className="w-4 h-4 text-gray-600" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
                         <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4 mb-4">
                           <div className="flex-1">
                             <div className="flex items-center gap-3 mb-3">
@@ -794,7 +947,7 @@ export default function ManagerEmployeeTaskPage() {
                   <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div>
                       <CardTitle className="text-xl font-bold text-gray-900">
-                        Tasks Shared With Me
+                        Tasks Shared By Me
                       </CardTitle>
                       <CardDescription className="text-gray-700">
                         Tasks that other managers have shared with you
@@ -888,6 +1041,132 @@ export default function ManagerEmployeeTaskPage() {
                                 </div>
                               </div>
                             )}
+
+                               {task?.fileAttachments && task?.fileAttachments.length > 0 && (
+                                      <div className="lg:col-span-3">
+                                        <h4 className="font-semibold text-gray-900 flex items-center gap-2 mb-4">
+                                          <Paperclip className="h-4 w-4" />
+                                         Visitor Attachments ({task.fileAttachments.length})
+                                        </h4>
+                                        <div className="bg-white rounded-lg border border-gray-200 p-4">
+                                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                                            {task.fileAttachments.map((file, index) => {
+                                              const { url, name, type } = file;
+                            
+                                              const isImage = type?.startsWith("image/");
+                                              const isVideo = type?.startsWith("video/");
+                                              const isPDF = type?.includes("pdf") || name?.endsWith(".pdf");
+                                              const isWord = type?.includes("word") || 
+                                                            type?.includes("doc") || 
+                                                            name?.endsWith(".doc") || 
+                                                            name?.endsWith(".docx");
+                                              const isExcel = type?.includes("excel") || 
+                                                             type?.includes("sheet") || 
+                                                             name?.endsWith(".xls") || 
+                                                             name?.endsWith(".xlsx");
+                            
+                                              // Determine colors and icons
+                                              let bgColor = "bg-gray-100";
+                                              let textColor = "text-gray-800";
+                                              let Icon = FileText;
+                                              
+                                              if (isImage) {
+                                                bgColor = "bg-green-50";
+                                                textColor = "text-green-800";
+                                                Icon = ImageIcon;
+                                              } else if (isVideo) {
+                                                bgColor = "bg-blue-50";
+                                                textColor = "text-blue-800";
+                                                Icon = VideoIcon;
+                                              } else if (isPDF) {
+                                                bgColor = "bg-red-50";
+                                                textColor = "text-red-800";
+                                              } else if (isWord) {
+                                                bgColor = "bg-blue-50";
+                                                textColor = "text-blue-800";
+                                              } else if (isExcel) {
+                                                bgColor = "bg-green-50";
+                                                textColor = "text-green-800";
+                                                Icon = FileSpreadsheet;
+                                              }
+                            
+                                              return (
+                                                <div
+                                                  key={index}
+                                                  className={`${bgColor} border rounded-lg overflow-hidden hover:shadow-md transition-all duration-200`}
+                                                >
+                                                  {/* File Preview Area */}
+                                                  <div 
+                                                    className="h-32 w-full overflow-hidden relative cursor-pointer"
+                                                    onClick={() => setPreviewFile(file)}
+                                                  >
+                                                    {isImage ? (
+                                                      <img 
+                                                        src={url} 
+                                                        alt={name} 
+                                                        className="w-full h-full object-cover hover:scale-105 transition-transform duration-200"
+                                                      />
+                                                    ) : isVideo ? (
+                                                      <div className="relative w-full h-full bg-black">
+                                                        <div className="absolute inset-0 flex items-center justify-center">
+                                                          <Play className="w-8 h-8 text-white/70" />
+                                                        </div>
+                                                        <div className="absolute bottom-2 right-2">
+                                                          <Badge className="bg-black/70 text-white text-xs">
+                                                            Video
+                                                          </Badge>
+                                                        </div>
+                                                      </div>
+                                                    ) : (
+                                                      <div className="h-full flex flex-col items-center justify-center p-3">
+                                                        <Icon className={`w-10 h-10 ${textColor} mb-1`} />
+                                                        <span className={`text-xs font-medium ${textColor}`}>
+                                                          {type?.split('/')[1]?.toUpperCase() || 'FILE'}
+                                                        </span>
+                                                      </div>
+                                                    )}
+                                                  </div>
+                            
+                                                  {/* File Info and Actions */}
+                                                  <div className="p-3 bg-white border-t">
+                                                    <div className="flex items-start justify-between gap-2">
+                                                      <div className="flex-1 min-w-0">
+                                                        <p className="text-sm font-medium text-gray-900 truncate mb-1">
+                                                          {name}
+                                                        </p>
+                                                        <div className="flex items-center gap-2 text-xs text-gray-500">
+                                                          <span>{type || 'Unknown type'}</span>
+                                                        </div>
+                                                      </div>
+                                                      <div className="flex gap-1">
+                                                        <Button
+                                                          size="sm"
+                                                          variant="ghost"
+                                                          className="h-8 w-8 p-0 hover:bg-gray-100"
+                                                          onClick={() => setPreviewFile(file)}
+                                                          title="Preview"
+                                                        >
+                                                          <Eye className="w-4 h-4 text-gray-600" />
+                                                        </Button>
+                                                        <Button
+                                                          size="sm"
+                                                          variant="ghost"
+                                                          className="h-8 w-8 p-0 hover:bg-gray-100"
+                                                          onClick={() => downloadFile(url, name)}
+                                                          title="Download"
+                                                        >
+                                                          <Download className="w-4 h-4 text-gray-600" />
+                                                        </Button>
+                                                      </div>
+                                                    </div>
+                                                  </div>
+                                                </div>
+                                              );
+                                            })}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    )}
                           </div>
                         </div>
                       </div>
@@ -1186,6 +1465,96 @@ export default function ManagerEmployeeTaskPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+            {/* Full Page Preview Modal with Zoom */}
+      {previewFile && (
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl w-full max-w-[95vw] max-h-[95vh] overflow-hidden flex flex-col shadow-lg">
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 border-b">
+              <div className="flex items-center gap-2">
+                {getFileIcon(previewFile.type)}
+                <h3 className="font-bold text-gray-900 truncate">{previewFile.name}</h3>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setZoom((prev) => prev + 0.2)}
+                  className="text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+                >
+                  Zoom In +
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setZoom((prev) => Math.max(prev - 0.2, 0.2))}
+                  className="text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+                >
+                  Zoom Out -
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => downloadFile(previewFile.url, previewFile.name)}
+                  className="text-green-600 hover:text-green-800 hover:bg-green-50"
+                >
+                  <Download className="w-4 h-4 mr-2" /> Download
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setPreviewFile(null)}
+                  className="text-gray-600 hover:text-gray-800 hover:bg-gray-100"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+
+            {/* Body */}
+            <div className="flex-1 p-4 overflow-auto flex items-center justify-center bg-gray-50">
+              {previewFile.type?.includes('image') ? (
+                <img
+                  src={previewFile.url}
+                  alt={previewFile.name}
+                  className="rounded-lg mx-auto transition-transform"
+                  style={{ transform: `scale(${zoom})` }}
+                />
+              ) : previewFile.type?.includes('video') ? (
+                <video
+                  controls
+                  autoPlay
+                  className="rounded-lg mx-auto transition-transform"
+                  style={{ transform: `scale(${zoom})` }}
+                >
+                  <source src={previewFile.url} type={previewFile.type} />
+                  Your browser does not support the video tag.
+                </video>
+              ) : previewFile.type?.includes('pdf') ? (
+                <iframe
+                  src={previewFile.url}
+                  className="w-full h-[90vh] border rounded-lg"
+                  title={previewFile.name}
+                />
+              ) : (
+                <div className="text-center py-12">
+                  <File className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-700">Preview not available for this file type</p>
+                  <Button
+                    variant="outline"
+                    onClick={() => downloadFile(previewFile.url, previewFile.name)}
+                    className="mt-4"
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Download File
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -70,8 +70,14 @@ import {
   Info,
   Phone,
   MapPin,
+  Paperclip,
   ExternalLink,
   Printer,
+    ImageIcon,
+  VideoIcon,
+  Play,
+X,
+File,
   Copy,
   MoreVertical,
   UserPlus,
@@ -121,6 +127,17 @@ export default function TeamleadReceivedTasksPage() {
     sharedTo: "",
     parentTaskId: "",
   });
+
+   const [zoom, setZoom] = useState(1);
+      const [previewFile, setPreviewFile] = useState(null);
+      
+    
+      const downloadFile = (url, name) => {
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = name;
+        link.click();
+      };
 
   useEffect(() => {
     if (status === "loading") return;
@@ -839,7 +856,7 @@ export default function TeamleadReceivedTasksPage() {
                                     <span className="text-sm text-gray-900">
                                       {task.sharedEmployee.firstName} {task.sharedEmployee.lastName}
                                     </span>
-                                    <Badge variant="outline" className="text-xs bg-purple-50">
+                                    <Badge variant="outline" className="text-xs bg-purple-900 text-white">
                                       Employee
                                     </Badge>
                                   </div>
@@ -928,84 +945,338 @@ export default function TeamleadReceivedTasksPage() {
                           
                           {/* Expanded Details Row */}
                           {isExpanded && (
-                            <TableRow className="bg-blue-50/30 hover:bg-blue-50/50">
-                              <TableCell colSpan={6} className="p-0">
-                                <div className="p-6 border-t border-gray-200">
-                                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                                    {/* Task Details */}
-                                    <div className="space-y-4">
-                                      <h4 className="font-semibold text-gray-900 flex items-center gap-2">
-                                        <Info className="h-4 w-4" />
-                                        Task Information
-                                      </h4>
-                                      <div className="space-y-3">
-                                        <div>
-                                          <label className="text-xs font-medium text-gray-500">Created</label>
-                                          <p className="text-sm text-gray-900">{formatDate(task.createdAt)}</p>
-                                        </div>
-                                        <div>
-                                          <label className="text-xs font-medium text-gray-500">Last Updated</label>
-                                          <p className="text-sm text-gray-900">{formatDate(task.updatedAt)}</p>
-                                        </div>
-                                        <div>
-                                          <label className="text-xs font-medium text-gray-500">Manager Contact</label>
-                                          <div className="flex items-center gap-2 mt-1">
-                                            <Mail className="h-3 w-3 text-gray-400" />
-                                            <p className="text-sm text-gray-900">{task.sharedManager?.email}</p>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    </div>
+                  <TableRow className="bg-blue-50/30 hover:bg-blue-50/50">
+  <TableCell colSpan={6} className="p-0">
+    <div className="p-6 border-t border-gray-200">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Task Details */}
+        <div className="space-y-4">
+          <h4 className="font-semibold text-gray-900 flex items-center gap-2">
+            <Info className="h-4 w-4" />
+            Task Information
+          </h4>
+          <div className="space-y-3">
+            <div>
+              <label className="text-xs font-medium text-gray-500">Created</label>
+              <p className="text-sm text-gray-900">{formatDate(task.createdAt)}</p>
+            </div>
+            <div>
+              <label className="text-xs font-medium text-gray-500">Last Updated</label>
+              <p className="text-sm text-gray-900">{formatDate(task.updatedAt)}</p>
+            </div>
+            <div>
+              <label className="text-xs font-medium text-gray-500">Manager Contact</label>
+              <div className="flex items-center gap-2 mt-1">
+                <Mail className="h-3 w-3 text-gray-400" />
+                <p className="text-sm text-gray-900">{task.sharedManager?.email}</p>
+              </div>
+            </div>
+          </div>
+        </div>
 
-                                    {/* Form Data */}
-                                    <div className="lg:col-span-2">
-                                      <h4 className="font-semibold text-gray-900 flex items-center gap-2 mb-4">
-                                        <FileText className="h-4 w-4" />
-                                        Form Data
-                                      </h4>
-                                      {task.formId?.formData && Object.keys(task.formId.formData).length > 0 ? (
-                                        <div className="bg-white rounded-lg border border-gray-200 p-4">
-                                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-60 overflow-y-auto pr-2">
-                                            {Object.entries(task.formId.formData).map(([key, value]) => (
-                                              <div key={key} className="space-y-1">
-                                                <label className="text-xs font-medium text-gray-500 capitalize">
-                                                  {key.replace(/([A-Z])/g, " $1").trim()}
-                                                </label>
-                                                <p className="text-sm text-gray-900 bg-gray-50 rounded px-3 py-2">
-                                                  {Array.isArray(value)
-                                                    ? value.join(", ")
-                                                    : value === null || value === undefined
-                                                    ? "Not provided"
-                                                    : String(value)}
-                                                </p>
-                                              </div>
-                                            ))}
-                                          </div>
-                                        </div>
-                                      ) : (
-                                        <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg border border-gray-200">
-                                          <FileText className="h-8 w-8 mx-auto mb-2 text-gray-300" />
-                                          <p className="text-sm">No form data available</p>
-                                        </div>
-                                      )}
-                                    </div>
+        {/* Form Data */}
+        <div className="lg:col-span-2">
+          <h4 className="font-semibold text-gray-900 flex items-center gap-2 mb-4">
+            <FileText className="h-4 w-4" />
+            Form Data
+          </h4>
+          {task.formId?.formData && Object.keys(task.formId.formData).length > 0 ? (
+            <div className="bg-white rounded-lg border border-gray-200 p-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-60 overflow-y-auto pr-2">
+                {Object.entries(task.formId.formData).map(([key, value]) => (
+                  <div key={key} className="space-y-1">
+                    <label className="text-xs font-medium text-gray-500 capitalize">
+                      {key.replace(/([A-Z])/g, " $1").trim()}
+                    </label>
+                    <p className="text-sm text-gray-900 bg-gray-50 rounded px-3 py-2">
+                      {Array.isArray(value)
+                        ? value.join(", ")
+                        : value === null || value === undefined
+                        ? "Not provided"
+                        : String(value)}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg border border-gray-200">
+              <FileText className="h-8 w-8 mx-auto mb-2 text-gray-300" />
+              <p className="text-sm">No form data available</p>
+            </div>
+          )}
+        </div>
 
-                                    {/* Notes Section */}
-                                    {task.notes && (
-                                      <div className="lg:col-span-3">
-                                        <h4 className="font-semibold text-gray-900 flex items-center gap-2 mb-2">
-                                          <FileText className="h-4 w-4" />
-                                          Notes
-                                        </h4>
-                                        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                                          <p className="text-sm text-yellow-900">{task.notes}</p>
-                                        </div>
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-                              </TableCell>
-                            </TableRow>
+        {/* Attachments Section - Correctly placed inside the grid */}
+        {task.formId?.fileAttachments && task.formId.fileAttachments.length > 0 && (
+          <div className="lg:col-span-3">
+            <h4 className="font-semibold text-gray-900 flex items-center gap-2 mb-4">
+              <Paperclip className="h-4 w-4" />
+              Attachments ({task.formId.fileAttachments.length})
+            </h4>
+            <div className="bg-white rounded-lg border border-gray-200 p-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {task.formId.fileAttachments.map((file, index) => {
+                  const { url, name, type } = file;
+
+                  const isImage = type?.startsWith("image/");
+                  const isVideo = type?.startsWith("video/");
+                  const isPDF = type?.includes("pdf") || name?.endsWith(".pdf");
+                  const isWord = type?.includes("word") || 
+                                type?.includes("doc") || 
+                                name?.endsWith(".doc") || 
+                                name?.endsWith(".docx");
+                  const isExcel = type?.includes("excel") || 
+                                 type?.includes("sheet") || 
+                                 name?.endsWith(".xls") || 
+                                 name?.endsWith(".xlsx");
+
+                  // Determine colors and icons
+                  let bgColor = "bg-gray-100";
+                  let textColor = "text-gray-800";
+                  let Icon = FileText;
+                  
+                  if (isImage) {
+                    bgColor = "bg-green-50";
+                    textColor = "text-green-800";
+                    Icon = ImageIcon;
+                  } else if (isVideo) {
+                    bgColor = "bg-blue-50";
+                    textColor = "text-blue-800";
+                    Icon = VideoIcon;
+                  } else if (isPDF) {
+                    bgColor = "bg-red-50";
+                    textColor = "text-red-800";
+                  } else if (isWord) {
+                    bgColor = "bg-blue-50";
+                    textColor = "text-blue-800";
+                  } else if (isExcel) {
+                    bgColor = "bg-green-50";
+                    textColor = "text-green-800";
+                    Icon = FileSpreadsheet;
+                  }
+
+                  return (
+                    <div
+                      key={index}
+                      className={`${bgColor} border rounded-lg overflow-hidden hover:shadow-md transition-all duration-200`}
+                    >
+                      {/* File Preview Area */}
+                      <div 
+                        className="h-32 w-full overflow-hidden relative cursor-pointer"
+                        onClick={() => setPreviewFile(file)}
+                      >
+                        {isImage ? (
+                          <img 
+                            src={url} 
+                            alt={name} 
+                            className="w-full h-full object-cover hover:scale-105 transition-transform duration-200"
+                          />
+                        ) : isVideo ? (
+                          <div className="relative w-full h-full bg-black">
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <Play className="w-8 h-8 text-white/70" />
+                            </div>
+                            <div className="absolute bottom-2 right-2">
+                              <Badge className="bg-black/70 text-white text-xs">
+                                Video
+                              </Badge>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="h-full flex flex-col items-center justify-center p-3">
+                            <Icon className={`w-10 h-10 ${textColor} mb-1`} />
+                            <span className={`text-xs font-medium ${textColor}`}>
+                              {type?.split('/')[1]?.toUpperCase() || 'FILE'}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* File Info and Actions */}
+                      <div className="p-3 bg-white border-t">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-900 truncate mb-1">
+                              {name}
+                            </p>
+                            <div className="flex items-center gap-2 text-xs text-gray-500">
+                              <span>{type || 'Unknown type'}</span>
+                            </div>
+                          </div>
+                          <div className="flex gap-1">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-8 w-8 p-0 hover:bg-gray-100"
+                              onClick={() => setPreviewFile(file)}
+                              title="Preview"
+                            >
+                              <Eye className="w-4 h-4 text-gray-600" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-8 w-8 p-0 hover:bg-gray-100"
+                              onClick={() => downloadFile(url, name)}
+                              title="Download"
+                            >
+                              <Download className="w-4 h-4 text-gray-600" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+
+
+          {task?.fileAttachments && task?.fileAttachments.length > 0 && (
+          <div className="lg:col-span-3">
+            <h4 className="font-semibold text-gray-900 flex items-center gap-2 mb-4">
+              <Paperclip className="h-4 w-4" />
+             Visitor Attachments ({task.fileAttachments.length})
+            </h4>
+            <div className="bg-white rounded-lg border border-gray-200 p-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {task.fileAttachments.map((file, index) => {
+                  const { url, name, type } = file;
+
+                  const isImage = type?.startsWith("image/");
+                  const isVideo = type?.startsWith("video/");
+                  const isPDF = type?.includes("pdf") || name?.endsWith(".pdf");
+                  const isWord = type?.includes("word") || 
+                                type?.includes("doc") || 
+                                name?.endsWith(".doc") || 
+                                name?.endsWith(".docx");
+                  const isExcel = type?.includes("excel") || 
+                                 type?.includes("sheet") || 
+                                 name?.endsWith(".xls") || 
+                                 name?.endsWith(".xlsx");
+
+                  // Determine colors and icons
+                  let bgColor = "bg-gray-100";
+                  let textColor = "text-gray-800";
+                  let Icon = FileText;
+                  
+                  if (isImage) {
+                    bgColor = "bg-green-50";
+                    textColor = "text-green-800";
+                    Icon = ImageIcon;
+                  } else if (isVideo) {
+                    bgColor = "bg-blue-50";
+                    textColor = "text-blue-800";
+                    Icon = VideoIcon;
+                  } else if (isPDF) {
+                    bgColor = "bg-red-50";
+                    textColor = "text-red-800";
+                  } else if (isWord) {
+                    bgColor = "bg-blue-50";
+                    textColor = "text-blue-800";
+                  } else if (isExcel) {
+                    bgColor = "bg-green-50";
+                    textColor = "text-green-800";
+                    Icon = FileSpreadsheet;
+                  }
+
+                  return (
+                    <div
+                      key={index}
+                      className={`${bgColor} border rounded-lg overflow-hidden hover:shadow-md transition-all duration-200`}
+                    >
+                      {/* File Preview Area */}
+                      <div 
+                        className="h-32 w-full overflow-hidden relative cursor-pointer"
+                        onClick={() => setPreviewFile(file)}
+                      >
+                        {isImage ? (
+                          <img 
+                            src={url} 
+                            alt={name} 
+                            className="w-full h-full object-cover hover:scale-105 transition-transform duration-200"
+                          />
+                        ) : isVideo ? (
+                          <div className="relative w-full h-full bg-black">
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <Play className="w-8 h-8 text-white/70" />
+                            </div>
+                            <div className="absolute bottom-2 right-2">
+                              <Badge className="bg-black/70 text-white text-xs">
+                                Video
+                              </Badge>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="h-full flex flex-col items-center justify-center p-3">
+                            <Icon className={`w-10 h-10 ${textColor} mb-1`} />
+                            <span className={`text-xs font-medium ${textColor}`}>
+                              {type?.split('/')[1]?.toUpperCase() || 'FILE'}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* File Info and Actions */}
+                      <div className="p-3 bg-white border-t">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-900 truncate mb-1">
+                              {name}
+                            </p>
+                            <div className="flex items-center gap-2 text-xs text-gray-500">
+                              <span>{type || 'Unknown type'}</span>
+                            </div>
+                          </div>
+                          <div className="flex gap-1">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-8 w-8 p-0 hover:bg-gray-100"
+                              onClick={() => setPreviewFile(file)}
+                              title="Preview"
+                            >
+                              <Eye className="w-4 h-4 text-gray-600" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-8 w-8 p-0 hover:bg-gray-100"
+                              onClick={() => downloadFile(url, name)}
+                              title="Download"
+                            >
+                              <Download className="w-4 h-4 text-gray-600" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Notes Section */}
+        {task.notes && (
+          <div className="lg:col-span-3">
+            <h4 className="font-semibold text-gray-900 flex items-center gap-2 mb-2">
+              <FileText className="h-4 w-4" />
+              Notes
+            </h4>
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+              <p className="text-sm text-yellow-900">{task.notes}</p>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  </TableCell>
+</TableRow>
                           )}
                         </React.Fragment>
                       );
@@ -1270,6 +1541,102 @@ export default function TeamleadReceivedTasksPage() {
           </div>
         </DialogContent>
       </Dialog>
+      {/* Preview Modal - Add this at the end of your component, outside the table */}
+{previewFile && (
+  <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 overflow-y-auto">
+    <div className="bg-white rounded-2xl w-full max-w-[95vw] max-h-[95vh] overflow-hidden flex flex-col shadow-lg">
+      {/* Header */}
+      <div className="flex items-center justify-between p-4 border-b">
+        <div className="flex items-center gap-2">
+          {previewFile.type?.startsWith("image/") ? (
+            <ImageIcon className="w-4 h-4 text-green-600" />
+          ) : previewFile.type?.startsWith("video/") ? (
+            <VideoIcon className="w-4 h-4 text-blue-600" />
+          ) : (
+            <FileText className="w-4 h-4 text-gray-600" />
+          )}
+          <h3 className="font-bold text-gray-900 truncate">{previewFile.name}</h3>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setZoom((prev) => prev + 0.2)}
+            className="text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+            disabled={!previewFile.type?.startsWith('image/')}
+          >
+            Zoom In +
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setZoom((prev) => Math.max(prev - 0.2, 0.2))}
+            className="text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+            disabled={!previewFile.type?.startsWith('image/')}
+          >
+            Zoom Out -
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => downloadFile(previewFile.url, previewFile.name)}
+            className="text-green-600 hover:text-green-800 hover:bg-green-50"
+          >
+            <Download className="w-4 h-4 mr-2" /> Download
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setPreviewFile(null)}
+            className="text-gray-600 hover:text-gray-800 hover:bg-gray-100"
+          >
+            <X className="w-4 h-4" />
+          </Button>
+        </div>
+      </div>
+
+      {/* Body */}
+      <div className="flex-1 p-4 overflow-auto flex items-center justify-center bg-gray-50">
+        {previewFile.type?.startsWith('image/') ? (
+          <img
+            src={previewFile.url}
+            alt={previewFile.name}
+            className="rounded-lg mx-auto transition-transform max-w-full max-h-[80vh]"
+            style={{ transform: `scale(${zoom})` }}
+          />
+        ) : previewFile.type?.startsWith('video/') ? (
+          <video
+            controls
+            autoPlay
+            className="rounded-lg mx-auto max-w-full max-h-[80vh]"
+          >
+            <source src={previewFile.url} type={previewFile.type} />
+            Your browser does not support the video tag.
+          </video>
+        ) : previewFile.type?.includes('pdf') ? (
+          <iframe
+            src={previewFile.url}
+            className="w-full h-[80vh] border rounded-lg"
+            title={previewFile.name}
+          />
+        ) : (
+          <div className="text-center py-12">
+            <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+            <p className="text-gray-700">Preview not available for this file type</p>
+            <Button
+              variant="outline"
+              onClick={() => downloadFile(previewFile.url, previewFile.name)}
+              className="mt-4"
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Download File
+            </Button>
+          </div>
+        )}
+      </div>
+    </div>
+  </div>
+)}
     </div>
   );
 }

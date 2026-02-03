@@ -29,7 +29,8 @@ export async function GET(request, { params }) {
         const subtask = await Subtask.findById(id)
             .populate("submissionId", "title description formData status")
             .populate("teamLeadId", "firstName lastName email")
-            .populate("assignedEmployees.employeeId", "firstName lastName email department");
+            .populate("assignedEmployees.employeeId", "firstName lastName email department")
+            .select("+fileAttachments");
 
         if (!subtask) {
             return NextResponse.json({ error: "Subtask not found" }, { status: 404 });

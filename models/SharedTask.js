@@ -73,21 +73,34 @@ const sharedTaskSchema = new mongoose.Schema(
       ],
       default: "pending",
     },
-    attachmentUrl: {
-      type: String,
-      default: null,
-    },
-
-    attachmentPublicId: {
-      type: String,
-      default: null,
-    },
-
-    attachmentUpdatedAt: {
-      type: Date,
-      default: null,
-    },
-
+    fileAttachments: [
+      {
+        url: {
+          type: String,
+          required: true,
+        },
+        name: {
+          type: String,
+          required: true,
+        },
+        type: {
+          type: String,
+          required: true,
+        },
+        size: {
+          type: Number,
+          required: true,
+        },
+        publicId: {
+          type: String,
+          required: true,
+        },
+        createdAt: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
     employeeFeedback: {
       type: String,
       default: "",

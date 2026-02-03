@@ -54,7 +54,7 @@ export async function POST(request) {
     // -------------------------------
     // ✅ Send notification & email to receiver manager
     // -------------------------------
-    const taskLink = `${process.env.NEXTAUTH_URL}/manager/sharedtasks/${sharedTask._id}`;
+    const taskLink = `/manager/received-tasks/${sharedTask._id}`;
     const tasks = [];
 
     if (receiverManager.email) {
@@ -115,6 +115,7 @@ export async function GET(request) {
         .populate("sharedManager", "firstName lastName email")
         .populate("sharedBy", "firstName lastName email")
         .populate("formId")
+        .select("+fileAttachments")
         .sort({ createdAt: -1 });
 
         return NextResponse.json({ 

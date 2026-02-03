@@ -24,6 +24,7 @@ export async function GET(request) {
     .populate("sharedTeamlead", "firstName lastName email department")
     .populate("sharedEmployee", "firstName lastName email department")
     .populate("formId")
+    .select("+fileAttachments")
     .sort({ createdAt: -1 });
 
     return NextResponse.json({ success: true, receivedTasks }, { status: 200 });

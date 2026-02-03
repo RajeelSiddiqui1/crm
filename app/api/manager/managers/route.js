@@ -14,7 +14,7 @@ export async function GET() {
       return NextResponse.json({ success: false, message: "Unauthorized access" }, { status: 401 });
     }
 
-    const managers = await Manager.find({ _id: { $ne: session.user.id } }) // exclude logged-in manager
+    const managers = await Manager.find({ }) 
       .populate("departments", "name logoUrl")
       .select("firstName lastName email departments profilePic status")
       .sort({ firstName: 1 });

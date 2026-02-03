@@ -4,8 +4,11 @@ import dbConnect from "@/lib/db";
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import cloudinary from "@/lib/cloudinary";
 import { sendMail } from "@/lib/mail";
+
+import { Upload } from "@aws-sdk/lib-storage";
+import s3 from "@/lib/aws";
+
 import EmployeeFormSubmission from "@/models/EmployeeFormSubmission";
 import { sendNotification } from "@/lib/sendNotification";
 import {
@@ -16,6 +19,7 @@ import {
 export async function PATCH(request, { params }) {
   try {
     const session = await getServerSession(authOptions);
+
     if (!session || session.user.role !== "Employee") {
       return NextResponse.json(
         { success: false, message: "Unauthorized access" },
@@ -27,63 +31,108 @@ export async function PATCH(request, { params }) {
 
     const { id } = params;
     const formData = await request.formData();
+
     const status = formData.get("status");
     const feedback = formData.get("feedback");
-    const attachment = formData.get("attachment");
 
     if (!status) {
-      return NextResponse.json({ success: false, message: "Status is required" }, { status: 400 });
+      return NextResponse.json(
+        { success: false, message: "Status is required" },
+        { status: 400 }
+      );
     }
 
     const validStatuses = [
-      "pending", "signed", "not_avaiable", "not_intrested",
-      "re_shedule", "completed", "in_progress", "cancelled"
+      "pending",
+      "signed",
+      "not_avaiable",
+      "not_intrested",
+      "re_shedule",
+      "completed",
+      "in_progress",
+      "cancelled"
     ];
+
     if (!validStatuses.includes(status)) {
-      return NextResponse.json({ success: false, message: "Invalid status" }, { status: 400 });
+      return NextResponse.json(
+        { success: false, message: "Invalid status" },
+        { status: 400 }
+      );
     }
 
-    const task = await SharedTask.findOne({ _id: id, sharedEmployee: session.user.id });
+    const task = await SharedTask.findOne({
+      _id: id,
+      sharedEmployee: session.user.id
+    });
+
     if (!task) {
-      return NextResponse.json({ success: false, message: "Task not found" }, { status: 404 });
+      return NextResponse.json(
+        { success: false, message: "Task not found" },
+        { status: 404 }
+      );
     }
 
-    // Handle attachment upload
-    let attachmentUrl = task.attachmentUrl || null;
-    let publicId = task.attachmentPublicId || null;
+    // ==================================================
+    // AWS S3 – multi files (append style like AWS flow)
+    // ==================================================
 
-    if (attachment && attachment.size > 0) {
-      const allowedTypes = ["image/jpeg","image/jpg","image/png","image/gif","image/webp","image/svg+xml"];
-      if (!allowedTypes.includes(attachment.type)) {
-        return NextResponse.json({ success: false, message: "Only images allowed" }, { status: 400 });
-      }
-      if (attachment.size > 5 * 1024 * 1024) {
-        return NextResponse.json({ success: false, message: "Max 5MB" }, { status: 400 });
-      }
+    let uploadedFiles = [...(task.fileAttachments || [])];
 
-      const bytes = await attachment.arrayBuffer();
-      const buffer = Buffer.from(bytes);
-      const base64String = `data:${attachment.type};base64,${buffer.toString("base64")}`;
+    const files = formData.getAll("files");
 
-      if (publicId) {
-        try { await cloudinary.uploader.destroy(publicId); } catch(e) { console.error(e); }
-      }
+    for (const file of files) {
+      if (!file || typeof file === "string" || file.size === 0) continue;
 
-      const uploadResult = await cloudinary.uploader.upload(base64String, {
-        folder: `shared_tasks/${task._id}/attachments`,
-        resource_type: "auto",
-        overwrite: true,
+      const buffer = Buffer.from(await file.arrayBuffer());
+
+      const fileName = file.name;
+      const fileType = file.type;
+      const fileSize = file.size;
+
+      const fileKey = `shared_tasks/${task._id}/files/${Date.now()}_${fileName}`;
+
+      const upload = new Upload({
+        client: s3,
+        params: {
+          Bucket: process.env.AWS_BUCKET_NAME,
+          Key: fileKey,
+          Body: buffer,
+          ContentType: fileType,
+          Metadata: {
+            originalName: encodeURIComponent(fileName),
+            uploadedBy: session.user.id,
+            uploadedAt: Date.now().toString()
+          }
+        }
       });
 
-      attachmentUrl = uploadResult.secure_url;
-      publicId = uploadResult.public_id;
+      await upload.done();
+
+            const fileUrl = `https://s3.${process.env.AWS_REGION}.amazonaws.com/${process.env.AWS_BUCKET_NAME}/${fileKey}`;
+
+      uploadedFiles.push({
+        url: fileUrl,
+        name: fileName,
+        type: fileType,
+        size: fileSize,
+        publicId: fileKey,
+        createdAt: new Date()
+      });
     }
 
-    // Update task
+    // --------------------
+    // update task
+    // --------------------
     task.status = status;
-    if (feedback) { task.employeeFeedback = feedback; task.feedbackUpdatedAt = new Date(); }
-    if (attachmentUrl) { task.attachmentUrl = attachmentUrl; task.attachmentPublicId = publicId; task.attachmentUpdatedAt = new Date(); }
+
+    if (feedback) {
+      task.employeeFeedback = feedback;
+      task.feedbackUpdatedAt = new Date();
+    }
+
+    task.fileAttachments = uploadedFiles;
     task.updatedAt = new Date();
+
     await task.save();
 
     const updatedTask = await SharedTask.findById(id)
@@ -93,15 +142,26 @@ export async function PATCH(request, { params }) {
       .populate("sharedBy", "firstName lastName email")
       .populate("formId");
 
-    // Parallel notifications and emails to TeamLead, Manager, and Employee
+    // ============================
+    // notifications & emails
+    // ============================
+
     const taskLink = `${process.env.NEXTAUTH_URL}/employee/tasks/${updatedTask._id}`;
-    const employeeName = `${updatedTask.sharedEmployee.firstName} ${updatedTask.sharedEmployee.lastName}`;
-    const teamLeadName = updatedTask.sharedTeamlead ? `${updatedTask.sharedTeamlead.firstName} ${updatedTask.sharedTeamlead.lastName}` : "Team Lead";
-    const managerName = updatedTask.sharedBy ? `${updatedTask.sharedBy.firstName} ${updatedTask.sharedBy.lastName}` : "Manager";
+
+    const employeeName =
+      `${updatedTask.sharedEmployee.firstName} ${updatedTask.sharedEmployee.lastName}`;
+
+    const teamLeadName = updatedTask.sharedTeamlead
+      ? `${updatedTask.sharedTeamlead.firstName} ${updatedTask.sharedTeamlead.lastName}`
+      : "Team Lead";
+
+    const managerName = updatedTask.sharedBy
+      ? `${updatedTask.sharedBy.firstName} ${updatedTask.sharedBy.lastName}`
+      : "Manager";
 
     const notifications = [];
 
-    // Shared TeamLead
+    // TeamLead
     if (updatedTask.sharedTeamlead?.email) {
       notifications.push(
         sendMail(
@@ -129,7 +189,7 @@ export async function PATCH(request, { params }) {
       );
     }
 
-    // Shared Employee (self)
+    // Employee (self)
     notifications.push(
       sendMail(
         updatedTask.sharedEmployee.email,
@@ -155,7 +215,7 @@ export async function PATCH(request, { params }) {
       )
     );
 
-    // Shared By (Manager)
+    // Manager
     if (updatedTask.sharedBy?.email) {
       notifications.push(
         sendMail(
@@ -185,11 +245,26 @@ export async function PATCH(request, { params }) {
 
     await Promise.all(notifications);
 
-    return NextResponse.json({ success: true, message: "Task updated successfully", task: updatedTask }, { status: 200 });
+    return NextResponse.json(
+      {
+        success: true,
+        message: "Task updated successfully",
+        task: updatedTask
+      },
+      { status: 200 }
+    );
 
   } catch (error) {
     console.error("Error updating employee task:", error);
-    return NextResponse.json({ success: false, message: "Internal server error", error: error.message }, { status: 500 });
+
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Internal server error",
+        error: error.message
+      },
+      { status: 500 }
+    );
   }
 }
 
@@ -264,31 +339,37 @@ export async function DELETE(request, { params }) {
       );
     }
 
-    // Delete attachment from Cloudinary if exists
-    if (task.attachmentPublicId) {
+    // Delete files from AWS S3 if they exist
+    if (task.fileAttachments && task.fileAttachments.length > 0) {
       try {
-        await cloudinary.uploader.destroy(task.attachmentPublicId);
+        for (const file of task.fileAttachments) {
+          if (file.publicId) {
+            await s3.deleteObject({
+              Bucket: process.env.AWS_BUCKET_NAME,
+              Key: file.publicId,
+            });
+          }
+        }
       } catch (error) {
-        console.error("Error deleting attachment from Cloudinary:", error);
-        // Continue even if Cloudinary delete fails
+        console.error("Error deleting files from S3:", error);
+        // Continue even if S3 delete fails
       }
     }
 
-    // Remove attachment from task
-    task.attachmentUrl = null;
-    task.attachmentPublicId = null;
-    task.attachmentUpdatedAt = new Date();
+    // Remove files from task
+    task.fileAttachments = [];
+    task.updatedAt = new Date();
     await task.save();
 
     return NextResponse.json(
       {
         success: true,
-        message: "Attachment removed successfully",
+        message: "Files removed successfully",
       },
       { status: 200 }
     );
   } catch (error) {
-    console.error("Error deleting attachment:", error);
+    console.error("Error deleting files:", error);
     return NextResponse.json(
       {
         success: false,

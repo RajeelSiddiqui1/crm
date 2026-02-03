@@ -24,31 +24,37 @@ export async function GET(request, { params }) {
 
         await dbConnect();
 
-        const { id: subtaskId, submissionId } = await params;
+        const { id } = await params;
 
-        if (!mongoose.Types.ObjectId.isValid(subtaskId) || !mongoose.Types.ObjectId.isValid(submissionId)) {
+        if (!mongoose.Types.ObjectId.isValid(id)) {
             return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
         }
 
-        const submission = await EmployeeFormSubmission.findOne({
-            _id: submissionId,
-            subtaskId
+        const submissions = await EmployeeFormSubmission.find({ 
+            subtaskId: id, 
+            teamleadstatus: "approved" 
         })
-        .populate("formId", "title description fields")
-        .populate("employeeId", "firstName lastName email department avatar")
-        .populate("subtaskId", "title description teamLeadId");
+            .populate("formId", "title description fields")
+            .populate("employeeId", "firstName lastName email department avatar")
+            .populate("subtaskId", "title description teamLeadId")
+            .select("+fileAttachments") // This is key
+            .sort({ createdAt: -1 })
+            .lean();
 
-        if (!submission) {
-            return NextResponse.json({ error: "Submission not found" }, { status: 404 });
-        }
+        // Ensure fileAttachments exists for each submission
+        const submissionsWithAttachments = submissions.map(sub => ({
+            ...sub,
+            fileAttachments: sub.fileAttachments || []
+        }));
 
-        return NextResponse.json(submission, { status: 200 });
+        return NextResponse.json(submissionsWithAttachments, { status: 200 });
 
     } catch (error) {
-        console.error("Error fetching submission:", error);
-        return NextResponse.json({ error: "Failed to fetch submission" }, { status: 500 });
+        console.error("Error fetching submissions:", error);
+        return NextResponse.json({ error: "Failed to fetch submissions" }, { status: 500 });
     }
 }
+
 
 // PATCH - Update submission status + notifications/emails
 export async function PATCH(request, { params }) {
