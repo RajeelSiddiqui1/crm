@@ -128,26 +128,24 @@ export default function EmployeeTasksPage() {
   const [selectedFeedbackId, setSelectedFeedbackId] = useState(null);
   const [showReplyDialog, setShowReplyDialog] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
-
-  
+  const [editingReplyId, setEditingReplyId] = useState(null);
+  const [editReplyText, setEditReplyText] = useState("");
   const [zoom, setZoom] = useState(1);
-  
-      const [previewFile, setPreviewFile] = useState(null);
-  
-    const downloadFile = (url, name) => {
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = name;
-      link.click();
-    };
+  const [previewFile, setPreviewFile] = useState(null);
 
-    const getFileIcon = (fileType) => {
+  const downloadFile = (url, name) => {
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = name;
+    link.click();
+  };
+
+  const getFileIcon = (fileType) => {
     if (fileType?.includes('image')) return <Image className="w-5 h-5 text-blue-500" />;
     if (fileType?.includes('video')) return <Video className="w-5 h-5 text-purple-500" />;
     if (fileType?.includes('pdf')) return <FileText className="w-5 h-5 text-red-500" />;
     return <File className="w-5 h-5 text-gray-500" />;
   };
-
 
   useEffect(() => {
     if (status === "loading") return;
@@ -160,52 +158,45 @@ export default function EmployeeTasksPage() {
     fetchTasks();
   }, [session, status, router, refreshKey]);
 
- const fetchTasks = async () => {
-  try {
-    setFetching(true);
-
-    const response = await axios.get("/api/employee/tasks");
-    if (response.status === 200) {
-      const processedTasks = response.data.map((task) => ({
-        ...task,
-        clinetName: task.clinetName || "Unnamed Client",
-        employeeStatus: task.employeeStatus || "pending",
-        employeeFeedback: task.employeeFeedback || "",
-        assignedAt: task.assignedAt,
-        completedAt: task.completedAt,
-        teamLeadFeedbacks: task.teamLeadFeedback || [],
-        teamLeadFeedbacksCount: task.teamLeadFeedback?.length || 0,
-      }));
-
-      setTasks(processedTasks);
+  const fetchTasks = async () => {
+    try {
+      setFetching(true);
+      const response = await axios.get("/api/employee/tasks");
+      if (response.status === 200) {
+        const processedTasks = response.data.map((task) => ({
+          ...task,
+          clinetName: task.clinetName || "Unnamed Client",
+          employeeStatus: task.employeeStatus || "pending",
+          employeeFeedback: task.employeeFeedback || "",
+          assignedAt: task.assignedAt,
+          completedAt: task.completedAt,
+          teamLeadFeedbacks: task.teamLeadFeedback || [],
+          teamLeadFeedbacksCount: task.teamLeadFeedback?.length || 0,
+        }));
+        setTasks(processedTasks);
+      }
+    } catch (error) {
+      console.error("Error fetching tasks:", error);
+      if (error.response?.status === 401) {
+        toast.error("Session expired. Please login again");
+        router.push("/login");
+      } else {
+        toast.error(error.response?.data?.error || "Failed to fetch tasks");
+      }
+    } finally {
+      setFetching(false);
     }
-  } catch (error) {
-    console.error("Error fetching tasks:", error);
-    if (error.response?.status === 401) {
-      toast.error("Session expired. Please login again");
-      router.push("/login");
-    } else {
-      toast.error(error.response?.data?.error || "Failed to fetch tasks");
-    }
-  } finally {
-    setFetching(false);
-  }
-};
-
-
+  };
 
   const handleStatusUpdate = async (taskId, newStatus, feedback = "") => {
     setLoading(true);
     const statusText = newStatus.replace("_", " ");
-
     try {
       const updateData = {
         status: newStatus,
         feedback: feedback.trim(),
       };
-
       const response = await axios.put(`/api/employee/tasks/${taskId}`, updateData);
-
       if (response.status === 200) {
         toast.success(`✅ Task marked as ${statusText}`, {
           description: feedback ? "Feedback submitted successfully" : "",
@@ -234,9 +225,7 @@ export default function EmployeeTasksPage() {
       const updateData = {
         status: newStatus,
       };
-
       const response = await axios.put(`/api/employee/tasks/${taskId}`, updateData);
-
       if (response.status === 200) {
         toast.success(`Status updated to ${newStatus.replace("_", " ")}`);
         setRefreshKey(prev => prev + 1);
@@ -255,7 +244,6 @@ export default function EmployeeTasksPage() {
       const response = await axios.post(`/api/employee/tasks/${taskId}/feedback`, {
         feedback: feedback.trim()
       });
-
       if (response.status === 201) {
         toast.success("Feedback submitted successfully");
         setRefreshKey(prev => prev + 1);
@@ -280,9 +268,7 @@ export default function EmployeeTasksPage() {
     try {
       setSelectedTask(task);
       setLoading(true);
-      
       const response = await axios.get(`/api/employee/tasks/${task._id}/feedback`);
-      
       if (response.status === 200) {
         setTeamLeadFeedbacks(response.data.feedbacks || []);
         setShowTeamLeadFeedbacks(true);
@@ -306,21 +292,18 @@ export default function EmployeeTasksPage() {
       toast.error("Please enter a reply");
       return;
     }
-
     setLoading(true);
     try {
       const response = await axios.put(`/api/employee/tasks/${selectedTask._id}/feedback`, {
         feedbackId: selectedFeedbackId,
         reply: replyText.trim()
       });
-
       if (response.status === 200) {
         toast.success("Reply submitted successfully");
         setRefreshKey(prev => prev + 1);
         setShowReplyDialog(false);
         setReplyText("");
         setSelectedFeedbackId(null);
-        
         // Refresh feedbacks
         const feedbackResponse = await axios.get(`/api/employee/tasks/${selectedTask._id}/feedback`);
         setTeamLeadFeedbacks(feedbackResponse.data.feedbacks || []);
@@ -333,6 +316,38 @@ export default function EmployeeTasksPage() {
     }
   };
 
+  const handleUpdateReply = async (replyId) => {
+  try {
+    setLoading(true);
+    const res = await axios.patch(
+      `/api/employee/tasks/${selectedTask._id}/feedback/${replyId}`,
+      { reply: editReplyText }
+    );
+
+    if (res.data.success) {
+      toast.success("Reply updated successfully");
+      
+      // Update the UI state
+      setTeamLeadFeedbacks(prev => 
+        prev.map(feedback => ({
+          ...feedback,
+          replies: feedback.replies.map(reply => 
+            reply._id === replyId ? { ...reply, reply: editReplyText } : reply
+          )
+        }))
+      );
+      
+      setEditingReplyId(null);
+      setEditReplyText("");
+    }
+  } catch (err) {
+    console.error("Update reply error:", err);
+    toast.error(err.response?.data?.error || "Failed to update reply");
+  } finally {
+    setLoading(false);
+  }
+};
+
   const toggleTaskExpansion = (taskId) => {
     setExpandedTasks(prev => ({
       ...prev,
@@ -342,7 +357,6 @@ export default function EmployeeTasksPage() {
 
   const getStatusVariant = (status) => {
     if (!status) status = "pending";
-    
     switch (status) {
       case "completed":
       case "approved":
@@ -420,7 +434,6 @@ export default function EmployeeTasksPage() {
     const now = new Date();
     const diffTime = Math.abs(now - date);
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
     if (diffDays === 0) {
       return "Today";
     } else if (diffDays === 1) {
@@ -450,7 +463,6 @@ export default function EmployeeTasksPage() {
     if (value === null || value === undefined || value === "") {
       return <span className="text-gray-400 italic">Not provided</span>;
     }
-
     if (typeof value === "object" && !Array.isArray(value)) {
       return (
         <div className="space-y-1 text-sm">
@@ -465,7 +477,6 @@ export default function EmployeeTasksPage() {
         </div>
       );
     }
-
     if (Array.isArray(value)) {
       return (
         <div className="flex flex-wrap gap-1">
@@ -477,7 +488,6 @@ export default function EmployeeTasksPage() {
         </div>
       );
     }
-
     if (typeof value === "boolean") {
       return (
         <Badge
@@ -488,7 +498,6 @@ export default function EmployeeTasksPage() {
         </Badge>
       );
     }
-
     return value.toString();
   };
 
@@ -500,10 +509,9 @@ export default function EmployeeTasksPage() {
     rejected: tasks.filter((t) => t.employeeStatus === "rejected").length,
   };
 
-  const completionPercentage =
-    tasks.length > 0
-      ? Math.round((statusStats.completed / tasks.length) * 100)
-      : 0;
+  const completionPercentage = tasks.length > 0
+    ? Math.round((statusStats.completed / tasks.length) * 100)
+    : 0;
 
   const filteredTasks = tasks.filter((task) => {
     const matchesSearch =
@@ -512,13 +520,8 @@ export default function EmployeeTasksPage() {
       task.employeeStatus?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       task.submittedBy?.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       task.submittedBy?.lastName?.toLowerCase().includes(searchTerm.toLowerCase());
-
-    const matchesStatus =
-      statusFilter === "all" || task.employeeStatus === statusFilter;
-
-    const matchesTab =
-      activeTab === "all" || task.employeeStatus === activeTab;
-
+    const matchesStatus = statusFilter === "all" || task.employeeStatus === statusFilter;
+    const matchesTab = activeTab === "all" || task.employeeStatus === activeTab;
     return matchesSearch && matchesStatus && matchesTab;
   });
 
@@ -540,7 +543,6 @@ export default function EmployeeTasksPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-blue-50/30 p-4 sm:p-6 overflow-x-hidden">
       <Toaster position="top-right" richColors />
-
       <div className="max-w-[100vw] mx-auto w-full space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -556,7 +558,6 @@ export default function EmployeeTasksPage() {
               ! Manage your assigned tasks efficiently.
             </p>
           </div>
-
           <div className="flex items-center gap-3">
             <Button
               onClick={() => setRefreshKey(prev => prev + 1)}
@@ -1417,168 +1418,154 @@ export default function EmployeeTasksPage() {
                 </div>
               )}
 
+              {/* Attachments */}
+              <Card className="mt-4">
+                <CardHeader>
+                  <CardTitle className="text-lg font-semibold text-gray-900">Attachments</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    {selectedTask?.fileAttachments?.map((file) => {
+                      const { url, name, type, publicId } = file;
+                      const isImage = type.startsWith("image/");
+                      const isVideo = type.startsWith("video/");
+                      const isPDF = type.includes("pdf");
 
+                      let bgColor = "bg-purple-100 text-purple-800";
+                      let Icon = File;
 
-  
-                  <Card className="mt-4">
-    <CardHeader>
-      <CardTitle className="text-lg font-semibold text-gray-900">Attachments</CardTitle>
-    </CardHeader>
-    <CardContent>
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-        {selectedTask?.fileAttachments?.map((file) => {
-          const { url, name, type, publicId } = file;
-  
-          const isImage = type.startsWith("image/");
-          const isVideo = type.startsWith("video/");
-          const isPDF = type.includes("pdf");
-          const isWord = type.includes("word") || type.includes("doc");
-          const isExcel = type.includes("excel") || type.includes("sheet") || type.includes("xlsx");
-  
-          // Color and icon for file type
-          let bgColor = "bg-purple-100 text-purple-800";
-          let Icon = FilePlus;
-  
-          if (isImage) bgColor = "bg-green-100 text-green-800";
-          else if (isVideo) bgColor = "bg-blue-100 text-blue-800";
-          else if (isPDF) { bgColor = "bg-red-100 text-red-800"; Icon = FileText; }
-          else if (isWord) { bgColor = "bg-blue-100 text-blue-800"; Icon = FileText; }
-          else if (isExcel) { bgColor = "bg-green-100 text-green-800"; Icon = FileSpreadsheet; }
-  
-          return (
-            <div
-              key={publicId}
-              className={`w-full rounded shadow flex flex-col overflow-hidden ${bgColor}`}
-            >
-              {/* Preview area */}
-              <div className="flex-1 w-full h-40 flex items-center justify-center overflow-hidden">
-                {isImage ? (
-                  <img src={url} alt={name} className="object-cover w-full h-full" />
-                ) : isVideo ? (
-                  <div className="relative w-full h-full">
-                    <video src={url} className="object-cover w-full h-full opacity-80" />
-                    <Play className="absolute w-8 h-8 text-white top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
-                  </div>
-                ) : (
-                  <Icon className="w-12 h-12" />
-                )}
-              </div>
-  
-              {/* Bottom: file name + buttons */}
-              <div className="p-2 bg-white flex flex-col items-center gap-2">
-                <p className="text-sm font-medium truncate w-full text-center">{name}</p>
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setPreviewFile(file)}
-                  >
-                    Preview
-                  </Button>
-                  <Button
-                    size="sm"
-                    onClick={() => window.open(url, "_blank")}
-                  >
-                    Download
-                  </Button>
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </CardContent>
+                      if (isImage) bgColor = "bg-green-100 text-green-800";
+                      else if (isVideo) bgColor = "bg-blue-100 text-blue-800";
+                      else if (isPDF) { bgColor = "bg-red-100 text-red-800"; Icon = FileText; }
 
-
-       {previewFile && (
-              <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 overflow-y-auto">
-                <div className="bg-white rounded-2xl w-full max-w-[95vw] max-h-[95vh] overflow-hidden flex flex-col shadow-lg">
-                  {/* Header */}
-                  <div className="flex items-center justify-between p-4 border-b">
-                    <div className="flex items-center gap-2">
-                      {getFileIcon(previewFile.type)}
-                      <h3 className="font-bold text-gray-900 truncate">{previewFile.name}</h3>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setZoom((prev) => prev + 0.2)}
-                        className="text-blue-600 hover:text-blue-800 hover:bg-blue-50"
-                      >
-                        Zoom In +
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setZoom((prev) => Math.max(prev - 0.2, 0.2))}
-                        className="text-blue-600 hover:text-blue-800 hover:bg-blue-50"
-                      >
-                        Zoom Out -
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => downloadFile(previewFile.url, previewFile.name)}
-                        className="text-green-600 hover:text-green-800 hover:bg-green-50"
-                      >
-                        <Download className="w-4 h-4 mr-2" /> Download
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setPreviewFile(null)}
-                        className="text-gray-600 hover:text-gray-800 hover:bg-gray-100"
-                      >
-                        <X className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
-            
-                  {/* Body */}
-                  <div className="flex-1 p-4 overflow-auto flex items-center justify-center bg-gray-50">
-                    {previewFile.type?.includes('image') ? (
-                      <img
-                        src={previewFile.url}
-                        alt={previewFile.name}
-                        className="rounded-lg mx-auto transition-transform"
-                        style={{ transform: `scale(${zoom})` }}
-                      />
-                    ) : previewFile.type?.includes('video') ? (
-                      <video
-                        controls
-                        autoPlay
-                        className="rounded-lg mx-auto transition-transform"
-                        style={{ transform: `scale(${zoom})` }}
-                      >
-                        <source src={previewFile.url} type={previewFile.type} />
-                        Your browser does not support the video tag.
-                      </video>
-                    ) : previewFile.type?.includes('pdf') ? (
-                      <iframe
-                        src={previewFile.url}
-                        className="w-full h-[90vh] border rounded-lg"
-                        title={previewFile.name}
-                      />
-                    ) : (
-                      <div className="text-center py-12">
-                        <File className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                        <p className="text-gray-700">Preview not available for this file type</p>
-                        <Button
-                          variant="outline"
-                          onClick={() => downloadFile(previewFile.url, previewFile.name)}
-                          className="mt-4"
+                      return (
+                        <div
+                          key={publicId}
+                          className={`w-full rounded shadow flex flex-col overflow-hidden ${bgColor}`}
                         >
-                          <Download className="w-4 h-4 mr-2" />
-                          Download File
+                          <div className="flex-1 w-full h-40 flex items-center justify-center overflow-hidden">
+                            {isImage ? (
+                              <img src={url} alt={name} className="object-cover w-full h-full" />
+                            ) : isVideo ? (
+                              <div className="relative w-full h-full">
+                                <video src={url} className="object-cover w-full h-full opacity-80" />
+                                <Play className="absolute w-8 h-8 text-white top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+                              </div>
+                            ) : (
+                              <Icon className="w-12 h-12" />
+                            )}
+                          </div>
+                          <div className="p-2 bg-white flex flex-col items-center gap-2">
+                            <p className="text-sm font-medium truncate w-full text-center">{name}</p>
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setPreviewFile(file)}
+                              >
+                                Preview
+                              </Button>
+                              <Button
+                                size="sm"
+                                onClick={() => window.open(url, "_blank")}
+                              >
+                                Download
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* File Preview Modal */}
+              {previewFile && (
+                <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 overflow-y-auto">
+                  <div className="bg-white rounded-2xl w-full max-w-[95vw] max-h-[95vh] overflow-hidden flex flex-col shadow-lg">
+                    <div className="flex items-center justify-between p-4 border-b">
+                      <div className="flex items-center gap-2">
+                        {getFileIcon(previewFile.type)}
+                        <h3 className="font-bold text-gray-900 truncate">{previewFile.name}</h3>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setZoom((prev) => prev + 0.2)}
+                          className="text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+                        >
+                          Zoom In +
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setZoom((prev) => Math.max(prev - 0.2, 0.2))}
+                          className="text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+                        >
+                          Zoom Out -
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => downloadFile(previewFile.url, previewFile.name)}
+                          className="text-green-600 hover:text-green-800 hover:bg-green-50"
+                        >
+                          <Download className="w-4 h-4 mr-2" /> Download
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setPreviewFile(null)}
+                          className="text-gray-600 hover:text-gray-800 hover:bg-gray-100"
+                        >
+                          <X className="w-4 h-4" />
                         </Button>
                       </div>
-                    )}
+                    </div>
+                    <div className="flex-1 p-4 overflow-auto flex items-center justify-center bg-gray-50">
+                      {previewFile.type?.includes('image') ? (
+                        <img
+                          src={previewFile.url}
+                          alt={previewFile.name}
+                          className="rounded-lg mx-auto transition-transform"
+                          style={{ transform: `scale(${zoom})` }}
+                        />
+                      ) : previewFile.type?.includes('video') ? (
+                        <video
+                          controls
+                          autoPlay
+                          className="rounded-lg mx-auto transition-transform"
+                          style={{ transform: `scale(${zoom})` }}
+                        >
+                          <source src={previewFile.url} type={previewFile.type} />
+                          Your browser does not support the video tag.
+                        </video>
+                      ) : previewFile.type?.includes('pdf') ? (
+                        <iframe
+                          src={previewFile.url}
+                          className="w-full h-[90vh] border rounded-lg"
+                          title={previewFile.name}
+                        />
+                      ) : (
+                        <div className="text-center py-12">
+                          <File className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                          <p className="text-gray-700">Preview not available for this file type</p>
+                          <Button
+                            variant="outline"
+                            onClick={() => downloadFile(previewFile.url, previewFile.name)}
+                            className="mt-4"
+                          >
+                            <Download className="w-4 h-4 mr-2" />
+                            Download File
+                          </Button>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
-  </Card>
+              )}
 
               {/* Previous Feedback */}
               {selectedTask.employeeFeedback && (
@@ -1594,8 +1581,6 @@ export default function EmployeeTasksPage() {
                   </p>
                 </div>
               )}
-
-             
             </div>
           )}
         </DialogContent>
@@ -1692,7 +1677,44 @@ export default function EmployeeTasksPage() {
                                     {formatDate(reply.repliedAt)}
                                   </span>
                                 </div>
-                                <p className="text-gray-800">{reply.reply}</p>
+                                {editingReplyId === reply._id ? (
+                                  <div className="space-y-2">
+                                    <textarea
+                                      className="w-full border rounded-md p-2 text-sm"
+                                      value={editReplyText}
+                                      onChange={(e) => setEditReplyText(e.target.value)}
+                                      rows={3}
+                                    />
+                                    <div className="flex gap-2 justify-end">
+                                      <Button
+                                        size="sm"
+                                        onClick={() => handleUpdateReply(reply._id)}
+                                      >
+                                        Save
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={() => setEditingReplyId(null)}
+                                      >
+                                        Cancel
+                                      </Button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <p className="text-gray-800">{reply.reply}
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={() => {
+                                        setEditingReplyId(reply._id);
+                                        setEditReplyText(reply.reply);
+                                      }}
+                                    >
+                                      Edit
+                                    </Button>
+                                  </p>
+                                )}
                               </div>
                             ))}
                           </div>
@@ -1836,8 +1858,6 @@ export default function EmployeeTasksPage() {
           </div>
         </DialogContent>
       </Dialog>
-
-    
     </div>
   );
 }

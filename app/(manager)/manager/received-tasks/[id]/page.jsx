@@ -30,6 +30,7 @@ import {
   DialogTitle,
   DialogTrigger,
   DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import {
   Table,
@@ -63,8 +64,8 @@ import {
   ImageIcon,
   VideoIcon,
   Play,
-X,
-File,
+  X,
+  File,
   MessageSquare,
   Paperclip,
   Eye,
@@ -73,6 +74,13 @@ File,
   Briefcase,
   FileCheck,
   RefreshCcw,
+  Upload,
+  Trash2,
+  AlertTriangle,
+  Check,
+  FileUp,
+  Send,
+  Trash,
 } from "lucide-react";
 import axios from "axios";
 import Link from "next/link";
@@ -91,8 +99,19 @@ export default function ReceivedTaskDetailPage() {
   const [sharing, setSharing] = useState(false);
   const [showNotesDialog, setShowNotesDialog] = useState(false);
   const [showStatusDialog, setShowStatusDialog] = useState(false);
+  const [showUploadDialog, setShowUploadDialog] = useState(false);
   const [activeTab, setActiveTab] = useState("details");
-  const [attachments, setAttachments] = useState([]);
+  
+  // File Upload States
+  const [files, setFiles] = useState([]);
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState({});
+  const [totalUploadProgress, setTotalUploadProgress] = useState(0);
+  const [uploadQueue, setUploadQueue] = useState([]);
+  const [completedUploads, setCompletedUploads] = useState([]);
+  const [failedUploads, setFailedUploads] = useState([]);
+  const [maxSize] = useState(100 * 1024 * 1024); // 100MB max per file
+  const [totalMaxSize] = useState(500 * 1024 * 1024); // 500MB total max
 
   const [shareForm, setShareForm] = useState({
     sharedTo: "",
@@ -109,16 +128,15 @@ export default function ReceivedTaskDetailPage() {
     employeeFeedback: "",
   });
 
-    const [zoom, setZoom] = useState(1);
-    const [previewFile, setPreviewFile] = useState(null);
-    
-  
-    const downloadFile = (url, name) => {
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = name;
-      link.click();
-    };
+  const [zoom, setZoom] = useState(1);
+  const [previewFile, setPreviewFile] = useState(null);
+
+  const downloadFile = (url, name) => {
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = name;
+    link.click();
+  };
 
   useEffect(() => {
     if (status === "loading") return;
@@ -147,11 +165,6 @@ export default function ReceivedTaskDetailPage() {
           MachineStatus: response.data.task.MachineStatus,
           employeeFeedback: response.data.task.employeeFeedback || "",
         });
-        // Simulate attachments (you might want to fetch actual attachments from API)
-        setAttachments([
-          { id: 1, name: "Employee_Agreement.pdf", size: "2.4 MB", date: "2024-01-15" },
-          { id: 2, name: "Vendor_Contract.pdf", size: "1.8 MB", date: "2024-01-14" },
-        ]);
       } else {
         toast.error("Failed to load task details");
         router.push("/manager/received-tasks");
@@ -174,6 +187,285 @@ export default function ReceivedTaskDetailPage() {
       console.error("Error fetching teamleads:", error);
       toast.error("Failed to load teamleads");
       setTeamleads([]);
+    }
+  };
+
+  // File Upload Functions
+  const handleFileSelect = (e) => {
+    const selectedFiles = Array.from(e.target.files);
+    
+    // Check total size
+    const totalSize = selectedFiles.reduce((total, file) => total + file.size, 0);
+    const existingSize = files.reduce((total, file) => total + file.size, 0);
+    
+    if (totalSize + existingSize > totalMaxSize) {
+      toast.error(`Total files size exceeds ${formatFileSize(totalMaxSize)} limit`);
+      return;
+    }
+    
+    // Check individual file sizes
+    const oversizedFiles = selectedFiles.filter(file => file.size > maxSize);
+    if (oversizedFiles.length > 0) {
+      toast.error(`${oversizedFiles.length} file(s) exceed ${formatFileSize(maxSize)} limit`);
+      return;
+    }
+    
+    // Filter out duplicates
+    const newFiles = selectedFiles.filter(newFile => 
+      !files.some(existingFile => 
+        existingFile.name === newFile.name && 
+        existingFile.size === newFile.size
+      )
+    );
+    
+    setFiles(prev => [...prev, ...newFiles]);
+    toast.success(`Added ${newFiles.length} file(s)`);
+    e.target.value = ""; // Reset input
+  };
+
+  const removeFile = (index) => {
+    setFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const clearAllFiles = () => {
+    setFiles([]);
+    setUploadProgress({});
+    setTotalUploadProgress(0);
+    setUploadQueue([]);
+    setCompletedUploads([]);
+    setFailedUploads([]);
+  };
+
+  const formatFileSize = (bytes) => {
+    if (bytes === 0) return "0 Bytes";
+    const k = 1024;
+    const sizes = ["Bytes", "KB", "MB", "GB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+  };
+
+  const getFileIcon = (fileType) => {
+    if (fileType.startsWith("image/")) return <ImageIcon className="w-5 h-5 text-green-600" />;
+    if (fileType.startsWith("video/")) return <VideoIcon className="w-5 h-5 text-blue-600" />;
+    if (fileType.includes("pdf")) return <FileText className="w-5 h-5 text-red-600" />;
+    if (fileType.includes("word") || fileType.includes("doc")) return <FileText className="w-5 h-5 text-blue-600" />;
+    if (fileType.includes("excel") || fileType.includes("sheet")) return <FileText className="w-5 h-5 text-green-600" />;
+    return <FileText className="w-5 h-5 text-gray-600" />;
+  };
+
+  // Combined update with files upload
+  const handleUpdateWithFiles = async () => {
+    if (files.length === 0) {
+      handleUpdateStatus();
+      return;
+    }
+
+    setUpdating(true);
+    setUploading(true);
+    setUploadQueue(files.map((file, index) => ({ file, index })));
+    setCompletedUploads([]);
+    setFailedUploads([]);
+    setUploadProgress({});
+    setTotalUploadProgress(0);
+
+    const totalFiles = files.length;
+    const formData = new FormData();
+    
+    // Add all form data
+    formData.append("status", statusForm.status);
+    formData.append("VendorStatus", statusForm.VendorStatus);
+    formData.append("MachineStatus", statusForm.MachineStatus);
+    formData.append("employeeFeedback", statusForm.employeeFeedback);
+    
+    // Add files
+    files.forEach(file => {
+      formData.append("files", file);
+    });
+
+    try {
+      const response = await axios.put(
+        `/api/manager/received-tasks/${taskId}`,
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+          onUploadProgress: (progressEvent) => {
+            if (progressEvent.total) {
+              const percentCompleted = Math.round(
+                (progressEvent.loaded * 100) / progressEvent.total
+              );
+              setTotalUploadProgress(percentCompleted);
+              
+              // Calculate individual file progress
+              const filesCount = files.length;
+              const fileProgress = Math.round(percentCompleted / filesCount);
+              
+              const newProgress = {};
+              files.forEach(file => {
+                newProgress[file.name] = fileProgress;
+              });
+              setUploadProgress(newProgress);
+            }
+          },
+        }
+      );
+
+      if (response.data.success) {
+        toast.success("Task status and files updated successfully");
+        setTask(response.data.task);
+        setShowStatusDialog(false);
+        setShowUploadDialog(false);
+        
+        // Reset upload states
+        setFiles([]);
+        setUploadProgress({});
+        setTotalUploadProgress(0);
+        setUploadQueue([]);
+      } else {
+        toast.error("Failed to update task");
+      }
+    } catch (error) {
+      console.error("Error updating task:", error);
+      toast.error(error.response?.data?.message || "Failed to update task");
+    } finally {
+      setUpdating(false);
+      setUploading(false);
+    }
+  };
+
+  // Separate file upload only
+  const uploadFilesOnly = async () => {
+    if (files.length === 0) {
+      toast.error("Please select files to upload");
+      return;
+    }
+
+    setUploading(true);
+    setUploadQueue(files.map((file, index) => ({ file, index })));
+    setCompletedUploads([]);
+    setFailedUploads([]);
+    setUploadProgress({});
+    setTotalUploadProgress(0);
+
+    const totalFiles = files.length;
+    const formData = new FormData();
+    
+    // Add files
+    files.forEach(file => {
+      formData.append("files", file);
+    });
+
+    // Add minimal status data (keep current status)
+    formData.append("status", task.status);
+    formData.append("VendorStatus", task.VendorStatus || "pending");
+    formData.append("MachineStatus", task.MachineStatus || "pending");
+
+    try {
+      const response = await axios.put(
+        `/api/manager/received-tasks/${taskId}`,
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+          onUploadProgress: (progressEvent) => {
+            if (progressEvent.total) {
+              const percentCompleted = Math.round(
+                (progressEvent.loaded * 100) / progressEvent.total
+              );
+              setTotalUploadProgress(percentCompleted);
+              
+              // Calculate individual file progress
+              const filesCount = files.length;
+              const fileProgress = Math.round(percentCompleted / filesCount);
+              
+              const newProgress = {};
+              files.forEach(file => {
+                newProgress[file.name] = fileProgress;
+              });
+              setUploadProgress(newProgress);
+            }
+          },
+        }
+      );
+
+      if (response.data.success) {
+        toast.success(`Successfully uploaded ${files.length} file(s)`);
+        setTask(response.data.task);
+        setShowUploadDialog(false);
+        
+        // Reset upload states
+        setFiles([]);
+        setUploadProgress({});
+        setTotalUploadProgress(0);
+        setUploadQueue([]);
+      } else {
+        toast.error("Failed to upload files");
+      }
+    } catch (error) {
+      console.error("Error uploading files:", error);
+      toast.error(error.response?.data?.message || "Failed to upload files");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  // Update status only (without files)
+  const handleUpdateStatus = async () => {
+    setUpdating(true);
+    try {
+      const formData = new FormData();
+      formData.append("status", statusForm.status);
+      formData.append("VendorStatus", statusForm.VendorStatus);
+      formData.append("MachineStatus", statusForm.MachineStatus);
+      formData.append("employeeFeedback", statusForm.employeeFeedback);
+      
+      const response = await axios.put(
+        `/api/manager/received-tasks/${taskId}`,
+        formData
+      );
+
+      if (response.data.success) {
+        toast.success("Status updated successfully");
+        setTask(response.data.task);
+        setShowStatusDialog(false);
+      } else {
+        toast.error("Failed to update status");
+      }
+    } catch (error) {
+      console.error("Error updating status:", error);
+      toast.error(error.response?.data?.message || "Failed to update status");
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  // Update notes only
+  const handleUpdateNotes = async () => {
+    setUpdating(true);
+    try {
+      const formData = new FormData();
+      formData.append("notes", notesForm.notes);
+      formData.append("status", task.status); // Keep existing status
+      formData.append("VendorStatus", task.VendorStatus || "pending");
+      formData.append("MachineStatus", task.MachineStatus || "pending");
+
+      const response = await axios.put(
+        `/api/manager/received-tasks/${taskId}`,
+        formData
+      );
+
+      if (response.data.success) {
+        toast.success("Notes updated successfully");
+        setTask(response.data.task);
+        setShowNotesDialog(false);
+      }
+    } catch (error) {
+      console.error("Error updating notes:", error);
+      toast.error("Failed to update notes");
+    } finally {
+      setUpdating(false);
     }
   };
 
@@ -211,56 +503,35 @@ export default function ReceivedTaskDetailPage() {
     }
   };
 
-  const handleUpdateNotes = async () => {
-    setUpdating(true);
-    try {
-      const response = await axios.put(
-        `/api/manager/received-tasks/${taskId}`,
-        { notes: notesForm.notes }
-      );
 
-      if (response.data.success) {
-        toast.success("Notes updated successfully");
-        setTask(response.data.task);
-        setShowNotesDialog(false);
-      }
-    } catch (error) {
-      console.error("Error updating notes:", error);
-      toast.error("Failed to update notes");
-    } finally {
-      setUpdating(false);
-    }
-  };
+  const handleDeleteAttachment = async (fileId) => {
+  try {
+    await axios.delete(`/api/manager/received-tasks/${taskId}`);
 
-  const handleUpdateStatus = async () => {
-    setUpdating(true);
-    try {
-      const response = await axios.put(
-        `/api/manager/received-tasks/${taskId}`,
-        statusForm
-      );
 
-      if (response.data.success) {
-        toast.success("Status updated successfully");
-        setTask(response.data.task);
-        setShowStatusDialog(false);
-      }
-    } catch (error) {
-      console.error("Error updating status:", error);
-      toast.error("Failed to update status");
-    } finally {
-      setUpdating(false);
-    }
-  };
+    setTask((prev) => ({
+      ...prev,
+      fileAttachments: prev.fileAttachments.filter(
+        (f) => f._id !== fileId
+      ),
+    }));
+  } catch (error) {
+    console.error(error);
+  }
+};
+
 
   // Status color functions
   const getStatusColor = (status) => {
     const colors = {
       pending: "bg-yellow-500 text-white border-yellow-600",
       signed: "bg-green-500 text-white border-green-600",
-      not_avaiable: "bg-red-500 text-white border-red-600",
-      not_intrested: "bg-orange-500 text-white border-orange-600",
-      re_shedule: "bg-blue-500 text-white border-blue-600",
+      not_available: "bg-red-500 text-white border-red-600",
+      not_interested: "bg-orange-500 text-white border-orange-600",
+      re_schedule: "bg-blue-500 text-white border-blue-600",
+      completed: "bg-green-600 text-white border-green-700",
+      in_progress: "bg-blue-500 text-white border-blue-600",
+      cancelled: "bg-red-600 text-white border-red-700",
     };
     return colors[status] || "bg-gray-500 text-white border-gray-600";
   };
@@ -322,7 +593,10 @@ export default function ReceivedTaskDetailPage() {
 
   const handleDownload = () => {
     toast.info("Download functionality will be implemented soon");
-    // Implement download logic here
+  };
+
+  const openUploadDialog = () => {
+    setShowUploadDialog(true);
   };
 
   if (status === "loading" || loading) {
@@ -397,7 +671,23 @@ export default function ReceivedTaskDetailPage() {
             </div>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
+            <Button
+              onClick={openUploadDialog}
+              variant="outline"
+              className="border-blue-700 text-blue-700 hover:bg-blue-700 hover:text-white"
+            >
+              <Upload className="w-4 h-4 mr-2" />
+              Upload Files
+            </Button>
+            <Button
+              onClick={() => setShowStatusDialog(true)}
+              variant="outline"
+              className="border-green-700 text-green-700 hover:bg-green-700 hover:text-white"
+            >
+              <Edit className="w-4 h-4 mr-2" />
+              Update Status
+            </Button>
             <Button
               onClick={handlePrint}
               variant="outline"
@@ -492,15 +782,17 @@ export default function ReceivedTaskDetailPage() {
               <CardHeader className="bg-white border-b border-gray-200">
                 <div className="flex justify-between items-center">
                   <CardTitle className="text-lg font-bold text-gray-900">Task Information</CardTitle>
-                  <Button
-                    onClick={() => setShowStatusDialog(true)}
-                    variant="outline"
-                    size="sm"
-                    className="border-gray-700 text-gray-700 hover:bg-gray-700 hover:text-white"
-                  >
-                    <Edit className="w-4 h-4 mr-2" />
-                    Update Status
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={() => setShowStatusDialog(true)}
+                      variant="outline"
+                      size="sm"
+                      className="border-green-700 text-green-700 hover:bg-green-700 hover:text-white"
+                    >
+                      <Edit className="w-4 h-4 mr-2" />
+                      Update Status
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent className="p-6">
@@ -570,393 +862,235 @@ export default function ReceivedTaskDetailPage() {
                     </div>
                   </div>
 
-            
 
+ {task.formId?.fileAttachments && task.formId?.fileAttachments.length > 0 && (
+                    <div className="mt-4">
+                      <Card className="p-4 bg-white border border-gray-200 shadow-sm">
+                      <label className="text-xl font-large text-gray-700 mb-2 block">
+                        Attachments ({task.formId?.fileAttachments.length})
+                      </label>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                        {task.formId?.fileAttachments.map((file, index) => {
+                          const isImage = file.type?.startsWith("image/");
+                          const isVideo = file.type?.startsWith("video/");
+                          const isPDF = file.type?.includes("pdf") || file.name?.endsWith(".pdf");
+                          const isWord = file.type?.includes("word") || file.type?.includes("doc");
+                          
+                          let bgColor = "bg-gray-100";
+                          let Icon = FileText;
+                          
+                          if (isImage) {
+                            bgColor = "bg-green-50";
+                            Icon = ImageIcon;
+                          } else if (isVideo) {
+                            bgColor = "bg-blue-50";
+                            Icon = VideoIcon;
+                          } else if (isPDF) {
+                            bgColor = "bg-red-50";
+                          } else if (isWord) {
+                            bgColor = "bg-blue-50";
+                          }
+
+                          return (
+                            <div
+                              key={index}
+                              className={`${bgColor} border rounded-lg overflow-hidden hover:shadow-md transition-all duration-200`}
+                            >
+                              <div 
+                                className="h-40 w-full overflow-hidden relative cursor-pointer"
+                                onClick={() => setPreviewFile(file)}
+                              >
+                                {isImage ? (
+                                  <img 
+                                    src={file.url} 
+                                    alt={file.name} 
+                                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-200"
+                                  />
+                                ) : isVideo ? (
+                                  <div className="relative w-full h-full bg-black">
+                                    <div className="absolute inset-0 flex items-center justify-center">
+                                      <Play className="w-12 h-12 text-white/70" />
+                                    </div>
+                                    <div className="absolute bottom-2 right-2">
+                                      <Badge className="bg-black/70 text-white text-xs">
+                                        Video
+                                      </Badge>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="h-full flex flex-col items-center justify-center p-4">
+                                    <Icon className="w-12 h-12 text-gray-600 mb-2" />
+                                    <span className="text-xs font-medium text-gray-600">
+                                      {file.type?.split('/')[1]?.toUpperCase() || 'FILE'}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+
+                              <div className="p-3 bg-white border-t">
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium text-gray-900 truncate mb-1">
+                                      {file.name}
+                                    </p>
+                                    <div className="flex items-center gap-2 text-xs text-gray-500">
+                                      <span>{formatFileSize(file.size)}</span>
+                                      <span>•</span>
+                                      <span>{file.type || 'Unknown type'}</span>
+                                    </div>
+                                  </div>
+                                  <div className="flex gap-1">
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      className="h-8 w-8 p-0 hover:bg-gray-100"
+                                      onClick={() => setPreviewFile(file)}
+                                      title="Preview"
+                                    >
+                                      <Eye className="w-4 h-4 text-gray-600" />
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      className="h-8 w-8 p-0 hover:bg-gray-100"
+                                      onClick={() => downloadFile(file.url, file.name)}
+                                      title="Download"
+                                    >
+                                      <Download className="w-4 h-4 text-gray-600" />
+                                    </Button>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      </Card>
+                    </div>
+                  )}
+
+
+                  {/* Existing Attachments */}
+                  {task.fileAttachments && task.fileAttachments.length > 0 && (
+                    <div className="mt-4">
+                      <Card className="p-4 bg-white border border-gray-200 shadow-sm">
+                      <label className="text-xl font-large text-gray-700 mb-2 block">
+                        Visit Attachments ({task.fileAttachments.length})
+                      </label>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                        {task.fileAttachments.map((file, index) => {
+                          const isImage = file.type?.startsWith("image/");
+                          const isVideo = file.type?.startsWith("video/");
+                          const isPDF = file.type?.includes("pdf") || file.name?.endsWith(".pdf");
+                          const isWord = file.type?.includes("word") || file.type?.includes("doc");
+                          
+                          let bgColor = "bg-gray-100";
+                          let Icon = FileText;
+                          
+                          if (isImage) {
+                            bgColor = "bg-green-50";
+                            Icon = ImageIcon;
+                          } else if (isVideo) {
+                            bgColor = "bg-blue-50";
+                            Icon = VideoIcon;
+                          } else if (isPDF) {
+                            bgColor = "bg-red-50";
+                          } else if (isWord) {
+                            bgColor = "bg-blue-50";
+                          }
+
+                          return (
+                            <div
+                              key={index}
+                              className={`${bgColor} border rounded-lg overflow-hidden hover:shadow-md transition-all duration-200`}
+                            >
+                              <div 
+                                className="h-40 w-full overflow-hidden relative cursor-pointer"
+                                onClick={() => setPreviewFile(file)}
+                              >
+                                {isImage ? (
+                                  <img 
+                                    src={file.url} 
+                                    alt={file.name} 
+                                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-200"
+                                  />
+                                ) : isVideo ? (
+                                  <div className="relative w-full h-full bg-black">
+                                    <div className="absolute inset-0 flex items-center justify-center">
+                                      <Play className="w-12 h-12 text-white/70" />
+                                    </div>
+                                    <div className="absolute bottom-2 right-2">
+                                      <Badge className="bg-black/70 text-white text-xs">
+                                        Video
+                                      </Badge>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="h-full flex flex-col items-center justify-center p-4">
+                                    <Icon className="w-12 h-12 text-gray-600 mb-2" />
+                                    <span className="text-xs font-medium text-gray-600">
+                                      {file.type?.split('/')[1]?.toUpperCase() || 'FILE'}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+
+                              <div className="p-3 bg-white border-t">
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-medium text-gray-900 truncate mb-1">
+                                      {file.name}
+                                    </p>
+                                    <div className="flex items-center gap-2 text-xs text-gray-500">
+                                      <span>{formatFileSize(file.size)}</span>
+                                      <span>•</span>
+                                      <span>{file.type || 'Unknown type'}</span>
+                                    </div>
+                                  </div>
+                                  <div className="flex gap-1">
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      className="h-8 w-8 p-0 hover:bg-gray-100"
+                                      onClick={() => setPreviewFile(file)}
+                                      title="Preview"
+                                    >
+                                      <Eye className="w-4 h-4 text-gray-600" />
+                                    </Button>
+
+                                  <Button
+  size="sm"
+  variant="ghost"
+  className="h-8 w-8 p-0 hover:bg-gray-100"
+  onClick={() => handleDeleteAttachment(file._id)}
+  title="Delete"
+>
+  <Trash className="w-4 h-4 text-gray-600" />
+</Button>
+
+
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      className="h-8 w-8 p-0 hover:bg-gray-100"
+                                      onClick={() => downloadFile(file.url, file.name)}
+                                      title="Download"
+                                    >
+                                      <Download className="w-4 h-4 text-gray-600" />
+                                    </Button>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      </Card>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
-
-            {/* Form Data Card */}
-            {task.formId?.formData && Object.keys(task.formId.formData).length > 0 && (
-              <Card className="bg-white border border-gray-200 shadow-sm">
-                <CardHeader className="bg-white border-b border-gray-200">
-                  <CardTitle className="text-lg font-bold text-gray-900">Form Data</CardTitle>
-                  <CardDescription className="text-gray-700">
-                    Submitted form information
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="p-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {Object.entries(task.formId.formData).map(([key, value]) => (
-                      <div key={key} className="space-y-1">
-                        <label className="text-sm font-medium text-gray-700 capitalize">
-                          {key.replace(/([A-Z])/g, " $1").trim()}
-                        </label>
-                        <p className="text-gray-900 p-2 bg-gray-50 rounded border border-gray-200">
-                          {Array.isArray(value) ? value.join(", ") : 
-                           value === null || value === undefined ? "Not provided" : String(value)}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-
-           {/* Attachments Section */}
-{task.formId?.fileAttachments && task.formId.fileAttachments.length > 0 && (
-  <Card className="mt-4">
-    <CardHeader>
-      <CardTitle className="text-lg font-semibold text-gray-900">Attachments</CardTitle>
-      <CardDescription className="text-gray-700">
-        {task.formId.fileAttachments.length} file(s) attached to this submission
-      </CardDescription>
-    </CardHeader>
-    <CardContent>
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-        {task.formId.fileAttachments.map((file, index) => {
-          const { url, name, type, publicId } = file;
-
-          const isImage = type?.startsWith("image/");
-          const isVideo = type?.startsWith("video/");
-          const isPDF = type?.includes("pdf") || name?.endsWith(".pdf");
-          const isWord = type?.includes("word") || 
-                        type?.includes("doc") || 
-                        name?.endsWith(".doc") || 
-                        name?.endsWith(".docx");
-          const isExcel = type?.includes("excel") || 
-                         type?.includes("sheet") || 
-                         name?.endsWith(".xls") || 
-                         name?.endsWith(".xlsx");
-
-          // Determine colors and icons
-          let bgColor = "bg-gray-100";
-          let textColor = "text-gray-800";
-          let Icon = FileText;
-          
-          if (isImage) {
-            bgColor = "bg-green-50";
-            textColor = "text-green-800";
-            Icon = ImageIcon;
-          } else if (isVideo) {
-            bgColor = "bg-blue-50";
-            textColor = "text-blue-800";
-            Icon = VideoIcon;
-          } else if (isPDF) {
-            bgColor = "bg-red-50";
-            textColor = "text-red-800";
-          } else if (isWord) {
-            bgColor = "bg-blue-50";
-            textColor = "text-blue-800";
-          } else if (isExcel) {
-            bgColor = "bg-green-50";
-            textColor = "text-green-800";
-            Icon = FileSpreadsheet;
-          }
-
-          return (
-            <div
-              key={publicId || index}
-              className={`${bgColor} border rounded-lg overflow-hidden hover:shadow-md transition-all duration-200`}
-            >
-              {/* File Preview Area */}
-              <div 
-                className="h-40 w-full overflow-hidden relative cursor-pointer"
-                onClick={() => setPreviewFile(file)}
-              >
-                {isImage ? (
-                  <img 
-                    src={url} 
-                    alt={name} 
-                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-200"
-                  />
-                ) : isVideo ? (
-                  <div className="relative w-full h-full bg-black">
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <Play className="w-12 h-12 text-white/70" />
-                    </div>
-                    <div className="absolute bottom-2 right-2">
-                      <Badge className="bg-black/70 text-white text-xs">
-                        Video
-                      </Badge>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="h-full flex flex-col items-center justify-center p-4">
-                    <Icon className={`w-12 h-12 ${textColor} mb-2`} />
-                    <span className={`text-xs font-medium ${textColor}`}>
-                      {type?.split('/')[1]?.toUpperCase() || 'FILE'}
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              {/* File Info and Actions */}
-              <div className="p-3 bg-white border-t">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate mb-1">
-                      {name}
-                    </p>
-                    <div className="flex items-center gap-2 text-xs text-gray-500">
-                      <span>{type || 'Unknown type'}</span>
-                    </div>
-                  </div>
-                  <div className="flex gap-1">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-8 w-8 p-0 hover:bg-gray-100"
-                      onClick={() => setPreviewFile(file)}
-                      title="Preview"
-                    >
-                      <Eye className="w-4 h-4 text-gray-600" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-8 w-8 p-0 hover:bg-gray-100"
-                      onClick={() => downloadFile(url, name)}
-                      title="Download"
-                    >
-                      <Download className="w-4 h-4 text-gray-600" />
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </CardContent>
-  </Card>
-)}
-
-
-{task?.fileAttachments && task.fileAttachments.length > 0 && (
-  <Card className="mt-4">
-    <CardHeader>
-      <CardTitle className="text-lg font-semibold text-gray-900">Visitor Attachments</CardTitle>
-      <CardDescription className="text-gray-700">
-        {task.fileAttachments.length} file(s) attached to this submission
-      </CardDescription>
-    </CardHeader>
-    <CardContent>
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-        {task.fileAttachments.map((file, index) => {
-          const { url, name, type, publicId } = file;
-
-          const isImage = type?.startsWith("image/");
-          const isVideo = type?.startsWith("video/");
-          const isPDF = type?.includes("pdf") || name?.endsWith(".pdf");
-          const isWord = type?.includes("word") || 
-                        type?.includes("doc") || 
-                        name?.endsWith(".doc") || 
-                        name?.endsWith(".docx");
-          const isExcel = type?.includes("excel") || 
-                         type?.includes("sheet") || 
-                         name?.endsWith(".xls") || 
-                         name?.endsWith(".xlsx");
-
-          // Determine colors and icons
-          let bgColor = "bg-gray-100";
-          let textColor = "text-gray-800";
-          let Icon = FileText;
-          
-          if (isImage) {
-            bgColor = "bg-green-50";
-            textColor = "text-green-800";
-            Icon = ImageIcon;
-          } else if (isVideo) {
-            bgColor = "bg-blue-50";
-            textColor = "text-blue-800";
-            Icon = VideoIcon;
-          } else if (isPDF) {
-            bgColor = "bg-red-50";
-            textColor = "text-red-800";
-          } else if (isWord) {
-            bgColor = "bg-blue-50";
-            textColor = "text-blue-800";
-          } else if (isExcel) {
-            bgColor = "bg-green-50";
-            textColor = "text-green-800";
-            Icon = FileSpreadsheet;
-          }
-
-          return (
-            <div
-              key={publicId || index}
-              className={`${bgColor} border rounded-lg overflow-hidden hover:shadow-md transition-all duration-200`}
-            >
-              {/* File Preview Area */}
-              <div 
-                className="h-40 w-full overflow-hidden relative cursor-pointer"
-                onClick={() => setPreviewFile(file)}
-              >
-                {isImage ? (
-                  <img 
-                    src={url} 
-                    alt={name} 
-                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-200"
-                  />
-                ) : isVideo ? (
-                  <div className="relative w-full h-full bg-black">
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <Play className="w-12 h-12 text-white/70" />
-                    </div>
-                    <div className="absolute bottom-2 right-2">
-                      <Badge className="bg-black/70 text-white text-xs">
-                        Video
-                      </Badge>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="h-full flex flex-col items-center justify-center p-4">
-                    <Icon className={`w-12 h-12 ${textColor} mb-2`} />
-                    <span className={`text-xs font-medium ${textColor}`}>
-                      {type?.split('/')[1]?.toUpperCase() || 'FILE'}
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              {/* File Info and Actions */}
-              <div className="p-3 bg-white border-t">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate mb-1">
-                      {name}
-                    </p>
-                    <div className="flex items-center gap-2 text-xs text-gray-500">
-                      <span>{type || 'Unknown type'}</span>
-                    </div>
-                  </div>
-                  <div className="flex gap-1">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-8 w-8 p-0 hover:bg-gray-100"
-                      onClick={() => setPreviewFile(file)}
-                      title="Preview"
-                    >
-                      <Eye className="w-4 h-4 text-gray-600" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-8 w-8 p-0 hover:bg-gray-100"
-                      onClick={() => downloadFile(url, name)}
-                      title="Download"
-                    >
-                      <Download className="w-4 h-4 text-gray-600" />
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </CardContent>
-  </Card>
-)}
-
-{/* Also add the Preview Modal at the end of your component */}
-{previewFile && (
-  <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 overflow-y-auto">
-    <div className="bg-white rounded-2xl w-full max-w-[95vw] max-h-[95vh] overflow-hidden flex flex-col shadow-lg">
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b">
-        <div className="flex items-center gap-2">
-          {previewFile.type?.startsWith("image/") ? (
-            <ImageIcon className="w-4 h-4 text-green-600" />
-          ) : previewFile.type?.startsWith("video/") ? (
-            <VideoIcon className="w-4 h-4 text-blue-600" />
-          ) : (
-            <FileText className="w-4 h-4 text-gray-600" />
-          )}
-          <h3 className="font-bold text-gray-900 truncate">{previewFile.name}</h3>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setZoom((prev) => prev + 0.2)}
-            className="text-blue-600 hover:text-blue-800 hover:bg-blue-50"
-          >
-            Zoom In +
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setZoom((prev) => Math.max(prev - 0.2, 0.2))}
-            className="text-blue-600 hover:text-blue-800 hover:bg-blue-50"
-          >
-            Zoom Out -
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => downloadFile(previewFile.url, previewFile.name)}
-            className="text-green-600 hover:text-green-800 hover:bg-green-50"
-          >
-            <Download className="w-4 h-4 mr-2" /> Download
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setPreviewFile(null)}
-            className="text-gray-600 hover:text-gray-800 hover:bg-gray-100"
-          >
-            <X className="w-4 h-4" />
-          </Button>
-        </div>
-      </div>
-
-      {/* Body */}
-      <div className="flex-1 p-4 overflow-auto flex items-center justify-center bg-gray-50">
-        {previewFile.type?.startsWith('image/') ? (
-          <img
-            src={previewFile.url}
-            alt={previewFile.name}
-            className="rounded-lg mx-auto transition-transform"
-            style={{ transform: `scale(${zoom})` }}
-          />
-        ) : previewFile.type?.startsWith('video/') ? (
-          <video
-            controls
-            autoPlay
-            className="rounded-lg mx-auto transition-transform"
-            style={{ transform: `scale(${zoom})` }}
-          >
-            <source src={previewFile.url} type={previewFile.type} />
-            Your browser does not support the video tag.
-          </video>
-        ) : previewFile.type?.includes('pdf') ? (
-          <iframe
-            src={previewFile.url}
-            className="w-full h-[90vh] border rounded-lg"
-            title={previewFile.name}
-          />
-        ) : (
-          <div className="text-center py-12">
-            <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-700">Preview not available for this file type</p>
-            <Button
-              variant="outline"
-              onClick={() => downloadFile(previewFile.url, previewFile.name)}
-              className="mt-4"
-            >
-              <Download className="w-4 h-4 mr-2" />
-              Download File
-            </Button>
-          </div>
-        )}
-      </div>
-    </div>
-  </div>
-)}
           </div>
 
           {/* Right Column - People & Actions */}
@@ -1009,125 +1143,444 @@ export default function ReceivedTaskDetailPage() {
               </CardContent>
             </Card>
 
-            {/* People Involved Card */}
+            {/* Quick Actions Card */}
             <Card className="bg-white border border-gray-200 shadow-sm">
               <CardHeader className="bg-white border-b border-gray-200">
-                <CardTitle className="text-lg font-bold text-gray-900">People Involved</CardTitle>
+                <CardTitle className="text-lg font-bold text-gray-900">Quick Actions</CardTitle>
               </CardHeader>
-              <CardContent className="p-6 space-y-4">
-                {/* Shared Manager */}
-                {task.sharedManager && (
-                  <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                        <User className="w-4 h-4 text-blue-600" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">Shared By</p>
-                        <p className="text-sm text-gray-600">
-                          {task.sharedManager.firstName} {task.sharedManager.lastName}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Employee */}
-                {task.formId?.employeeId && (
-                  <div className="p-3 bg-green-50 rounded-lg border border-green-200">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                        <User className="w-4 h-4 text-green-600" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">Employee</p>
-                        <p className="text-sm text-gray-600">
-                          {task.formId.employeeId.firstName} {task.formId.employeeId.lastName}
-                        </p>
-                        {task.formId.employeeId.email && (
-                          <p className="text-xs text-gray-500 flex items-center gap-1 mt-1">
-                            <Mail className="w-3 h-3" />
-                            {task.formId.employeeId.email}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Shared Employee */}
-                {task.sharedEmployee && (
-                  <div className="p-3 bg-orange-50 rounded-lg border border-orange-200">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
-                        <User className="w-4 h-4 text-orange-600" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">Shared Employee</p>
-                        <p className="text-sm text-gray-600">
-                          {task.sharedEmployee.firstName} {task.sharedEmployee.lastName}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Timeline Card */}
-            <Card className="bg-white border border-gray-200 shadow-sm">
-              <CardHeader className="bg-white border-b border-gray-200">
-                <CardTitle className="text-lg font-bold text-gray-900">Timeline</CardTitle>
-              </CardHeader>
-              <CardContent className="p-6">
-                <div className="space-y-4">
-                  <div className="flex items-start gap-3">
-                    <div className="w-2 h-2 bg-green-500 rounded-full mt-2"></div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">Task Created</p>
-                      <p className="text-sm text-gray-600">{formatDate(task.createdAt)}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-3">
-                    <div className="w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">Last Updated</p>
-                      <p className="text-sm text-gray-600">{formatDate(task.updatedAt)}</p>
-                    </div>
-                  </div>
-                  {task.dueDate && (
-                    <div className="flex items-start gap-3">
-                      <div className="w-2 h-2 bg-red-500 rounded-full mt-2"></div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">Due Date</p>
-                        <p className="text-sm text-gray-600">{formatDate(task.dueDate)}</p>
-                      </div>
-                    </div>
-                  )}
-                  {task.feedbackUpdatedAt && (
-                    <div className="flex items-start gap-3">
-                      <div className="w-2 h-2 bg-purple-500 rounded-full mt-2"></div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">Feedback Updated</p>
-                        <p className="text-sm text-gray-600">{formatDate(task.feedbackUpdatedAt)}</p>
-                      </div>
-                    </div>
-                  )}
-                  {task.attachmentUpdatedAt && (
-                    <div className="flex items-start gap-3">
-                      <div className="w-2 h-2 bg-yellow-500 rounded-full mt-2"></div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">Attachment Updated</p>
-                        <p className="text-sm text-gray-600">{formatDate(task.attachmentUpdatedAt)}</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
+              <CardContent className="p-6 space-y-3">
+                <Button
+                  onClick={() => setShowNotesDialog(true)}
+                  variant="outline"
+                  className="w-full justify-start border-blue-200 text-blue-700 hover:bg-blue-50 hover:text-blue-800"
+                >
+                  <Edit className="w-4 h-4 mr-2" />
+                  Edit Notes
+                </Button>
+                <Button
+                  onClick={openUploadDialog}
+                  variant="outline"
+                  className="w-full justify-start border-green-200 text-green-700 hover:bg-green-50 hover:text-green-800"
+                >
+                  <Upload className="w-4 h-4 mr-2" />
+                  Upload Files
+                </Button>
+                <Button
+                  onClick={() => setShowStatusDialog(true)}
+                  variant="outline"
+                  className="w-full justify-start border-purple-200 text-purple-700 hover:bg-purple-50 hover:text-purple-800"
+                >
+                  <Edit className="w-4 h-4 mr-2" />
+                  Update Status
+                </Button>
               </CardContent>
             </Card>
           </div>
         </div>
       </div>
+
+      {/* File Upload Dialog */}
+      <Dialog open={showUploadDialog} onOpenChange={setShowUploadDialog}>
+        <DialogContent className="max-w-4xl max-h-[90vh] bg-white overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-gray-900 flex items-center gap-2">
+              <Upload className="w-5 h-5" />
+              Upload Files
+            </DialogTitle>
+            <DialogDescription className="text-gray-600">
+              Upload multiple files to this task (max {formatFileSize(maxSize)} per file)
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 mt-4">
+            {/* Upload Progress */}
+            {uploading && (
+              <Card className="bg-blue-50 border-blue-200">
+                <CardContent className="p-4">
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-2">
+                        <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+                        <span className="text-sm font-medium text-gray-900">
+                          Uploading {files.length} files...
+                        </span>
+                      </div>
+                      <Badge variant="outline" className="bg-white">
+                        {totalUploadProgress}%
+                      </Badge>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <div className="h-2 bg-blue-100 rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-blue-600 transition-all duration-300"
+                          style={{ width: `${totalUploadProgress}%` }}
+                        />
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-2 text-xs text-gray-600">
+                        <div className="flex items-center gap-1">
+                          <FileText className="w-3 h-3 text-blue-600" />
+                          <span>{files.length} files</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Clock className="w-3 h-3 text-gray-600" />
+                          <span>In progress</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* File Selection Area */}
+            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
+              <input
+                type="file"
+                id="file-upload"
+                multiple
+                onChange={handleFileSelect}
+                className="hidden"
+                disabled={uploading}
+              />
+              <label htmlFor="file-upload" className="cursor-pointer block">
+                <div className="flex flex-col items-center justify-center gap-3">
+                  <Upload className="w-12 h-12 text-gray-400" />
+                  <div>
+                    <p className="text-lg font-medium text-gray-900">
+                      Click to select files or drag and drop
+                    </p>
+                    <p className="text-sm text-gray-600 mt-1">
+                      Supports all file types up to {formatFileSize(maxSize)} each
+                    </p>
+                  </div>
+                  <Button 
+                    type="button"
+                    variant="outline"
+                    className="border-gray-300 text-gray-700"
+                    disabled={uploading}
+                  >
+                    <FileUp className="w-4 h-4 mr-2" />
+                    Browse Files
+                  </Button>
+                </div>
+              </label>
+            </div>
+
+            {/* Selected Files List */}
+            {files.length > 0 && (
+              <Card>
+                <CardHeader className="pb-3">
+                  <div className="flex justify-between items-center">
+                    <CardTitle className="text-lg font-bold text-gray-900">
+                      Selected Files ({files.length})
+                    </CardTitle>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={clearAllFiles}
+                      className="text-red-600 hover:text-red-800 hover:bg-red-50"
+                      disabled={uploading}
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Clear All
+                    </Button>
+                  </div>
+                  <CardDescription>
+                    Total size: {formatFileSize(files.reduce((total, file) => total + file.size, 0))}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2 max-h-60 overflow-y-auto">
+                    {files.map((file, index) => (
+                      <div
+                        key={`${file.name}-${index}`}
+                        className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200"
+                      >
+                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                          {getFileIcon(file.type)}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-900 truncate">
+                              {file.name}
+                            </p>
+                            <div className="flex items-center gap-2 text-xs text-gray-600">
+                              <span>{formatFileSize(file.size)}</span>
+                              <span>•</span>
+                              <span>{file.type || "Unknown type"}</span>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Upload Progress for this file */}
+                        {uploadProgress[file.name] !== undefined && (
+                          <div className="flex items-center gap-2">
+                            <div className="w-20 h-2 bg-gray-200 rounded-full overflow-hidden">
+                              <div 
+                                className="h-full bg-blue-600 transition-all duration-300"
+                                style={{ width: `${uploadProgress[file.name]}%` }}
+                              />
+                            </div>
+                            <span className="text-xs font-medium text-gray-700 w-8">
+                              {uploadProgress[file.name]}%
+                            </span>
+                          </div>
+                        )}
+                        
+                        {/* Remove button */}
+                        {!uploading && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0 text-red-600 hover:text-red-800 hover:bg-red-50"
+                            onClick={() => removeFile(index)}
+                          >
+                            <X className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setShowUploadDialog(false)}
+              disabled={uploading}
+              className="border-gray-700 text-gray-700 hover:bg-gray-700 hover:text-white"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={uploadFilesOnly}
+              disabled={files.length === 0 || uploading}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              {uploading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Uploading...
+                </>
+              ) : (
+                <>
+                  <Upload className="w-4 h-4 mr-2" />
+                  Upload {files.length} File{files.length !== 1 ? 's' : ''}
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Status Dialog - With option to add files */}
+      <Dialog open={showStatusDialog} onOpenChange={setShowStatusDialog}>
+        <DialogContent className="max-w-md bg-white">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-gray-900">Update Task Status</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-900">Status *</label>
+              <Select
+                value={statusForm.status}
+                onValueChange={(value) => setStatusForm({ ...statusForm, status: value })}
+              >
+                <SelectTrigger className="bg-white border-gray-300 text-gray-900">
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent className="bg-white text-gray-900">
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="signed">Signed</SelectItem>
+                  <SelectItem value="not_available">Not Available</SelectItem>
+                  <SelectItem value="not_interested">Not Interested</SelectItem>
+                  <SelectItem value="re_schedule">Re-schedule</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                  <SelectItem value="in_progress">In Progress</SelectItem>
+                  <SelectItem value="cancelled">Cancelled</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-900">Vendor Status</label>
+              <Select
+                value={statusForm.VendorStatus}
+                onValueChange={(value) => setStatusForm({ ...statusForm, VendorStatus: value })}
+              >
+                <SelectTrigger className="bg-white border-gray-300 text-gray-900">
+                  <SelectValue placeholder="Select vendor status" />
+                </SelectTrigger>
+                <SelectContent className="bg-white text-gray-900">
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="approved">Approved</SelectItem>
+                  <SelectItem value="not_approved">Not Approved</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-900">Machine Status</label>
+              <Select
+                value={statusForm.MachineStatus}
+                onValueChange={(value) => setStatusForm({ ...statusForm, MachineStatus: value })}
+              >
+                <SelectTrigger className="bg-white border-gray-300 text-gray-900">
+                  <SelectValue placeholder="Select machine status" />
+                </SelectTrigger>
+                <SelectContent className="bg-white text-gray-900">
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="deployed">Deployed</SelectItem>
+                  <SelectItem value="cancelled">Cancelled</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-900">Employee Feedback</label>
+              <Textarea
+                value={statusForm.employeeFeedback}
+                onChange={(e) => setStatusForm({ ...statusForm, employeeFeedback: e.target.value })}
+                placeholder="Enter employee feedback..."
+                className="min-h-[100px] bg-white border-gray-300 text-gray-900"
+              />
+            </div>
+
+            {/* File Upload Option in Status Dialog */}
+            {files.length === 0 ? (
+              <div className="pt-4 border-t">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setShowStatusDialog(false);
+                    setTimeout(() => setShowUploadDialog(true), 100);
+                  }}
+                  className="w-full border-blue-600 text-blue-600 hover:bg-blue-50 hover:text-blue-700"
+                >
+                  <Upload className="w-4 h-4 mr-2" />
+                  Add Files to Upload
+                </Button>
+              </div>
+            ) : (
+              <div className="pt-4 border-t">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-gray-900">
+                    Files to upload ({files.length})
+                  </span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={clearAllFiles}
+                    className="text-red-600 hover:text-red-800 hover:bg-red-50"
+                  >
+                    <Trash2 className="w-3 h-3 mr-1" />
+                    Clear
+                  </Button>
+                </div>
+                <div className="space-y-1 max-h-32 overflow-y-auto">
+                  {files.map((file, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center justify-between p-2 bg-gray-50 rounded border border-gray-200"
+                    >
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        {getFileIcon(file.type)}
+                        <span className="text-sm text-gray-700 truncate">{file.name}</span>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeFile(index)}
+                        className="h-6 w-6 p-0 text-red-600 hover:text-red-800 hover:bg-red-50"
+                      >
+                        <X className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="flex justify-end gap-3 pt-4">
+              <Button
+                variant="outline"
+                onClick={() => setShowStatusDialog(false)}
+                disabled={updating || uploading}
+                className="border-gray-700 text-gray-700 hover:bg-gray-700 hover:text-white"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={files.length > 0 ? handleUpdateWithFiles : handleUpdateStatus}
+                className="bg-gray-800 hover:bg-gray-900 text-white"
+                disabled={updating || uploading || !statusForm.status}
+              >
+                {(updating || uploading) ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    {files.length > 0 ? "Updating with Files..." : "Updating..."}
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4 mr-2" />
+                    {files.length > 0 ? `Update with ${files.length} File${files.length !== 1 ? 's' : ''}` : "Update Status"}
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Notes Dialog */}
+      <Dialog open={showNotesDialog} onOpenChange={setShowNotesDialog}>
+        <DialogContent className="max-w-2xl bg-white">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-gray-900">Edit Notes</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-4">
+            <Textarea
+              value={notesForm.notes}
+              onChange={(e) => setNotesForm({ ...notesForm, notes: e.target.value })}
+              placeholder="Add your notes here..."
+              className="min-h-[200px] bg-white border-gray-300 text-gray-900"
+            />
+            <div className="flex justify-end gap-3">
+              <Button
+                variant="outline"
+                onClick={() => setShowNotesDialog(false)}
+                disabled={updating}
+                className="border-gray-700 text-gray-700 hover:bg-gray-700 hover:text-white"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleUpdateNotes}
+                className="bg-gray-800 hover:bg-gray-900 text-white"
+                disabled={updating}
+              >
+                {updating ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4 mr-2" />
+                    Save Notes
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Share Dialog */}
       <Dialog open={showShareDialog} onOpenChange={setShowShareDialog}>
@@ -1198,150 +1651,101 @@ export default function ReceivedTaskDetailPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Notes Dialog */}
-      <Dialog open={showNotesDialog} onOpenChange={setShowNotesDialog}>
-        <DialogContent className="max-w-2xl bg-white">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-gray-900">Edit Notes</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 mt-4">
-            <Textarea
-              value={notesForm.notes}
-              onChange={(e) => setNotesForm({ ...notesForm, notes: e.target.value })}
-              placeholder="Add your notes here..."
-              className="min-h-[200px] bg-white border-gray-300 text-gray-900"
-            />
-            <div className="flex justify-end gap-3">
-              <Button
-                variant="outline"
-                onClick={() => setShowNotesDialog(false)}
-                disabled={updating}
-                className="border-gray-700 text-gray-700 hover:bg-gray-700 hover:text-white"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleUpdateNotes}
-                className="bg-gray-800 hover:bg-gray-900 text-white"
-                disabled={updating}
-              >
-                {updating ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Saving...
-                  </>
+      {/* Preview Modal */}
+      {previewFile && (
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl w-full max-w-[95vw] max-h-[95vh] overflow-hidden flex flex-col shadow-lg">
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 border-b">
+              <div className="flex items-center gap-2">
+                {previewFile.type?.startsWith("image/") ? (
+                  <ImageIcon className="w-4 h-4 text-green-600" />
+                ) : previewFile.type?.startsWith("video/") ? (
+                  <VideoIcon className="w-4 h-4 text-blue-600" />
                 ) : (
-                  <>
-                    <Save className="w-4 h-4 mr-2" />
-                    Save Notes
-                  </>
+                  <FileText className="w-4 h-4 text-gray-600" />
                 )}
-              </Button>
+                <h3 className="font-bold text-gray-900 truncate">{previewFile.name}</h3>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setZoom((prev) => prev + 0.2)}
+                  className="text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+                >
+                  Zoom In +
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setZoom((prev) => Math.max(prev - 0.2, 0.2))}
+                  className="text-blue-600 hover:text-blue-800 hover:bg-blue-50"
+                >
+                  Zoom Out -
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => downloadFile(previewFile.url, previewFile.name)}
+                  className="text-green-600 hover:text-green-800 hover:bg-green-50"
+                >
+                  <Download className="w-4 h-4 mr-2" /> Download
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setPreviewFile(null)}
+                  className="text-gray-600 hover:text-gray-800 hover:bg-gray-100"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+
+            {/* Body */}
+            <div className="flex-1 p-4 overflow-auto flex items-center justify-center bg-gray-50">
+              {previewFile.type?.startsWith('image/') ? (
+                <img
+                  src={previewFile.url}
+                  alt={previewFile.name}
+                  className="rounded-lg mx-auto transition-transform"
+                  style={{ transform: `scale(${zoom})` }}
+                />
+              ) : previewFile.type?.startsWith('video/') ? (
+                <video
+                  controls
+                  autoPlay
+                  className="rounded-lg mx-auto transition-transform"
+                  style={{ transform: `scale(${zoom})` }}
+                >
+                  <source src={previewFile.url} type={previewFile.type} />
+                  Your browser does not support the video tag.
+                </video>
+              ) : previewFile.type?.includes('pdf') ? (
+                <iframe
+                  src={previewFile.url}
+                  className="w-full h-[90vh] border rounded-lg"
+                  title={previewFile.name}
+                />
+              ) : (
+                <div className="text-center py-12">
+                  <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-700">Preview not available for this file type</p>
+                  <Button
+                    variant="outline"
+                    onClick={() => downloadFile(previewFile.url, previewFile.name)}
+                    className="mt-4"
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Download File
+                  </Button>
+                </div>
+              )}
             </div>
           </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Status Dialog */}
-      <Dialog open={showStatusDialog} onOpenChange={setShowStatusDialog}>
-        <DialogContent className="max-w-md bg-white">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-gray-900">Update Task Status</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 mt-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-900">Status</label>
-              <Select
-                value={statusForm.status}
-                onValueChange={(value) => setStatusForm({ ...statusForm, status: value })}
-              >
-                <SelectTrigger className="bg-white border-gray-300 text-gray-900">
-                  <SelectValue placeholder="Select status" />
-                </SelectTrigger>
-                <SelectContent className="bg-white text-gray-900">
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="signed">Signed</SelectItem>
-                  <SelectItem value="not_avaiable">Not Available</SelectItem>
-                  <SelectItem value="not_intrested">Not Interested</SelectItem>
-                  <SelectItem value="re_shedule">Re-schedule</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-900">Vendor Status</label>
-              <Select
-                value={statusForm.VendorStatus}
-                onValueChange={(value) => setStatusForm({ ...statusForm, VendorStatus: value })}
-              >
-                <SelectTrigger className="bg-white border-gray-300 text-gray-900">
-                  <SelectValue placeholder="Select vendor status" />
-                </SelectTrigger>
-                <SelectContent className="bg-white text-gray-900">
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="approved">Approved</SelectItem>
-                  <SelectItem value="not_approved">Not Approved</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-900">Machine Status</label>
-              <Select
-                value={statusForm.MachineStatus}
-                onValueChange={(value) => setStatusForm({ ...statusForm, MachineStatus: value })}
-              >
-                <SelectTrigger className="bg-white border-gray-300 text-gray-900">
-                  <SelectValue placeholder="Select machine status" />
-                </SelectTrigger>
-                <SelectContent className="bg-white text-gray-900">
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="deployed">Deployed</SelectItem>
-                  <SelectItem value="cancelled">Cancelled</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-900">Employee Feedback</label>
-              <Textarea
-                value={statusForm.employeeFeedback}
-                onChange={(e) => setStatusForm({ ...statusForm, employeeFeedback: e.target.value })}
-                placeholder="Enter employee feedback..."
-                className="min-h-[100px] bg-white border-gray-300 text-gray-900"
-              />
-            </div>
-
-            <div className="flex justify-end gap-3 pt-4">
-              <Button
-                variant="outline"
-                onClick={() => setShowStatusDialog(false)}
-                disabled={updating}
-                className="border-gray-700 text-gray-700 hover:bg-gray-700 hover:text-white"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleUpdateStatus}
-                className="bg-gray-800 hover:bg-gray-900 text-white"
-                disabled={updating}
-              >
-                {updating ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Updating...
-                  </>
-                ) : (
-                  <>
-                    <Save className="w-4 h-4 mr-2" />
-                    Update Status
-                  </>
-                )}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+        </div>
+      )}
     </div>
   );
 }

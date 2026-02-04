@@ -9,7 +9,7 @@ import { authOptions } from "@/lib/auth";
 import { sendNotification } from "@/lib/sendNotification";
 import { sendMail } from "@/lib/mail";
 
-// POST: ایمپلائی فیڈ بیک جمع کروانا
+// POST: Add employee feedback
 export async function POST(req, { params }) {
   try {
     const session = await getServerSession(authOptions);
@@ -45,7 +45,7 @@ export async function POST(req, { params }) {
       return NextResponse.json({ error: "Task not found" }, { status: 404 });
     }
 
-    // چیک کریں کہ ایمپلائی اس ٹاسک پر ہے
+    // Check if employee is assigned to this task
     const isAssigned = task.assignedEmployees?.some(
       assignment => assignment.employeeId.toString() === employee._id.toString()
     );
@@ -54,13 +54,13 @@ export async function POST(req, { params }) {
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
 
-    // پرانا فیڈ بیک ہٹائیں (اگر موجود ہے)
+    // Remove old feedback (if exists)
     await FormSubmission.updateOne(
       { _id: id },
       { $pull: { employeeFeedbacks: { employeeId: employee._id } } }
     );
 
-    // نیا فیڈ بیک شامل کریں
+    // Add new feedback
     const updateResult = await FormSubmission.updateOne(
       { _id: id },
       {
@@ -81,10 +81,10 @@ export async function POST(req, { params }) {
       );
     }
 
-    // نوٹیفیکیشنز بھیجیں
+    // Send notifications
     const notifications = [];
 
-    // ٹیم لیڈ کو نوٹیفائی کریں
+    // Notify Team Lead
     if (task.assignedTo?.length > 0) {
       await Promise.allSettled(
         task.assignedTo.map(async (teamLead) => {
@@ -104,7 +104,7 @@ export async function POST(req, { params }) {
             })
           );
 
-          // ای میل نوٹیفیکیشن
+          // Email notification
           const emailHTML = `
             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px;">
               <h2 style="color: #333;">New Employee Feedback</h2>
@@ -124,7 +124,7 @@ export async function POST(req, { params }) {
       );
     }
 
-    // مینیجر کو نوٹیفائی کریں
+    // Notify Manager
     if (task.submittedBy) {
       notifications.push(
         sendNotification({
@@ -142,7 +142,7 @@ export async function POST(req, { params }) {
         })
       );
 
-      // ای میل نوٹیفیکیشن
+      // Email notification
       const emailHTML = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px;">
           <h2 style="color: #333;">New Employee Feedback</h2>
@@ -176,7 +176,7 @@ export async function POST(req, { params }) {
   }
 }
 
-// PUT: ٹیم لیڈ فیڈ بیک پر ریپلائی
+// PUT: Reply to team lead feedback
 export async function PUT(req, { params }) {
   try {
     const session = await getServerSession(authOptions);
@@ -195,7 +195,7 @@ export async function PUT(req, { params }) {
       );
     }
 
-    // چیک کریں کہ صرف ایمپلائی ہی ریپلائی کر سکتا ہے
+    // Check only employee can reply
     if (session.user.role !== "Employee") {
       return NextResponse.json(
         { error: "Only employees can reply to feedback" },
@@ -218,7 +218,7 @@ export async function PUT(req, { params }) {
       return NextResponse.json({ error: "Task not found" }, { status: 404 });
     }
 
-    // چیک کریں کہ ایمپلائی اس ٹاسک پر ہے
+    // Check if employee is assigned to this task
     const isAssigned = task.assignedEmployees?.some(
       assignment => assignment.employeeId.toString() === employee._id.toString()
     );
@@ -227,13 +227,13 @@ export async function PUT(req, { params }) {
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
 
-    // فیڈ بیک تلاش کریں
+    // Find feedback
     const feedback = task.teamLeadFeedbacks.id(feedbackId);
     if (!feedback) {
       return NextResponse.json({ error: "Feedback not found" }, { status: 404 });
     }
 
-    // ریپلائی شامل کریں
+    // Add reply
     const newReply = {
       repliedBy: employee._id,
       repliedByModel: "Employee",
@@ -244,10 +244,10 @@ export async function PUT(req, { params }) {
     feedback.replies.push(newReply);
     await task.save();
 
-    // نوٹیفیکیشنز بھیجیں
+    // Send notifications
     const notifications = [];
 
-    // اصل فیڈ بیک دینے والے ٹیم لیڈ کو نوٹیفائی کریں
+    // Notify original feedback giver
     if (feedback.teamLeadId._id.toString() !== employee._id.toString()) {
       const originalTeamLead = feedback.teamLeadId;
       if (originalTeamLead) {
@@ -267,7 +267,7 @@ export async function PUT(req, { params }) {
           })
         );
 
-        // ای میل نوٹیفیکیشن
+        // Email notification
         const emailHTML = `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px;">
             <h2 style="color: #333;">New Reply to Your Feedback</h2>
@@ -293,7 +293,7 @@ export async function PUT(req, { params }) {
       }
     }
 
-    // دوسرے ٹیم لیڈز کو نوٹیفائی کریں
+    // Notify other team leads
     if (task.assignedTo?.length > 0) {
       await Promise.allSettled(
         task.assignedTo.map(async (teamLead) => {
@@ -318,7 +318,7 @@ export async function PUT(req, { params }) {
       );
     }
 
-    // مینیجر کو نوٹیفائی کریں
+    // Notify Manager
     if (task.submittedBy) {
       notifications.push(
         sendNotification({
@@ -336,7 +336,7 @@ export async function PUT(req, { params }) {
         })
       );
 
-      // ای میل نوٹیفیکیشن
+      // Email notification
       const emailHTML = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 10px;">
           <h2 style="color: #333;">Employee Replied to Feedback</h2>
@@ -378,7 +378,9 @@ export async function PUT(req, { params }) {
   }
 }
 
-// GET: ایمپلائی کے لیے ٹیم لیڈ فیڈ بیک اور ریپلائیز
+
+
+// GET: Get team lead feedbacks and replies
 export async function GET(req, { params }) {
   try {
     const session = await getServerSession(authOptions);
@@ -403,7 +405,7 @@ export async function GET(req, { params }) {
       return NextResponse.json({ error: "Task not found" }, { status: 404 });
     }
 
-    // چیک کریں کہ ایمپلائی اس ٹاسک پر ہے
+    // Check if employee is assigned to this task
     const isAssigned = task.assignedEmployees?.some(
       assignment => assignment.employeeId.toString() === employee._id.toString()
     );
