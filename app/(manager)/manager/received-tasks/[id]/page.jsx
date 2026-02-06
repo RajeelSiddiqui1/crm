@@ -504,21 +504,30 @@ export default function ReceivedTaskDetailPage() {
   };
 
 
-  const handleDeleteAttachment = async (fileId) => {
+const handleDeleteAttachment = async (file) => {
   try {
-    await axios.delete(`/api/manager/received-tasks/${taskId}`);
 
+    if (!file?.publicId) {
+      console.error("publicId missing", file);
+      return;
+    }
+
+    await axios.delete(
+      `/api/manager/received-tasks/${taskId}?fileKey=${encodeURIComponent(file.publicId)}`
+    );
 
     setTask((prev) => ({
       ...prev,
       fileAttachments: prev.fileAttachments.filter(
-        (f) => f._id !== fileId
+        (f) => f.publicId !== file.publicId
       ),
     }));
+
   } catch (error) {
     console.error(error);
   }
 };
+
 
 
   // Status color functions
@@ -1062,7 +1071,8 @@ export default function ReceivedTaskDetailPage() {
   size="sm"
   variant="ghost"
   className="h-8 w-8 p-0 hover:bg-gray-100"
-  onClick={() => handleDeleteAttachment(file._id)}
+  onClick={() => handleDeleteAttachment(file)}
+
   title="Delete"
 >
   <Trash className="w-4 h-4 text-gray-600" />
@@ -1287,7 +1297,7 @@ export default function ReceivedTaskDetailPage() {
                       Clear All
                     </Button>
                   </div>
-                  <CardDescription>
+                  <CardDescription className="text-gray-900">
                     Total size: {formatFileSize(files.reduce((total, file) => total + file.size, 0))}
                   </CardDescription>
                 </CardHeader>
@@ -1405,42 +1415,12 @@ export default function ReceivedTaskDetailPage() {
               </Select>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-900">Vendor Status</label>
-              <Select
-                value={statusForm.VendorStatus}
-                onValueChange={(value) => setStatusForm({ ...statusForm, VendorStatus: value })}
-              >
-                <SelectTrigger className="bg-white border-gray-300 text-gray-900">
-                  <SelectValue placeholder="Select vendor status" />
-                </SelectTrigger>
-                <SelectContent className="bg-white text-gray-900">
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="approved">Approved</SelectItem>
-                  <SelectItem value="not_approved">Not Approved</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            
+
+           
 
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-900">Machine Status</label>
-              <Select
-                value={statusForm.MachineStatus}
-                onValueChange={(value) => setStatusForm({ ...statusForm, MachineStatus: value })}
-              >
-                <SelectTrigger className="bg-white border-gray-300 text-gray-900">
-                  <SelectValue placeholder="Select machine status" />
-                </SelectTrigger>
-                <SelectContent className="bg-white text-gray-900">
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="deployed">Deployed</SelectItem>
-                  <SelectItem value="cancelled">Cancelled</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-900">Employee Feedback</label>
+              <label className="text-sm font-medium text-gray-900">Your Feedback</label>
               <Textarea
                 value={statusForm.employeeFeedback}
                 onChange={(e) => setStatusForm({ ...statusForm, employeeFeedback: e.target.value })}

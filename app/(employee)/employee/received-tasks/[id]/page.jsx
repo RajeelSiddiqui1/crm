@@ -212,25 +212,31 @@ export default function EmployeeTaskDetailPage() {
     }
   };
 
-  const handleDeleteAttachment = async () => {
-    try {
-      const response = await axios.delete(`/api/employee/received-tasks/${taskId}`);
+  const handleDeleteAttachment = async (file) => {
+     try {
 
-      if (response.data.success) {
-        toast.success("Attachments removed successfully");
-        setTask(prev => ({
-          ...prev,
-          fileAttachments: [],
-          updatedAt: new Date(),
-        }));
-        setShowDeleteDialog(false);
-      }
-    } catch (error) {
-      console.error("Error deleting attachments:", error);
-      const errorMessage = error.response?.data?.message || "Failed to remove attachments";
-      toast.error(errorMessage);
+    if (!file?.publicId) {
+      console.error("publicId missing", file);
+      return;
     }
+
+    await axios.delete(
+      `/api/employee/received-tasks/${taskId}?fileKey=${encodeURIComponent(file.publicId)}`
+    );
+
+    setTask((prev) => ({
+      ...prev,
+      fileAttachments: prev.fileAttachments.filter(
+        (f) => f.publicId !== file.publicId
+      ),
+    }));
+
+  } catch (error) {
+    console.error(error);
+  }
   };
+
+
 
   const handleFileChange = (e) => {
     const files = Array.from(e.target.files);
@@ -728,6 +734,18 @@ export default function EmployeeTaskDetailPage() {
                                     Uploaded: {formatDate(file.createdAt)}
                                   </p>
                                 )}
+
+                                                      <Button
+  size="sm"
+  variant="ghost"
+  className="h-8 w-8 p-0 hover:bg-gray-100"
+  onClick={() => handleDeleteAttachment(file)}
+
+  title="Delete"
+>
+  <Trash2 className="w-4 h-4 text-gray-600" />
+</Button>
+
                               </div>
                             </div>
                           </div>
@@ -1461,18 +1479,7 @@ export default function EmployeeTaskDetailPage() {
               </ul>
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="border-gray-700 text-gray-700 hover:bg-gray-700 hover:text-white px-6">
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteAttachment}
-              className="bg-gradient-to-r from-red-600 to-red-500 hover:from-red-700 hover:to-red-600 text-white px-6"
-            >
-              <Trash2 className="w-4 h-4 mr-2" />
-              Remove All
-            </AlertDialogAction>
-          </AlertDialogFooter>
+          
         </AlertDialogContent>
       </AlertDialog>
 

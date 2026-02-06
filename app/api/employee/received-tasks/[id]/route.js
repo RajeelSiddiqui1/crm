@@ -15,6 +15,7 @@ import {
   employeeTaskUpdateMailTemplate,
   employeeTaskUpdateNotification
 } from "@/helper/emails/employee/received-task";
+import { DeleteObjectCommand } from "@aws-sdk/client-s3";
 
 export async function PATCH(request, { params }) {
   try {
@@ -313,9 +314,12 @@ export async function GET(request, { params }) {
 }
 
 
-export async function DELETE(request, { params }) {
+
+
+export async function DELETE(request, context) {
   try {
     const session = await getServerSession(authOptions);
+
     if (!session || session.user.role !== "Employee") {
       return NextResponse.json(
         { success: false, message: "Unauthorized access" },
@@ -325,7 +329,18 @@ export async function DELETE(request, { params }) {
 
     await dbConnect();
 
+    const { params } = context;
     const { id } = params;
+
+    const { searchParams } = new URL(request.url);
+    const fileKey = searchParams.get("fileKey"); // <-- publicId
+
+    if (!fileKey) {
+      return NextResponse.json(
+        { success: false, message: "fileKey is required" },
+        { status: 400 }
+      );
+    }
 
     const task = await SharedTask.findOne({
       _id: id,
@@ -339,37 +354,43 @@ export async function DELETE(request, { params }) {
       );
     }
 
-    // Delete files from AWS S3 if they exist
-    if (task.fileAttachments && task.fileAttachments.length > 0) {
-      try {
-        for (const file of task.fileAttachments) {
-          if (file.publicId) {
-            await s3.deleteObject({
-              Bucket: process.env.AWS_BUCKET_NAME,
-              Key: file.publicId,
-            });
-          }
-        }
-      } catch (error) {
-        console.error("Error deleting files from S3:", error);
-        // Continue even if S3 delete fails
-      }
+    const fileExists = task.fileAttachments.find(
+      (f) => f.publicId === fileKey
+    );
+
+    if (!fileExists) {
+      return NextResponse.json(
+        { success: false, message: "File not found in task" },
+        { status: 404 }
+      );
     }
 
-    // Remove files from task
-    task.fileAttachments = [];
+    // ✅ delete from S3 (correct v3 way)
+    await s3.send(
+      new DeleteObjectCommand({
+        Bucket: process.env.AWS_BUCKET_NAME,
+        Key: fileKey,
+      })
+    );
+
+    // ✅ delete only that file from DB array
+    task.fileAttachments = task.fileAttachments.filter(
+      (f) => f.publicId !== fileKey
+    );
+
     task.updatedAt = new Date();
     await task.save();
 
     return NextResponse.json(
       {
         success: true,
-        message: "Files removed successfully",
+        message: "File deleted successfully",
       },
       { status: 200 }
     );
+
   } catch (error) {
-    console.error("Error deleting files:", error);
+    console.error("Error deleting file:", error);
     return NextResponse.json(
       {
         success: false,
