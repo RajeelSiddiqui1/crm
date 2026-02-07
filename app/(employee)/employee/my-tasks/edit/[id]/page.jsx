@@ -1,6 +1,10 @@
 "use client";
 
+<<<<<<< HEAD
 import { useState, useEffect, useRef } from "react";
+=======
+import { useState, useEffect } from "react";
+>>>>>>> d285dcb (set submission backend)
 import { useRouter, useParams } from "next/navigation";
 import axios from "axios";
 import {
@@ -20,6 +24,7 @@ import {
   CheckCircle,
   Clock4,
   AlertTriangle,
+<<<<<<< HEAD
   Upload,
   File,
   FileText,
@@ -71,6 +76,11 @@ import {
 import { toast } from "sonner";
 
 export default function EditEmployeeTaskPage() {
+=======
+} from "lucide-react";
+
+export default function EditTaskPage() {
+>>>>>>> d285dcb (set submission backend)
   const router = useRouter();
   const params = useParams();
   const taskId = params.id;
@@ -88,6 +98,7 @@ export default function EditEmployeeTaskPage() {
   const [showManagerDropdown, setShowManagerDropdown] = useState(false);
   const [showEmployeeDropdown, setShowEmployeeDropdown] = useState(false);
   const [fetchingData, setFetchingData] = useState(true);
+<<<<<<< HEAD
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [existingFiles, setExistingFiles] = useState([]);
   const [filesToDelete, setFilesToDelete] = useState([]);
@@ -110,6 +121,8 @@ export default function EditEmployeeTaskPage() {
   const teamLeadDropdownRef = useRef(null);
   const managerDropdownRef = useRef(null);
   const employeeDropdownRef = useRef(null);
+=======
+>>>>>>> d285dcb (set submission backend)
 
   const [formData, setFormData] = useState({
     title: "",
@@ -131,6 +144,7 @@ export default function EditEmployeeTaskPage() {
     { value: "rejected", label: "Rejected", icon: AlertTriangle, color: "bg-red-100 text-red-800 border-red-200" },
   ];
 
+<<<<<<< HEAD
   const fileTypeFilters = [
     { value: "all", label: "All Files", icon: File, color: "text-gray-600" },
     { value: "image", label: "Images", icon: Image, color: "text-blue-600" },
@@ -140,6 +154,8 @@ export default function EditEmployeeTaskPage() {
     { value: "audio", label: "Audio", icon: FileAudio, color: "text-green-600" },
   ];
 
+=======
+>>>>>>> d285dcb (set submission backend)
   useEffect(() => {
     if (taskId) {
       fetchTask();
@@ -149,6 +165,7 @@ export default function EditEmployeeTaskPage() {
 
   useEffect(() => {
     const handleClickOutside = (event) => {
+<<<<<<< HEAD
       if (teamLeadDropdownRef.current && !teamLeadDropdownRef.current.contains(event.target)) {
         setShowTeamLeadDropdown(false);
       }
@@ -156,6 +173,24 @@ export default function EditEmployeeTaskPage() {
         setShowManagerDropdown(false);
       }
       if (employeeDropdownRef.current && !employeeDropdownRef.current.contains(event.target)) {
+=======
+      const dropdowns = [
+        'team-lead-dropdown',
+        'manager-dropdown', 
+        'employee-dropdown',
+        'team-lead-selector',
+        'manager-selector',
+        'employee-selector'
+      ];
+      
+      const clickedInside = dropdowns.some(className => 
+        event.target.closest(`.${className}`)
+      );
+      
+      if (!clickedInside) {
+        setShowTeamLeadDropdown(false);
+        setShowManagerDropdown(false);
+>>>>>>> d285dcb (set submission backend)
         setShowEmployeeDropdown(false);
       }
     };
@@ -164,6 +199,7 @@ export default function EditEmployeeTaskPage() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+<<<<<<< HEAD
   useEffect(() => {
     const handleEscape = (e) => {
       if (e.key === 'Escape') {
@@ -176,6 +212,8 @@ export default function EditEmployeeTaskPage() {
     return () => window.removeEventListener('keydown', handleEscape);
   }, [previewFile, isFullscreen]);
 
+=======
+>>>>>>> d285dcb (set submission backend)
   const fetchTask = async () => {
     try {
       setLoading(true);
@@ -195,6 +233,7 @@ export default function EditEmployeeTaskPage() {
           status: taskData.status || "pending",
         });
 
+<<<<<<< HEAD
         // Extract and set selected team leads
         const teamLeads = taskData.assignedTeamLead?.map(item => ({
           _id: item.teamLeadId?._id || item.teamLeadId,
@@ -234,6 +273,18 @@ export default function EditEmployeeTaskPage() {
       console.error("Error fetching task:", error);
       toast.error("Failed to load task");
       router.push("/employee/my-tasks");
+=======
+        setSelectedTeamLeads(taskData.assignedTeamLead || []);
+        setSelectedManagers(taskData.assignedManager || []);
+        setSelectedEmployees(taskData.assignedEmployee || []);
+      } else {
+        alert("Task not found");
+        router.push("/employee/employee-tasks");
+      }
+    } catch (error) {
+      console.error("Error fetching task:", error);
+      alert("Failed to load task");
+>>>>>>> d285dcb (set submission backend)
     } finally {
       setLoading(false);
     }
@@ -243,12 +294,17 @@ export default function EditEmployeeTaskPage() {
     try {
       setFetchingData(true);
       
+<<<<<<< HEAD
+=======
+      // Sab data ek saath fetch karo
+>>>>>>> d285dcb (set submission backend)
       const [teamLeadsRes, managersRes, employeesRes] = await Promise.all([
         axios.get("/api/employee/teamleads"),
         axios.get("/api/employee/managers"),
         axios.get("/api/employee/employees")
       ]);
 
+<<<<<<< HEAD
       if (teamLeadsRes.data.success) setTeamLeads(teamLeadsRes.data.employees || []);
       if (managersRes.data.success) setManagers(managersRes.data.employees || []);
       if (employeesRes.status === 200) setEmployees(employeesRes.data || []);
@@ -256,6 +312,21 @@ export default function EditEmployeeTaskPage() {
     } catch (error) {
       console.error("Error fetching data:", error);
       toast.error("Failed to load data");
+=======
+      if (teamLeadsRes.data.success) {
+        setTeamLeads(teamLeadsRes.data.employees || []);
+      }
+
+      if (managersRes.data.success) {
+        setManagers(managersRes.data.employees || []);
+      }
+
+      if (employeesRes.status === 200) {
+        setEmployees(employeesRes.data || []);
+      }
+    } catch (error) {
+      console.error("Error fetching data:", error);
+>>>>>>> d285dcb (set submission backend)
     } finally {
       setFetchingData(false);
     }
@@ -266,21 +337,59 @@ export default function EditEmployeeTaskPage() {
 
     if (!formData.title.trim()) {
       newErrors.title = "Title is required";
+<<<<<<< HEAD
     }
 
+=======
+    } else if (formData.title.trim().length < 3) {
+      newErrors.title = "Title must be at least 3 characters";
+    }
+
+    if (!formData.description.trim()) {
+      newErrors.description = "Description is required";
+    } else if (formData.description.trim().length < 10) {
+      newErrors.description = "Description must be at least 10 characters";
+    }
+
+    if (!formData.startDate) {
+      newErrors.startDate = "Start date is required";
+    }
+
+    if (!formData.endDate) {
+      newErrors.endDate = "End date is required";
+    }
+>>>>>>> d285dcb (set submission backend)
 
     if (formData.startDate && formData.endDate) {
       const start = new Date(formData.startDate);
       const end = new Date(formData.endDate);
+<<<<<<< HEAD
       if (start > end) {
         newErrors.endDate = "End date must be after start date";
       }
+=======
+      
+      if (start > end) {
+        newErrors.endDate = "End date must be after start date";
+      }
+      
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (end < today) {
+        newErrors.endDate = "End date cannot be in the past";
+      }
+    }
+
+    if (selectedTeamLeads.length === 0 && selectedManagers.length === 0 && selectedEmployees.length === 0) {
+      newErrors.assignees = "Please assign at least one team lead, manager, or employee";
+>>>>>>> d285dcb (set submission backend)
     }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
+<<<<<<< HEAD
   const handleFileUpload = async (files) => {
     setIsUploading(true);
     setUploadProgress(0);
@@ -387,46 +496,121 @@ export default function EditEmployeeTaskPage() {
     return 'other';
   };
 
+=======
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!validateForm()) {
+      const firstError = Object.keys(errors)[0];
+      if (firstError) {
+        document.querySelector(`[name="${firstError}"]`)?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center'
+        });
+      }
+      return;
+    }
+
+    try {
+      setUpdating(true);
+
+      const payload = {
+        ...formData,
+        assignedTeamLead: selectedTeamLeads.map((tl) => tl.teamLeadId?._id || tl._id),
+        assignedManager: selectedManagers.map((mgr) => mgr.managerId?._id || mgr._id),
+        assignedEmployee: selectedEmployees.map((emp) => emp.employeeId?._id || emp._id),
+      };
+
+      const response = await axios.put(`/api/employee/assigned-subtasks/${taskId}`, payload);
+
+      if (response.status === 200) {
+        alert("Task updated successfully!");
+        router.push(`/employee/employee-tasks/${taskId}`);
+      }
+    } catch (error) {
+      console.error("Error updating task:", error);
+      alert(error.response?.data?.error || error.response?.data?.message || "Failed to update task");
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+    if (errors[name]) {
+      setErrors((prev) => ({ ...prev, [name]: "" }));
+    }
+  };
+
+>>>>>>> d285dcb (set submission backend)
   // Team Lead Functions
   const addTeamLead = (teamLead) => {
     if (!selectedTeamLeads.find((tl) => tl._id === teamLead._id)) {
       setSelectedTeamLeads([...selectedTeamLeads, teamLead]);
+<<<<<<< HEAD
       toast.success(`${teamLead.firstName} ${teamLead.lastName} added as Team Lead`);
       setTeamLeadSearch("");
+=======
+>>>>>>> d285dcb (set submission backend)
     }
   };
 
   const removeTeamLead = (teamLeadId) => {
+<<<<<<< HEAD
     const tl = selectedTeamLeads.find(tl => tl._id === teamLeadId);
     setSelectedTeamLeads(selectedTeamLeads.filter((tl) => tl._id !== teamLeadId));
     toast.info(`${tl?.firstName} ${tl?.lastName} removed from Team Leads`);
+=======
+    setSelectedTeamLeads(selectedTeamLeads.filter((tl) => tl._id !== teamLeadId));
+    if (errors.assignees) {
+      setErrors(prev => ({ ...prev, assignees: "" }));
+    }
+>>>>>>> d285dcb (set submission backend)
   };
 
   // Manager Functions
   const addManager = (manager) => {
     if (!selectedManagers.find((mgr) => mgr._id === manager._id)) {
       setSelectedManagers([...selectedManagers, manager]);
+<<<<<<< HEAD
       toast.success(`${manager.firstName} ${manager.lastName} added as Manager`);
       setManagerSearch("");
+=======
+>>>>>>> d285dcb (set submission backend)
     }
   };
 
   const removeManager = (managerId) => {
+<<<<<<< HEAD
     const mgr = selectedManagers.find(mgr => mgr._id === managerId);
     setSelectedManagers(selectedManagers.filter((mgr) => mgr._id !== managerId));
     toast.info(`${mgr?.firstName} ${mgr?.lastName} removed from Managers`);
+=======
+    setSelectedManagers(selectedManagers.filter((mgr) => mgr._id !== managerId));
+    if (errors.assignees) {
+      setErrors(prev => ({ ...prev, assignees: "" }));
+    }
+>>>>>>> d285dcb (set submission backend)
   };
 
   // Employee Functions
   const addEmployee = (employee) => {
     if (!selectedEmployees.find((emp) => emp._id === employee._id)) {
       setSelectedEmployees([...selectedEmployees, employee]);
+<<<<<<< HEAD
       toast.success(`${employee.firstName} ${employee.lastName} added as Employee`);
       setEmployeeSearch("");
+=======
+>>>>>>> d285dcb (set submission backend)
     }
   };
 
   const removeEmployee = (employeeId) => {
+<<<<<<< HEAD
     const emp = selectedEmployees.find(emp => emp._id === employeeId);
     setSelectedEmployees(selectedEmployees.filter((emp) => emp._id !== employeeId));
     toast.info(`${emp?.firstName} ${emp?.lastName} removed from Employees`);
@@ -597,6 +781,39 @@ export default function EditEmployeeTaskPage() {
                 <div className="h-48 bg-white rounded-2xl"></div>
                 <div className="h-48 bg-white rounded-2xl"></div>
                 <div className="h-48 bg-white rounded-2xl"></div>
+=======
+    setSelectedEmployees(selectedEmployees.filter((emp) => emp._id !== employeeId));
+    if (errors.assignees) {
+      setErrors(prev => ({ ...prev, assignees: "" }));
+    }
+  };
+
+  // Already selected members ko filter out karo
+  const availableTeamLeads = teamLeads.filter(tl => 
+    !selectedTeamLeads.find(selected => selected._id === tl._id || selected.teamLeadId?._id === tl._id)
+  );
+
+  const availableManagers = managers.filter(mgr => 
+    !selectedManagers.find(selected => selected._id === mgr._id || selected.managerId?._id === mgr._id)
+  );
+
+  const availableEmployees = employees.filter(emp => 
+    !selectedEmployees.find(selected => selected._id === emp._id || selected.employeeId?._id === emp._id)
+  );
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-6">
+        <div className="max-w-4xl mx-auto">
+          <div className="animate-pulse space-y-8">
+            <div className="h-12 bg-gray-200 rounded-xl w-3/4 mb-8"></div>
+            <div className="bg-white rounded-2xl p-6 shadow-lg">
+              <div className="space-y-6">
+                <div className="h-6 bg-gray-200 rounded w-1/3"></div>
+                <div className="h-4 bg-gray-200 rounded"></div>
+                <div className="h-4 bg-gray-200 rounded"></div>
+                <div className="h-4 bg-gray-200 rounded"></div>
+>>>>>>> d285dcb (set submission backend)
               </div>
             </div>
           </div>
@@ -606,6 +823,7 @@ export default function EditEmployeeTaskPage() {
   }
 
   return (
+<<<<<<< HEAD
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 p-4 md:p-6">
       {/* Main Container */}
       <div className="max-w-7xl mx-auto">
@@ -671,11 +889,37 @@ export default function EditEmployeeTaskPage() {
                 <div className="text-xs text-white/80 mt-1 text-center">
                   Edit Mode
                 </div>
+=======
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-4 md:p-6">
+      <div className="max-w-4xl mx-auto">
+        {/* Header */}
+        <div className="mb-8">
+          <button
+            onClick={() => router.push(`/employee/employee-tasks/${taskId}`)}
+            className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-6 group transition-all duration-200"
+          >
+            <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
+            <span className="font-medium">Back to Task</span>
+          </button>
+          <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                  Edit Task
+                </h1>
+                <p className="text-gray-600">
+                  Update the task details and assignments
+                </p>
+              </div>
+              <div className="hidden md:flex items-center justify-center w-12 h-12 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl">
+                <Save className="w-6 h-6 text-white" />
+>>>>>>> d285dcb (set submission backend)
               </div>
             </div>
           </div>
         </div>
 
+<<<<<<< HEAD
         {/* Main Content Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           
@@ -758,12 +1002,101 @@ export default function EditEmployeeTaskPage() {
                             : ' text-gray-900 bg-gray-50 border-gray-200 hover:bg-gray-100 hover:border-gray-300'
                         }`}
                       >
+=======
+        {/* Form */}
+        <div className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100">
+          <form onSubmit={handleSubmit} className="space-y-8">
+            {/* Task Details Section */}
+            <div className="space-y-6">
+              <div className="pb-4 border-b border-gray-100">
+                <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+                  <div className="w-2 h-6 bg-blue-600 rounded-full"></div>
+                  Task Details
+                </h2>
+                <p className="text-gray-500 text-sm mt-1">Update basic information about the task</p>
+              </div>
+
+              {/* Title */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Task Title *
+                </label>
+                <input
+                  type="text"
+                  name="title"
+                  value={formData.title}
+                  onChange={handleInputChange}
+                  placeholder="Enter task title"
+                  className={`w-full px-4 py-3 bg-gray-50 border ${
+                    errors.title ? "border-red-300" : "border-gray-200"
+                  } rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-gray-900`}
+                />
+                {errors.title && (
+                  <div className="mt-2 flex items-center gap-2 text-red-600 bg-red-50 px-3 py-2 rounded-lg">
+                    <AlertCircle className="w-4 h-4" />
+                    <span className="text-sm">{errors.title}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Description */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Description *
+                </label>
+                <textarea
+                  name="description"
+                  value={formData.description}
+                  onChange={handleInputChange}
+                  rows={4}
+                  placeholder="Describe the task in detail..."
+                  className={`w-full px-4 py-3 bg-gray-50 border ${
+                    errors.description ? "border-red-300" : "border-gray-200"
+                  } rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all resize-none text-gray-900`}
+                />
+                <div className="flex justify-between mt-1">
+                  {errors.description ? (
+                    <div className="flex items-center gap-2 text-red-600 bg-red-50 px-3 py-2 rounded-lg">
+                      <AlertCircle className="w-4 h-4" />
+                      <span className="text-sm">{errors.description}</span>
+                    </div>
+                  ) : (
+                    <p className="text-gray-500 text-sm">
+                      Be as detailed as possible to ensure clarity
+                    </p>
+                  )}
+                  <span className="text-gray-400 text-sm">
+                    {formData.description.length}/500
+                  </span>
+                </div>
+              </div>
+
+              {/* Status */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Status *
+                </label>
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                  {statusOptions.map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => setFormData(prev => ({ ...prev, status: option.value }))}
+                      className={`px-4 py-3 rounded-xl border-2 transition-all duration-200 ${
+                        formData.status === option.value 
+                          ? `${option.color} border-current scale-[1.02] shadow-sm` 
+                          : 'bg-gray-50 border-gray-200 hover:bg-gray-100 hover:border-gray-300'
+                      }`}
+                    >
+                      <div className="flex flex-col items-center gap-2">
+>>>>>>> d285dcb (set submission backend)
                         <option.icon className={`w-5 h-5 ${
                           formData.status === option.value ? 'opacity-100' : 'opacity-60'
                         }`} />
                         <span className="text-sm font-medium">
                           {option.label}
                         </span>
+<<<<<<< HEAD
                       </button>
                     ))}
                   </div>
@@ -904,11 +1237,15 @@ export default function EditEmployeeTaskPage() {
                     >
                       <filter.icon className={`w-4 h-4 ${filter.color}`} />
                       <span className="text-sm">{filter.label}</span>
+=======
+                      </div>
+>>>>>>> d285dcb (set submission backend)
                     </button>
                   ))}
                 </div>
               </div>
 
+<<<<<<< HEAD
               {/* Upload Area */}
               <div
                 className={`relative border-2 border-dashed ${
@@ -1314,6 +1651,128 @@ export default function EditEmployeeTaskPage() {
                             className="ml-1 hover:text-red-600 transition-colors"
                           >
                             <X className="w-3 h-3" />
+=======
+              {/* Date and Time */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <Calendar className="inline-block w-4 h-4 mr-2 text-blue-600" />
+                    Start Date *
+                  </label>
+                  <input
+                    type="date"
+                    name="startDate"
+                    value={formData.startDate}
+                    onChange={handleInputChange}
+                    className={`w-full px-4 py-3 bg-gray-50 border ${
+                      errors.startDate ? "border-red-300" : "border-gray-200"
+                    } rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-gray-900`}
+                  />
+                  {errors.startDate && (
+                    <div className="mt-2 flex items-center gap-2 text-red-600 bg-red-50 px-3 py-2 rounded-lg">
+                      <AlertCircle className="w-4 h-4" />
+                      <span className="text-sm">{errors.startDate}</span>
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <Calendar className="inline-block w-4 h-4 mr-2 text-blue-600" />
+                    End Date *
+                  </label>
+                  <input
+                    type="date"
+                    name="endDate"
+                    value={formData.endDate}
+                    onChange={handleInputChange}
+                    min={formData.startDate}
+                    className={`w-full px-4 py-3 bg-gray-50 border ${
+                      errors.endDate ? "border-red-300" : "border-gray-200"
+                    } rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-gray-900`}
+                  />
+                  {errors.endDate && (
+                    <div className="mt-2 flex items-center gap-2 text-red-600 bg-red-50 px-3 py-2 rounded-lg">
+                      <AlertCircle className="w-4 h-4" />
+                      <span className="text-sm">{errors.endDate}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <Clock className="inline-block w-4 h-4 mr-2 text-blue-600" />
+                    Start Time (Optional)
+                  </label>
+                  <input
+                    type="time"
+                    name="startTime"
+                    value={formData.startTime}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-gray-900"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <Clock className="inline-block w-4 h-4 mr-2 text-blue-600" />
+                    End Time (Optional)
+                  </label>
+                  <input
+                    type="time"
+                    name="endTime"
+                    value={formData.endTime}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all text-gray-900"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Assign Team Leads Section */}
+            <div className="space-y-6">
+              <div className="pb-4 border-b border-gray-100">
+                <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+                  <div className="w-2 h-6 bg-green-600 rounded-full"></div>
+                  Assign Team Leads
+                  <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
+                    Department Specific
+                  </span>
+                </h2>
+                <p className="text-gray-500 text-sm mt-1">Team leads from your department</p>
+              </div>
+
+              <div className="space-y-4">
+                {/* Selected Team Leads */}
+                {selectedTeamLeads.length > 0 && (
+                  <div className="space-y-3">
+                    <p className="text-sm font-medium text-gray-700">
+                      Selected Team Leads ({selectedTeamLeads.length})
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedTeamLeads.map((tl) => (
+                        <div
+                          key={tl._id || tl.teamLeadId?._id}
+                          className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 text-green-800 rounded-xl shadow-sm"
+                        >
+                          <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                          <span className="font-medium">
+                            {tl.teamLeadId?.firstName || tl.firstName} {tl.teamLeadId?.lastName || tl.lastName}
+                          </span>
+                          {tl.teamLeadId?.depId && (
+                            <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">
+                              {tl.teamLeadId.depId.name}
+                            </span>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => removeTeamLead(tl._id || tl.teamLeadId?._id)}
+                            className="ml-2 hover:text-red-600 transition-colors"
+                          >
+                            <X className="w-4 h-4" />
+>>>>>>> d285dcb (set submission backend)
                           </button>
                         </div>
                       ))}
@@ -1321,6 +1780,7 @@ export default function EditEmployeeTaskPage() {
                   </div>
                 )}
 
+<<<<<<< HEAD
                 <div className="relative" ref={teamLeadDropdownRef}>
                   <button
                     type="button"
@@ -1330,15 +1790,32 @@ export default function EditEmployeeTaskPage() {
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 bg-gradient-to-br from-green-100 to-emerald-100 border border-green-200 rounded-full flex items-center justify-center">
                         <span className="font-semibold text-green-800">TL</span>
+=======
+                {/* Team Leads Dropdown Selector */}
+                <div className="relative team-lead-selector">
+                  <button
+                    type="button"
+                    onClick={() => setShowTeamLeadDropdown(!showTeamLeadDropdown)}
+                    className="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl hover:border-green-400 focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition-all flex items-center justify-between group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-full flex items-center justify-center text-white font-semibold">
+                        <User className="w-5 h-5" />
+>>>>>>> d285dcb (set submission backend)
                       </div>
                       <div className="text-left">
                         <p className="font-medium text-gray-900">Select Team Leads</p>
                         <p className="text-sm text-gray-500">
+<<<<<<< HEAD
                           {availableTeamLeads.length} available
+=======
+                          {availableTeamLeads.length} team leads available
+>>>>>>> d285dcb (set submission backend)
                         </p>
                       </div>
                     </div>
                     {fetchingData ? (
+<<<<<<< HEAD
                       <Loader2 className="w-4 h-4 text-gray-400 animate-spin" />
                     ) : showTeamLeadDropdown ? (
                       <ChevronUp className="w-4 h-4 text-gray-400" />
@@ -1400,12 +1877,61 @@ export default function EditEmployeeTaskPage() {
                           ))
                         )}
                       </div>
+=======
+                      <Loader2 className="w-5 h-5 text-gray-400 animate-spin" />
+                    ) : showTeamLeadDropdown ? (
+                      <ChevronUp className="w-5 h-5 text-gray-400 group-hover:text-green-600 transition-colors" />
+                    ) : (
+                      <ChevronDown className="w-5 h-5 text-gray-400 group-hover:text-green-600 transition-colors" />
+                    )}
+                  </button>
+
+                  {/* Team Leads Dropdown */}
+                  {showTeamLeadDropdown && (
+                    <div className="absolute z-20 w-full mt-2 bg-white border border-gray-200 rounded-xl shadow-lg max-h-60 overflow-y-auto team-lead-dropdown">
+                      {availableTeamLeads.length === 0 ? (
+                        <div className="px-4 py-8 text-center text-gray-500">
+                          <p className="font-medium">All team leads selected</p>
+                          <p className="text-sm mt-1">No more team leads available</p>
+                        </div>
+                      ) : (
+                        availableTeamLeads.map((tl) => (
+                          <button
+                            key={tl._id}
+                            type="button"
+                            onClick={() => addTeamLead(tl)}
+                            className="w-full px-4 py-3 text-left hover:bg-green-50 flex items-center justify-between border-b border-gray-100 last:border-b-0 transition-colors"
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 bg-gradient-to-br from-green-100 to-emerald-100 border border-green-200 rounded-full flex items-center justify-center">
+                                <span className="font-semibold text-green-800">
+                                  {tl.firstName?.[0]}{tl.lastName?.[0]}
+                                </span>
+                              </div>
+                              <div>
+                                <p className="font-medium text-gray-900">
+                                  {tl.firstName} {tl.lastName}
+                                </p>
+                                <p className="text-sm text-gray-500">{tl.email}</p>
+                                {tl.depId && (
+                                  <p className="text-xs text-green-600 mt-0.5">
+                                    Department: {tl.depId.name}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                            <Plus className="w-5 h-5 text-green-600" />
+                          </button>
+                        ))
+                      )}
+>>>>>>> d285dcb (set submission backend)
                     </div>
                   )}
                 </div>
               </div>
             </div>
 
+<<<<<<< HEAD
             {/* Assign Managers Card */}
             <div className="bg-white rounded-2xl p-6 shadow-xl border border-gray-200">
               <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100">
@@ -1450,6 +1976,50 @@ export default function EditEmployeeTaskPage() {
                             className="ml-1 hover:text-red-600 transition-colors"
                           >
                             <X className="w-3 h-3" />
+=======
+            {/* Assign Managers Section */}
+            <div className="space-y-6">
+              <div className="pb-4 border-b border-gray-100">
+                <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+                  <div className="w-2 h-6 bg-purple-600 rounded-full"></div>
+                  Assign Managers
+                  <span className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded-full">
+                    Multiple Departments
+                  </span>
+                </h2>
+                <p className="text-gray-500 text-sm mt-1">Managers from any department</p>
+              </div>
+
+              <div className="space-y-4">
+                {/* Selected Managers */}
+                {selectedManagers.length > 0 && (
+                  <div className="space-y-3">
+                    <p className="text-sm font-medium text-gray-700">
+                      Selected Managers ({selectedManagers.length})
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedManagers.map((mgr) => (
+                        <div
+                          key={mgr._id || mgr.managerId?._id}
+                          className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-purple-50 to-violet-50 border border-purple-200 text-purple-800 rounded-xl shadow-sm"
+                        >
+                          <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                          <span className="font-medium">
+                            {mgr.managerId?.firstName || mgr.firstName} {mgr.managerId?.lastName || mgr.lastName}
+                          </span>
+                          {Array.isArray(mgr.managerId?.departments) && mgr.managerId?.departments.length > 0 && (
+                            <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">
+                              {mgr.managerId.departments.slice(0, 2).map(d => d.name).join(', ')}
+                              {mgr.managerId.departments.length > 2 && '...'}
+                            </span>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => removeManager(mgr._id || mgr.managerId?._id)}
+                            className="ml-2 hover:text-red-600 transition-colors"
+                          >
+                            <X className="w-4 h-4" />
+>>>>>>> d285dcb (set submission backend)
                           </button>
                         </div>
                       ))}
@@ -1457,6 +2027,7 @@ export default function EditEmployeeTaskPage() {
                   </div>
                 )}
 
+<<<<<<< HEAD
                 <div className="relative" ref={managerDropdownRef}>
                   <button
                     type="button"
@@ -1466,15 +2037,32 @@ export default function EditEmployeeTaskPage() {
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 bg-gradient-to-br from-purple-100 to-violet-100 border border-purple-200 rounded-full flex items-center justify-center">
                         <span className="font-semibold text-purple-800">MG</span>
+=======
+                {/* Managers Dropdown Selector */}
+                <div className="relative manager-selector">
+                  <button
+                    type="button"
+                    onClick={() => setShowManagerDropdown(!showManagerDropdown)}
+                    className="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl hover:border-purple-400 focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition-all flex items-center justify-between group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-violet-600 rounded-full flex items-center justify-center text-white font-semibold">
+                        <Users className="w-5 h-5" />
+>>>>>>> d285dcb (set submission backend)
                       </div>
                       <div className="text-left">
                         <p className="font-medium text-gray-900">Select Managers</p>
                         <p className="text-sm text-gray-500">
+<<<<<<< HEAD
                           {availableManagers.length} available
+=======
+                          {availableManagers.length} managers available
+>>>>>>> d285dcb (set submission backend)
                         </p>
                       </div>
                     </div>
                     {fetchingData ? (
+<<<<<<< HEAD
                       <Loader2 className="w-4 h-4 text-gray-400 animate-spin" />
                     ) : showManagerDropdown ? (
                       <ChevronUp className="w-4 h-4 text-gray-400" />
@@ -1543,12 +2131,61 @@ export default function EditEmployeeTaskPage() {
                           ))
                         )}
                       </div>
+=======
+                      <Loader2 className="w-5 h-5 text-gray-400 animate-spin" />
+                    ) : showManagerDropdown ? (
+                      <ChevronUp className="w-5 h-5 text-gray-400 group-hover:text-purple-600 transition-colors" />
+                    ) : (
+                      <ChevronDown className="w-5 h-5 text-gray-400 group-hover:text-purple-600 transition-colors" />
+                    )}
+                  </button>
+
+                  {/* Managers Dropdown */}
+                  {showManagerDropdown && (
+                    <div className="absolute z-20 w-full mt-2 bg-white border border-gray-200 rounded-xl shadow-lg max-h-60 overflow-y-auto manager-dropdown">
+                      {availableManagers.length === 0 ? (
+                        <div className="px-4 py-8 text-center text-gray-500">
+                          <p className="font-medium">All managers selected</p>
+                          <p className="text-sm mt-1">No more managers available</p>
+                        </div>
+                      ) : (
+                        availableManagers.map((mgr) => (
+                          <button
+                            key={mgr._id}
+                            type="button"
+                            onClick={() => addManager(mgr)}
+                            className="w-full px-4 py-3 text-left hover:bg-purple-50 flex items-center justify-between border-b border-gray-100 last:border-b-0 transition-colors"
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 bg-gradient-to-br from-purple-100 to-violet-100 border border-purple-200 rounded-full flex items-center justify-center">
+                                <span className="font-semibold text-purple-800">
+                                  {mgr.firstName?.[0]}{mgr.lastName?.[0]}
+                                </span>
+                              </div>
+                              <div>
+                                <p className="font-medium text-gray-900">
+                                  {mgr.firstName} {mgr.lastName}
+                                </p>
+                                <p className="text-sm text-gray-500">{mgr.email}</p>
+                                {Array.isArray(mgr.departments) && mgr.departments.length > 0 && (
+                                  <p className="text-xs text-purple-600 mt-0.5">
+                                    Departments: {mgr.departments.map(d => d.name).join(', ')}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                            <Plus className="w-5 h-5 text-purple-600" />
+                          </button>
+                        ))
+                      )}
+>>>>>>> d285dcb (set submission backend)
                     </div>
                   )}
                 </div>
               </div>
             </div>
 
+<<<<<<< HEAD
             {/* Assign Employees Card */}
             <div className="bg-white rounded-2xl p-6 shadow-xl border border-gray-200">
               <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-100">
@@ -1593,6 +2230,49 @@ export default function EditEmployeeTaskPage() {
                             className="ml-1 hover:text-red-600 transition-colors"
                           >
                             <X className="w-3 h-3" />
+=======
+            {/* Assign Employees Section */}
+            <div className="space-y-6">
+              <div className="pb-4 border-b border-gray-100">
+                <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+                  <div className="w-2 h-6 bg-amber-600 rounded-full"></div>
+                  Assign Employees
+                  <span className="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded-full">
+                    All Departments
+                  </span>
+                </h2>
+                <p className="text-gray-500 text-sm mt-1">Regular employees from any department</p>
+              </div>
+
+              <div className="space-y-4">
+                {/* Selected Employees */}
+                {selectedEmployees.length > 0 && (
+                  <div className="space-y-3">
+                    <p className="text-sm font-medium text-gray-700">
+                      Selected Employees ({selectedEmployees.length})
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedEmployees.map((emp) => (
+                        <div
+                          key={emp._id || emp.employeeId?._id}
+                          className="inline-flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 text-amber-800 rounded-xl shadow-sm"
+                        >
+                          <div className="w-2 h-2 bg-amber-500 rounded-full"></div>
+                          <span className="font-medium">
+                            {emp.employeeId?.firstName || emp.firstName} {emp.employeeId?.lastName || emp.lastName}
+                          </span>
+                          {emp.employeeId?.depId && (
+                            <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">
+                              {emp.employeeId.depId.name}
+                            </span>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => removeEmployee(emp._id || emp.employeeId?._id)}
+                            className="ml-2 hover:text-red-600 transition-colors"
+                          >
+                            <X className="w-4 h-4" />
+>>>>>>> d285dcb (set submission backend)
                           </button>
                         </div>
                       ))}
@@ -1600,6 +2280,7 @@ export default function EditEmployeeTaskPage() {
                   </div>
                 )}
 
+<<<<<<< HEAD
                 <div className="relative" ref={employeeDropdownRef}>
                   <button
                     type="button"
@@ -1609,15 +2290,32 @@ export default function EditEmployeeTaskPage() {
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 bg-gradient-to-br from-amber-100 to-orange-100 border border-amber-200 rounded-full flex items-center justify-center">
                         <span className="font-semibold text-amber-800">EM</span>
+=======
+                {/* Employees Dropdown Selector */}
+                <div className="relative employee-selector">
+                  <button
+                    type="button"
+                    onClick={() => setShowEmployeeDropdown(!showEmployeeDropdown)}
+                    className="w-full px-4 py-3.5 bg-gray-50 border border-gray-200 rounded-xl hover:border-amber-400 focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none transition-all flex items-center justify-between group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-600 rounded-full flex items-center justify-center text-white font-semibold">
+                        <Briefcase className="w-5 h-5" />
+>>>>>>> d285dcb (set submission backend)
                       </div>
                       <div className="text-left">
                         <p className="font-medium text-gray-900">Select Employees</p>
                         <p className="text-sm text-gray-500">
+<<<<<<< HEAD
                           {availableEmployees.length} available
+=======
+                          {availableEmployees.length} employees available
+>>>>>>> d285dcb (set submission backend)
                         </p>
                       </div>
                     </div>
                     {fetchingData ? (
+<<<<<<< HEAD
                       <Loader2 className="w-4 h-4 text-gray-400 animate-spin" />
                     ) : showEmployeeDropdown ? (
                       <ChevronUp className="w-4 h-4 text-gray-400" />
@@ -1679,12 +2377,61 @@ export default function EditEmployeeTaskPage() {
                           ))
                         )}
                       </div>
+=======
+                      <Loader2 className="w-5 h-5 text-gray-400 animate-spin" />
+                    ) : showEmployeeDropdown ? (
+                      <ChevronUp className="w-5 h-5 text-gray-400 group-hover:text-amber-600 transition-colors" />
+                    ) : (
+                      <ChevronDown className="w-5 h-5 text-gray-400 group-hover:text-amber-600 transition-colors" />
+                    )}
+                  </button>
+
+                  {/* Employees Dropdown */}
+                  {showEmployeeDropdown && (
+                    <div className="absolute z-20 w-full mt-2 bg-white border border-gray-200 rounded-xl shadow-lg max-h-60 overflow-y-auto employee-dropdown">
+                      {availableEmployees.length === 0 ? (
+                        <div className="px-4 py-8 text-center text-gray-500">
+                          <p className="font-medium">All employees selected</p>
+                          <p className="text-sm mt-1">No more employees available</p>
+                        </div>
+                      ) : (
+                        availableEmployees.map((emp) => (
+                          <button
+                            key={emp._id}
+                            type="button"
+                            onClick={() => addEmployee(emp)}
+                            className="w-full px-4 py-3 text-left hover:bg-amber-50 flex items-center justify-between border-b border-gray-100 last:border-b-0 transition-colors"
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 bg-gradient-to-br from-amber-100 to-orange-100 border border-amber-200 rounded-full flex items-center justify-center">
+                                <span className="font-semibold text-amber-800">
+                                  {emp.firstName?.[0]}{emp.lastName?.[0]}
+                                </span>
+                              </div>
+                              <div>
+                                <p className="font-medium text-gray-900">
+                                  {emp.firstName} {emp.lastName}
+                                </p>
+                                <p className="text-sm text-gray-500">{emp.email}</p>
+                                {emp.depId && (
+                                  <p className="text-xs text-amber-600 mt-0.5">
+                                    Department: {emp.depId.name}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                            <Plus className="w-5 h-5 text-amber-600" />
+                          </button>
+                        ))
+                      )}
+>>>>>>> d285dcb (set submission backend)
                     </div>
                   )}
                 </div>
               </div>
             </div>
 
+<<<<<<< HEAD
             {/* Summary Card */}
             <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-6 border border-blue-200 shadow-lg">
               <h3 className="font-bold text-gray-900 text-lg mb-4 flex items-center gap-2">
@@ -1741,10 +2488,128 @@ export default function EditEmployeeTaskPage() {
                       {formData.status.replace('_', ' ')}
                     </span>
                   </div>
+=======
+            {/* Assignees Summary */}
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-100">
+              <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <Users className="w-5 h-5" />
+                Assignees Summary
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="bg-white p-4 rounded-lg border border-gray-200">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-gray-500">Team Leads</p>
+                      <div className="flex items-center gap-2 mt-2">
+                        <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                        <p className="font-semibold text-gray-900">
+                          {selectedTeamLeads.length}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-xs text-gray-400">
+                      {teamLeads.length} total
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-white p-4 rounded-lg border border-gray-200">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-gray-500">Managers</p>
+                      <div className="flex items-center gap-2 mt-2">
+                        <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
+                        <p className="font-semibold text-gray-900">
+                          {selectedManagers.length}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-xs text-gray-400">
+                      {managers.length} total
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-white p-4 rounded-lg border border-gray-200">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm text-gray-500">Employees</p>
+                      <div className="flex items-center gap-2 mt-2">
+                        <div className="w-3 h-3 bg-amber-500 rounded-full"></div>
+                        <p className="font-semibold text-gray-900">
+                          {selectedEmployees.length}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-xs text-gray-400">
+                      {employees.length} total
+                    </div>
+                  </div>
+                </div>
+                <div className="bg-white p-4 rounded-lg border border-gray-200">
+                  <p className="text-sm text-gray-500">Total Assignees</p>
+                  <p className="font-semibold text-gray-900 text-2xl mt-2">
+                    {selectedTeamLeads.length + selectedManagers.length + selectedEmployees.length}
+                  </p>
+                  <p className="text-xs text-gray-400 mt-1">
+                    across {new Set([
+                      ...selectedTeamLeads.map(tl => tl.teamLeadId?.depId?._id || tl.depId?._id),
+                      ...selectedManagers.flatMap(mgr => mgr.managerId?.departments?.map(d => d._id) || mgr.departments?.map(d => d._id)),
+                      ...selectedEmployees.map(emp => emp.employeeId?.depId?._id || emp.depId?._id)
+                    ].filter(Boolean)).size} departments
+                  </p>
+                </div>
+              </div>
+              
+              {errors.assignees && (
+                <div className="mt-4 flex items-center gap-2 text-red-600 bg-red-50 px-4 py-3 rounded-xl border border-red-200">
+                  <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                  <span className="text-sm font-medium">{errors.assignees}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Task Duration Summary */}
+            <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl p-6 border border-gray-200">
+              <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                <Briefcase className="w-5 h-5" />
+                Task Timeline
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-white p-4 rounded-lg border border-gray-200">
+                  <p className="text-sm text-gray-500">Start Date</p>
+                  <p className="font-semibold text-gray-900 mt-1">
+                    {formData.startDate ? new Date(formData.startDate).toLocaleDateString('en-US', {
+                      weekday: 'short',
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric'
+                    }) : 'Not set'}
+                  </p>
+                </div>
+                <div className="bg-white p-4 rounded-lg border border-gray-200">
+                  <p className="text-sm text-gray-500">End Date</p>
+                  <p className="font-semibold text-gray-900 mt-1">
+                    {formData.endDate ? new Date(formData.endDate).toLocaleDateString('en-US', {
+                      weekday: 'short',
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric'
+                    }) : 'Not set'}
+                  </p>
+                </div>
+                <div className="bg-white p-4 rounded-lg border border-gray-200">
+                  <p className="text-sm text-gray-500">Duration</p>
+                  <p className="font-semibold text-gray-900 mt-1">
+                    {formData.startDate && formData.endDate ? 
+                      `${Math.ceil((new Date(formData.endDate) - new Date(formData.startDate)) / (1000 * 60 * 60 * 24))} days` : 
+                      'Not set'
+                    }
+                  </p>
+>>>>>>> d285dcb (set submission backend)
                 </div>
               </div>
             </div>
 
+<<<<<<< HEAD
             {/* Action Buttons */}
             <div className="space-y-4">
               <button
@@ -1769,10 +2634,20 @@ export default function EditEmployeeTaskPage() {
                 <button
                   onClick={() => router.push(`/employee/my-tasks/detail/${taskId}`)}
                   className="px-4 py-3 text-gray-700 hover:bg-gray-100 border-2 border-gray-200 rounded-xl font-medium transition-all duration-200 hover:border-gray-300 hover:shadow-sm"
+=======
+            {/* Submit Buttons */}
+            <div className="pt-6 border-t border-gray-200">
+              <div className="flex flex-col sm:flex-row gap-4">
+                <button
+                  type="button"
+                  onClick={() => router.push(`/employee/employee-tasks/${taskId}`)}
+                  className="px-8 py-3.5 text-gray-700 hover:bg-gray-100 border-2 border-gray-200 rounded-xl font-semibold transition-all duration-200 hover:border-gray-300 hover:shadow-sm"
+>>>>>>> d285dcb (set submission backend)
                 >
                   Cancel
                 </button>
                 <button
+<<<<<<< HEAD
                   onClick={() => {
                     if (confirm("Are you sure you want to delete this task? This action cannot be undone.")) {
                       axios.delete(`/api/employee/assigned-subtasks/${taskId}`)
@@ -2018,6 +2893,40 @@ export default function EditEmployeeTaskPage() {
           </div>
         </div>
       )}
+=======
+                  type="submit"
+                  disabled={updating || fetchingData}
+                  className="flex-1 px-8 py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold rounded-xl hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
+                >
+                  {updating ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      Updating Task...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-5 h-5" />
+                      Update Task
+                    </>
+                  )}
+                </button>
+              </div>
+              <p className="text-center text-gray-500 text-sm mt-4">
+                All changes will be visible to assigned members
+              </p>
+            </div>
+          </form>
+        </div>
+
+        {/* Footer */}
+        <div className="mt-6 text-center text-gray-500 text-sm">
+          <p className="flex items-center justify-center gap-2">
+            <Briefcase className="w-4 h-4" />
+            You can update task details and reassign to team members
+          </p>
+        </div>
+      </div>
+>>>>>>> d285dcb (set submission backend)
     </div>
   );
 }

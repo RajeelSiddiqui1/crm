@@ -17,6 +17,7 @@ import { GetObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 export async function GET(req, { params }) {
     try {
         const { id } = await params;
+<<<<<<< HEAD
         
         // Check authentication
         const session = await getServerSession(authOptions);
@@ -25,6 +26,19 @@ export async function GET(req, { params }) {
                 { error: "Unauthorized. Team Lead access required." },
                 { status: 401 }
             );
+=======
+        await dbConnect();
+
+        const subtask = await Subtask.findById(id)
+            .populate("submissionId", "title description")
+            .populate("assignedEmployees.employeeId", "firstName lastName email")
+            .populate("assignedManagers.managerId", "firstName lastName email")
+            .populate("assignedTeamLeads.teamLeadId", "firstName lastName email")
+            .select('+fileAttachments');
+
+        if (!subtask) {
+            return NextResponse.json({ error: "Subtask not found" }, { status: 404 });
+>>>>>>> d285dcb (set submission backend)
         }
 
         await dbConnect();
@@ -237,6 +251,10 @@ export async function GET(req, { params }) {
 }
 
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> d285dcb (set submission backend)
 export async function PUT(request, { params }) {
     try {
         const formData = await request.formData();
@@ -442,8 +460,12 @@ export async function PUT(request, { params }) {
                     Bucket: process.env.AWS_BUCKET_NAME,
                     Key: fileKey,
                 });
+<<<<<<< HEAD
         const fileUrl = `https://s3.${process.env.AWS_REGION}.amazonaws.com/${process.env.AWS_BUCKET_NAME}/${fileKey}`;
 // 1 week
+=======
+                const fileUrl = await getSignedUrl(s3, command, { expiresIn: 604800 }); // 1 week
+>>>>>>> d285dcb (set submission backend)
 
                 uploadedFiles.push({
                     url: fileUrl,
@@ -471,6 +493,10 @@ export async function PUT(request, { params }) {
             hasLeadsTarget,
             totalLeadsRequired: hasLeadsTarget ? parseInt(totalLeadsRequired) : 0,
             fileAttachments: uploadedFiles,
+<<<<<<< HEAD
+=======
+            status: existingSubtask.status === 'completed' ? 'completed' : 'in_progress',
+>>>>>>> d285dcb (set submission backend)
             updatedAt: new Date()
         };
 

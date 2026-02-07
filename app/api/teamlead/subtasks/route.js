@@ -226,8 +226,12 @@ export async function POST(request) {
           Bucket: process.env.AWS_BUCKET_NAME,
           Key: fileKey,
         });
+<<<<<<< HEAD
        const fileUrl = `https://s3.${process.env.AWS_REGION}.amazonaws.com/${process.env.AWS_BUCKET_NAME}/${fileKey}`;
  // 1 week
+=======
+        const fileUrl = await getSignedUrl(s3, command, { expiresIn: 604800 }); // 1 week
+>>>>>>> d285dcb (set submission backend)
 
         uploadedFiles.push({
           url: fileUrl,

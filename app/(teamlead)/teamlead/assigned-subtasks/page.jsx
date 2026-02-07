@@ -840,6 +840,7 @@ export default function TeamLeadAssignedSubtasksPage() {
                                                           </div>
 
                                                           
+<<<<<<< HEAD
                                                           {/* Feedback History Section - Modal के Right Column में जोड़ें */}
 <Card className="border border-gray-200/50 shadow-lg rounded-xl overflow-hidden">
   <CardHeader className="bg-gradient-to-r from-gray-50 to-white border-b border-gray-100">
@@ -909,6 +910,47 @@ export default function TeamLeadAssignedSubtasksPage() {
                             Latest
                           </Badge>
                         )}
+=======
+                      <div className="space-y-4 pt-4 border-t border-gray-200">
+                        <div className="flex items-center justify-between">
+                          <h4 className="font-semibold text-gray-900">Feedback / Comments</h4>
+                          <Button
+                            onClick={submitFeedback}
+                            disabled={updatingStatus || !feedback.trim()}
+                            size="sm"
+                            variant="outline"
+                            className="text-xs border-yellow-500 text-yellow-700 hover:bg-yellow-50 font-bold"
+                          >
+                            <MessageSquare className="w-3 h-3 mr-1" />
+                            Submit Feedback Only
+                          </Button>
+                        </div>
+                        <textarea
+                          value={feedback}
+                          onChange={(e) => setFeedback(e.target.value)}
+                          className="w-full min-h-[120px] p-4 border-2 border-gray-400 rounded-lg focus:border-yellow-600 focus:ring-4 focus:ring-yellow-100 text-gray-950 font-semibold placeholder:text-gray-500 bg-white"
+                          placeholder="Add detailed feedback, comments, or notes about this task..."
+                        />
+                        <div className="text-sm font-medium text-gray-800 flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse"></div>
+                          Feedback will be sent to the creator via notification and email.
+                        </div>
+                      </div>
+                                                        </CardContent>
+                                                      </Card>
+                  
+
+                  {/* Team Collaboration & Feedback Section */}
+                  <Card className="border border-gray-200/50 shadow-lg rounded-xl overflow-hidden">
+                    <CardHeader className="bg-gradient-to-r from-gray-50 to-white border-b border-gray-100">
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-lg">
+                          <MessageSquare className="w-5 h-5 text-white" />
+                        </div>
+                        <CardTitle className="text-xl font-bold text-gray-900">
+                          Team Feedback & Activity
+                        </CardTitle>
+>>>>>>> d285dcb (set submission backend)
                       </div>
                       <div className="text-xs text-gray-900 flex items-center gap-2">
                         <Calendar className="w-3 h-3" />

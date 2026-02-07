@@ -356,12 +356,20 @@ export default function EmployeeTasksPage() {
               />
             </div>
 
+<<<<<<< HEAD
             {/* <Select value={filterStatus} onValueChange={setFilterStatus} className="text-gray-700">
+=======
+            <Select value={filterStatus} onValueChange={setFilterStatus}>
+>>>>>>> d285dcb (set submission backend)
               <SelectTrigger className="w-full md:w-[180px] bg-white border-gray-300">
                 <Filter className="h-4 w-4 mr-2 text-gray-500" />
                 <SelectValue placeholder="Filter by Status" />
               </SelectTrigger>
+<<<<<<< HEAD
               <SelectContent className="bg-white text-gray-700">
+=======
+              <SelectContent className="bg-white">
+>>>>>>> d285dcb (set submission backend)
                 <SelectItem value="all">All Status</SelectItem>
                 <SelectItem value="pending">Pending</SelectItem>
                 <SelectItem value="in_progress">In Progress</SelectItem>
@@ -371,6 +379,7 @@ export default function EmployeeTasksPage() {
               </SelectContent>
             </Select>
 
+<<<<<<< HEAD
             <Select value={viewMode} onValueChange={setViewMode} className="text-gray-700">
               <SelectTrigger className="w-full md:w-[180px] bg-white border-gray-300">
                 <SelectValue placeholder="View Mode" />
@@ -380,6 +389,17 @@ export default function EmployeeTasksPage() {
                 <SelectItem value="grid">Grid View</SelectItem>
               </SelectContent>
             </Select> */}
+=======
+            <Select value={viewMode} onValueChange={setViewMode}>
+              <SelectTrigger className="w-full md:w-[180px] bg-white border-gray-300">
+                <SelectValue placeholder="View Mode" />
+              </SelectTrigger>
+              <SelectContent className="bg-white">
+                <SelectItem value="list">List View</SelectItem>
+                <SelectItem value="grid">Grid View</SelectItem>
+              </SelectContent>
+            </Select>
+>>>>>>> d285dcb (set submission backend)
 
             <Button variant="outline" onClick={fetchTasks} className="gap-2 border-gray-300 text-gray-700 hover:bg-gray-50">
               <RefreshCw className="h-4 w-4" />
@@ -394,13 +414,21 @@ export default function EmployeeTasksPage() {
         <TabsList className="grid w-full max-w-sm grid-cols-2 mb-6 bg-gray-100 p-1">
           <TabsTrigger 
             value="list" 
+<<<<<<< HEAD
             className="data-[state=active]:bg-white text-gray-700 data-[state=active]:text-blue-600 data-[state=active]:shadow-sm"
+=======
+            className="data-[state=active]:bg-white data-[state=active]:text-blue-600 data-[state=active]:shadow-sm"
+>>>>>>> d285dcb (set submission backend)
           >
             List View
           </TabsTrigger>
           <TabsTrigger 
             value="grid"
+<<<<<<< HEAD
             className="data-[state=active]:bg-white text-gray-700 data-[state=active]:text-blue-600 data-[state=active]:shadow-sm"
+=======
+            className="data-[state=active]:bg-white data-[state=active]:text-blue-600 data-[state=active]:shadow-sm"
+>>>>>>> d285dcb (set submission backend)
           >
             Grid View
           </TabsTrigger>
