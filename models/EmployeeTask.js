@@ -44,76 +44,43 @@ const EmployeeTaskSchema = new mongoose.Schema({
         }
     ],
 
-    assignedManager: [
-        {
-            managerId: {
-                type: mongoose.Schema.Types.ObjectId,
-                ref: "Manager"
-            },
-            status: {
-                type: String,
-                enum: ["pending", "in_progress", "completed", "approved", "rejected"],
-                default: "pending"
-            },
-            feedbacks: [
-                {
-                    feedback: { type: String },
-                    sentAt: { type: Date, default: Date.now },
+        assignedManager: [
+            {
+                managerId: {
+                    type: mongoose.Schema.Types.ObjectId,
+                    ref: "Manager"
                 },
-            ],
-        }
-    ],
-    assignedEmployee: [
-        {
-            employeeId: {
-                type: mongoose.Schema.Types.ObjectId,
-                ref: "Employee"
-            },
-            status: {
-                type: String,
-                enum: ["pending", "in_progress", "completed", "approved", "rejected"],
-                default: "pending"
-            },
-            feedbacks: [
-                {
-                    feedback: { type: String },
-                    sentAt: { type: Date, default: Date.now },
+                status: {
+                    type: String,
+                    enum: ["pending", "in_progress", "completed", "approved", "rejected"],
+                    default: "pending"
                 },
-            ],
-        }
-    ],
-
-    fileAttachments: [
-        {
-            url: {
-                type: String,
-                required: true,
-            },
-            name: {
-                type: String,
-                required: true,
-            },
-            type: {
-                type: String,
-                required: true,
-            },
-            size: {
-                type: Number,
-                required: true,
-            },
-            publicId: {
-                type: String,
-                required: true,
-            },
-            createdAt: {
-                type: Date,
-                default: Date.now,
-            },
-        },
-    ],
-}, {
-    timestamps: true
-})
+                feedback: {
+                    type: String,
+                    default: ""
+                }
+            }
+        ],
+        assignedEmployee: [
+            {
+                employeeId: {
+                    type: mongoose.Schema.Types.ObjectId,
+                    ref: "Employee"
+                },
+                status: {
+                    type: String,
+                    enum: ["pending", "in_progress", "completed", "approved", "rejected"],
+                    default: "pending"
+                },
+                feedback: {
+                    type: String,
+                    default: ""
+                }
+            }
+        ],
+    }, {
+        timestamps: true
+    })
 
 const EmployeeTask =
     mongoose.models.EmployeeTask || mongoose.model("EmployeeTask", EmployeeTaskSchema);

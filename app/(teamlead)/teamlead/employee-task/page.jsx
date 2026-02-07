@@ -109,7 +109,7 @@ export default function TeamLeadEmployeeTaskPage() {
     setCurrentStatus("");
   };
 
-  const updateTaskStatus = async (newStatus,feedback) => {
+  const updateTaskStatus = async (newStatus) => {
     if (!selectedTask) return;
     
     try {
