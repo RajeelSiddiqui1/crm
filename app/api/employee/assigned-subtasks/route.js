@@ -64,7 +64,7 @@ export async function POST(req) {
       const upload = new Upload({
         client: s3,
         params: {
-          Bucket: Bucket,
+          Bucket: BUCKET,
           Key: key,
           Body: buffer,
           ContentType: file.type,
@@ -77,11 +77,14 @@ export async function POST(req) {
 
       await upload.done();
 
-      // Correct key usage
-      const fileUrl = `https://s3.${process.env.AWS_REGION}.amazonaws.com/${process.env.AWS_BUCKET_NAME}/${key}`;
+      const signedUrl = await getSignedUrl(
+        s3,
+        new GetObjectCommand({ Bucket: BUCKET, Key: key }),
+        { expiresIn: 604800 } // 7 days
+      );
 
       uploadedFiles.push({
-        url: fileUrl,
+        url: signedUrl,
         name: file.name,
         type: file.type,
         size: file.size,
