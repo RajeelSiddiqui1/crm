@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
 import axios from "axios";
 import {
-<<<<<<< HEAD
   Card,
   CardContent,
   CardHeader,
@@ -12,17 +11,12 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 import {
-=======
->>>>>>> d285dcb (set submission backend)
   ArrowLeft,
   Calendar,
   Clock,
   User,
-<<<<<<< HEAD
   FilePlus,
   Play,
-=======
->>>>>>> d285dcb (set submission backend)
   Users,
   Edit,
   Trash2,
@@ -41,15 +35,11 @@ import {
   AlertTriangle,
   ThumbsUp,
   ThumbsDown,
-<<<<<<< HEAD
   Image,
   Video,
   Download,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-=======
-} from "lucide-react";
->>>>>>> d285dcb (set submission backend)
 
 export default function TaskDetailPage() {
   const router = useRouter();
@@ -62,7 +52,6 @@ export default function TaskDetailPage() {
   const [deleteModal, setDeleteModal] = useState(false);
   const [expandedSection, setExpandedSection] = useState("assigned");
   const [activeTab, setActiveTab] = useState("assigned"); // 'assigned', 'activity', 'details'
-<<<<<<< HEAD
 const [zoom, setZoom] = useState(1);
 
     const [previewFile, setPreviewFile] = useState(null);
@@ -80,9 +69,6 @@ const [zoom, setZoom] = useState(1);
     if (fileType?.includes('pdf')) return <FileText className="w-5 h-5 text-red-500" />;
     return <File className="w-5 h-5 text-gray-500" />;
   };
-=======
-
->>>>>>> d285dcb (set submission backend)
   useEffect(() => {
     if (taskId) {
       fetchTask();
@@ -562,7 +548,6 @@ const [zoom, setZoom] = useState(1);
                                 <StatusBadge status={assignment.status} />
                               </div>
                               
-<<<<<<< HEAD
                            
 {assignment.feedbacks && assignment.feedbacks.length > 0 && (
   <div className="mt-3 pt-3 border-t border-gray-200">
@@ -580,19 +565,6 @@ const [zoom, setZoom] = useState(1);
   </div>
 )}
 
-=======
-                              {assignment.feedback && (
-                                <div className="mt-3 pt-3 border-t border-gray-200">
-                                  <div className="flex items-center gap-2 mb-2">
-                                    <MessageSquare className="w-4 h-4 text-gray-400" />
-                                    <span className="text-sm font-medium text-gray-700">Feedback:</span>
-                                  </div>
-                                  <p className="text-sm text-gray-600 bg-white p-3 rounded-lg border">
-                                    {assignment.feedback}
-                                  </p>
-                                </div>
-                              )}
->>>>>>> d285dcb (set submission backend)
                             </div>
                           ))}
                         </div>
@@ -636,7 +608,6 @@ const [zoom, setZoom] = useState(1);
                                 <StatusBadge status={assignment.status} />
                               </div>
                               
-<<<<<<< HEAD
                        {assignment.feedbacks && assignment.feedbacks.length > 0 && (
   <div className="mt-3 pt-3 border-t border-gray-200">
     <div className="flex items-center gap-2 mb-2">
@@ -652,19 +623,6 @@ const [zoom, setZoom] = useState(1);
     </div>
   </div>
 )}
-=======
-                              {assignment.feedback && (
-                                <div className="mt-3 pt-3 border-t border-gray-200">
-                                  <div className="flex items-center gap-2 mb-2">
-                                    <MessageSquare className="w-4 h-4 text-gray-400" />
-                                    <span className="text-sm font-medium text-gray-700">Feedback:</span>
-                                  </div>
-                                  <p className="text-sm text-gray-600 bg-white p-3 rounded-lg border">
-                                    {assignment.feedback}
-                                  </p>
-                                </div>
-                              )}
->>>>>>> d285dcb (set submission backend)
                             </div>
                           ))}
                         </div>
@@ -708,7 +666,6 @@ const [zoom, setZoom] = useState(1);
                                 <StatusBadge status={assignment.status} />
                               </div>
                               
-<<<<<<< HEAD
                              {assignment.feedbacks && assignment.feedbacks.length > 0 && (
   <div className="mt-3 pt-3 border-t border-gray-200">
     <div className="flex items-center gap-2 mb-2">
@@ -724,19 +681,6 @@ const [zoom, setZoom] = useState(1);
     </div>
   </div>
 )}
-=======
-                              {assignment.feedback && (
-                                <div className="mt-3 pt-3 border-t border-gray-200">
-                                  <div className="flex items-center gap-2 mb-2">
-                                    <MessageSquare className="w-4 h-4 text-gray-400" />
-                                    <span className="text-sm font-medium text-gray-700">Feedback:</span>
-                                  </div>
-                                  <p className="text-sm text-gray-600 bg-white p-3 rounded-lg border">
-                                    {assignment.feedback}
-                                  </p>
-                                </div>
-                              )}
->>>>>>> d285dcb (set submission backend)
                             </div>
                           ))}
                         </div>
@@ -808,7 +752,6 @@ const [zoom, setZoom] = useState(1);
                 )}
               </div>
             </div>
-<<<<<<< HEAD
 
 
             <Card className="mt-4">
@@ -880,8 +823,6 @@ const [zoom, setZoom] = useState(1);
     </div>
   </CardContent>
 </Card>
-=======
->>>>>>> d285dcb (set submission backend)
           </div>
 
           {/* Right Column - Stats & Summary */}
@@ -1043,7 +984,6 @@ const [zoom, setZoom] = useState(1);
           </div>
         </div>
       </div>
-<<<<<<< HEAD
       {/* Full Page Preview Modal with Zoom */}
 {previewFile && (
   <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 overflow-y-auto">
@@ -1133,8 +1073,6 @@ const [zoom, setZoom] = useState(1);
     </div>
   </div>
 )}
-=======
->>>>>>> d285dcb (set submission backend)
     </div>
   );
 }

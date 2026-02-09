@@ -9,6 +9,9 @@ import { authOptions } from "@/lib/auth";
 import { sendNotification } from "@/lib/sendNotification";
 import { sendMail } from "@/lib/mail";
 import { employeeTaskCreatedTemplate } from "@/helper/emails/employee/employeeTaskTemplates";
+import { Upload } from "@aws-sdk/lib-storage";
+import s3 from "@/lib/aws";
+import { Bucket$ } from "@aws-sdk/client-s3";
 
 export async function POST(req) {
   try {
@@ -18,21 +21,75 @@ export async function POST(req) {
     }
 
     await dbConnect();
-    const body = await req.json();
+    const formData = await req.formData();
 
-    const {
-      title,
-      description,
-      assignedTeamLead = [],
-      assignedManager = [],
-      assignedEmployee = [],
-      startDate,
-      endDate,
-      startTime,
-      endTime,
-    } = body;
+    /* ---------------- BASIC FIELDS ---------------- */
+    const title = formData.get("title");
+    const description = formData.get("description");
+    const startDate = formData.get("startDate");
+    const endDate = formData.get("endDate");
+    const startTime = formData.get("startTime");
+    const endTime = formData.get("endTime");
 
-    // Wrap IDs in objects to match schema
+    /* ---------------- ASSIGNEES ---------------- */
+    const assignedTeamLead = JSON.parse(
+      formData.get("assignedTeamLead") || "[]",
+    );
+    const assignedManager = JSON.parse(formData.get("assignedManager") || "[]");
+    const assignedEmployee = JSON.parse(
+      formData.get("assignedEmployee") || "[]",
+    );
+
+    if (
+      assignedTeamLead.length === 0 &&
+      assignedManager.length === 0 &&
+      assignedEmployee.length === 0
+    ) {
+      return NextResponse.json(
+        { error: "At least one assignee is required" },
+        { status: 400 },
+      );
+    }
+
+    /* ---------------- FILE UPLOADS ---------------- */
+    const files = formData.getAll("files");
+    const uploadedFiles = [];
+
+    for (const file of files) {
+      if (!file || !file.size) continue;
+
+      const buffer = Buffer.from(await file.arrayBuffer());
+      const key = `employee_tasks/${Date.now()}_${file.name.replace(/\s+/g, "_")}`;
+
+      const upload = new Upload({
+        client: s3,
+        params: {
+          Bucket: Bucket,
+          Key: key,
+          Body: buffer,
+          ContentType: file.type,
+          Metadata: {
+            uploadedBy: session.user.id,
+            uploadedAt: Date.now().toString(),
+          },
+        },
+      });
+
+      await upload.done();
+
+      // Correct key usage
+      const fileUrl = `https://s3.${process.env.AWS_REGION}.amazonaws.com/${process.env.AWS_BUCKET_NAME}/${key}`;
+
+      uploadedFiles.push({
+        url: fileUrl,
+        name: file.name,
+        type: file.type,
+        size: file.size,
+        publicId: key,
+      });
+    }
+
+    /* ---------------- CREATE TASK ---------------- */
     const task = await EmployeeTask.create({
       title,
       description,
@@ -41,6 +98,7 @@ export async function POST(req) {
       endDate,
       startTime,
       endTime,
+      fileAttachments: uploadedFiles,
       assignedTeamLead: assignedTeamLead.map((id) => ({ teamLeadId: id })),
       assignedManager: assignedManager.map((id) => ({ managerId: id })),
       assignedEmployee: assignedEmployee.map((id) => ({ employeeId: id })),
@@ -68,7 +126,11 @@ export async function POST(req) {
         });
 
         if (emp.email) {
-          const html = employeeTaskCreatedTemplate(emp.firstName, title, description);
+          const html = employeeTaskCreatedTemplate(
+            emp.firstName,
+            title,
+            description,
+          );
           sendMail(emp.email, "New Task Assigned", html);
         }
       }),
@@ -93,7 +155,11 @@ export async function POST(req) {
         });
 
         if (mgr.email) {
-          const html = employeeTaskCreatedTemplate(mgr.firstName, title, description);
+          const html = employeeTaskCreatedTemplate(
+            mgr.firstName,
+            title,
+            description,
+          );
           sendMail(mgr.email, "New Task Assigned", html);
         }
       }),
@@ -118,7 +184,11 @@ export async function POST(req) {
         });
 
         if (tl.email) {
-          const html = employeeTaskCreatedTemplate(tl.firstName, title, description);
+          const html = employeeTaskCreatedTemplate(
+            tl.firstName,
+            title,
+            description,
+          );
           sendMail(tl.email, "New Task Assigned", html);
         }
       }),
@@ -134,10 +204,12 @@ export async function POST(req) {
     return NextResponse.json(populatedTask, { status: 201 });
   } catch (err) {
     console.error("EmployeeTask POST Error:", err);
-    return NextResponse.json({ error: "Failed to create task" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to create task" },
+      { status: 500 },
+    );
   }
 }
-
 
 export async function GET() {
   const session = await getServerSession(authOptions);

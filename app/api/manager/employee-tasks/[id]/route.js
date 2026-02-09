@@ -25,7 +25,7 @@ export async function GET(request, context) {
       return NextResponse.json({ error: "Invalid task ID" }, { status: 400 });
     }
 
-    const updatedTask = await EmployeeTask.findById(id)
+    const task = await EmployeeTask.findById(id)
       .populate("submittedBy", "firstName lastName email avatar role")
       .populate({
         path: "assignedEmployee.employeeId",
@@ -35,24 +35,40 @@ export async function GET(request, context) {
         path: "assignedManager.managerId",
         select: "firstName lastName email avatar",
       })
+      .populate({
+        path: "assignedTeamLead.teamLeadId",
+        select: "firstName lastName email avatar",
+      })
       .lean();
 
-    const managerAssignment = updatedTask.assignedManager.find(
+    if (!task) {
+      return NextResponse.json({ error: "Task not found" }, { status: 404 });
+    }
+
+    const managerAssignment = task.assignedManager?.find(
       (mgr) => mgr.managerId?._id?.toString() === session.user.id
     );
+
+    if (!managerAssignment) {
+      return NextResponse.json(
+        { error: "You are not assigned to this task" },
+        { status: 403 }
+      );
+    }
 
     return NextResponse.json(
       {
         success: true,
         task: {
-          ...updatedTask,
+          ...task,
           managerStatus: managerAssignment.status,
-          managerFeedbacks: managerAssignment.feedbacks, // ✅ ARRAY
+          managerFeedback: managerAssignment.feedback,
+          assignedAt: managerAssignment.assignedAt,
+          completedAt: managerAssignment.completedAt,
         },
       },
       { status: 200 }
     );
-
   } catch (error) {
     console.error("GET Manager Task Error:", error);
     return NextResponse.json(
@@ -110,28 +126,20 @@ export async function PUT(request, context) {
       );
     }
 
-    const manager = task.assignedManager[managerIndex];
-    const oldStatus = manager.status;
+    const oldStatus = task.assignedManager[managerIndex].status;
 
-    /* ===== STATUS UPDATE ===== */
     if (status) {
-      manager.status = status;
-
-      if (["completed", "approved"].includes(status)) {
-        manager.completedAt = new Date();
+      task.assignedManager[managerIndex].status = status;
+      if (status === "completed" || status === "approved") {
+        task.assignedManager[managerIndex].completedAt = new Date();
       }
     }
 
-    /* ===== ADD FEEDBACK (ARRAY PUSH) ===== */
-    if (feedback && feedback.trim()) {
-      manager.feedbacks.push({
-        feedback,
-        sentAt: new Date(),
-      });
+    if (feedback !== undefined) {
+      task.assignedManager[managerIndex].feedback = feedback;
     }
 
     await task.save();
-
 
     /* ===== Notification (FIXED) ===== */
     if (sendNotification && task.submittedBy) {
