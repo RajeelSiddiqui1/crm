@@ -49,11 +49,7 @@ import {
   Mail,
 } from "lucide-react";
 import axios from "axios";
-<<<<<<< HEAD
 import ViewTaskModal from "@/components/manager/viewTaskModal";
-=======
-import ViewTaskModal from "@/components/manager/viewTaskModal"
->>>>>>> d285dcb (set submission backend)
 import MediaSection from "@/components/manager/admin-task/MediaSection";
 
 export default function ManagerAdminTasksPage() {
@@ -1049,15 +1045,9 @@ export default function ManagerAdminTasksPage() {
               </div>
 
               {/* Media Section */}
-<<<<<<< HEAD
               {/* Media Section */}
               <div className="space-y-6 bg-white">
                 {selectedTask && <MediaSection task={selectedTask} />}
-=======
-              <div className="space-y-6 bg-white">
-                {/* Audio Section */}
-                 <MediaSection task={selectedTask} />
->>>>>>> d285dcb (set submission backend)
               </div>
 
               {/* Action Buttons */}
