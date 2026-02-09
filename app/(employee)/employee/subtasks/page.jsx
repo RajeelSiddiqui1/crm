@@ -31,15 +31,9 @@ import {
     ChevronRight,
     Filter,
     TrendingUp,
-<<<<<<< HEAD
     FilePlus,
     X,
     Play,
-=======
-     FilePlus,
-  X,
-  Play,
->>>>>>> d285dcb (set submission backend)
     Award,
     Target,
     BarChart3,
@@ -49,7 +43,6 @@ import {
     Send,
     ThumbsUp,
     AlertTriangle,
-<<<<<<< HEAD
     Video,
     Image,
     File,
@@ -79,11 +72,6 @@ import {
     CalendarDays,
     FileCheck,
     FileX
-=======
-    Mail,
-    Video,
-    Image
->>>>>>> d285dcb (set submission backend)
 } from "lucide-react";
 import axios from "axios";
 
@@ -124,29 +112,7 @@ export default function EmployeeSubtasksPage() {
         efficiency: 0
     });
 
-<<<<<<< HEAD
     // Fetch all subtasks on page load
-=======
-    const [zoom, setZoom] = useState(1);
-      
-          const [previewFile, setPreviewFile] = useState(null);
-      
-        const downloadFile = (url, name) => {
-          const link = document.createElement("a");
-          link.href = url;
-          link.download = name;
-          link.click();
-        };
-
-        
-     const getFileIcon = (fileType) => {
-        if (fileType?.includes('image')) return <Image className="w-5 h-5 text-blue-500" />;
-        if (fileType?.includes('video')) return <Video className="w-5 h-5 text-purple-500" />;
-        if (fileType?.includes('pdf')) return <FileText className="w-5 h-5 text-red-500" />;
-        return <File className="w-5 h-5 text-gray-500" />;
-      };
-
->>>>>>> d285dcb (set submission backend)
     useEffect(() => {
         if (sessionStatus === "loading") return;
         
@@ -514,7 +480,6 @@ export default function EmployeeSubtasksPage() {
 
     return (
         <>
-<<<<<<< HEAD
             <div className="min-h-screen bg-white p-4 md:p-6">
                 <Toaster position="top-right" />
                 
@@ -556,15 +521,6 @@ export default function EmployeeSubtasksPage() {
                             </Button>
                         </div>
                     </div>
-=======
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50/30 p-4 md:p-6">
-            <Toaster 
-                position="top-right"
-                toastOptions={{
-                    className: "bg-white border border-gray-200 shadow-xl rounded-xl",
-                }}
-            />
->>>>>>> d285dcb (set submission backend)
 
                     {/* Stats Cards */}
                     <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-8">
@@ -933,11 +889,6 @@ export default function EmployeeSubtasksPage() {
                                                     );
                                                 })}
                                             </div>
-<<<<<<< HEAD
-=======
-
-                                          
->>>>>>> d285dcb (set submission backend)
                                         </CardContent>
                                     </Card>
 
@@ -979,7 +930,6 @@ export default function EmployeeSubtasksPage() {
                                         </CardContent>
                                     </Card>
 
-<<<<<<< HEAD
                                     {/* Attachments */}
                                     {selectedSubtask.fileAttachments?.length > 0 && (
                                         <Card className="border-gray-200">
@@ -1026,132 +976,6 @@ export default function EmployeeSubtasksPage() {
                                             </CardContent>
                                         </Card>
                                     )}
-=======
-                                     <Card className="mt-4">
-                                                                                            <CardHeader>
-                                                                                              <CardTitle className="text-lg font-semibold text-gray-900">Attachments</CardTitle>
-                                                                                            </CardHeader>
-                                                                                            <CardContent>
-                                                                                              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                                                                                                {selectedSubtask.fileAttachments?.map((file) => {
-                                                                                                  const { url, name, type, publicId } = file;
-                                                                                          
-                                                                                                  const isImage = type.startsWith("image/");
-                                                                                                  const isVideo = type.startsWith("video/");
-                                                                                                  const isPDF = type.includes("pdf");
-                                                                                                  const isWord = type.includes("word") || type.includes("doc");
-                                                                                                  const isExcel = type.includes("excel") || type.includes("sheet") || type.includes("xlsx");
-                                                                                          
-                                                                                                  // Color and icon for file type
-                                                                                                  let bgColor = "bg-purple-100 text-purple-800";
-                                                                                                  let Icon = FilePlus;
-                                                                                          
-                                                                                                  if (isImage) bgColor = "bg-green-100 text-green-800";
-                                                                                                  else if (isVideo) bgColor = "bg-blue-100 text-blue-800";
-                                                                                                  else if (isPDF) { bgColor = "bg-red-100 text-red-800"; Icon = FileText; }
-                                                                                                  else if (isWord) { bgColor = "bg-blue-100 text-blue-800"; Icon = FileText; }
-                                                                                                  else if (isExcel) { bgColor = "bg-green-100 text-green-800"; Icon = FileSpreadsheet; }
-                                                                                          
-                                                                                                  return (
-                                                                                                    <div
-                                                                                                      key={publicId}
-                                                                                                      className={`w-full rounded shadow flex flex-col overflow-hidden ${bgColor}`}
-                                                                                                    >
-                                                                                                      {/* Preview area */}
-                                                                                                      <div className="flex-1 w-full h-40 flex items-center justify-center overflow-hidden">
-                                                                                                        {isImage ? (
-                                                                                                          <img src={url} alt={name} className="object-cover w-full h-full" />
-                                                                                                        ) : isVideo ? (
-                                                                                                          <div className="relative w-full h-full">
-                                                                                                            <video src={url} className="object-cover w-full h-full opacity-80" />
-                                                                                                            <Play className="absolute w-8 h-8 text-white top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
-                                                                                                          </div>
-                                                                                                        ) : (
-                                                                                                          <Icon className="w-12 h-12" />
-                                                                                                        )}
-                                                                                                      </div>
-                                                                                          
-                                                                                                      {/* Bottom: file name + buttons */}
-                                                                                                      <div className="p-2 bg-white flex flex-col items-center gap-2">
-                                                                                                        <p className="text-sm font-medium truncate w-full text-center">{name}</p>
-                                                                                                        <div className="flex gap-2">
-                                                                                                          <Button
-                                                                                                            size="sm"
-                                                                                                            variant="outline"
-                                                                                                            onClick={() => setPreviewFile(file)}
-                                                                                                          >
-                                                                                                            Preview
-                                                                                                          </Button>
-                                                                                                          <Button
-                                                                                                            size="sm"
-                                                                                                            onClick={() => window.open(url, "_blank")}
-                                                                                                          >
-                                                                                                            Download
-                                                                                                          </Button>
-                                                                                                        </div>
-                                                                                                      </div>
-                                                                                                    </div>
-                                                                                                  );
-                                                                                                })}
-                                                                                              </div>
-                                                                                            </CardContent>
-                                                                                          </Card>
-
-
-                                                                                            {/* Feedback Section */}
-                                            <div className="space-y-4 pt-4 border-t border-gray-200">
-                                                <div className="flex items-center gap-2">
-                                                    <MessageCircle className="w-5 h-5 text-blue-600" />
-                                                    <h4 className="font-bold text-gray-900">Add Feedback / Comments</h4>
-                                                </div>
-                                                <div className="space-y-3">
-                                                    <textarea
-  value={feedback}
-  onChange={(e) => setFeedback(e.target.value)}
-  placeholder="Share your progress, challenges, or any feedback about this task..."
-  className="w-full min-h-[100px] p-3 border-2 border-gray-300 rounded-lg 
-             text-gray-900 placeholder-gray-400
-             focus:border-blue-500 focus:ring-2 focus:ring-blue-200 
-             resize-none"
-  rows={4}
-/>
-
-                                                    <div className="flex gap-3">
-                                                        <Button
-                                                            onClick={submitFeedbackOnly}
-                                                            disabled={!feedback.trim() || isSubmittingFeedback}
-                                                            className="bg-gradient-to-r from-blue-600 to-indigo-700 hover:opacity-90 text-white flex-1"
-                                                        >
-                                                            {isSubmittingFeedback ? (
-                                                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                                            ) : (
-                                                                <Send className="w-4 h-4 mr-2" />
-                                                            )}
-                                                            Send Feedback Only
-                                                        </Button>
-                                                        <Button
-                                                            variant="outline"
-                                                            onClick={() => setFeedback("")}
-                                                            className="border-gray-300 text-gray-700 hover:bg-gray-100"
-                                                            disabled={!feedback.trim()}
-                                                        >
-                                                            Clear
-                                                        </Button>
-                                                    </div>
-                                                    <div className="text-sm text-gray-600">
-                                                        <div className="flex items-center gap-1 mb-1">
-                                                            <AlertTriangle className="w-4 h-4 text-amber-500" />
-                                                            <span>Your feedback will be sent to the team lead along with status updates</span>
-                                                        </div>
-                                                        <div className="flex items-center gap-1">
-                                                            <ThumbsUp className="w-4 h-4 text-emerald-500" />
-                                                            <span>Team lead will be notified immediately</span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                                      
->>>>>>> d285dcb (set submission backend)
                                 </div>
 
                                 {/* Right Column - Team Info & Feedback */}
@@ -1361,103 +1185,7 @@ export default function EmployeeSubtasksPage() {
                         </div>
                     </div>
                 </div>
-<<<<<<< HEAD
             )}
         </>
-=======
-            </div>
-        </div>
-
-          {/* Full Page Preview Modal with Zoom */}
-            {previewFile && (
-              <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 overflow-y-auto">
-                <div className="bg-white rounded-2xl w-full max-w-[95vw] max-h-[95vh] overflow-hidden flex flex-col shadow-lg">
-                  {/* Header */}
-                  <div className="flex items-center justify-between p-4 border-b">
-                    <div className="flex items-center gap-2">
-                      {getFileIcon(previewFile.type)}
-                      <h3 className="font-bold text-gray-900 truncate">{previewFile.name}</h3>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setZoom((prev) => prev + 0.2)}
-                        className="text-blue-600 hover:text-blue-800 hover:bg-blue-50"
-                      >
-                        Zoom In +
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setZoom((prev) => Math.max(prev - 0.2, 0.2))}
-                        className="text-blue-600 hover:text-blue-800 hover:bg-blue-50"
-                      >
-                        Zoom Out -
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => downloadFile(previewFile.url, previewFile.name)}
-                        className="text-green-600 hover:text-green-800 hover:bg-green-50"
-                      >
-                        <Download className="w-4 h-4 mr-2" /> Download
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setPreviewFile(null)}
-                        className="text-gray-600 hover:text-gray-800 hover:bg-gray-100"
-                      >
-                        <X className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
-            
-                  {/* Body */}
-                  <div className="flex-1 p-4 overflow-auto flex items-center justify-center bg-gray-50">
-                    {previewFile.type?.includes('image') ? (
-                      <img
-                        src={previewFile.url}
-                        alt={previewFile.name}
-                        className="rounded-lg mx-auto transition-transform"
-                        style={{ transform: `scale(${zoom})` }}
-                      />
-                    ) : previewFile.type?.includes('video') ? (
-                      <video
-                        controls
-                        autoPlay
-                        className="rounded-lg mx-auto transition-transform"
-                        style={{ transform: `scale(${zoom})` }}
-                      >
-                        <source src={previewFile.url} type={previewFile.type} />
-                        Your browser does not support the video tag.
-                      </video>
-                    ) : previewFile.type?.includes('pdf') ? (
-                      <iframe
-                        src={previewFile.url}
-                        className="w-full h-[90vh] border rounded-lg"
-                        title={previewFile.name}
-                      />
-                    ) : (
-                      <div className="text-center py-12">
-                        <File className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                        <p className="text-gray-700">Preview not available for this file type</p>
-                        <Button
-                          variant="outline"
-                          onClick={() => downloadFile(previewFile.url, previewFile.name)}
-                          className="mt-4"
-                        >
-                          <Download className="w-4 h-4 mr-2" />
-                          Download File
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-            </>
->>>>>>> d285dcb (set submission backend)
     );
 }
