@@ -148,24 +148,7 @@ export default function EmployeeTasksPage() {
   };
 
   
-  const [zoom, setZoom] = useState(1);
-  
-      const [previewFile, setPreviewFile] = useState(null);
-  
-    const downloadFile = (url, name) => {
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = name;
-      link.click();
-    };
-
-    const getFileIcon = (fileType) => {
-    if (fileType?.includes('image')) return <Image className="w-5 h-5 text-blue-500" />;
-    if (fileType?.includes('video')) return <Video className="w-5 h-5 text-purple-500" />;
-    if (fileType?.includes('pdf')) return <FileText className="w-5 h-5 text-red-500" />;
-    return <File className="w-5 h-5 text-gray-500" />;
-  };
-
+ 
 
   useEffect(() => {
     if (status === "loading") return;
@@ -1438,7 +1421,7 @@ export default function EmployeeTasksPage() {
                 </div>
               )}
 
-<<<<<<< HEAD
+
               {/* Attachments */}
               <Card className="mt-4">
                 <CardHeader>
@@ -1587,7 +1570,6 @@ export default function EmployeeTasksPage() {
                   </div>
                 </div>
               )}
-=======
 
 
   
@@ -1750,7 +1732,6 @@ export default function EmployeeTasksPage() {
               </div>
             )}
   </Card>
->>>>>>> d285dcb (set submission backend)
 
               {/* Previous Feedback */}
               {selectedTask.employeeFeedback && (

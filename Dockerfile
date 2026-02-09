@@ -1,4 +1,4 @@
-<<<<<<< HEAD
+
 # Stage 1: Build stage
 FROM node:22-alpine AS builder
 WORKDIR /app
@@ -31,7 +31,7 @@ EXPOSE 5000
 
 # Run production server
 CMD ["npm", "start"]
-=======
+
 FROM node:22-alpine
 
 WORKDIR /app
@@ -46,4 +46,4 @@ EXPOSE 3000
 
 CMD ["npm", "run", "dev"]
 
->>>>>>> d285dcb (set submission backend)
+
