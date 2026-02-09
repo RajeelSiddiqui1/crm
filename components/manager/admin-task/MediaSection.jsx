@@ -1,11 +1,5 @@
-<<<<<<< HEAD
 "use client";
 import React, { useState, useRef, useEffect, useMemo } from "react";
-=======
-// MediaFiles.jsx - Unified Premium Component
-"use client";
-import React, { useState, useRef, useEffect } from "react";
->>>>>>> d285dcb (set submission backend)
 import {
   Card,
   CardContent,
@@ -19,19 +13,10 @@ import { Progress } from "@/components/ui/progress";
 import { Slider } from "@/components/ui/slider";
 import {
   Volume2,
-<<<<<<< HEAD
-=======
-  AudioLines,
-  FileText,
->>>>>>> d285dcb (set submission backend)
   Download,
   Play,
   Pause,
   Music,
-<<<<<<< HEAD
-=======
-  FileAudio,
->>>>>>> d285dcb (set submission backend)
   FileVideo,
   Image as ImageIcon,
   File,
@@ -39,42 +24,22 @@ import {
   FileType,
   Video,
   Eye,
-<<<<<<< HEAD
-=======
-  Maximize2,
->>>>>>> d285dcb (set submission backend)
   RotateCw,
   ZoomIn,
   ZoomOut,
   Loader2,
-<<<<<<< HEAD
   Clock,
   Headphones,
-=======
-  ExternalLink,
-  CheckCircle,
-  AlertCircle,
-  Clock,
-  Headphones,
-  Waves,
->>>>>>> d285dcb (set submission backend)
   FileArchive,
   FileCode,
   Film,
   X,
-<<<<<<< HEAD
-=======
-  SkipBack,
-  SkipForward,
-  VolumeX,
->>>>>>> d285dcb (set submission backend)
   Search,
   Grid,
   List,
   Filter,
   SortAsc,
   SortDesc,
-<<<<<<< HEAD
   MoreVertical,
   Share2,
   Bookmark,
@@ -97,10 +62,6 @@ import {
   Volume1,
   SkipBack,
   SkipForward
-=======
-  ChevronRight,
-  ChevronLeft,
->>>>>>> d285dcb (set submission backend)
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
@@ -110,7 +71,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-<<<<<<< HEAD
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -122,19 +82,6 @@ const getFileType = (name = "", type = "", url = "") => {
   
   if (type) {
     if (type.startsWith("video/")) {
-=======
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-
-// File type detection utilities
-const getFileType = (name = "", type = "", url = "") => {
-  const ext = name.split(".").pop().toLowerCase();
-  
-  // Check MIME type first if available
-  if (type) {
-    if (type.startsWith("video/")) {
-      // WEBM can be video or audio, check MIME type more specifically
->>>>>>> d285dcb (set submission backend)
       if (type === "audio/webm" || type === "audio/webm; codecs=opus") {
         return "audio";
       }
@@ -151,7 +98,6 @@ const getFileType = (name = "", type = "", url = "") => {
     if (type.includes("json") || type.includes("javascript") || type.includes("python")) return "code";
   }
   
-<<<<<<< HEAD
   const audioExtensions = ["mp3", "wav", "ogg", "m4a", "flac", "aac", "wma", "aiff", "opus", "webm", "weba"];
   const videoExtensions = ["mp4", "avi", "mov", "mkv", "flv", "m4v", "mpeg", "mpg", "3gp"];
   
@@ -169,42 +115,6 @@ const getFileType = (name = "", type = "", url = "") => {
     return nameLower.includes('audio') ? "audio" : "video";
   }
   
-=======
-  // Check extensions with priority
-  // Audio extensions (including audio-only webm)
-  const audioExtensions = ["mp3", "wav", "ogg", "m4a", "flac", "aac", "wma", "aiff", "opus"];
-  
-  // Video extensions
-  const videoExtensions = ["mp4", "avi", "mov", "mkv", "flv", "m4v", "mpeg", "mpg", "3gp"];
-  
-  // WEBM handling - check filename for clues
-  if (ext === "webm") {
-    const nameLower = name.toLowerCase();
-    // If filename suggests audio, treat as audio
-    if (nameLower.includes('audio') || 
-        nameLower.includes('sound') || 
-        nameLower.includes('recording') || 
-        nameLower.includes('track') ||
-        nameLower.includes('podcast') ||
-        nameLower.includes('music') ||
-        nameLower.includes('song')) {
-      return "audio";
-    }
-    // If filename suggests video, treat as video
-    if (nameLower.includes('video') || 
-        nameLower.includes('movie') || 
-        nameLower.includes('clip') || 
-        nameLower.includes('film') ||
-        nameLower.includes('recording') ||
-        nameLower.includes('screen')) {
-      return "video";
-    }
-    // Default to video (most common use case for webm)
-    return "video";
-  }
-  
-  // Check other extensions
->>>>>>> d285dcb (set submission backend)
   if (videoExtensions.includes(ext)) return "video";
   if (audioExtensions.includes(ext)) return "audio";
   if (["jpg", "jpeg", "png", "webp", "gif", "bmp", "svg", "tiff", "ico", "psd"].includes(ext)) return "image";
@@ -219,7 +129,6 @@ const getFileType = (name = "", type = "", url = "") => {
   return "file";
 };
 
-<<<<<<< HEAD
 // DARK RED/EMERALD COLOR THEME WITH WHITE BACKGROUND
 const getFileColor = (type) => {
   switch (type) {
@@ -269,105 +178,22 @@ const getTypeColor = (type) => {
   }
 };
 
-=======
->>>>>>> d285dcb (set submission backend)
 const getFileIcon = (type, className = "w-6 h-6") => {
   switch (type) {
     case "video": return <Film className={className} />;
     case "image": return <ImageIcon className={className} />;
     case "audio": return <Music className={className} />;
-<<<<<<< HEAD
     case "pdf": return <File className={className} />;
     case "doc": return <FileType className={className} />;
     case "excel": return <FileSpreadsheet className={className} />;
     case "powerpoint": return <File className={className} />;
     case "text": return <File className={className} />;
-=======
-    case "pdf": return <FileText className={className} />;
-    case "doc": return <FileType className={className} />;
-    case "excel": return <FileSpreadsheet className={className} />;
-    case "powerpoint": return <FileText className={className} />;
-    case "text": return <FileText className={className} />;
->>>>>>> d285dcb (set submission backend)
     case "archive": return <FileArchive className={className} />;
     case "code": return <FileCode className={className} />;
     default: return <File className={className} />;
   }
 };
 
-<<<<<<< HEAD
-=======
-const getFileColor = (type) => {
-  switch (type) {
-    case "video": return "from-purple-500 to-violet-600";
-    case "audio": return "from-amber-500 to-orange-600";
-    case "image": return "from-emerald-500 to-teal-600";
-    case "pdf": return "from-red-500 to-rose-600";
-    case "doc": return "from-blue-500 to-cyan-600";
-    case "excel": return "from-green-500 to-lime-600";
-    case "powerpoint": return "from-orange-500 to-amber-600";
-    case "text": return "from-gray-500 to-gray-600";
-    case "archive": return "from-indigo-500 to-purple-600";
-    case "code": return "from-yellow-500 to-amber-600";
-    default: return "from-gray-500 to-gray-600";
-  }
-};
-
-const getTypeGradient = (type) => {
-  switch (type) {
-    case "video":
-      return "bg-gradient-to-br from-purple-900 via-violet-900 to-fuchsia-900";
-    case "image":
-      return "bg-gradient-to-br from-emerald-900 via-teal-900 to-green-900";
-    case "audio":
-      return "bg-gradient-to-br from-amber-900 via-orange-900 to-yellow-900";
-    case "pdf":
-      return "bg-gradient-to-br from-red-900 via-rose-900 to-pink-900";
-    case "doc":
-      return "bg-gradient-to-br from-blue-900 via-sky-900 to-cyan-900";
-    case "excel":
-      return "bg-gradient-to-br from-green-900 via-emerald-900 to-lime-900";
-    case "powerpoint":
-      return "bg-gradient-to-br from-orange-900 via-red-900 to-amber-900";
-    case "text":
-      return "bg-gradient-to-br from-gray-800 via-gray-900 to-gray-950";
-    case "archive":
-      return "bg-gradient-to-br from-indigo-900 via-purple-900 to-violet-900";
-    case "code":
-      return "bg-gradient-to-br from-yellow-900 via-amber-900 to-orange-900";
-    default:
-      return "bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900";
-  }
-};
-
-const getTypeColor = (type) => {
-  switch (type) {
-    case "video":
-      return "from-purple-500/20 via-violet-500/10 to-purple-600/20 border-purple-500/30";
-    case "image":
-      return "from-emerald-500/20 via-green-500/10 to-teal-600/20 border-emerald-500/30";
-    case "audio":
-      return "from-amber-500/20 via-yellow-500/10 to-orange-600/20 border-amber-500/30";
-    case "pdf":
-      return "from-red-500/20 via-rose-500/10 to-pink-600/20 border-red-500/30";
-    case "doc":
-      return "from-blue-500/20 via-sky-500/10 to-cyan-600/20 border-blue-500/30";
-    case "excel":
-      return "from-green-500/20 via-emerald-500/10 to-lime-600/20 border-green-500/30";
-    case "powerpoint":
-      return "from-orange-500/20 via-red-500/10 to-amber-600/20 border-orange-500/30";
-    case "text":
-      return "from-gray-500/20 via-gray-500/10 to-gray-600/20 border-gray-500/30";
-    case "archive":
-      return "from-indigo-500/20 via-purple-500/10 to-violet-600/20 border-indigo-500/30";
-    case "code":
-      return "from-yellow-500/20 via-amber-500/10 to-orange-600/20 border-yellow-500/30";
-    default:
-      return "from-gray-500/20 via-gray-500/10 to-gray-600/20 border-gray-500/30";
-  }
-};
-
->>>>>>> d285dcb (set submission backend)
 const getTypeLabel = (type) => {
   switch (type) {
     case "video": return "VIDEO";
@@ -387,11 +213,7 @@ const getTypeLabel = (type) => {
 const formatFileSize = (bytes) => {
   if (!bytes || bytes === 0) return "0 Bytes";
   const k = 1024;
-<<<<<<< HEAD
   const sizes = ["Bytes", "KB", "MB", "GB", "TB"];
-=======
-  const sizes = ["Bytes", "KB", "MB", "GB"];
->>>>>>> d285dcb (set submission backend)
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + " " + sizes[i];
 };
@@ -403,7 +225,6 @@ const formatDuration = (seconds) => {
   return `${mins}:${secs.toString().padStart(2, "0")}`;
 };
 
-<<<<<<< HEAD
 // Enhanced File Card Component for White Background
 const FileCard = ({ file, onClick, viewMode = "grid", isAudioMain = false }) => {
   const [detectedType, setDetectedType] = useState(null);
@@ -411,12 +232,6 @@ const FileCard = ({ file, onClick, viewMode = "grid", isAudioMain = false }) => 
   const [isHovered, setIsHovered] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const audioRef = useRef(null);
-=======
-// Enhanced File Card Component
-const FileCard = ({ file, onClick, viewMode = "grid" }) => {
-  const [detectedType, setDetectedType] = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
->>>>>>> d285dcb (set submission backend)
   
   const url = file?.url || file?.path;
   const initialFileType = getFileType(file?.name, file?.type, url);
@@ -425,10 +240,6 @@ const FileCard = ({ file, onClick, viewMode = "grid" }) => {
   const typeGradient = getTypeGradient(fileType);
   const fileColor = getFileColor(fileType);
 
-<<<<<<< HEAD
-=======
-  // Detect WEBM type on mount
->>>>>>> d285dcb (set submission backend)
   useEffect(() => {
     const detectWebmType = async () => {
       if (initialFileType === "video" && file?.name?.toLowerCase().endsWith('.webm')) {
@@ -444,28 +255,16 @@ const FileCard = ({ file, onClick, viewMode = "grid" }) => {
             };
             
             video.onerror = () => {
-<<<<<<< HEAD
-=======
-              // If video fails to load metadata, try audio
->>>>>>> d285dcb (set submission backend)
               const audio = document.createElement('audio');
               audio.preload = 'metadata';
               
               audio.onloadedmetadata = () => {
-<<<<<<< HEAD
                 resolve(false);
-=======
-                resolve(false); // It's audio
->>>>>>> d285dcb (set submission backend)
                 audio.remove();
               };
               
               audio.onerror = () => {
-<<<<<<< HEAD
                 resolve(true);
-=======
-                resolve(true); // Default to video
->>>>>>> d285dcb (set submission backend)
                 audio.remove();
               };
               
@@ -489,7 +288,6 @@ const FileCard = ({ file, onClick, viewMode = "grid" }) => {
     detectWebmType();
   }, [file?.name, initialFileType, url]);
 
-<<<<<<< HEAD
   const handleAudioPlay = (e) => {
     e.stopPropagation();
     if (audioRef.current) {
@@ -503,18 +301,12 @@ const FileCard = ({ file, onClick, viewMode = "grid" }) => {
     }
   };
 
-=======
->>>>>>> d285dcb (set submission backend)
   const renderPreview = () => {
     if (isLoading) {
       return (
         <div className="flex flex-col items-center justify-center space-y-4 p-6">
           <Loader2 className="w-10 h-10 text-gray-400 animate-spin" />
-<<<<<<< HEAD
           <div className="text-xs text-gray-500">Detecting file type...</div>
-=======
-          <div className="text-xs text-gray-400">Detecting file type...</div>
->>>>>>> d285dcb (set submission backend)
         </div>
       );
     }
@@ -525,7 +317,6 @@ const FileCard = ({ file, onClick, viewMode = "grid" }) => {
           <div className="relative w-full h-full">
             <video 
               src={url} 
-<<<<<<< HEAD
               className="h-full w-full object-cover rounded-t-2xl opacity-80 group-hover:opacity-100 transition-all duration-500"
               muted 
               playsInline
@@ -537,18 +328,6 @@ const FileCard = ({ file, onClick, viewMode = "grid" }) => {
               </div>
             </div>
             <div className="absolute bottom-3 right-3 bg-black/70 text-white text-xs px-2 py-1 rounded-lg backdrop-blur-sm">
-=======
-              className="h-full w-full object-cover rounded-t-2xl opacity-80 group-hover:opacity-100 transition-opacity"
-              muted 
-              playsInline
-            />
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-16 h-16 bg-black/50 backdrop-blur-sm rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
-                <Video className="w-8 h-8 text-white" />
-              </div>
-            </div>
-            <div className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
->>>>>>> d285dcb (set submission backend)
               {file?.name?.toLowerCase().endsWith('.webm') ? 'WEBM' : 'VIDEO'}
             </div>
           </div>
@@ -558,25 +337,14 @@ const FileCard = ({ file, onClick, viewMode = "grid" }) => {
         return (
           <div className="flex flex-col items-center justify-center space-y-4 p-6">
             <div className="relative">
-<<<<<<< HEAD
               <div className="w-20 h-20 bg-gradient-to-br from-emerald-500/20 to-emerald-600/20 rounded-full flex items-center justify-center backdrop-blur-sm shadow-lg shadow-emerald-200">
                 <Music className="w-10 h-10 text-emerald-600" />
               </div>
-=======
-              <div className="w-20 h-20 bg-gradient-to-br from-amber-500/30 to-orange-600/30 rounded-full flex items-center justify-center backdrop-blur-sm">
-                <Music className="w-10 h-10 text-amber-300" />
-              </div>
-              {/* Sound waves animation */}
->>>>>>> d285dcb (set submission backend)
               <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 flex space-x-1">
                 {[1, 2, 3, 4, 3, 2, 1].map((height, i) => (
                   <div
                     key={i}
-<<<<<<< HEAD
                     className={`w-1 rounded-full ${isPlaying ? 'bg-emerald-400 animate-pulse' : 'bg-emerald-300'}`}
-=======
-                    className="w-1 bg-amber-400/50 rounded-full animate-pulse"
->>>>>>> d285dcb (set submission backend)
                     style={{
                       height: `${height * 4}px`,
                       animationDelay: `${i * 0.1}s`
@@ -586,7 +354,6 @@ const FileCard = ({ file, onClick, viewMode = "grid" }) => {
               </div>
             </div>
             <div className="text-center">
-<<<<<<< HEAD
               <div className="text-xs text-emerald-700 font-semibold">
                 {file?.name?.toLowerCase().endsWith('.webm') ? 'WEBM AUDIO' : 'AUDIO FILE'}
               </div>
@@ -598,13 +365,6 @@ const FileCard = ({ file, onClick, viewMode = "grid" }) => {
               onEnded={() => setIsPlaying(false)}
               className="hidden"
             />
-=======
-              <div className="text-xs text-amber-300/70 tracking-wider font-semibold">
-                {file?.name?.toLowerCase().endsWith('.webm') ? 'WEBM AUDIO' : 'AUDIO FILE'}
-              </div>
-              <div className="text-xs text-amber-200/50 mt-1">Click to play</div>
-            </div>
->>>>>>> d285dcb (set submission backend)
           </div>
         );
       
@@ -614,7 +374,6 @@ const FileCard = ({ file, onClick, viewMode = "grid" }) => {
             <img 
               src={url} 
               alt={file.name} 
-<<<<<<< HEAD
               className="h-full w-full object-cover rounded-t-2xl opacity-90 group-hover:opacity-100 transition-all duration-700 group-hover:scale-105" 
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/10 via-transparent to-transparent" />
@@ -623,11 +382,6 @@ const FileCard = ({ file, onClick, viewMode = "grid" }) => {
                 IMAGE
               </Badge>
             </div>
-=======
-              className="h-full w-full object-cover rounded-t-2xl opacity-90 group-hover:opacity-100 transition-opacity group-hover:scale-105 duration-700" 
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent" />
->>>>>>> d285dcb (set submission backend)
           </div>
         );
       
@@ -635,7 +389,6 @@ const FileCard = ({ file, onClick, viewMode = "grid" }) => {
         return (
           <div className="flex flex-col items-center justify-center space-y-4 p-6">
             <div className="relative">
-<<<<<<< HEAD
               <div className={`w-20 h-20 ${typeGradient} rounded-2xl flex items-center justify-center shadow-lg`}>
                 <div className="relative">
                   {getFileIcon(fileType, "w-10 h-10 text-gray-700")}
@@ -652,22 +405,6 @@ const FileCard = ({ file, onClick, viewMode = "grid" }) => {
                 {getTypeLabel(fileType)}
               </div>
               <div className="text-[10px] text-gray-500 mt-1">Click to preview</div>
-=======
-              <div className={`w-20 h-20 bg-gradient-to-br ${typeColor.replace('border', 'bg').split(' ')[0]} rounded-2xl flex items-center justify-center backdrop-blur-sm rotate-12 group-hover:rotate-0 transition-transform duration-500`}>
-                <div className="-rotate-12 group-hover:rotate-0 transition-transform duration-500">
-                  {getFileIcon(fileType, "w-10 h-10")}
-                </div>
-              </div>
-              {/* Floating particles */}
-              <div className="absolute -top-2 -right-2 w-4 h-4 bg-white/20 rounded-full animate-bounce" />
-              <div className="absolute -bottom-2 -left-2 w-3 h-3 bg-white/20 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
-            </div>
-            <div className="text-center">
-              <div className="text-xs text-gray-300/70 tracking-wider font-semibold uppercase">
-                {getTypeLabel(fileType)}
-              </div>
-              <div className="text-[10px] text-gray-400/50 mt-1">Click to preview</div>
->>>>>>> d285dcb (set submission backend)
             </div>
           </div>
         );
@@ -677,32 +414,22 @@ const FileCard = ({ file, onClick, viewMode = "grid" }) => {
   if (viewMode === "list") {
     return (
       <div
-<<<<<<< HEAD
         className="group bg-white hover:bg-gray-50 rounded-xl p-4 border border-gray-200 hover:border-rose-300 transition-all duration-300 shadow-sm"
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
-=======
-        className="group bg-white hover:bg-gray-100 rounded-xl p-4 border border-gray-200 hover:border-purple-500 transition-all duration-300 shadow-sm"
->>>>>>> d285dcb (set submission backend)
         onClick={onClick}
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4 flex-1 min-w-0">
-<<<<<<< HEAD
             <div className={`relative p-3 rounded-xl bg-gradient-to-r ${fileColor} shadow-md`}>
               {getFileIcon(fileType, "w-5 h-5 text-white")}
               {isHovered && (
                 <div className="absolute inset-0 bg-white/20 rounded-xl animate-pulse" />
               )}
-=======
-            <div className={`p-3 rounded-lg bg-gradient-to-r ${fileColor}`}>
-              {getFileIcon(fileType)}
->>>>>>> d285dcb (set submission backend)
             </div>
             <div className="flex-1 min-w-0">
               <h4 className="font-bold text-gray-900 truncate">
                 {file.name}
-<<<<<<< HEAD
                 {isAudioMain && (
                   <Badge className="ml-2 bg-gradient-to-r from-emerald-500 to-teal-600 text-white text-xs">
                     Main
@@ -719,26 +446,12 @@ const FileCard = ({ file, onClick, viewMode = "grid" }) => {
                 <span className="text-xs text-gray-400">•</span>
                 <span className="text-sm text-gray-600">
                   {file.uploadedAt ? new Date(file.uploadedAt).toLocaleDateString() : 'Just now'}
-=======
-              </h4>
-              <div className="flex items-center gap-3 mt-1">
-                <Badge variant="outline" className="text-xs border-gray-700 text-gray-400">
-                  {getTypeLabel(fileType)}
-                </Badge>
-                <span className="text-sm text-gray-500">
-                  {formatFileSize(file.size)}
-                </span>
-                <span className="text-xs text-gray-500">•</span>
-                <span className="text-sm text-gray-500">
-                  {new Date(file.uploadedAt).toLocaleDateString()}
->>>>>>> d285dcb (set submission backend)
                 </span>
               </div>
             </div>
           </div>
           
           <div className="flex items-center gap-2">
-<<<<<<< HEAD
             {fileType === "audio" && (
               <Button
                 variant="ghost"
@@ -749,17 +462,11 @@ const FileCard = ({ file, onClick, viewMode = "grid" }) => {
                 {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
               </Button>
             )}
-=======
->>>>>>> d285dcb (set submission backend)
             <Button
               variant="ghost"
               size="icon"
               onClick={onClick}
-<<<<<<< HEAD
               className="opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-rose-50 text-rose-600"
-=======
-              className="opacity-0 group-hover:opacity-100 transition-opacity hover:bg-purple-500/20 text-purple-600"
->>>>>>> d285dcb (set submission backend)
             >
               <Eye className="w-4 h-4" />
             </Button>
@@ -770,7 +477,6 @@ const FileCard = ({ file, onClick, viewMode = "grid" }) => {
                 e.stopPropagation();
                 downloadFile(url, file.name);
               }}
-<<<<<<< HEAD
               className="opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-emerald-50 text-emerald-600"
             >
               <Download className="w-4 h-4" />
@@ -782,12 +488,6 @@ const FileCard = ({ file, onClick, viewMode = "grid" }) => {
             >
               <MoreVertical className="w-4 h-4" />
             </Button>
-=======
-              className="opacity-0 group-hover:opacity-100 transition-opacity hover:bg-purple-500/20 text-purple-600"
-            >
-              <Download className="w-4 h-4" />
-            </Button>
->>>>>>> d285dcb (set submission backend)
           </div>
         </div>
       </div>
@@ -798,7 +498,6 @@ const FileCard = ({ file, onClick, viewMode = "grid" }) => {
   return (
     <Card
       onClick={onClick}
-<<<<<<< HEAD
       className="cursor-pointer group relative overflow-hidden bg-white border border-gray-200 hover:border-rose-300 transition-all duration-500 hover:scale-[1.02] hover:shadow-xl hover:shadow-rose-100 rounded-2xl"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -836,41 +535,11 @@ const FileCard = ({ file, onClick, viewMode = "grid" }) => {
               </Button>
             </div>
           )}
-=======
-      className="cursor-pointer group relative overflow-hidden bg-white border border-gray-200 hover:border-purple-500 transition-all duration-300 hover:scale-[1.02] hover:shadow-2xl hover:shadow-purple-500/10 rounded-2xl"
-    >
-      {/* Animated background effect */}
-      <div className={`absolute inset-0 ${typeGradient} opacity-0 group-hover:opacity-10 transition-opacity duration-500`} />
-      
-      {/* Glow effect */}
-      <div className="absolute inset-0 bg-gradient-to-t from-transparent via-transparent to-black/20" />
-      
-      <CardContent className="p-0 relative z-10">
-        <div className={`h-48 flex items-center justify-center bg-gradient-to-br ${typeColor} rounded-t-2xl relative overflow-hidden`}>
-          {/* Animated particles */}
-          <div className="absolute inset-0">
-            {[...Array(20)].map((_, i) => (
-              <div
-                key={i}
-                className="absolute w-1 h-1 bg-white/10 rounded-full animate-pulse"
-                style={{
-                  left: `${Math.random() * 100}%`,
-                  top: `${Math.random() * 100}%`,
-                  animationDelay: `${i * 0.1}s`,
-                  animationDuration: `${1 + Math.random() * 2}s`
-                }}
-              />
-            ))}
-          </div>
-
-          {renderPreview()}
->>>>>>> d285dcb (set submission backend)
         </div>
 
         <div className="p-4 space-y-3">
           <div className="flex items-start justify-between">
             <div className="flex-1 min-w-0">
-<<<<<<< HEAD
               <p className="text-sm font-semibold text-gray-900 truncate group-hover:text-rose-700 transition-colors duration-300">
                 {file?.name}
               </p>
@@ -881,39 +550,20 @@ const FileCard = ({ file, onClick, viewMode = "grid" }) => {
                 )}
                 {isAudioMain && (
                   <span className="text-emerald-600 font-medium">• Voice Instructions</span>
-=======
-              <p className="text-sm font-medium text-gray-900 truncate group-hover:text-purple-600 transition-colors">
-                {file?.name}
-              </p>
-              <p className="text-xs text-gray-500 mt-1">
-                {file?.size ? formatFileSize(file.size) : 'Unknown size'}
-                {file?.name?.toLowerCase().endsWith('.webm') && (
-                  <span className="ml-2 text-amber-600">• WEBM</span>
->>>>>>> d285dcb (set submission backend)
                 )}
               </p>
             </div>
             <div className="flex items-center space-x-2">
               <Badge 
-<<<<<<< HEAD
                 className={`text-[10px] font-bold px-2 py-1 bg-gradient-to-r ${fileColor.split(' ').slice(0, 3).join(' ')} border-0 text-white shadow-md`}
               >
                 {getTypeLabel(fileType)}
               </Badge>
               <Eye size={14} className="text-gray-400 group-hover:text-rose-500 transition-colors" />
-=======
-                variant="outline" 
-                className={`text-[10px] font-semibold px-2 py-0.5 border-opacity-30 bg-opacity-10 ${typeColor.split(' ').slice(0, 3).join(' ')}`}
-              >
-                {getTypeLabel(fileType)}
-              </Badge>
-              <Eye size={14} className="text-gray-400 group-hover:text-purple-600 transition-colors" />
->>>>>>> d285dcb (set submission backend)
             </div>
           </div>
           
           {/* Progress bar effect */}
-<<<<<<< HEAD
           <div className="h-1 bg-gray-100 rounded-full overflow-hidden">
             <div 
               className={`h-full ${fileColor.split(' ')[0]} transition-all duration-1000 group-hover:w-full w-0`}
@@ -977,23 +627,10 @@ const FileCard = ({ file, onClick, viewMode = "grid" }) => {
           </div>
         </div>
       )}
-=======
-          <div className="h-0.5 bg-gray-100 rounded-full overflow-hidden">
-            <div 
-              className={`h-full ${typeColor.split(' ')[0]} transition-all duration-1000 group-hover:w-full w-0`}
-            />
-          </div>
-        </div>
-      </CardContent>
-      
-      {/* Corner accent */}
-      <div className={`absolute top-0 right-0 w-12 h-12 ${typeColor.split(' ')[0]} opacity-20 blur-xl`} />
->>>>>>> d285dcb (set submission backend)
     </Card>
   );
 };
 
-<<<<<<< HEAD
 // Helper function for downloading files
 const downloadFile = (fileUrl, fileName) => {
   if (!fileUrl) return;
@@ -1018,24 +655,6 @@ const AdvancedAudioPlayer = ({ audioFiles, taskTitle }) => {
   const [showVisualizer, setShowVisualizer] = useState(true);
   const [repeatMode, setRepeatMode] = useState('none'); // 'none', 'one', 'all'
   const [shuffleMode, setShuffleMode] = useState(false);
-=======
-// Main Component
-export default function MediaFiles({ task }) {
-  const [audioPlaying, setAudioPlaying] = useState(false);
-  const [audioProgress, setAudioProgress] = useState(0);
-  const [audioDuration, setAudioDuration] = useState(0);
-  const [audioVolume, setAudioVolume] = useState(0.7);
-  const [isMuted, setIsMuted] = useState(false);
-  const [playbackRate, setPlaybackRate] = useState(1);
-  const [showAudioVisualizer, setShowAudioVisualizer] = useState(false);
-  const [previewFile, setPreviewFile] = useState(null);
-  const [zoom, setZoom] = useState(1);
-  const [rotation, setRotation] = useState(0);
-  const [viewMode, setViewMode] = useState("grid");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [filterType, setFilterType] = useState("all");
-  const [sortBy, setSortBy] = useState("name");
->>>>>>> d285dcb (set submission backend)
   
   const audioRef = useRef(null);
   const visualizerRef = useRef(null);
@@ -1043,95 +662,11 @@ export default function MediaFiles({ task }) {
   const analyserRef = useRef(null);
   const sourceRef = useRef(null);
   const animationRef = useRef(null);
-<<<<<<< HEAD
   
   const currentTrack = audioFiles[currentTrackIndex];
 
   useEffect(() => {
     if (showVisualizer) {
-=======
-
-  // Prepare all files
-  const getAllFiles = () => {
-    const files = [];
-    
-    // Add audio file if exists
-    if (task?.audioUrl) {
-      const audioName = task.audioUrl.split('/').pop() || 'audio_recording.mp3';
-      files.push({
-        id: 'audio-main',
-        name: `Voice Instructions - ${task.title}`,
-        url: task.audioUrl,
-        type: 'audio/mpeg',
-        size: 0,
-        isAudio: true,
-        uploadedAt: new Date().toISOString()
-      });
-    }
-    
-    // Add file attachments
-    if (task?.fileAttachments) {
-      if (Array.isArray(task.fileAttachments)) {
-        task.fileAttachments.forEach((file, index) => {
-          files.push({
-            id: `file-${index}`,
-            name: file.name || file.fileName || `File ${index + 1}`,
-            url: file.url || file.path,
-            type: file.type || 'application/octet-stream',
-            size: file.size || 0,
-            uploadedAt: file.uploadedAt || new Date().toISOString()
-          });
-        });
-      } else {
-        files.push({
-          id: 'file-single',
-          name: task.fileAttachments.name || "Supporting Document",
-          url: task.fileAttachments.url || task.fileAttachments.path,
-          type: task.fileAttachments.type || 'application/octet-stream',
-          size: task.fileAttachments.size || 0,
-          uploadedAt: task.fileAttachments.uploadedAt || new Date().toISOString()
-        });
-      }
-    }
-    
-    return files;
-  };
-
-  const allFiles = getAllFiles();
-  
-  // Filter and sort files
-  const filteredFiles = allFiles.filter(file => {
-    // Search filter
-    if (searchQuery && !file.name.toLowerCase().includes(searchQuery.toLowerCase())) {
-      return false;
-    }
-    
-    // Type filter
-    if (filterType !== "all") {
-      const fileType = getFileType(file.name, file.type);
-      if (fileType !== filterType) return false;
-    }
-    
-    return true;
-  }).sort((a, b) => {
-    switch (sortBy) {
-      case "name":
-        return a.name.localeCompare(b.name);
-      case "size":
-        return (b.size || 0) - (a.size || 0);
-      case "date":
-        return new Date(b.uploadedAt) - new Date(a.uploadedAt);
-      case "type":
-        return getFileType(a.name, a.type).localeCompare(getFileType(b.name, b.type));
-      default:
-        return 0;
-    }
-  });
-
-  // Audio context initialization
-  useEffect(() => {
-    if (showAudioVisualizer) {
->>>>>>> d285dcb (set submission backend)
       const initAudioContext = async () => {
         try {
           const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -1146,11 +681,7 @@ export default function MediaFiles({ task }) {
           }
         } catch (error) {
           console.error("Error initializing audio context:", error);
-<<<<<<< HEAD
           setShowVisualizer(false);
-=======
-          setShowAudioVisualizer(false);
->>>>>>> d285dcb (set submission backend)
         }
       };
       
@@ -1165,18 +696,10 @@ export default function MediaFiles({ task }) {
         audioContextRef.current.close();
       }
     };
-<<<<<<< HEAD
   }, [showVisualizer]);
 
   useEffect(() => {
     if (!showVisualizer || !visualizerRef.current || !analyserRef.current) return;
-=======
-  }, [showAudioVisualizer]);
-
-  // Audio visualizer drawing
-  useEffect(() => {
-    if (!showAudioVisualizer || !visualizerRef.current || !analyserRef.current) return;
->>>>>>> d285dcb (set submission backend)
 
     const canvas = visualizerRef.current;
     const ctx = canvas.getContext("2d");
@@ -1187,34 +710,22 @@ export default function MediaFiles({ task }) {
       animationRef.current = requestAnimationFrame(draw);
       analyserRef.current.getByteFrequencyData(dataArray);
       
-<<<<<<< HEAD
       // Clear canvas with gradient background
       const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
       gradient.addColorStop(0, "rgba(16, 185, 129, 0.1)");
       gradient.addColorStop(1, "rgba(16, 185, 129, 0.05)");
       ctx.fillStyle = gradient;
-=======
-      ctx.fillStyle = "rgba(0, 0, 0, 0.1)";
->>>>>>> d285dcb (set submission backend)
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       
       const barWidth = (canvas.width / bufferLength) * 2.5;
       let x = 0;
       
       for (let i = 0; i < bufferLength; i++) {
-<<<<<<< HEAD
         const barHeight = (dataArray[i] / 2) + 10;
         const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
         gradient.addColorStop(0, "#10b981");
         gradient.addColorStop(0.5, "#059669");
         gradient.addColorStop(1, "#047857");
-=======
-        const barHeight = dataArray[i] / 2;
-        const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-        gradient.addColorStop(0, "#f59e0b");
-        gradient.addColorStop(0.5, "#f97316");
-        gradient.addColorStop(1, "#ea580c");
->>>>>>> d285dcb (set submission backend)
         
         ctx.fillStyle = gradient;
         ctx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
@@ -1223,7 +734,6 @@ export default function MediaFiles({ task }) {
     };
     
     draw();
-<<<<<<< HEAD
   }, [showVisualizer]);
 
   const handlePlay = () => {
@@ -1248,31 +758,6 @@ export default function MediaFiles({ task }) {
   const handleLoadedMetadata = () => {
     if (audioRef.current) {
       setDuration(audioRef.current.duration);
-=======
-  }, [showAudioVisualizer]);
-
-  // Audio handlers
-  const playAudio = () => {
-    if (audioPlaying) {
-      audioRef.current?.pause();
-      setAudioPlaying(false);
-    } else {
-      audioRef.current?.play().catch(console.error);
-      setAudioPlaying(true);
-    }
-  };
-
-  const handleAudioTimeUpdate = () => {
-    if (audioRef.current) {
-      const progress = (audioRef.current.currentTime / audioRef.current.duration) * 100;
-      setAudioProgress(progress);
-    }
-  };
-
-  const handleAudioLoaded = () => {
-    if (audioRef.current) {
-      setAudioDuration(audioRef.current.duration);
->>>>>>> d285dcb (set submission backend)
     }
   };
 
@@ -1280,28 +765,16 @@ export default function MediaFiles({ task }) {
     if (audioRef.current) {
       const time = (value[0] / 100) * audioRef.current.duration;
       audioRef.current.currentTime = time;
-<<<<<<< HEAD
       setProgress(value[0]);
-=======
-      setAudioProgress(value[0]);
->>>>>>> d285dcb (set submission backend)
     }
   };
 
   const handleVolumeChange = (value) => {
-<<<<<<< HEAD
     const newVolume = value[0] / 100;
     setVolume(newVolume);
     if (audioRef.current) {
       audioRef.current.volume = newVolume;
       setIsMuted(newVolume === 0);
-=======
-    const volume = value[0];
-    setAudioVolume(volume);
-    if (audioRef.current) {
-      audioRef.current.volume = volume;
-      setIsMuted(volume === 0);
->>>>>>> d285dcb (set submission backend)
     }
   };
 
@@ -1325,7 +798,6 @@ export default function MediaFiles({ task }) {
     }
   };
 
-<<<<<<< HEAD
   const nextTrack = () => {
     if (shuffleMode) {
       const randomIndex = Math.floor(Math.random() * audioFiles.length);
@@ -1802,18 +1274,6 @@ export default function MediaSection({ task }) {
       }
     });
   }, [allFiles, searchQuery, filterType, sortBy, sortOrder, activeTab]);
-=======
-  const downloadFile = (fileUrl, fileName) => {
-    if (!fileUrl) return;
-    
-    const link = document.createElement("a");
-    link.href = fileUrl;
-    link.download = fileName || "download";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
->>>>>>> d285dcb (set submission backend)
 
   const openPreview = (file) => {
     setPreviewFile(file);
@@ -1834,7 +1294,6 @@ export default function MediaSection({ task }) {
 
     return (
       <Dialog open={!!previewFile} onOpenChange={() => setPreviewFile(null)}>
-<<<<<<< HEAD
         <DialogContent className="max-w-6xl bg-white border border-gray-200 p-0 overflow-hidden">
           {/* Header */}
           <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white">
@@ -1852,19 +1311,6 @@ export default function MediaSection({ task }) {
                   <span>{formatFileSize(previewFile.size || 0)}</span>
                   <span>•</span>
                   <span>{previewFile.uploadedAt ? new Date(previewFile.uploadedAt).toLocaleDateString() : 'Just now'}</span>
-=======
-        <DialogContent className="max-w-6xl bg-[#0b0b0b] border border-[#222] p-0 overflow-hidden">
-          {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-gray-800 bg-gradient-to-r from-gray-900 to-black">
-            <div className="flex items-center gap-3">
-              <div className={`p-3 rounded-lg bg-gradient-to-r ${fileColor}`}>
-                {getFileIcon(fileType)}
-              </div>
-              <div>
-                <h3 className="text-xl font-bold text-white truncate max-w-lg">{name}</h3>
-                <p className="text-gray-400 text-sm">
-                  {getTypeLabel(fileType)} • {formatFileSize(previewFile.size || 0)}
->>>>>>> d285dcb (set submission backend)
                 </p>
               </div>
             </div>
@@ -1875,11 +1321,7 @@ export default function MediaSection({ task }) {
                     variant="ghost"
                     size="icon"
                     onClick={() => setRotation(prev => (prev + 90) % 360)}
-<<<<<<< HEAD
                     className="hover:bg-rose-50 text-rose-600 border border-rose-200"
-=======
-                    className="hover:bg-white/10 text-white"
->>>>>>> d285dcb (set submission backend)
                   >
                     <RotateCw className="w-5 h-5" />
                   </Button>
@@ -1887,30 +1329,18 @@ export default function MediaSection({ task }) {
                     variant="ghost"
                     size="icon"
                     onClick={() => setZoom(prev => Math.max(0.5, prev - 0.25))}
-<<<<<<< HEAD
                     className="hover:bg-amber-50 text-amber-600 border border-amber-200"
                   >
                     <ZoomOut className="w-5 h-5" />
                   </Button>
                   <span className="text-gray-900 text-sm min-w-[60px] text-center bg-gray-100 px-3 py-1 rounded-lg">
-=======
-                    className="hover:bg-white/10 text-white"
-                  >
-                    <ZoomOut className="w-5 h-5" />
-                  </Button>
-                  <span className="text-white text-sm min-w-[60px] text-center">
->>>>>>> d285dcb (set submission backend)
                     {Math.round(zoom * 100)}%
                   </span>
                   <Button
                     variant="ghost"
                     size="icon"
                     onClick={() => setZoom(prev => Math.min(3, prev + 0.25))}
-<<<<<<< HEAD
                     className="hover:bg-emerald-50 text-emerald-600 border border-emerald-200"
-=======
-                    className="hover:bg-white/10 text-white"
->>>>>>> d285dcb (set submission backend)
                   >
                     <ZoomIn className="w-5 h-5" />
                   </Button>
@@ -1920,11 +1350,7 @@ export default function MediaSection({ task }) {
                 variant="ghost"
                 size="icon"
                 onClick={() => downloadFile(url, name)}
-<<<<<<< HEAD
                 className="hover:bg-emerald-50 text-emerald-600 border border-emerald-200"
-=======
-                className="hover:bg-white/10 text-white"
->>>>>>> d285dcb (set submission backend)
               >
                 <Download className="w-5 h-5" />
               </Button>
@@ -1932,11 +1358,7 @@ export default function MediaSection({ task }) {
                 variant="ghost"
                 size="icon"
                 onClick={() => setPreviewFile(null)}
-<<<<<<< HEAD
                 className="hover:bg-rose-50 text-rose-600 border border-rose-200"
-=======
-                className="hover:bg-red-500/20 text-white"
->>>>>>> d285dcb (set submission backend)
               >
                 <X className="w-5 h-5" />
               </Button>
@@ -1950,16 +1372,10 @@ export default function MediaSection({ task }) {
                 <img
                   src={url}
                   alt={name}
-<<<<<<< HEAD
                   className="rounded-2xl shadow-xl max-w-full max-h-[70vh] object-contain transition-all duration-300"
                   style={{
                     transform: `scale(${zoom}) rotate(${rotation}deg)`,
                     boxShadow: '0 25px 50px -12px rgba(225, 29, 72, 0.15)'
-=======
-                  className="rounded-xl shadow-2xl max-w-full max-h-[70vh] object-contain transition-transform duration-300"
-                  style={{
-                    transform: `scale(${zoom}) rotate(${rotation}deg)`,
->>>>>>> d285dcb (set submission backend)
                   }}
                 />
               </div>
@@ -1968,7 +1384,6 @@ export default function MediaSection({ task }) {
                 <video
                   src={url}
                   controls
-<<<<<<< HEAD
                   className="rounded-2xl shadow-xl w-full max-h-[70vh] shadow-rose-200"
                 />
               </div>
@@ -1986,40 +1401,17 @@ export default function MediaSection({ task }) {
                     <p className="text-emerald-700/70 text-sm">Audio File • Professional Recording</p>
                   </div>
                   <audio src={url} controls className="w-full bg-white/50 rounded-xl border border-gray-200" />
-=======
-                  className="rounded-xl shadow-2xl w-full max-h-[70vh]"
-                />
-              </div>
-            ) : isAudio ? (
-              <div className="w-full max-w-2xl bg-gradient-to-br from-amber-900/30 to-orange-900/20 rounded-2xl p-8">
-                <div className="flex flex-col items-center space-y-6">
-                  <div className="relative">
-                    <div className="w-32 h-32 bg-gradient-to-br from-amber-500/20 to-orange-600/20 rounded-full flex items-center justify-center backdrop-blur-lg">
-                      <Music className="w-16 h-16 text-amber-300" />
-                    </div>
-                  </div>
-                  <div className="text-center space-y-2">
-                    <h4 className="text-2xl font-bold text-amber-100">{name}</h4>
-                    <p className="text-amber-300/70">Audio File</p>
-                  </div>
-                  <audio src={url} controls className="w-full" />
->>>>>>> d285dcb (set submission backend)
                 </div>
               </div>
             ) : isPdf ? (
               <iframe
                 src={url}
-<<<<<<< HEAD
                 className="w-full h-[70vh] rounded-2xl shadow-xl shadow-rose-100"
-=======
-                className="w-full h-[70vh] rounded-xl"
->>>>>>> d285dcb (set submission backend)
                 title={name}
               />
             ) : (
               <div className="text-center space-y-6">
                 <div className="relative inline-block">
-<<<<<<< HEAD
                   <div className="w-32 h-32 bg-gradient-to-br from-gray-100 to-gray-200 rounded-2xl flex items-center justify-center border border-gray-300">
                     <File className="w-16 h-16 text-gray-600" />
                   </div>
@@ -2028,15 +1420,6 @@ export default function MediaSection({ task }) {
                 <div className="space-y-2">
                   <h4 className="text-2xl font-bold text-gray-900">{name}</h4>
                   <p className="text-gray-600">
-=======
-                  <div className="w-32 h-32 bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl flex items-center justify-center">
-                    <File className="w-16 h-16 text-gray-400" />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <h4 className="text-2xl font-bold text-white">{name}</h4>
-                  <p className="text-gray-400">
->>>>>>> d285dcb (set submission backend)
                     Preview not available for this file type
                   </p>
                 </div>
@@ -2048,7 +1431,6 @@ export default function MediaSection({ task }) {
     );
   };
 
-<<<<<<< HEAD
   if (allFiles.length === 0) {
     return (
       <Card className="border border-gray-200 shadow-sm bg-white rounded-2xl overflow-hidden">
@@ -2086,45 +1468,26 @@ export default function MediaSection({ task }) {
   return (
     <>
       <Card className="border border-gray-200 shadow-sm bg-white rounded-2xl overflow-hidden">
-=======
-  if (allFiles.length === 0) return null;
-
-  return (
-    <>
-      <Card className="border-0 shadow-xl bg-white rounded-2xl overflow-hidden">
->>>>>>> d285dcb (set submission backend)
         <CardHeader className="border-b border-gray-200 pb-6">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <div className="relative">
-<<<<<<< HEAD
                 <div className="w-12 h-12 bg-gradient-to-r from-rose-500 to-red-600 rounded-xl flex items-center justify-center shadow-lg shadow-rose-200">
                   <FileVideo className="w-6 h-6 text-white" />
                 </div>
                 <div className="absolute -inset-2 bg-gradient-to-r from-rose-500/20 to-red-500/10 blur-xl" />
-=======
-                <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-violet-600 rounded-xl flex items-center justify-center">
-                  <FileVideo className="w-6 h-6 text-white" />
-                </div>
-                <div className="absolute -inset-2 bg-gradient-to-r from-purple-600/20 to-violet-600/10 blur-xl" />
->>>>>>> d285dcb (set submission backend)
               </div>
               <div>
                 <CardTitle className="text-2xl font-bold text-gray-900">
                   Media Files & Attachments
                 </CardTitle>
                 <CardDescription className="text-gray-600">
-<<<<<<< HEAD
                   {allFiles.length} file{allFiles.length !== 1 ? 's' : ''} • {formatFileSize(stats.totalSize)} total • Voice instructions and supporting documents
-=======
-                  {allFiles.length} file{allFiles.length !== 1 ? 's' : ''} • Voice instructions and supporting documents
->>>>>>> d285dcb (set submission backend)
                 </CardDescription>
               </div>
             </div>
             
             <div className="flex items-center gap-2">
-<<<<<<< HEAD
               <Badge className="bg-gradient-to-r from-rose-500/10 to-red-600/10 text-rose-700 border border-rose-200">
                 <FileVideo className="w-3 h-3 mr-1" />
                 {allFiles.length} Files
@@ -2133,17 +1496,10 @@ export default function MediaSection({ task }) {
                 <Database className="w-3 h-3 mr-1" />
                 {formatFileSize(stats.totalSize)}
               </Badge>
-=======
-              <Badge variant="secondary" className="bg-gradient-to-r from-purple-500/20 to-violet-600/20 text-purple-600 border-purple-500/30">
-                <FileText className="w-3 h-3 mr-1" />
-                {allFiles.length} Files
-              </Badge>
->>>>>>> d285dcb (set submission backend)
             </div>
           </div>
         </CardHeader>
         
-<<<<<<< HEAD
         {/* Stats Overview */}
         <div className="px-6 pb-6">
          
@@ -2214,151 +1570,11 @@ export default function MediaSection({ task }) {
           
 
        
-=======
-        <CardContent className="p-6">
-          {/* Controls Bar */}
-          
-
-          {/* Audio Player Section */}
-          {task?.audioUrl && (
-            <div className="mb-8 bg-gradient-to-br from-amber-50 via-orange-50 to-transparent rounded-xl p-6 border border-amber-200">
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-3">
-                  <div className="w-14 h-14 bg-gradient-to-r from-amber-600/30 to-orange-600/30 rounded-xl flex items-center justify-center">
-                    <Headphones className="w-7 h-7 text-amber-600" />
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-gray-900">Voice Instructions</h4>
-                    <p className="text-sm text-amber-600/70">Professional audio guidance</p>
-                  </div>
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowAudioVisualizer(!showAudioVisualizer)}
-                  className={`border ${showAudioVisualizer ? 'border-amber-500 bg-amber-500/10' : 'border-amber-200'} text-amber-700 hover:bg-amber-100`}
-                >
-                  {showAudioVisualizer ? "Hide Visualizer" : "Show Visualizer"}
-                </Button>
-              </div>
-              
-              {/* Audio Visualizer */}
-              {showAudioVisualizer && (
-                <div className="mb-6 bg-black/50 rounded-xl p-4">
-                  <canvas
-                    ref={visualizerRef}
-                    width={800}
-                    height={100}
-                    className="w-full h-20 rounded-lg"
-                  />
-                </div>
-              )}
-              
-              {/* Audio Controls */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <Button
-                      onClick={playAudio}
-                      size="lg"
-                      className={`gap-3 px-6 ${
-                        audioPlaying
-                          ? "bg-gradient-to-r from-red-500 to-pink-600 hover:from-red-600 hover:to-pink-700"
-                          : "bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700"
-                      } text-white shadow-lg`}
-                    >
-                      {audioPlaying ? (
-                        <>
-                          <Pause className="w-5 h-5" />
-                          Pause Audio
-                        </>
-                      ) : (
-                        <>
-                          <Play className="w-5 h-5" />
-                          Play Instructions
-                        </>
-                      )}
-                    </Button>
-                    
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={toggleMute}
-                        className="hover:bg-amber-500/20 text-amber-600"
-                      >
-                        {isMuted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
-                      </Button>
-                      
-                      <div className="w-32">
-                        <Slider
-                          value={[audioVolume * 100]}
-                          max={100}
-                          step={1}
-                          onValueChange={handleVolumeChange}
-                          className="[&>span]:bg-amber-500"
-                        />
-                      </div>
-                      
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={changePlaybackRate}
-                        className="text-amber-600 hover:bg-amber-500/20"
-                      >
-                        {playbackRate.toFixed(2)}x
-                      </Button>
-                    </div>
-                  </div>
-                  
-                  <div className="text-right">
-                    <div className="text-sm text-amber-600">
-                      {audioDuration > 0 ? (
-                        <>
-                          <Clock className="w-4 h-4 inline mr-1" />
-                          {formatDuration(audioDuration)}
-                        </>
-                      ) : (
-                        "Loading..."
-                      )}
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Progress Bar */}
-                <div className="space-y-2">
-                  <Slider
-                    value={[audioProgress]}
-                    max={100}
-                    step={0.1}
-                    onValueChange={handleSeek}
-                    className="[&>span]:bg-amber-500"
-                  />
-                  <div className="flex justify-between text-sm text-amber-600/70">
-                    <span>{formatDuration((audioProgress / 100) * audioDuration)}</span>
-                    <span>{formatDuration(audioDuration)}</span>
-                  </div>
-                </div>
-                
-                {/* Hidden Audio Element */}
-                <audio
-                  ref={audioRef}
-                  src={task.audioUrl}
-                  onTimeUpdate={handleAudioTimeUpdate}
-                  onLoadedMetadata={handleAudioLoaded}
-                  onEnded={() => setAudioPlaying(false)}
-                  className="hidden"
-                />
-              </div>
-            </div>
-          )}
->>>>>>> d285dcb (set submission backend)
 
           {/* Files Grid/List */}
           <div className="mt-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900">
-<<<<<<< HEAD
                 {activeTab === "all" ? "All Files" : 
                  activeTab === "audio" ? "Audio Files" :
                  activeTab === "media" ? "Media Files" : 
@@ -2366,32 +1582,19 @@ export default function MediaSection({ task }) {
               </h3>
               <div className="text-sm text-gray-600">
                 Showing {filteredFiles.length} of {allFiles.length} files
-=======
-                Attached Files ({filteredFiles.length})
-              </h3>
-              <div className="text-sm text-gray-500">
-                {filteredFiles.length} of {allFiles.length} files
->>>>>>> d285dcb (set submission backend)
               </div>
             </div>
             
             {filteredFiles.length > 0 ? (
               viewMode === "grid" ? (
-<<<<<<< HEAD
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
-=======
-                <div className="grid grid-cols-2 gap-4">
->>>>>>> d285dcb (set submission backend)
                   {filteredFiles.map((file, index) => (
                     <FileCard 
                       key={file.id || index} 
                       file={file} 
                       onClick={() => openPreview(file)}
                       viewMode={viewMode}
-<<<<<<< HEAD
                       isAudioMain={file.isMain}
-=======
->>>>>>> d285dcb (set submission backend)
                     />
                   ))}
                 </div>
@@ -2403,42 +1606,26 @@ export default function MediaSection({ task }) {
                       file={file} 
                       onClick={() => openPreview(file)}
                       viewMode={viewMode}
-<<<<<<< HEAD
                       isAudioMain={file.isMain}
-=======
->>>>>>> d285dcb (set submission backend)
                     />
                   ))}
                 </div>
               )
             ) : (
               <div className="text-center py-12">
-<<<<<<< HEAD
                 <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full mb-4 border border-gray-300">
                   <File className="w-10 h-10 text-gray-500" />
                 </div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">No Files Found</h3>
                 <p className="text-gray-500 max-w-md mx-auto">
                   No files match your search criteria. Try adjusting your filters or select a different tab.
-=======
-                <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full mb-4">
-                  <File className="w-10 h-10 text-gray-400" />
-                </div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">No Files Found</h3>
-                <p className="text-gray-500 max-w-md mx-auto">
-                  No files match your search criteria. Try adjusting your filters.
->>>>>>> d285dcb (set submission backend)
                 </p>
               </div>
             )}
           </div>
-<<<<<<< HEAD
         </div>
         
         
-=======
-        </CardContent>
->>>>>>> d285dcb (set submission backend)
       </Card>
       
       {/* File Preview Modal */}
