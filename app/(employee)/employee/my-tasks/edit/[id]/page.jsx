@@ -261,6 +261,156 @@ export default function EditEmployeeTaskPage() {
     }
   };
 
+
+  const handleInputChange = (e) => {
+  const { name, value } = e.target;
+  setFormData(prev => ({
+    ...prev,
+    [name]: value
+  }));
+  
+  // Clear error for this field if it exists
+  if (errors[name]) {
+    setErrors(prev => ({
+      ...prev,
+      [name]: ''
+    }));
+  }
+};
+
+const handleDragOver = (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  setDragActive(true);
+};
+
+const handleDragLeave = (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  setDragActive(false);
+};
+
+const handleDrop = (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  setDragActive(false);
+  
+  const files = e.dataTransfer.files;
+  if (files && files.length > 0) {
+    handleFileUpload(files);
+  }
+};
+
+const clearAllAssignees = () => {
+  if (confirm("Are you sure you want to clear all assignees?")) {
+    setSelectedTeamLeads([]);
+    setSelectedManagers([]);
+    setSelectedEmployees([]);
+    toast.success("All assignees cleared");
+  }
+};
+
+const handleDownloadAll = () => {
+  toast.info("Download all functionality would be implemented here");
+  // Implement bulk download logic
+};
+
+// Filter functions for files
+const filteredUploadedFiles = uploadedFiles.filter(file => {
+  if (filterType === 'all') return true;
+  if (filterType === 'image') return file.type?.startsWith('image/');
+  if (filterType === 'video') return file.type?.startsWith('video/');
+  if (filterType === 'audio') return file.type?.startsWith('audio/');
+  if (filterType === 'pdf') return file.type?.includes('pdf');
+  if (filterType === 'document') {
+    return file.type?.includes('document') || 
+           file.type?.includes('word') || 
+           file.type?.includes('excel') || 
+           file.type?.includes('sheet');
+  }
+  return true;
+}).filter(file => 
+  file.name?.toLowerCase().includes(searchQuery.toLowerCase())
+);
+
+const filteredExistingFiles = existingFiles.filter(file => {
+  if (filterType === 'all') return true;
+  const fileCategory = getFileTypeCategory(file.type);
+  return filterType === fileCategory;
+}).filter(file => 
+  file.name?.toLowerCase().includes(searchQuery.toLowerCase())
+);
+
+// Submit handler
+const handleSubmit = async () => {
+  if (!validateForm()) {
+    toast.error("Please fix the errors in the form");
+    return;
+  }
+
+  setUpdating(true);
+  
+  try {
+    const formDataToSend = new FormData();
+    
+    // Add basic form data
+    Object.keys(formData).forEach(key => {
+      formDataToSend.append(key, formData[key]);
+    });
+    
+    // Add team leads
+    selectedTeamLeads.forEach(tl => {
+      formDataToSend.append('teamLeads', tl._id);
+    });
+    
+    // Add managers
+    selectedManagers.forEach(mgr => {
+      formDataToSend.append('managers', mgr._id);
+    });
+    
+    // Add employees
+    selectedEmployees.forEach(emp => {
+      formDataToSend.append('employees', emp._id);
+    });
+    
+    // Add files to delete
+    filesToDelete.forEach(fileId => {
+      formDataToSend.append('filesToDelete', fileId);
+    });
+    
+    // Add new files
+    uploadedFiles.forEach(file => {
+      formDataToSend.append('files', file.file);
+    });
+    
+    const response = await axios.put(`/api/employee/assigned-subtasks/${taskId}`, formDataToSend, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+    
+    if (response.data.success) {
+      toast.success("Task updated successfully!");
+      
+      // Clean up object URLs for uploaded files
+      uploadedFiles.forEach(file => {
+        if (file.preview) {
+          URL.revokeObjectURL(file.preview);
+        }
+      });
+      
+      router.push(`/employee/my-tasks/detail/${taskId}`);
+    } else {
+      toast.error(response.data.message || "Failed to update task");
+    }
+  } catch (error) {
+    console.error("Error updating task:", error);
+    toast.error(error.response?.data?.message || "Failed to update task");
+  } finally {
+    setUpdating(false);
+  }
+};
+
   const validateForm = () => {
     const newErrors = {};
 

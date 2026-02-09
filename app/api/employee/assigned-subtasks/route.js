@@ -11,7 +11,6 @@ import { sendMail } from "@/lib/mail";
 import { employeeTaskCreatedTemplate } from "@/helper/emails/employee/employeeTaskTemplates";
 import { Upload } from "@aws-sdk/lib-storage";
 import s3 from "@/lib/aws";
-import { Bucket$ } from "@aws-sdk/client-s3";
 
 export async function POST(req) {
   try {
@@ -23,7 +22,7 @@ export async function POST(req) {
     await dbConnect();
     const formData = await req.formData();
 
-    /* ---------------- BASIC FIELDS ---------------- */
+    // ---------------- BASIC FIELDS ----------------
     const title = formData.get("title");
     const description = formData.get("description");
     const startDate = formData.get("startDate");
@@ -31,27 +30,16 @@ export async function POST(req) {
     const startTime = formData.get("startTime");
     const endTime = formData.get("endTime");
 
-    /* ---------------- ASSIGNEES ---------------- */
-    const assignedTeamLead = JSON.parse(
-      formData.get("assignedTeamLead") || "[]",
-    );
+    // ---------------- ASSIGNEES ----------------
+    const assignedTeamLead = JSON.parse(formData.get("assignedTeamLead") || "[]");
     const assignedManager = JSON.parse(formData.get("assignedManager") || "[]");
-    const assignedEmployee = JSON.parse(
-      formData.get("assignedEmployee") || "[]",
-    );
+    const assignedEmployee = JSON.parse(formData.get("assignedEmployee") || "[]");
 
-    if (
-      assignedTeamLead.length === 0 &&
-      assignedManager.length === 0 &&
-      assignedEmployee.length === 0
-    ) {
-      return NextResponse.json(
-        { error: "At least one assignee is required" },
-        { status: 400 },
-      );
+    if (assignedTeamLead.length === 0 && assignedManager.length === 0 && assignedEmployee.length === 0) {
+      return NextResponse.json({ error: "At least one assignee is required" }, { status: 400 });
     }
 
-    /* ---------------- FILE UPLOADS ---------------- */
+    // ---------------- FILE UPLOADS ----------------
     const files = formData.getAll("files");
     const uploadedFiles = [];
 
@@ -59,13 +47,13 @@ export async function POST(req) {
       if (!file || !file.size) continue;
 
       const buffer = Buffer.from(await file.arrayBuffer());
-      const key = `employee_tasks/${Date.now()}_${file.name.replace(/\s+/g, "_")}`;
+      const fileKey = `employee_tasks/${Date.now()}_${file.name.replace(/\s+/g, "_")}`;
 
       const upload = new Upload({
         client: s3,
         params: {
-          Bucket: BUCKET,
-          Key: key,
+          Bucket: process.env.AWS_BUCKET_NAME,
+          Key: fileKey,
           Body: buffer,
           ContentType: file.type,
           Metadata: {
@@ -77,22 +65,18 @@ export async function POST(req) {
 
       await upload.done();
 
-      const signedUrl = await getSignedUrl(
-        s3,
-        new GetObjectCommand({ Bucket: BUCKET, Key: key }),
-        { expiresIn: 604800 } // 7 days
-      );
+      const fileUrl = `https://s3.${process.env.AWS_REGION}.amazonaws.com/${process.env.AWS_BUCKET_NAME}/${fileKey}`;
 
       uploadedFiles.push({
-        url: signedUrl,
+        url: fileUrl,
         name: file.name,
         type: file.type,
         size: file.size,
-        publicId: key,
+        publicId: fileKey,
       });
     }
 
-    /* ---------------- CREATE TASK ---------------- */
+    // ---------------- CREATE TASK ----------------
     const task = await EmployeeTask.create({
       title,
       description,
@@ -107,12 +91,12 @@ export async function POST(req) {
       assignedEmployee: assignedEmployee.map((id) => ({ employeeId: id })),
     });
 
-    // 🔔 Notifications + Emails in parallel
-    await Promise.all([
-      // Assigned Employees
-      ...assignedEmployee.map(async (empObj) => {
-        const emp = await Employee.findById(empObj);
-        if (!emp) return;
+    // ---------------- NOTIFICATIONS + EMAILS ----------------
+    const sendAllNotifications = async () => {
+      // Employees
+      for (const empId of assignedEmployee) {
+        const emp = await Employee.findById(empId);
+        if (!emp) continue;
 
         sendNotification({
           senderId: session.user.id,
@@ -129,19 +113,14 @@ export async function POST(req) {
         });
 
         if (emp.email) {
-          const html = employeeTaskCreatedTemplate(
-            emp.firstName,
-            title,
-            description,
-          );
-          sendMail(emp.email, "New Task Assigned", html);
+          sendMail(emp.email, "New Task Assigned", employeeTaskCreatedTemplate(emp.firstName, title, description));
         }
-      }),
+      }
 
-      // Assigned Managers
-      ...assignedManager.map(async (mgrObj) => {
-        const mgr = await Manager.findById(mgrObj);
-        if (!mgr) return;
+      // Managers
+      for (const mgrId of assignedManager) {
+        const mgr = await Manager.findById(mgrId);
+        if (!mgr) continue;
 
         sendNotification({
           senderId: session.user.id,
@@ -158,19 +137,14 @@ export async function POST(req) {
         });
 
         if (mgr.email) {
-          const html = employeeTaskCreatedTemplate(
-            mgr.firstName,
-            title,
-            description,
-          );
-          sendMail(mgr.email, "New Task Assigned", html);
+          sendMail(mgr.email, "New Task Assigned", employeeTaskCreatedTemplate(mgr.firstName, title, description));
         }
-      }),
+      }
 
-      // Assigned Team Leads
-      ...assignedTeamLead.map(async (tlObj) => {
-        const tl = await TeamLead.findById(tlObj);
-        if (!tl) return;
+      // Team Leads
+      for (const tlId of assignedTeamLead) {
+        const tl = await TeamLead.findById(tlId);
+        if (!tl) continue;
 
         sendNotification({
           senderId: session.user.id,
@@ -187,17 +161,14 @@ export async function POST(req) {
         });
 
         if (tl.email) {
-          const html = employeeTaskCreatedTemplate(
-            tl.firstName,
-            title,
-            description,
-          );
-          sendMail(tl.email, "New Task Assigned", html);
+          sendMail(tl.email, "New Task Assigned", employeeTaskCreatedTemplate(tl.firstName, title, description));
         }
-      }),
-    ]);
+      }
+    };
 
-    // Populate assigned employees/managers/teamleads for response
+    await sendAllNotifications();
+
+    // ---------------- POPULATE TASK ----------------
     const populatedTask = await EmployeeTask.findById(task._id)
       .populate("submittedBy", "firstName lastName email")
       .populate("assignedEmployee.employeeId", "firstName lastName email")
@@ -207,10 +178,7 @@ export async function POST(req) {
     return NextResponse.json(populatedTask, { status: 201 });
   } catch (err) {
     console.error("EmployeeTask POST Error:", err);
-    return NextResponse.json(
-      { error: "Failed to create task" },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Failed to create task" }, { status: 500 });
   }
 }
 
