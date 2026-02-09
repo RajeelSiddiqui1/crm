@@ -56,13 +56,8 @@ import {
   ThumbsDown,
   Check,
   X,
-<<<<<<< HEAD
   Image,
   Video,
-=======
-    Image,
-    Video,
->>>>>>> d285dcb (set submission backend)
   MoreVertical,
   Send,
   ClipboardCheck,
@@ -102,15 +97,9 @@ export default function ViewSubtaskPage() {
   const [selectedFeedback, setSelectedFeedback] = useState(null);
   const [teamLeadFeedback, setTeamLeadFeedback] = useState("");
   const [isSubmittingFeedback, setIsSubmittingFeedback] = useState(false);
-<<<<<<< HEAD
   const [zoom, setZoom] = useState(1);
   const [previewFile, setPreviewFile] = useState(null);
   
-=======
-const [zoom, setZoom] = useState(1);
-
-    const [previewFile, setPreviewFile] = useState(null);
->>>>>>> d285dcb (set submission backend)
 
   const downloadFile = (url, name) => {
     const link = document.createElement("a");
@@ -199,11 +188,7 @@ const [zoom, setZoom] = useState(1);
     }
   };
 
-<<<<<<< HEAD
   const getFileIcon = (fileType) => {
-=======
-    const getFileIcon = (fileType) => {
->>>>>>> d285dcb (set submission backend)
     if (fileType?.includes('image')) return <Image className="w-5 h-5 text-blue-500" />;
     if (fileType?.includes('video')) return <Video className="w-5 h-5 text-purple-500" />;
     if (fileType?.includes('pdf')) return <FileText className="w-5 h-5 text-red-500" />;
@@ -624,7 +609,6 @@ const [zoom, setZoom] = useState(1);
                   </div>
                 </div>
 
-<<<<<<< HEAD
                 {/* Attachments Section */}
                 {subtask.fileAttachments && subtask.fileAttachments.length > 0 && (
                   <Card className="mt-4">
@@ -695,81 +679,6 @@ const [zoom, setZoom] = useState(1);
                   </Card>
                 )}
 
-=======
-<Card className="mt-4">
-  <CardHeader>
-    <CardTitle className="text-lg font-semibold text-gray-900">Attachments</CardTitle>
-  </CardHeader>
-  <CardContent>
-    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-      {subtask.fileAttachments?.map((file) => {
-        const { url, name, type, publicId } = file;
-
-        const isImage = type.startsWith("image/");
-        const isVideo = type.startsWith("video/");
-        const isPDF = type.includes("pdf");
-        const isWord = type.includes("word") || type.includes("doc");
-        const isExcel = type.includes("excel") || type.includes("sheet") || type.includes("xlsx");
-
-        // Color and icon for file type
-        let bgColor = "bg-purple-100 text-purple-800";
-        let Icon = FilePlus;
-
-        if (isImage) bgColor = "bg-green-100 text-green-800";
-        else if (isVideo) bgColor = "bg-blue-100 text-blue-800";
-        else if (isPDF) { bgColor = "bg-red-100 text-red-800"; Icon = FileText; }
-        else if (isWord) { bgColor = "bg-blue-100 text-blue-800"; Icon = FileText; }
-        else if (isExcel) { bgColor = "bg-green-100 text-green-800"; Icon = FileSpreadsheet; }
-
-        return (
-          <div
-            key={publicId}
-            className={`w-full rounded shadow flex flex-col overflow-hidden ${bgColor}`}
-          >
-            {/* Preview area */}
-            <div className="flex-1 w-full h-40 flex items-center justify-center overflow-hidden">
-              {isImage ? (
-                <img src={url} alt={name} className="object-cover w-full h-full" />
-              ) : isVideo ? (
-                <div className="relative w-full h-full">
-                  <video src={url} className="object-cover w-full h-full opacity-80" />
-                  <Play className="absolute w-8 h-8 text-white top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
-                </div>
-              ) : (
-                <Icon className="w-12 h-12" />
-              )}
-            </div>
-
-            {/* Bottom: file name + buttons */}
-            <div className="p-2 bg-white flex flex-col items-center gap-2">
-              <p className="text-sm font-medium truncate w-full text-center">{name}</p>
-              <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setPreviewFile(file)}
-                >
-                  Preview
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={() => window.open(url, "_blank")}
-                >
-                  Download
-                </Button>
-              </div>
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  </CardContent>
-</Card>
-
-
-      {/* Preview Modal */}
-     
->>>>>>> d285dcb (set submission backend)
                 {/* Assignees Summary */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {/* Employees Summary */}
@@ -1481,7 +1390,6 @@ const [zoom, setZoom] = useState(1);
         <div className="space-y-6">
           {/* Timeline Info Card */}
           <Card className="border-0 shadow-xl bg-white/90 backdrop-blur-sm">
-<<<<<<< HEAD
             <CardHeader className="border-b border-slate-200 p-6">
               <CardTitle className="text-lg font-bold text-gray-900">
                 Timeline Details
@@ -1531,60 +1439,6 @@ const [zoom, setZoom] = useState(1);
                 </div>
               </div>
             </CardContent>
-=======
-      <CardHeader className="border-b border-slate-200 p-6">
-  <CardTitle className="text-lg font-bold text-gray-900">
-    Timeline Details
-  </CardTitle>
-</CardHeader>
-<CardContent className="p-6">
-  <div className="space-y-4">
-    {/* Start Date */}
-    <div className="space-y-2">
-      <div className="text-sm text-gray-600 font-medium">Start Date</div>
-      <div className="text-gray-900 font-semibold">
-        {format(new Date(subtask.startDate), "PPP")} • {subtask.startTime}
-      </div>
-    </div>
-
-    {/* End Date */}
-    <div className="space-y-2">
-      <div className="text-sm text-gray-600 font-medium">End Date</div>
-      <div className="text-gray-900 font-semibold">
-        {format(new Date(subtask.endDate), "PPP")} • {subtask.endTime}
-      </div>
-    </div>
-
-    {/* Duration */}
-    <div className="space-y-2">
-      <div className="text-sm text-gray-600 font-medium">Duration</div>
-      <div className="text-gray-900 font-semibold">{duration}</div>
-    </div>
-
-    {/* Time Remaining */}
-    <div className="space-y-2">
-      <div className="text-sm text-gray-600 font-medium">Time Remaining</div>
-      <div
-        className={`font-semibold ${
-          isOverdue ? "text-rose-600" : "text-emerald-600"
-        }`}
-      >
-        {isOverdue ? (
-          <span className="flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4" />
-            Overdue by {formatDistance(new Date(subtask.endDate), new Date())}
-          </span>
-        ) : (
-          timeRemaining
-        )}
-      </div>
-    </div>
-
-
-  </div>
-</CardContent>
-
->>>>>>> d285dcb (set submission backend)
           </Card>
 
           {/* Performance Stats Card */}
@@ -1832,7 +1686,6 @@ const [zoom, setZoom] = useState(1);
           )}
         </DialogContent>
       </Dialog>
-<<<<<<< HEAD
 
       {/* Full Page Preview Modal with Zoom */}
       {previewFile && (
@@ -1923,99 +1776,6 @@ const [zoom, setZoom] = useState(1);
           </div>
         </div>
       )}
-=======
-{/* Full Page Preview Modal with Zoom */}
-{previewFile && (
-  <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4 overflow-y-auto">
-    <div className="bg-white rounded-2xl w-full max-w-[95vw] max-h-[95vh] overflow-hidden flex flex-col shadow-lg">
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b">
-        <div className="flex items-center gap-2">
-          {getFileIcon(previewFile.type)}
-          <h3 className="font-bold text-gray-900 truncate">{previewFile.name}</h3>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setZoom((prev) => prev + 0.2)}
-            className="text-blue-600 hover:text-blue-800 hover:bg-blue-50"
-          >
-            Zoom In +
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setZoom((prev) => Math.max(prev - 0.2, 0.2))}
-            className="text-blue-600 hover:text-blue-800 hover:bg-blue-50"
-          >
-            Zoom Out -
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => downloadFile(previewFile.url, previewFile.name)}
-            className="text-green-600 hover:text-green-800 hover:bg-green-50"
-          >
-            <Download className="w-4 h-4 mr-2" /> Download
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setPreviewFile(null)}
-            className="text-gray-600 hover:text-gray-800 hover:bg-gray-100"
-          >
-            <X className="w-4 h-4" />
-          </Button>
-        </div>
-      </div>
-
-      {/* Body */}
-      <div className="flex-1 p-4 overflow-auto flex items-center justify-center bg-gray-50">
-        {previewFile.type?.includes('image') ? (
-          <img
-            src={previewFile.url}
-            alt={previewFile.name}
-            className="rounded-lg mx-auto transition-transform"
-            style={{ transform: `scale(${zoom})` }}
-          />
-        ) : previewFile.type?.includes('video') ? (
-          <video
-            controls
-            autoPlay
-            className="rounded-lg mx-auto transition-transform"
-            style={{ transform: `scale(${zoom})` }}
-          >
-            <source src={previewFile.url} type={previewFile.type} />
-            Your browser does not support the video tag.
-          </video>
-        ) : previewFile.type?.includes('pdf') ? (
-          <iframe
-            src={previewFile.url}
-            className="w-full h-[90vh] border rounded-lg"
-            title={previewFile.name}
-          />
-        ) : (
-          <div className="text-center py-12">
-            <File className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <p className="text-gray-700">Preview not available for this file type</p>
-            <Button
-              variant="outline"
-              onClick={() => downloadFile(previewFile.url, previewFile.name)}
-              className="mt-4"
-            >
-              <Download className="w-4 h-4 mr-2" />
-              Download File
-            </Button>
-          </div>
-        )}
-      </div>
-    </div>
-  </div>
-)}
-
-
->>>>>>> d285dcb (set submission backend)
     </div>
   );
 }

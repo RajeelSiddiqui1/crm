@@ -133,7 +133,6 @@ export default function ManagerEditSubmissionPage() {
   const [selectedTeamLead, setSelectedTeamLead] = useState("");
   const [allTeamLeadsAssigned, setAllTeamLeadsAssigned] = useState(false);
   const [previouslyAssignedTeamLeads, setPreviouslyAssignedTeamLeads] = useState([]);
-<<<<<<< HEAD
   const [clinetName, setClinetName] = useState("");
   const [zoom, setZoom] = useState(1);
   const [previewFile, setPreviewFile] = useState(null);
@@ -192,64 +191,6 @@ export default function ManagerEditSubmissionPage() {
     if (fileType?.includes('code') || fileType?.includes('text/plain')) return <FileCode className="w-5 h-5 text-indigo-500" />;
     return <File className="w-5 h-5 text-gray-500" />;
   };
-=======
-  const [clinetName, setClinetName] = useState(""); // Added clinetName state
-   const [zoom, setZoom] = useState(1);
-  const [previewFile, setPreviewFile] = useState(null);
-const [fileToUpload, setFileToUpload] = useState([]);
-const [filesToRemove, setFilesToRemove] = useState([]);
-const [fileNames, setFileNames] = useState({});
-
-// File upload handler
-const handleFileUpload = (e) => {
-  const files = Array.from(e.target.files);
-  setFileToUpload(prev => [...prev, ...files]);
-};
-
-// File remove handler
-const handleRemoveFile = (fileId) => {
-  if (fileId) {
-    // Existing file - mark for removal
-    setFilesToRemove(prev => [...prev, fileId]);
-  } else {
-    // New file - remove from upload list
-    const fileName = fileId; // For new files, fileId is actually the file name
-    setFileToUpload(prev => prev.filter(file => file.name !== fileName));
-  }
-};
-
-const formData = new FormData();
-formData.append("title", clinetName.trim());
-formData.append("formData", JSON.stringify(submission?.formData || {}));
-formData.append("managerComments", submission?.managerComments || "");
-formData.append("removeFiles", JSON.stringify([]));
-formData.append("fileUpdates", JSON.stringify({}));
-
-
-// Update file name handler
-const handleFileNameChange = (fileId, newName) => {
-  setFileNames(prev => ({
-    ...prev,
-    [fileId]: newName
-  }));
-};
- 
-    
-    
-      const downloadFile = (url, name) => {
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = name;
-        link.click();
-      };
-  
-      const getFileIcon = (fileType) => {
-      if (fileType?.includes('image')) return <Image className="w-5 h-5 text-blue-500" />;
-      if (fileType?.includes('video')) return <Video className="w-5 h-5 text-purple-500" />;
-      if (fileType?.includes('pdf')) return <FileText className="w-5 h-5 text-red-500" />;
-      return <File className="w-5 h-5 text-gray-500" />;
-    };
->>>>>>> d285dcb (set submission backend)
 
   useEffect(() => {
     if (status === "loading") return;
@@ -814,7 +755,6 @@ const handleFileNameChange = (fileId, newName) => {
     return;
   }
 
-<<<<<<< HEAD
     try {
       setUpdatingTeamLead(true);
       const response = await axios.put(
@@ -831,7 +771,7 @@ const handleFileNameChange = (fileId, newName) => {
       toast.error(error.response?.data?.error || "Failed to reassign team lead");
     } finally {
       setUpdatingTeamLead(false);
-=======
+
 
   const downloadFile = (url, name) => {
   const link = document.createElement('a');
@@ -891,7 +831,6 @@ const handleFileNameChange = (fileId, newName) => {
       toast.success("Team lead reassigned successfully!");
       fetchSubmissionDetails(); // Refresh data
       fetchTeamLeads(); // Refresh team leads list
->>>>>>> d285dcb (set submission backend)
     }
   } catch (error) {
     toast.error(
@@ -964,13 +903,6 @@ if (assignedTeamLeadId) {
 
   const getStatusIcon = (status) => {
     switch (status) {
-<<<<<<< HEAD
-      case "completed": case "approved": return <CheckCircle className="w-3 h-3" />;
-      case "in_progress": return <Clock className="w-3 h-3" />;
-      case "pending": return <AlertCircle className="w-3 h-3" />;
-      case "rejected": return <XCircle className="w-3 h-3" />;
-      default: return <AlertCircle className="w-3 h-3" />;
-=======
       case "completed":
       case "approved":
         return <CheckCircle className="w-3 h-3" />;
@@ -1100,7 +1032,6 @@ const handleSubmit = async (e) => {
       }
     } catch (error) {
       toast.error(error.response?.data?.error || "Failed to delete submission");
->>>>>>> d285dcb (set submission backend)
     }
   };
 
@@ -2037,7 +1968,6 @@ const handleSubmit = async (e) => {
         </div>
       </div>
 
-<<<<<<< HEAD
       {/* File Preview Modal */}
       {previewFile && (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
@@ -2172,7 +2102,6 @@ const handleSubmit = async (e) => {
           </div>
         </div>
       )}
-=======
 {previewFile && (
   <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
     <div className="bg-white rounded-2xl w-full max-w-[95vw] max-h-[95vh] overflow-hidden flex flex-col shadow-lg">
@@ -2292,8 +2221,6 @@ const handleSubmit = async (e) => {
     </div>
   </div>
 )}
-      
->>>>>>> d285dcb (set submission backend)
     </div>
   );
-}
+}}
