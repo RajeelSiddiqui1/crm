@@ -81,7 +81,7 @@ export default function CreateSubtaskPage() {
   // Check if current team lead has the specific depId
   const shouldShowLeadsField = useMemo(() => {
     if (!session?.user?.depId) return false;
-    return session.user.depId === "694161a12ab0b6a3ab0e0788";
+    return session.user.depId === "698b8832717cd23e92faef95";
   }, [session]);
 
   useEffect(() => {

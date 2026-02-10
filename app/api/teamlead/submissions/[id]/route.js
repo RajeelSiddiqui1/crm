@@ -38,7 +38,9 @@ export async function PATCH(request, { params }) {
       .populate({
         path: "subtaskId",
         select: "teamLeadId title description"
-      });
+      })
+      .select("+fileAttachments")
+      ;
 
     if (!submission) {
       return NextResponse.json({ error: "Submission not found" }, { status: 404 });

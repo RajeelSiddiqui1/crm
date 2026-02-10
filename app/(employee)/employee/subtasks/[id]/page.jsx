@@ -665,30 +665,34 @@ const handleFormSelect = (formId, isCompleted = false) => {
                     </div>
                 );
             case "select":
-                return (
-                    <div className="relative group">
-                        <div className="absolute -inset-1 bg-gradient-to-r from-blue-100 to-purple-100 rounded-xl blur opacity-0 group-hover:opacity-100 transition duration-500"></div>
-                        <Select
-                            value={fieldValue}
-                            onValueChange={(value) => handleInputChange(field.name, value)}
-                            disabled={isReadOnly}
+    return (
+        <div className="relative group">
+            <div className="absolute -inset-1 bg-gradient-to-r from-blue-100 to-purple-100 rounded-xl blur opacity-0 group-hover:opacity-100 transition duration-500"></div>
+            <Select
+                value={fieldValue}
+                onValueChange={(value) => handleInputChange(field.name, value)}
+                disabled={isReadOnly}
+            >
+                <SelectTrigger className={`relative bg-white/90 backdrop-blur-sm border-2 border-gray-200 focus:border-blue-500 transition-all rounded-xl p-4 text-black text-lg ${isReadOnly ? "bg-gray-50 cursor-not-allowed" : ""}`}>
+                    <SelectValue placeholder={`Select ${field.label}`} className="text-gray-900" />
+                </SelectTrigger>
+                <SelectContent className="bg-white border-2 border-gray-200 rounded-xl shadow-xl text-gray-900">
+                    {field.options?.map((option, index) => (
+                        <SelectItem 
+                            key={index} 
+                            value={option} 
+                            className="p-3 hover:bg-blue-50 cursor-pointer transition-colors text-gray-900"
                         >
-                            <SelectTrigger className={`relative bg-white/90 backdrop-blur-sm border-2 border-gray-200 focus:border-blue-500 transition-all rounded-xl p-4 text-black text-lg ${isReadOnly ? "bg-gray-50 cursor-not-allowed" : ""}`}>
-                                <SelectValue placeholder={`Select ${field.label}`} />
-                            </SelectTrigger>
-                            <SelectContent className="bg-white border-2 border-gray-200 rounded-xl shadow-xl">
-                                {field.options?.map((option, index) => (
-                                    <SelectItem key={index} value={option} className="p-3 hover:bg-blue-50 cursor-pointer transition-colors">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                                            {option}
-                                        </div>
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
-                );
+                            <div className="flex items-center gap-3">
+                                <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                                <span className="text-gray-900">{option}</span>
+                            </div>
+                        </SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
+        </div>
+    );
             case "radio":
                 return (
                     <RadioGroup
@@ -1058,21 +1062,12 @@ const handleFormSelect = (formId, isCompleted = false) => {
                                     Submission Portal
                                 </h1>
                             </div>
-                            <p className="text-gray-700 text-lg flex items-center gap-4">
-                                <span className="flex items-center gap-2 bg-gradient-to-r from-blue-100 to-purple-100 px-4 py-2 rounded-full">
-                                    <Clock className="w-5 h-5 text-blue-600" />
-                                    <span className="font-bold text-blue-700">{currentTime}</span>
-                                </span>
-                                Complete forms for your assigned tasks
-                            </p>
+                            
                         </div>
                     </div>
                     
                     <div className="flex items-center gap-4">
-                        <div className="hidden md:flex items-center gap-3 bg-gradient-to-r from-gray-900 to-black text-white px-6 py-3 rounded-2xl shadow-2xl">
-                            <Trophy className="w-5 h-5 text-yellow-400" />
-                            <span className="font-bold">{stats.streak} Day Streak</span>
-                        </div>
+                        
                         
                         <Button 
                             onClick={fetchAllData} 

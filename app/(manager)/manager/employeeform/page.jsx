@@ -285,7 +285,7 @@ export default function EmployeeFormBuilderPage() {
   const fetchForms = async () => {
     try {
       setFetching(true);
-      const response = await axios.get("/api/manager/managerforms");
+      const response = await axios.get("/api/manager/employeeform");
       setForms(response.data || []);
     } catch (error) {
       console.error("Fetch error:", error);
@@ -301,7 +301,7 @@ export default function EmployeeFormBuilderPage() {
       const responses = {};
       for (const form of forms) {
         const response = await axios.get(
-          `/api/manager/managerforms/${form._id}/responses`
+          `/api/manager/employeeform/${form._id}/responses`
         );
         responses[form._id] = response.data?.length || 0;
       }
@@ -499,11 +499,11 @@ export default function EmployeeFormBuilderPage() {
       let response;
       if (editingForm) {
         response = await axios.put(
-          `/api/manager/managerforms/${editingForm._id}`,
+          `/api/manager/employeeform/${editingForm._id}`,
           formData
         );
       } else {
-        response = await axios.post("/api/manager/managerforms", formData);
+        response = await axios.post("/api/manager/employeeform", formData);
       }
 
       if (response.status === 200 || response.status === 201) {
@@ -531,7 +531,7 @@ export default function EmployeeFormBuilderPage() {
   // Get single form by ID
   const getFormById = async (formId) => {
     try {
-      const response = await axios.get(`/api/manager/managerforms/${formId}`);
+      const response = await axios.get(`/api/manager/employeeform/${formId}`);
       return response.data;
     } catch (error) {
       toast.error("Failed to fetch form details");
@@ -575,7 +575,7 @@ export default function EmployeeFormBuilderPage() {
   const duplicateForm = async (form) => {
     try {
       setLoading(true);
-      const response = await axios.post("/api/manager/managerforms", {
+      const response = await axios.post("/api/manager/employeeform", {
         ...form,
         title: `${form.title} (Copy)`,
         status: "draft",
@@ -606,7 +606,7 @@ export default function EmployeeFormBuilderPage() {
     try {
       setLoading(true);
       const response = await axios.delete(
-        `/api/manager/managerforms/${formId}`
+        `/api/manager/employeeform/${formId}`
       );
 
       if (response.status === 200) {
@@ -623,7 +623,7 @@ export default function EmployeeFormBuilderPage() {
   const publishForm = async (formId) => {
     try {
       setLoading(true);
-      const response = await axios.put(`/api/manager/managerforms/${formId}`, {
+      const response = await axios.put(`/api/manager/employeeform/${formId}`, {
         status: "published",
       });
 
@@ -641,7 +641,7 @@ export default function EmployeeFormBuilderPage() {
   const unpublishForm = async (formId) => {
     try {
       setLoading(true);
-      const response = await axios.put(`/api/manager/managerforms/${formId}`, {
+      const response = await axios.put(`/api/manager/employeeform/${formId}`, {
         status: "draft",
       });
 
@@ -675,7 +675,7 @@ export default function EmployeeFormBuilderPage() {
   const downloadResponses = async (formId) => {
     try {
       const response = await axios.get(
-        `/api/manager/managerforms/${formId}/responses/export`
+        `/api/manager/employeeform/${formId}/responses/export`
       );
       const blob = new Blob([response.data], { type: "text/csv" });
       const url = window.URL.createObjectURL(blob);

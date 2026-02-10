@@ -63,7 +63,8 @@ import {
   Building,
   Target,
   BarChart3,
-  ViewIcon
+  ViewIcon,
+  View
 } from "lucide-react";
 import axios from "axios";
 import Link from "next/link";
@@ -1198,15 +1199,19 @@ export default function AllSubtasksPage() {
                         
                         <TableCell className="py-4">
                           <div className="flex gap-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => openModal(subtask)}
-                              className="border-blue-200 text-blue-700 hover:bg-blue-50 hover:border-blue-300 transition-all duration-200"
+                              <Link
+                              href={`/teamlead/subtasks/${subtask._id}`}
                             >
-                              <Eye className="w-4 h-4" />
-                            </Button>
-                            
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="border-blue-200 text-blue-700 hover:bg-blue-50 hover:border-blue-300 transition-all duration-200"
+                              >
+                                <View className="w-4 h-4" />
+                                View Employee Task
+                              </Button>
+                            </Link>
+
                               <Link
                               href={`/teamlead/subtask-employee/view/${subtask._id}`}
                             >
